@@ -203,7 +203,7 @@ h1 .signatur{font-size:.55em;letter-spacing:.06em;white-space:nowrap}
     </div>
   </div>
   <div class="faner" id="faner" role="tablist"></div>
-  <button class="shatter-knapp" id="shatterKnapp"><b>SCRUB</b><span>Bonus game. Wash the mud off the art. →</span></button>
+  <button class="shatter-knapp" id="shatterKnapp"><b>SCRUB</b><span id="scrubTekst">Scrub game. Wash the mud off the art. →</span></button>
   <div class="samlingsnavn samling-tittel" id="samlingTittel"></div>
   <div class="rutenett" id="brettliste"></div>
   <div class="samlingsnavn">Next collection</div>
@@ -211,7 +211,7 @@ h1 .signatur{font-size:.55em;letter-spacing:.06em;white-space:nowrap}
   <div class="samlingsnavn" id="sammenTittel"></div>
   <div class="regel"><b>The race:</b> Your best score on each of the ten boards in a collection is added up. Finish #1 overall and you get the next collection for free. Anyone who takes first place later gets it too. Points: Easy (25 pieces) gives 10,000, Medium (49) 15,000, Hard (100) 20,000 and Chaos (144) 25,000 at normal speed. Be fast and you get up to double.</div>
   <div class="sammen" id="sammen"><p class="liten">Loading standings …</p></div>
-  <p class="liten" id="versjon" style="margin-top:28px;opacity:.5">Version 0.30</p>
+  <p class="liten" id="versjon" style="margin-top:28px;opacity:.5">Version 0.31</p>
 </section>
 
 <div class="ark" id="startark" hidden>
@@ -343,7 +343,14 @@ function tegnFaner() {
   const nb = document.createElement("b"); nb.textContent = "/" + nr + " " + (SAMLINGSNAVN[aktiv + 1] || "");
   s2.firstElementChild.append(nb, fremdrift["samling" + (aktiv + 2)] ? "Unlocked for free because you finished #1 overall." : (SAMLINGER[aktiv + 1] ? "Open for beta testers. Later: paid, or free for #1 overall in /" + SAMLING + "." : "Coming. Paid, or free for #1 overall in /" + SAMLING + "."));
 }
+// SCRUB bruker bare brett du har løst i puslespillet, så motivet ikke avsløres før du har pusla det.
+function løsteBrett() { return BRETT.map((b, i) => i).filter(i => erLost(BRETT[i].id)); }
+function tegnScrubKnapp() {
+  const n = løsteBrett().length;
+  $("scrubTekst").textContent = n ? "Scrub game. Wash the mud off your " + n + " solved board" + (n === 1 ? "" : "s") + ". →" : "Scrub game. Solve a board first, then wash it here. →";
+}
 async function tegnMeny() {
+  tegnScrubKnapp();
   tegnFaner();
   tegnSammen().catch(() => { $("sammen").innerHTML = '<p class="liten">Could not load the standings.</p>'; });
   const liste = $("brettliste");
@@ -1335,7 +1342,7 @@ async function shatterStart(niva, poeng = 0, liv = 3) {
   stoppFest(); clearInterval(timer); spill = null;
   document.querySelectorAll(".bit").forEach(e => e.remove());
   $("meny").hidden = true; $("spill").hidden = true; $("shatter").hidden = false;
-  const i = niva % BRETT.length;
+  const løst = løsteBrett(), i = løst.length ? løst[niva % løst.length] : 0;
   const img = await hentBilde(BRETT[i].src);
   const tykk = shMoekk(niva);
   const klosser = [], j1 = Math.floor(Math.random() * SH_JORD.length), j2 = (j1 + 1 + Math.floor(Math.random() * (SH_JORD.length - 1))) % SH_JORD.length;
@@ -1616,14 +1623,14 @@ function shStot(b, nx, ny, styrke) {
 }
 function shJelly(b, dt, tid) {
   const n = Math.max(1, Math.ceil(dt / (1 / 150))), h = dt / n, d = b.d, v = b.dv, uro = b.uro || 0;
-  b.uro = uro * Math.exp(-dt * 1.1);
+  b.uro = uro * Math.exp(-dt * .55);
   for (let s = 0; s < n; s++) {
     let snitt = 0;
     for (let i = 0; i < SH_N; i++) {
       // Uro: rett etter slaget vrir den seg i to og tre buler, og roer seg mens den stiger.
       const th = i / SH_N * Math.PI * 2;
       const a = -520 * d[i] - 4.5 * v[i] + 220 * (d[(i + SH_N - 1) % SH_N] + d[(i + 1) % SH_N] - 2 * d[i])
-        + uro * (105 * Math.sin(2 * th + 13 * tid + b.fase) + 80 * Math.sin(3 * th - 17 * tid) + 40 * Math.sin(4 * th + 21 * tid));
+        + uro * (62 * Math.sin(2 * th + 6 * tid + b.fase) + 44 * Math.sin(3 * th - 8 * tid) + 18 * Math.sin(4 * th + 10 * tid));
       v[i] += a * h;
     }
     for (let i = 0; i < SH_N; i++) { d[i] = shClamp(d[i] + v[i] * h, -.55, .6); snitt += d[i]; }
@@ -1881,7 +1888,7 @@ function shRacketTreff(b, R) {
   let a = t * 1.05;
   s.fart = Math.min(s.maksFart, s.fart * 1.008);
   s.kombo = 0; s.glod = 1;
-  shStot(b, 0, -1, .55); b.uro = 1.6;
+  shStot(b, 0, -1, .45); b.uro = Math.max(b.uro || 0, .85);
   if (s.eff.F > 0) {
     const fl = s.flip[b.x < s.padX ? 0 : 1];
     a = t * 1.1 + (Math.random() - .5) * .35;
@@ -1896,7 +1903,7 @@ function shRacketTreff(b, R) {
   b.y = SH_PY - shRad(b);
   if (s.eff.G > 0) { b.vx = s.fart * Math.sin(a); b.vy = -s.fart * Math.cos(a); b.fast = true; b.off = b.x - s.padX; b.slippT = 2; return; }
   b.vx = s.fart * Math.sin(a); b.vy = -s.fart * Math.cos(a);
-  for (let i = 0; i < SH_N; i++) b.dv[i] += 7 * (Math.abs(Math.sin(i / SH_N * Math.PI * 2)) - .64);
+  for (let i = 0; i < SH_N; i++) b.dv[i] += 4 * (Math.abs(Math.sin(i / SH_N * Math.PI * 2)) - .64);
 }
 function shBevegBall(b, dt) {
   const s = sh, R = shRad(b), px = b.x, py = b.y;
@@ -1915,8 +1922,8 @@ function shBevegBall(b, dt) {
   const lag = b.kraftN > 0 ? b.kraft : 1;
   if (b.kraftN > 0 && --b.kraftN === 0) b.kraft = 1;
   // Hvert treff vasker det boblen berører. Den graver seg inn, som i Arkanoid.
-  // Bare slaps der den traff: den pløyer videre gjennom åra uten å sprette.
-  const bare = alle.every(q => q.myk);
+  // Bare slaps eller nesten vasket der den traff: den glir videre uten å sprette.
+  const bare = alle.every(q => q.myk || (q.liv < q.maks && q.liv <= Math.max(1, Math.floor(q.maks * .3))));
   shVask(b.x, b.y, R * 1.6, lag);
   if (bare) return;
   const fraSiden = px + R <= k.x || px - R >= k.x + k.w;
@@ -2325,7 +2332,11 @@ function shSteg(t) {
 addEventListener("resize", () => { if (sh) shOppsett(); });
 // Bare for automatisk testing lokalt (?autotest).
 if (location.search.includes("autotest")) { window.__sh = () => sh; window.__shOppdater = dt => { shOppdater(dt); if (sh) { sh.tid += dt; shPartikler(dt); } }; window.__shTreff = shTreff; window.__shSprekk = shSprekk; window.__shTegn = () => { shRens(); shTegn(performance.now()); }; }
-$("shatterKnapp").onclick = () => { ctx(); shatterStart((shLagret()["niva" + aktiv] || 0) % BRETT.length); };
+$("shatterKnapp").onclick = () => {
+  ctx();
+  if (!løsteBrett().length) { const t = $("scrubTekst"); t.textContent = "Solve at least one board in this collection first."; setTimeout(tegnScrubKnapp, 2500); return; }
+  shatterStart(shLagret()["niva" + aktiv] || 0);
+};
 
 
 // Behold et påbegynt brett når siden oppdateres.
