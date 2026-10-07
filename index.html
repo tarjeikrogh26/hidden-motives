@@ -318,7 +318,7 @@ body:has(.resultat.vis) #spill .linje{opacity:0;pointer-events:none;transition:o
   <div class="regel"><b>The race:</b> Your best score on each of the ten boards in a collection is added up. Finish #1 overall and you get the next collection for free. Anyone who takes first place later gets it too. Points: Easy (25 pieces) gives 10,000, Medium (49) 15,000, Hard (100) 20,000 and Chaos (144) 25,000 at normal speed. Be fast and you get up to double.</div>
   <div class="sammen" id="sammen"><p class="liten">Loading standings …</p></div>
   <p class="kreditt">© 2001–2026 Tarjei Krogh. All photography, music and art. <a href="https://kroghx.com" target="_blank" rel="noopener">kroghx.com</a></p>
-  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 0.58<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
+  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 0.59<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
 </section>
 
 <div class="ark" id="tidUtArk" hidden style="z-index:200001">
@@ -2763,22 +2763,22 @@ function shTreff(k, lag = 1, kilde = null) {
   const mx = k.x + k.w / 2, my = k.y + k.h / 2;
   if (kilde !== "syre" || Math.random() < .4) shSkum(mx, my, kilde ? 1 : 2, kilde === "syre");
   if (k.liv > 0) {
-    s.poeng += 5 * lag; shLyd("moekk", k.liv); shHud();
+    if (!s.bytte) s.poeng += 5 * lag; shLyd("moekk", k.liv); shHud();
     if (kilde !== "syre" && Math.random() < .3) shKlatt(mx + (Math.random() - .5) * k.w, k.y + k.h, .003 + Math.random() * .004, .08);
     return;
   }
   s.igjen--; s.kombo++;
-  s.poeng += (20 + 10 * k.maks) * Math.min(1 + Math.floor(s.kombo / 8), 5);
+  if (!s.bytte) s.poeng += (20 + 10 * k.maks) * Math.min(1 + Math.floor(s.kombo / 8), 5);
   k.glans = 1;
-  if (k.gave) { if (!s.kapsler.length) s.kapsler.push({ x: mx, y: my, t: k.gave, r: .044, vy: .04, fase: Math.random() * 6 }); k.gave = null; }
+  if (k.gave) { if (!s.kapsler.length && !s.bytte) s.kapsler.push({ x: mx, y: my, t: k.gave, r: .044, vy: .04, fase: Math.random() * 6 }); k.gave = null; }
   shLyd("ren"); shHud();
   if (Math.random() < .3) shDrypp(mx, k.y + k.h * .8);
   if (Math.random() < .45) shKlatt(mx, my, .004 + Math.random() * .006, .1);
   if (Math.random() < .3) shStjerne(k.x + Math.random() * k.w, k.y + Math.random() * k.h, .7);
-  if (kilde !== "syre" && s.smaa.length < 5 && Math.random() < .03) shSmaaNy(mx, my);
+  if (kilde !== "syre" && !s.bytte && s.smaa.length < 5 && Math.random() < .03) shSmaaNy(mx, my);
   // Edelsteiner er sjeldne, og bare én faller om gangen.
   if (kilde !== "syre" && !(s.sopp > 0) && !s.kapsler.length && s.sabot.length && Math.random() < .012) s.kapsler.push({ x: mx, y: my, t: "K", r: .044, vy: .04, fase: Math.random() * 6 });
-  if (kilde !== "syre" && !(s.sopp > 0) && !s.kapsler.length && Math.random() < .0055) {
+  if (kilde !== "syre" && !(s.sopp > 0) && !s.bytte && !s.kapsler.length && Math.random() < .0055) {
     const sum = KAPSLER.reduce((a, q) => a + q.vekt, 0); let r = Math.random() * sum, valgt = KAPSLER[0];
     for (const q of KAPSLER) { if (r < q.vekt) { valgt = q; break; } r -= q.vekt; }
     s.kapsler.push({ x: mx, y: my, t: valgt.t, r: .044, vy: .04, fase: Math.random() * 6 });
@@ -2899,6 +2899,7 @@ function shNyGjorme(x, y, rad, tak = 2) {
   }
   s.splatter.push({ x, y, r: rad * .5, t: 0 });
   if (n) shLyd("plopp");
+  return n;
 }
 function shInnkaps(e) {
   const s = sh, g = s.galaga;
@@ -3101,10 +3102,10 @@ function shSoppTreff(b, R, vx0, side) {
 // ALIEN SWITCH: du er bossen øverst og slipper store gjørmebomber. Flipperen spiller av seg selv og prøver å vaske.
 function shByttetStart() {
   const s = sh; s.byttePlan = false; s.sopp = 0;
-  s.bytte = { x: .5, bomber: [], bombeT: .3, figur: (Math.random() * 9) | 0, mål: .92 };
-  s.tekster.push({ txt: "ALIEN SWITCH!", x: .5, y: .42, liv: 2, farge: "#6dff8a" });
-  s.tekster.push({ txt: "YOU NOW CONTROL THE BOSS", x: .5, y: .5, liv: 3, farge: "#ffffff", liten: true });
-  s.tekster.push({ txt: "COVER THE WHOLE PAINTING · BEAT THE FLIPPER", x: .5, y: .55, liv: 3, farge: "#6dff8a", liten: true });
+  s.bytte = { x: .5, bomber: [], bombeT: .3, figur: (Math.random() * 9) | 0, mål: .92, tekstT: 0 };
+  s.tekster.push({ txt: "ALIEN SWITCH!", x: .5, y: .7, liv: 2, farge: "#6dff8a" });
+  // Ingen power-ups for flipperen mens du er bossen, og de den hadde, forsvinner.
+  s.eff = { W: 0, B: 0, G: 0, A: 0, F: 0, K: 0 }; s.kapsler = []; s.smaa = []; s.skudd = [];
   shLyd("boss");
 }
 function shByttetSteg(dt) {
@@ -3116,20 +3117,20 @@ function shByttetSteg(dt) {
   if (lav) s.padX = shClamp(s.padX + shClamp(lav.x - s.padX, -1.1 * dt, 1.1 * dt), s.padW / 2, 1 - s.padW / 2);
   B.bombeT -= dt;
   // Etter 40 sekunder blir bossen sliten: mindre bomber, og etter 80 sekunder ingen. Da vinner flipperen til slutt.
-  B.alder = (B.alder || 0) + dt; B.kraft = Math.max(0, 1 - Math.max(0, B.alder - 40) / 40);
+  B.alder = (B.alder || 0) + dt; B.tekstT += dt; B.kraft = Math.max(0, 1 - Math.max(0, B.alder - 40) / 40);
   if (B.alder > 40 && !B.sliten) { B.sliten = true; s.tekster.push({ txt: "THE BOSS IS TIRING", x: .5, y: .45, liv: 1.6, farge: "#ff7ad9" }); }
   if (B.bombeT <= 0 && B.kraft > 0) { B.bombeT = .26; B.bomber.push({ x: B.x + (Math.random() - .5) * .08, y: .12, vy: .2, mål: SH_TOPP + .05 + Math.random() * .9 }); }
   for (const q of B.bomber) {
     q.vy = Math.min(.8, q.vy + .6 * dt); q.y += q.vy * dt;
-    if (q.y >= q.mål) { q.borte = true; shNyGjorme(q.x, q.y, Math.max(.03, .095 * B.kraft), B.kraft > .5 ? 3 : 1); }
+    if (q.y >= q.mål) { q.borte = true; s.poeng += shNyGjorme(q.x, q.y, Math.max(.03, .085 * B.kraft), B.kraft > .5 ? 6 : 1); }
     // Treffer du flipperen, blir den skitten og treg.
     if (!q.borte && q.y > SH_PY - .02 && Math.abs(q.x - s.padX) < s.padW / 2) { q.borte = true; shSkitt(q.x, .03); }
   }
   B.bomber = B.bomber.filter(q => !q.borte);
   const dekket = s.igjen / s.klosser.length;
   if (dekket >= B.mål) {
-    s.bytte = null; s.poeng += 10000; shHud();
-    s.tekster.push({ txt: "COVERED! +10,000", x: .5, y: .45, liv: 1.8, farge: "#6dff8a" }); shLyd("glimt");
+    s.bytte = null; s.poeng += 2500; shHud();
+    s.tekster.push({ txt: "COVERED! +2,500", x: .5, y: .45, liv: 1.8, farge: "#6dff8a" }); shLyd("glimt");
     for (const b of s.baller) b.borte = false;
     shFerdig(); return;
   }
@@ -3142,12 +3143,18 @@ function shByttetTegn(x, f, s) {
   const gl = x.createRadialGradient(X, Y, R * .2, X, Y, R * 1.5); gl.addColorStop(0, "rgba(90,255,140,.35)"); gl.addColorStop(1, "rgba(90,255,140,0)");
   x.fillStyle = gl; x.fillRect(X - R * 1.5, Y - R * 1.5, R * 3, R * 3); x.restore();
   if (sp) { const sk = 2.3 * R / Math.max(sp.width, sp.height); x.drawImage(sp, X - sp.width * sk / 2, Y - sp.height * sk / 2, sp.width * sk, sp.height * sk); }
-  // Tid og hvor mye som er dekket.
-  const dekket = s.igjen / s.klosser.length;
-  x.fillStyle = "rgba(0,0,0,.55)"; x.fillRect(f * .05, SH_PY * f + f * .045, f * .9, f * .022);
-  x.fillStyle = "#6dff8a"; x.fillRect(f * .05, SH_PY * f + f * .045, f * .9 * Math.min(1, dekket / B.mål), f * .022);
-  x.font = `800 ${.034 * f}px "Syne", sans-serif`; x.textAlign = "center"; x.fillStyle = "#ffffff";
-  x.fillText(`YOU ARE THE BOSS · COVERED ${Math.round(dekket * 100)} % / ${Math.round(B.mål * 100)} %`, f / 2, SH_PY * f + f * .035);
+  // Under bossen: selvlysende tekst som står en stund og så blekner, og en tynn dekkmåler.
+  const dekket = s.igjen / s.klosser.length, tx = shClamp(X, f * .28, f * .72), ty = Y + R * 1.35;
+  const alfa = Math.max(.22, 1 - Math.max(0, B.tekstT - 5) / 6);
+  x.save(); x.textAlign = "center"; x.globalAlpha = alfa; x.shadowColor = "#3dff7a"; x.shadowBlur = 18; x.fillStyle = "#b9ffc9";
+  x.font = `800 ${.058 * f}px "Syne", sans-serif`; x.fillText("YOU ARE THE BOSS", tx, ty);
+  x.shadowBlur = 10; x.fillStyle = "#6dff8a"; x.font = `700 ${.028 * f}px "Syne", sans-serif`; x.fillText("COVER THE PAINTING · BEAT THE FLIPPER", tx, ty + f * .042);
+  x.restore();
+  const bw = f * .44, bx = tx - bw / 2, by = ty + f * .062;
+  x.fillStyle = "rgba(0,0,0,.5)"; x.fillRect(bx, by, bw, f * .012);
+  x.fillStyle = "#6dff8a"; x.fillRect(bx, by, bw * Math.min(1, dekket / B.mål), f * .012);
+  x.save(); x.font = `700 ${.024 * f}px "IBM Plex Mono", monospace`; x.textAlign = "center"; x.fillStyle = "rgba(185,255,201,.85)";
+  x.fillText(`${Math.round(dekket * 100)} % / ${Math.round(B.mål * 100)} %`, tx, by + f * .038); x.restore();
 }
 function shKapsel(t) {
   const s = sh, q = KAPSLER.find(k => k.t === t);
@@ -3520,7 +3527,7 @@ function shFerdig() {
   // Vasket flipperen alt mens du var bossen, vant den.
   if (sh.bytte) { sh.bytte = null; sh.tekster.push({ txt: "THE FLIPPER CLEANED IT", x: .5, y: .45, liv: 1.8, farge: "#ff7ad9" }); }
   const s = sh; s.tilstand = "ferdig"; s.ferdigT = performance.now();
-  const bonus = (s.liv - 1) * 500; s.poeng += bonus; shHud();
+  const bonus = (s.liv - 1) * 500, tidBonus = Math.max(0, Math.round((150 - s.tid) * 40 / 10) * 10); s.poeng += bonus + tidBonus; shHud();
   s.baller = []; s.kapsler = []; s.smaa = []; s.skudd = []; s.galaga = null; s.sabot = [];
   ferdigLyd(); dempMusikk(); s.glimt = s.tid; s.drypp = []; s.skum = []; s.klatter = [];
   for (const h of s.levende || []) { h.bule = 1; h.blink = 1; h.holder = null; }
@@ -3534,7 +3541,7 @@ function shFerdig() {
   ark = { tema: "scrub", img: s.img, fra: { x: shG.fx, y: shG.fy + SH_TOPP * shG.fw, w: shG.fw }, poeng: s.poeng, sluttT: performance.now(), gyldig: () => sh === s && s.tilstand === "ferdig",
     neste: () => { if (sh !== s) return; if (nesteI >= 0) shatterStart(nesteI, s.poeng, s.liv); else shAvslutt(); }, meny: shAvslutt };
   $("resTittel").textContent = BRETT[s.i].navn; $("resPoeng").textContent = "0 points";
-  $("resInfo").textContent = kode(s.i) + " · SCRUB IT" + (bonus ? " · +" + bonus.toLocaleString("en") + " for spare bubbles" : "");
+  $("resInfo").textContent = kode(s.i) + " · SCRUB IT · time " + fmt(Math.round(s.tid)) + (tidBonus ? " · time bonus +" + tidBonus.toLocaleString("en") : "") + (bonus ? " · +" + bonus.toLocaleString("en") + " for spare bubbles" : "");
   $("resRekord").textContent = nesteI >= 0 ? "All clean!" : "All clean! Every board in this collection is clean.";
   $("nesteKnapp").textContent = nesteI >= 0 ? "Next: " + BRETT[nesteI].navn + " →" : "Menu"; $("nesteKnapp").disabled = false;
   shLagreRekord(s.poeng).then(() => shArkListe(s.poeng));
