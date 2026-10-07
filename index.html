@@ -342,7 +342,7 @@ body:has(.resultat.vis) #spill .linje{opacity:0;pointer-events:none;transition:o
   <div class="regel"><b>The race:</b> Your best score on each of the ten boards in a collection is added up. Finish #1 overall and you get the next collection for free. Anyone who takes first place later gets it too. Points: Easy (25 pieces) gives 10,000, Medium (49) 15,000, Hard (100) 20,000 and Chaos (144) 25,000 at normal speed. Be fast and you get up to double.</div>
   <div class="sammen" id="sammen"><p class="liten">Loading standings …</p></div>
   <p class="kreditt">© 2001–2026 Tarjei Krogh. All photography, music and art. <a href="https://kroghx.com" target="_blank" rel="noopener">kroghx.com</a></p>
-  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 0.81<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
+  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 0.82<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
 </section>
 
 <div class="ark" id="tidUtArk" hidden style="z-index:200001">
@@ -3245,8 +3245,11 @@ function shMal(x0, y0, x1, y1) {
     const er = F * 1.15 - m.slit[k] * .5 + kn * .45, ee = er <= 0 ? 0 : er >= .25 ? 1 : (er / .25) * (er / .25) * (3 - 2 * er / .25);
     const a = ee * (.5 + .5 * Math.min(1, F * 1.5));
     A[i] = a; Wt[i] = W;
-    const db = Math.min(px, py, MR - 1 - px, MR - 1 - py) / MR, list = db < .058 ? Math.sin(Math.PI * Math.min(1, db / .058)) * .6 : 0;
-    H[i] = a * (.2 + .25 * L + m.hump[k] * (.7 + .3 * L) * (1 - list * .8) + list) * (.4 + .6 * F);
+    const db = Math.min(px, py, MR - 1 - px, MR - 1 - py) / MR, list = db < .058 ? Math.sin(Math.PI * Math.min(1, db / .058)) * .45 : 0;
+    // Korn: tre lag støy (fint, middels, smuler), sterkest i rammen.
+    const h1 = ((px * 374761393 + py * 668265263) ^ (px * 1274126177)) >>> 0, korn = (h1 % 1000) / 1000, h2 = (((px >> 1) * 2246822519 + (py >> 1) * 3266489917) >>> 0) % 1000 / 1000, h3 = (((px >> 2) * 1597334677 + (py >> 2) * 2654435761) >>> 0) % 1000 / 1000;
+    const smul = db < .075 ? (1 - db / .075) : 0, grus = smul * ((korn - .5) * .22 + (h2 - .5) * .3 + (h3 > .82 ? (h3 - .82) * 2.2 : 0));
+    H[i] = a * (.2 + .25 * L + m.hump[k] * (.7 + .3 * L) * (1 - list * .7) + list + grus) * (.4 + .6 * F);
   }
   const K = MR / 45, sy = .009, sx = .006;
   for (let py = y0; py < y1; py++) for (let px = x0; px < x1; px++) {
@@ -3266,11 +3269,15 @@ function shMal(x0, y0, x1, y1) {
     const tt = shClamp(t * .45 + m.hump[k] * .45, 0, 1);
     let R = mr + (lr - mr) * tt, G = mg + (lg - mg) * tt, B = mb + (lb - mb) * tt;
     const RM = sh.ramme, dbk = Math.min(px, py, MR - 1 - px, MR - 1 - py) / MR, wR = RM ? (dbk < .035 ? 1 : dbk < .07 ? (.07 - dbk) / .035 : 0) * .85 : 0;
-    if (wR > 0) { const tr = shClamp(tt * .6 + .4, 0, 1); R += (RM.mork[0] + (RM.lys[0] - RM.mork[0]) * tr - R) * wR; G += (RM.mork[1] + (RM.lys[1] - RM.mork[1]) * tr - G) * wR; B += (RM.mork[2] + (RM.lys[2] - RM.mork[2]) * tr - B) * wR; }
+    if (wR > 0) {
+      const hk = (((px * 2654435761) ^ (py * 1597334677)) >>> 0) % 1000 / 1000, hk2 = ((((px >> 1) * 40503) ^ ((py >> 1) * 2246822519)) >>> 0) % 1000 / 1000;
+      const tr = shClamp(tt * .55 + .25 + (hk2 - .5) * .5, 0, 1), fl = .8 + hk * .38;
+      R += ((RM.mork[0] + (RM.lys[0] - RM.mork[0]) * tr) * fl - R) * wR * .8; G += ((RM.mork[1] + (RM.lys[1] - RM.mork[1]) * tr) * fl - G) * wR * .8; B += ((RM.mork[2] + (RM.lys[2] - RM.mork[2]) * tr) * fl - B) * wR * .8;
+    }
     const gr = (R + G + B) / 3, mett = 1 + .5 * W, mork = (1 - .3 * W) * (.18 + 1.05 * dif);
     R = (gr + (R - gr) * mett) * mork; G = (gr + (G - gr) * mett) * mork; B = (gr + (B - gr) * mett) * mork;
     const sp2 = sp * sp, sp8 = sp2 * sp2 * sp2 * sp2, sp32 = sp8 * sp8 * sp8 * sp8;
-    const blank = vaat * (sp32 * 230 + sp8 * 35) * (1 + (wR > 0 && sh.ramme.metall ? wR * 1.6 : 0));
+    const blank = vaat * (sp32 * 230 + sp8 * 35) * (1 - wR * .55 + (wR > 0 && sh.ramme.metall ? wR * .35 : 0));
     const aa = a * (1 - .22 * W * W), ut = aa + sa * (1 - aa), f = aa / ut;
     d[o] = (R + blank) * f; d[o + 1] = (G + blank) * f; d[o + 2] = (B + blank * 1.05) * f; d[o + 3] = ut * 255;
   }
@@ -4948,7 +4955,11 @@ function shKantSteg(s, dt) {
   for (let c = 0; c < SH_KOL; c++) {
     const d = s.kantDrypp[c], k = s.klosser[(SH_RAD - 1) * SH_KOL + c], v = Math.min(1, k.vis || 0);
     d.slipp += dt;
-    if (v < .15 || k.liv <= 0 || d.av) d.L = Math.max(0, d.L - dt * .04);
+    if (v < .15 || k.liv <= 0 || d.av) {
+      // Kolonnen er vasket: dråpen som henger, slipper og faller i stedet for å forsvinne.
+      if (d.L > .012 && !d.av) { const r = (d.bredde + .25) * .3 / SH_KOL * Math.min(1, d.L / .05 + .4); s.kantFall.push({ x: d.x, y: SH_TOPP + 1 + d.L * .7, vy: .05, r, fase: Math.random() * 6, t: 0, fra: SH_TOPP + 1 }); d.L = 0; d.Lv *= .4; }
+      else d.L = Math.max(0, d.L - dt * .04);
+    }
     else {
       // Renner fortere jo tyngre dråpen blir.
       d.L += dt * d.fart * (.004 + d.L * .3) * Math.max(.5, v);
@@ -4971,7 +4982,7 @@ function shKantSteg(s, dt) {
 function shRammeJord(s) {
   if (s.rammeJord) return s.rammeJord;
   const R = s.ramme; if (!R) return s.jord;
-  const bl = (a, b) => a.map((v, k) => Math.round(v * .25 + b[k] * .75));
+  const bl = (a, b) => a.map((v, k) => Math.round(v * .5 + b[k] * .5));
   return s.rammeJord = { mork: bl(s.jord.mork, R.mork), lys: bl(s.jord.lys, R.lys) };
 }
 function shKantTegn(x, f, s, y0) {
@@ -4992,7 +5003,7 @@ function shKantTegn(x, f, s, y0) {
   // Dråper som renner over kanten: bred rot, en hals som blir tynnere, og en tung, blank dråpe nederst.
   shKantInit(s);
   for (let c = 0; c < SH_KOL; c++) {
-    const v = vis(c), d = s.kantDrypp[c], L = d.Lv * f; if (v < .1 || L < f * .003) continue;
+    const v = Math.max(vis(c), .35), d = s.kantDrypp[c], L = d.Lv * f; if (L < f * .003) continue;
     const p = Math.min(1, d.Lv / d.mal), X = d.x * f + Math.sin(s.tid * .7 + c * 1.9) * cw * .04 * p, w = cw * (d.bredde + .25) * Math.max(.6, v);
     const rb = w * (.17 + .13 * p), wn = w * (.5 - .26 * p), by = y0 + Math.max(rb * .6, L - rb), ny = y0 + Math.max(L * .4, L - rb * 1.7), hy = ny - y0;
     x.beginPath(); x.moveTo(X - w / 2, y0);
@@ -5001,11 +5012,25 @@ function shKantTegn(x, f, s, y0) {
     x.ellipse(X + (c % 3 - 1) * rb * .12, by, rb * (1 + (c % 4) * .06), rb * (1 + p * .22), (c % 5 - 2) * .08, Math.PI, 0, true);
     x.bezierCurveTo(X + rb, by - rb * .55, X + wn / 2, ny + rb * .3, X + wn / 2, ny);
     x.bezierCurveTo(X + wn / 2, ny - hy * .35, X + w * .4, y0 + hy * .35, X + w / 2, y0); x.closePath();
-    const dg = x.createLinearGradient(X - w / 2, 0, X + w / 2, 0); dg.addColorStop(0, `rgb(${m1},${m2},${m3})`); dg.addColorStop(.38, `rgb(${(l1 * .62 + m1 * .38) | 0},${(l2 * .62 + m2 * .38) | 0},${(l3 * .62 + m3 * .38) | 0})`); dg.addColorStop(1, `rgb(${m1 * .7 | 0},${m2 * .7 | 0},${m3 * .7 | 0})`);
+    const dg = x.createLinearGradient(X - w / 2, 0, X + w / 2, 0); dg.addColorStop(0, `rgb(${m1},${m2},${m3})`); dg.addColorStop(.38, `rgb(${(l1 * .4 + m1 * .6) | 0},${(l2 * .4 + m2 * .6) | 0},${(l3 * .4 + m3 * .6) | 0})`); dg.addColorStop(1, `rgb(${m1 * .6 | 0},${m2 * .6 | 0},${m3 * .6 | 0})`);
     x.fillStyle = dg; x.fill();
+    // Korn og smuler i dråpen, så den ser ut som våt jord og ikke glatt pålegg.
+    x.save(); x.clip();
+    const nK = Math.min(220, 40 + ((w * (L + rb)) / 3) | 0);
+    for (let j = 0; j < nK; j++) { const hx = Math.sin(c * 12.9 + j * 78.2) * 43758.5, hy = Math.sin(c * 4.1 + j * 37.7) * 24634.6, ux = hx - Math.floor(hx), uy = hy - Math.floor(hy);
+      const pxx = X - w / 2 + ux * w, pyy = y0 + uy * (L + rb), st = (j * 7) % 9, rr = Math.max(.35, w * (st === 8 ? .024 : .006 + .01 * st / 8));
+      x.fillStyle = j % 3 ? `rgba(${m1 * .4 | 0},${m2 * .4 | 0},${m3 * .4 | 0},${.55 + .12 * (j % 4)})` : `rgba(${Math.min(255, l1 * 1.15) | 0},${Math.min(255, l2 * 1.15) | 0},${Math.min(255, l3 * 1.1) | 0},.35)`;
+      if (rr > 1.2) { x.beginPath(); x.ellipse(pxx, pyy, rr, rr * .8, j, 0, 7); x.fill(); } else x.fillRect(pxx - rr, pyy - rr, rr * 2, rr * 2); }
+    x.restore();
+    // Smuler som henger fast langs kanten av halsen og dråpen.
+    for (let j = 0; j < 14; j++) { const hz = Math.sin(c * 7.3 + j * 19.1) * 31337.7, u = hz - Math.floor(hz), side = j % 2 ? 1 : -1;
+      const yy = y0 + u * (by - y0 + rb * .6), t = Math.min(1, (yy - y0) / Math.max(1, ny - y0)), hb = yy > ny ? rb * Math.sqrt(Math.max(0, 1 - ((yy - by) / rb) ** 2)) : (w / 2) * (1 - t) + (wn / 2) * t;
+      const rr = Math.max(.45, w * (.018 + .022 * ((j * 5) % 4) / 4)), xx = X + side * hb * (.9 + .12 * ((j * 3) % 5) / 5);
+      x.fillStyle = j % 4 ? `rgba(${m1 * .6 | 0},${m2 * .6 | 0},${m3 * .6 | 0},.85)` : `rgba(${l1 * .8 | 0},${l2 * .8 | 0},${l3 * .8 | 0},.75)`;
+      x.beginPath(); x.ellipse(xx, yy, rr, rr * .8, j, 0, 7); x.fill(); }
     // Våt glans: en lys stripe nedover halsen og et blankt punkt på dråpen.
-    x.strokeStyle = "rgba(255,255,255,.22)"; x.lineWidth = Math.max(.6, wn * .14); x.beginPath(); x.moveTo(X - w * .16, y0 + 1); x.quadraticCurveTo(X - wn * .2, ny, X - rb * .45, by - rb * .2); x.stroke();
-    x.fillStyle = "rgba(255,255,255,.28)"; x.beginPath(); x.ellipse(X - rb * .38, by - rb * .1, rb * .12 + .3, rb * .3 + .3, -.2, 0, 7); x.fill();
+    x.strokeStyle = "rgba(255,255,255,.1)"; x.lineWidth = Math.max(.6, wn * .14); x.beginPath(); x.moveTo(X - w * .16, y0 + 1); x.quadraticCurveTo(X - wn * .2, ny, X - rb * .45, by - rb * .2); x.stroke();
+    x.fillStyle = "rgba(255,255,255,.16)"; x.beginPath(); x.ellipse(X - rb * .38, by - rb * .1, rb * .12 + .3, rb * .3 + .3, -.2, 0, 7); x.fill();
   }
   // Dråper som har sluppet: dras ut av farten, med en tynn tråd det første øyeblikket.
   for (const q of s.kantFall || []) {
@@ -5029,13 +5054,25 @@ function shPapirKant(x, f, s, iy) {
   for (let j = 0; j <= N; j++) { const u = j / N; x.lineTo(f - u * f, iy + f - 1 - p(u, 2)); }
   for (let j = 0; j <= N; j++) { const u = j / N; x.lineTo(1 + p(u, 3), iy + f - u * f); }
   x.stroke(); x.restore();
-  // Våte flekker der rammen nettopp er vasket bort. De tørker på ca. fire sekunder.
+  // Der rammen nettopp er vasket bort: vått, flekkete papir og jordsmuler som sakte tørker bort (ca. 8 sek).
   for (const k of s.klosser) {
     if (!k.ramme || k.liv > 0 || k.vaatT == null) continue;
-    const a = 1 - (s.tid - k.vaatT) / 4; if (a <= 0) { k.vaatT = null; continue; }
-    const cx = (k.x + k.w / 2) * f, cy = (k.y + k.h / 2) * f, r = Math.max(k.w, k.h) * f * 1.1;
-    const g = x.createRadialGradient(cx, cy, 0, cx, cy, r); g.addColorStop(0, `rgba(92,64,34,${.38 * a})`); g.addColorStop(.7, `rgba(120,90,55,${.2 * a})`); g.addColorStop(1, "rgba(120,90,55,0)");
-    x.fillStyle = g; x.fillRect(cx - r, cy - r, r * 2, r * 2);
+    const u = (s.tid - k.vaatT) / 8; if (u >= 1) { k.vaatT = null; continue; }
+    const a = 1 - u * u, cx = (k.x + k.w / 2) * f, cy = (k.y + k.h / 2) * f, cw = k.w * f, ch = k.h * f, frø = k.r * 31 + k.c * 17;
+    // Flekkete vått papir: mange små, ujevne flekker i stedet for én rund.
+    for (let j = 0; j < 6; j++) {
+      const ox = Math.sin(frø + j * 2.3) * cw * .55, oy = Math.cos(frø * 1.7 + j * 1.9) * ch * .55, rr = Math.max(cw, ch) * (.35 + .3 * Math.abs(Math.sin(frø + j * 4.1)));
+      const g = x.createRadialGradient(cx + ox, cy + oy, 0, cx + ox, cy + oy, rr); g.addColorStop(0, `rgba(78,52,28,${.32 * a})`); g.addColorStop(.6, `rgba(105,78,46,${.16 * a})`); g.addColorStop(1, "rgba(105,78,46,0)");
+      x.fillStyle = g; x.fillRect(cx + ox - rr, cy + oy - rr, rr * 2, rr * 2);
+    }
+    // Jordsmuler som ligger igjen og forsvinner én etter én.
+    for (let j = 0; j < 14; j++) {
+      const liv = .35 + .65 * Math.abs(Math.sin(frø * 3 + j * 1.3)); if (u > liv) continue;
+      const ux = Math.sin(frø * 7.1 + j * 12.9) * 43758.5, uy = Math.sin(frø * 3.3 + j * 7.7) * 24634.6, sx = cx + (ux - Math.floor(ux) - .5) * cw * 1.6, sy = cy + (uy - Math.floor(uy) - .5) * ch * 1.6;
+      const rr = Math.max(.6, cw * (.03 + .05 * ((j * 7) % 5) / 5)), al = (1 - u / liv) * .8;
+      x.fillStyle = `rgba(52,36,22,${al})`; x.beginPath(); x.ellipse(sx, sy, rr, rr * .75, j, 0, 7); x.fill();
+      x.fillStyle = `rgba(170,140,100,${al * .5})`; x.beginPath(); x.arc(sx - rr * .3, sy - rr * .3, rr * .35, 0, 7); x.fill();
+    }
   }
 }
 function shTegn(t) {
