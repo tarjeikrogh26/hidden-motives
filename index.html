@@ -44,6 +44,9 @@ h1 .tittel span{color:var(--signal)}
 .modus[aria-selected="true"]{opacity:1;border-bottom-color:var(--signal)}
 #modusScrub .tittel{color:var(--signal)}
 .av-linje{font-family:var(--brod);color:var(--demp);margin:10px 0 0;font-size:14px}
+.av-linje a.signatur{text-decoration:none}
+.kreditt{margin:36px 0 0;font-size:13px;color:var(--demp);max-width:46ch}
+.kreditt a{color:var(--tekst);text-decoration:underline;text-decoration-color:var(--signal);text-underline-offset:3px}
 .av-linje .signatur{font-family:var(--display);font-weight:800;letter-spacing:.06em;color:var(--tekst);margin-left:.3em}
 .tid.slutt{color:#ff5a4a!important;animation:dunk .5s ease-in-out infinite}
 h1 .av{font-family:var(--brod);font-weight:400;font-size:.32em;letter-spacing:.02em;color:var(--demp);margin:0 .15em 0 .35em}
@@ -211,7 +214,7 @@ h1 .signatur{font-size:.55em;letter-spacing:.06em;white-space:nowrap}
         <button class="modus" id="modusPuslespill" role="tab"><span class="tittel">HIDDEN <span>MOTIVES</span></span></button>
         <button class="modus" id="modusScrub" role="tab"><span class="tittel">SCRUB</span></button>
       </h1>
-      <p class="av-linje">by <span class="signatur">KROGHX</span></p>
+      <p class="av-linje">by <a class="signatur" href="https://kroghx.com" target="_blank" rel="noopener">KROGHX</a></p>
       <p class="under" id="modusTekst"></p>
     </div>
   </div>
@@ -223,7 +226,8 @@ h1 .signatur{font-size:.55em;letter-spacing:.06em;white-space:nowrap}
   <div class="samlingsnavn" id="sammenTittel"></div>
   <div class="regel"><b>The race:</b> Your best score on each of the ten boards in a collection is added up. Finish #1 overall and you get the next collection for free. Anyone who takes first place later gets it too. Points: Easy (25 pieces) gives 10,000, Medium (49) 15,000, Hard (100) 20,000 and Chaos (144) 25,000 at normal speed. Be fast and you get up to double.</div>
   <div class="sammen" id="sammen"><p class="liten">Loading standings …</p></div>
-  <p class="liten" id="versjon" style="margin-top:28px;opacity:.5">Version 0.35</p>
+  <p class="kreditt">All photography, music and art by Tarjei Krogh, made since 2001. <a href="https://kroghx.com" target="_blank" rel="noopener">kroghx.com</a></p>
+  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 0.36</p>
 </section>
 
 <div class="ark" id="tidUtArk" hidden style="z-index:200001">
