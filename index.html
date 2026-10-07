@@ -1936,7 +1936,7 @@ $("tilbakeKnapp").onclick = () => (ark?.meny || tilMeny)();
 $("nesteKnapp").onclick = () => ark?.neste?.();
 addEventListener("resize", () => { if (spill) oppsett(); });
 // Panelet kan vokse etter at brettet er lagt ut (for eksempel når topplista er lastet). Da flyttes brettet.
-{ let sistH = 0, sistB = 0; new ResizeObserver(([e]) => { const r = e.target.getBoundingClientRect(); if (Math.abs(r.height - sistH) < 2 && Math.abs(r.width - sistB) < 2) return; sistH = r.height; sistB = r.width; if (spill && !spill.slutt && !$("spill").hidden) oppsett(); }).observe(document.querySelector(".linje")); }
+if (window.ResizeObserver) { let sistH = 0, sistB = 0; new ResizeObserver(([e]) => { const r = e.target.getBoundingClientRect(); if (Math.abs(r.height - sistH) < 2 && Math.abs(r.width - sistB) < 2) return; sistH = r.height; sistB = r.width; if (spill && !spill.slutt && !$("spill").hidden) oppsett(); }).observe(document.querySelector(".linje")); }
 
 // ---------- SCRUB: såpebobler vasker møkka av kunstverket ----------
 // Bildet ligger under et lag med møkk. 864 små felt teller treffene, men møkka tegnes som ett sammenhengende lag.
