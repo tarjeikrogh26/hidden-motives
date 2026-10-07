@@ -341,7 +341,7 @@ body:has(.resultat.vis) #spill .linje{opacity:0;pointer-events:none;transition:o
   <div class="regel"><b>The race:</b> Your best score on each of the ten boards in a collection is added up. Finish #1 overall and you get the next collection for free. Anyone who takes first place later gets it too. Points: Easy (25 pieces) gives 10,000, Medium (49) 15,000, Hard (100) 20,000 and Chaos (144) 25,000 at normal speed. Be fast and you get up to double.</div>
   <div class="sammen" id="sammen"><p class="liten">Loading standings …</p></div>
   <p class="kreditt">© 2001–2026 Tarjei Krogh. All photography, music and art. <a href="https://kroghx.com" target="_blank" rel="noopener">kroghx.com</a></p>
-  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 0.73<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
+  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 0.74<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
 </section>
 
 <div class="ark" id="tidUtArk" hidden style="z-index:200001">
@@ -1270,7 +1270,9 @@ async function startSpill(i, n, gjenoppta) {
   $("hudKode").textContent = kode(i); $("hudNavn").textContent = BRETT[i].navn;
   if (!gjenoppta || musikkØnske !== BRETT[i].id) spillMusikk(BRETT[i].id);
   spill.hint = HINT_ANTALL; visHintKnapp();
-  spill.tilt = 2; visTilt(); spill.hendelser = gjestekort(o.n); spill.brann = null;
+  spill.tilt = 2; visTilt();
+  // Beta: Krogh skal alltid kunne prøve TILT, MAGNET og HINT to ganger hver (2×2 + 2×3 + 2×1 = 12). Ved lansering: fjernes.
+  if (BETA) settCredits(Math.max(credits(), 12)); spill.hendelser = gjestekort(o.n); spill.brann = null;
   spill.liste = husListe(i, o.n);
   hentListe(i, o.n).then(l => { if (spill && spill.brett === i && spill.n === o.n) spill.liste = l; });
   oppsett();
@@ -1387,7 +1389,7 @@ function kast(b, heldig) {
   løftes.delete(b); b.z = ++sp.ztopp;
   const fx = b.x, fy = b.y, t0 = performance.now(), varighet = (380 + Math.hypot((mx - fx) * geo.bredde, (my - fy) * geo.hoyde) * .25) * 1.1;
   const r0 = b.rot || 0, rMål = heldig ? 0 : (Math.random() - .5) * 24, spinn = (Math.random() < .5 ? -1 : 1) * (70 + Math.random() * 140);
-  const vend = !heldig && !b.bak && Math.random() < .18;
+  const vend = !heldig && !b.bak && Math.random() < .18 && (sp.vendKvote == null || sp.vendKvote-- > 0);
   if (lydPa) { tone(420, 0, .07, .012, "triangle", .6, .4); tone(840, .02, .05, .006, "sine", .6, .4); }
   const steg = t => {
     if (spill !== sp || !b.el.isConnected) return;
@@ -1912,7 +1914,7 @@ function tikk() {
     if (!(b.svidd > 0) || spill.brann?.ild.has(b.id)) continue;
     // Svartsvidd gror saktere enn litt svidd.
     b.svidd = Math.max(0, b.svidd - (b.svidd > .55 ? .011 : .025));
-    if (Math.abs((b.sviddTegnet ?? 1) - b.svidd) > .04 || b.svidd === 0) { b.sviddTegnet = b.svidd; tegnBit(b); plasser(b); }
+    if (Math.abs((b.sviddTegnet ?? 1) - b.svidd) > .015 || b.svidd === 0) { b.sviddTegnet = b.svidd; tegnBit(b); plasser(b); }
   }
   visMal(s);
 }
@@ -2016,6 +2018,7 @@ function tilt(dino) {
   const bord = $("bord"); bord.classList.remove("rist"); void bord.offsetWidth; bord.classList.add("rist"); setTimeout(() => bord.classList.remove("rist"), 800);
   if (lydPa) [0, dino ? .5 : null, dino ? 1 : null].forEach(t => { if (t == null) return; tone(46, t, .45, .14, "sine", .9, .3); tone(92, t, .12, .05, "triangle", .9, .2); });
   const løse = sp.biter.filter(b => !b.ferdig && !b.iBunke && !b.lander && !b.el.classList.contains("drar"));
+  sp.vendKvote = 1 + (Math.random() < .5); setTimeout(() => { if (spill === sp) sp.vendKvote = null; }, (dino ? 450 : 150) + løse.length * 45 + 400);
   løse.forEach((b, j) => setTimeout(() => { if (spill === sp && !b.ferdig) kast(b, Math.random() < HELDIG * 1.3); }, (dino ? 450 : 150) + j * 45));
 }
 // PUZZLE BREAK: 1–3 brikker som lå på plass, rømmer og hopper ned i bunken.
@@ -2143,16 +2146,16 @@ function brannSteg(t) {
   for (const [id, v] of [...B.ild]) {
     const b = bitAv(id); if (b.iBunke || b.lander) { B.ild.delete(id); continue; }
     let ny = Math.min(1, v + .9 * dt);
-    if (B.slange) { const [cx, cy] = brannPos(b); if (Math.hypot(cx - B.slange.x, cy - B.slange.y) < Math.max(geo.bw, geo.bh) * 1.25) ny -= 2.6 * dt; }
+    if (B.slange) { const [cx, cy] = brannPos(b); if (Math.hypot(cx - B.slange.x, cy - B.slange.y) < Math.max(geo.bw, geo.bh) * 1.25) ny -= 1.8 * dt; }
     if (ny <= 0) { B.ild.delete(id); tegnBit(b); plasser(b); continue; }
-    B.ild.set(id, ny); b.svidd = Math.min(1, (b.svidd || 0) + ny * dt * .17);
+    B.ild.set(id, ny); b.svidd = Math.min(1, (b.svidd || 0) + ny * dt * .24);
     if (ny > .35) {
       const [bx, by] = brannPos(b), nær = Math.max(geo.bw, geo.bh) * 1.05;
       for (const n of sp.biter) {
         if (n === b || n.iBunke || n.lander || B.ild.has(n.id) || !(n.ferdig || n.el.isConnected)) continue;
         const [nx, ny2] = brannPos(n), d = Math.hypot(nx - bx, ny2 - by);
         // Rett over eller under: tar fyr fort. Inntil: litt saktere.
-        if (d < nær && Math.random() < (d < nær * .55 ? 1.7 : .9) * dt) B.ild.set(n.id, .5);
+        if (d < nær && Math.random() < (d < nær * .55 ? 1.25 : .65) * dt) B.ild.set(n.id, .5);
       }
     }
   }
@@ -2160,7 +2163,7 @@ function brannSteg(t) {
   B.tegnT -= dt; if (B.tegnT <= 0) { B.tegnT = .4; for (const id of B.ild.keys()) { tegnBit(bitAv(id)); plasser(bitAv(id)); } }
   const tapt = sp.biter.reduce((a, b) => a + (b.svidd || 0), 0) / sp.biter.length;
   tegnBrann(B, dt, t);
-  if (tapt > .4) { B.ild.clear(); sp.brann = null; brannRAF = 0; tegnBrann({ ild: new Map(), partikler: [], plask: [], damp: [] }, 0, t); tidUt("Burned", "Too much of the picture went up in flames. It can't be approved."); return; }
+  if (tapt > .5) { B.ild.clear(); sp.brann = null; brannRAF = 0; tegnBrann({ ild: new Map(), partikler: [], plask: [], damp: [] }, 0, t); tidUt("Burned", "Too much of the picture went up in flames. It can't be approved."); return; }
   if (!B.ild.size) {
     if (!B.ute) {
       B.ute = true;
@@ -2194,7 +2197,7 @@ function plask(px, py) {
   for (const [id, v] of B.ild) {
     const b = spill.biter[id], [cx, cy] = brannPos(b);
     if (Math.hypot(cx - px, cy - py) > R * 2) continue;
-    traff++; const ny = v - .5;
+    traff++; const ny = v - .35;
     for (let n = 0; n < 5; n++) B.damp.push({ x: cx + (Math.random() - .5) * geo.bw * .8, y: cy + (Math.random() - .5) * geo.bh * .5, r: 9 + Math.random() * 12, liv: 1, vy: -(25 + Math.random() * 35) });
     if (ny <= 0) { B.ild.delete(id); tegnBit(b); plasser(b); } else B.ild.set(id, ny);
   }
@@ -2211,6 +2214,8 @@ function vannLyd(styrke = 1) {
   const g = c.createGain(); g.gain.value = .32 * styrke; src.connect(lp).connect(hp).connect(g); g.connect(c.destination);
   const r = romInn(); if (r) { const gv = c.createGain(); gv.gain.value = .35; g.connect(gv).connect(r); }
   src.start(c.currentTime);
+  { const o = c.createOscillator(), go = c.createGain(), t = c.currentTime; o.type = "sine"; o.frequency.setValueAtTime(190, t); o.frequency.exponentialRampToValueAtTime(70, t + .22);
+    go.gain.setValueAtTime(0, t); go.gain.linearRampToValueAtTime(.09 * styrke, t + .012); go.gain.exponentialRampToValueAtTime(.0005, t + .3); o.connect(go); go.connect(c.destination); if (r) { const gv = c.createGain(); gv.gain.value = .4; go.connect(gv).connect(r); } o.start(t); o.stop(t + .32); }
   // Små dråper som faller etter: korte, myke «plopp» som stiger litt i tone.
   for (let n = 0; n < 8; n++) {
     const t = c.currentTime + .08 + Math.random() * .7, o = c.createOscillator(), gg = c.createGain(), f0 = 450 + Math.random() * 850;
@@ -2317,7 +2322,7 @@ function sprut(px, py, d) {
   for (const [id, v] of B.ild) {
     const b = spill.biter[id], [cx, cy] = brannPos(b);
     if (Math.hypot(cx - px, cy - py) > R * 1.5) continue;
-    const ny = v - .22;
+    const ny = v - .15;
     if (Math.random() < .5) B.damp.push({ x: cx + (Math.random() - .5) * geo.bw * .8, y: cy + (Math.random() - .5) * geo.bh * .5, r: 8 + Math.random() * 10, liv: 1, vy: -(25 + Math.random() * 35) });
     if (ny <= 0) { B.ild.delete(id); tegnBit(b); plasser(b); } else B.ild.set(id, ny);
   }
