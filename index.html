@@ -202,7 +202,20 @@ h1 .signatur{font-size:.55em;letter-spacing:.06em;white-space:nowrap}
 #stovLag{position:fixed;inset:0;pointer-events:none;z-index:285}
 @media (max-height:520px){.resultat h2{font-size:18px}.resultat .poeng{font-size:26px}.ark-hode{font-size:15px}}
 .resultat h2{font-family:var(--display);margin:0;font-size:clamp(19px,2.6vw,26px);line-height:1.1;text-wrap:balance}
-#spill:has(.resultat.vis) .linje{opacity:0;pointer-events:none;transition:opacity .4s ease}
+body:has(.resultat.vis) #spill .linje{opacity:0;pointer-events:none;transition:opacity .4s ease}
+/* Rød tone for HIDDEN, dypblå for SCRUB IT. */
+.resultat.tema-pusle{background:radial-gradient(ellipse at 50% 0%,rgba(70,16,20,.97),rgba(10,7,7,.985) 65%)}
+.resultat.tema-scrub{background:radial-gradient(ellipse at 50% 0%,rgba(10,28,78,.97),rgba(5,7,14,.985) 65%)}
+.resultat.tema-pusle .ark-hode{color:#ff5a6a;text-shadow:0 0 12px rgba(255,90,106,.6)}
+.resultat.tema-pusle .ark-hode span{color:#ffd23a;text-shadow:0 0 12px rgba(255,210,58,.5)}
+.resultat.tema-scrub .ark-hode{color:#4fa8ff;text-shadow:0 0 12px rgba(79,168,255,.65)}
+.resultat.tema-scrub .ark-hode span{color:#a8ecff;text-shadow:0 0 12px rgba(168,236,255,.5)}
+.resultat.tema-pusle .rad:nth-child(3n+1){color:#ff5a6a}.resultat.tema-pusle .rad:nth-child(3n+2){color:#ff917e}.resultat.tema-pusle .rad:nth-child(3n+3){color:#ff4d8a}
+.resultat.tema-scrub .rad:nth-child(3n+1){color:#4fa8ff}.resultat.tema-scrub .rad:nth-child(3n+2){color:#8adcff}.resultat.tema-scrub .rad:nth-child(3n+3){color:#6f86ff}
+.resultat.tema-scrub .rad.meg .n,.resultat.tema-scrub .rad input{color:#a8ecff;border-bottom-color:#a8ecff}
+.resultat.tema-scrub .rad.meg{background:rgba(79,168,255,.16);animation-name:arkBlinkBla}
+@keyframes arkBlinkBla{50%{background:rgba(79,168,255,.38)}}
+.resultat.tema-scrub .poeng{color:#7fd6ff}
 .poeng{font-family:var(--tall);font-size:34px;color:var(--signal);line-height:1;font-variant-numeric:tabular-nums;display:inline-block;transform-origin:left center}
 .poeng.dunk{animation:dunk .14s ease-out}
 @keyframes dunk{50%{transform:scale(1.08);text-shadow:0 0 14px rgba(255,190,60,.8)}}
@@ -270,7 +283,7 @@ h1 .signatur{font-size:.55em;letter-spacing:.06em;white-space:nowrap}
   <div class="regel"><b>The race:</b> Your best score on each of the ten boards in a collection is added up. Finish #1 overall and you get the next collection for free. Anyone who takes first place later gets it too. Points: Easy (25 pieces) gives 10,000, Medium (49) 15,000, Hard (100) 20,000 and Chaos (144) 25,000 at normal speed. Be fast and you get up to double.</div>
   <div class="sammen" id="sammen"><p class="liten">Loading standings …</p></div>
   <p class="kreditt">© 2001–2026 Tarjei Krogh. All photography, music and art. <a href="https://kroghx.com" target="_blank" rel="noopener">kroghx.com</a></p>
-  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 0.46<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
+  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 0.47<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
 </section>
 
 <div class="ark" id="tidUtArk" hidden style="z-index:200001">
@@ -331,7 +344,7 @@ h1 .signatur{font-size:.55em;letter-spacing:.06em;white-space:nowrap}
     </div>
     </div>
     <div class="ark-hoyre">
-    <div class="ark-hode">HIGH SCORES<span>TOP 100</span></div>
+    <div class="ark-hode" id="arkHode">HIDDEN<span>TOP 100</span></div>
     <div class="liste" id="liste"><p class="liten">Loading leaderboard …</p></div>
     <button class="sekundar" id="visAlle" hidden>Show all</button>
     </div>
@@ -651,7 +664,7 @@ function vikForPanel() {
 }
 function nullstillBord() { const b = $("bord"); b.classList.remove("vik"); b.style.transform = ""; }
 function stoppFest() {
-  nullstillBord();
+  nullstillBord(); ark = null; $("resultat").classList.remove("vis");
   arkTimere.forEach(clearTimeout); arkTimere = []; cancelAnimationFrame(stovRAF); stovRAF = 0; cancelAnimationFrame(rullRAF); rullRAF = 0;
   const sl = $("stovLag"); sl.getContext("2d").clearRect(0, 0, sl.width, sl.height);
   $("arkPlass").classList.remove("borte"); $("arkBilde").style.opacity = "";
@@ -662,10 +675,14 @@ function stoppFest() {
   stoppPad();
 }
 // ---------- arkadelista: bildet krymper opp, lista ruller ned til deg, bildet blir til gullstøv ----------
-let arkTimere = [], stovRAF = 0, rullRAF = 0, rullet = false;
+let arkTimere = [], stovRAF = 0, rullRAF = 0, rullet = false, ark = null;
+// Lista, myntene og støvet ligger rett i body, så de virker både fra puslespillet og SCRUB IT.
+for (const id of ["mynter", "resultat", "stovLag"]) document.body.appendChild($(id));
 function visArkade() {
-  const sp = spill, res = $("resultat");
-  if (!sp || !sp.slutt || sp.tapt || res.classList.contains("vis")) return;
+  const a = ark, sp = a, res = $("resultat");
+  if (!a || !a.gyldig() || res.classList.contains("vis")) return;
+  res.classList.toggle("tema-scrub", a.tema === "scrub"); res.classList.toggle("tema-pusle", a.tema !== "scrub");
+  $("arkHode").innerHTML = (a.tema === "scrub" ? "SCRUB IT" : "HIDDEN") + "<span>TOP 100</span>";
   const kanv = $("arkBilde"), plass = $("arkPlass");
   plass.classList.remove("borte"); kanv.style.opacity = "";
   res.classList.add("vis"); rullet = false; $("liste").scrollTop = 0;
@@ -675,18 +692,18 @@ function visArkade() {
   const dpr = Math.min(devicePixelRatio || 1, 2);
   kanv.width = Math.round(w * dpr); kanv.height = Math.round(h * dpr); kanv.style.width = w + "px"; kanv.style.height = h + "px";
   kanv.getContext("2d").drawImage(sp.img, 0, 0, kanv.width, kanv.height);
-  const kr = kanv.getBoundingClientRect(), s = geo.bredde / w;
-  kanv.style.transition = "none"; kanv.style.transform = `translate(${geo.x0 - kr.left}px, ${geo.y0 - kr.top}px) scale(${s})`;
+  const kr = kanv.getBoundingClientRect(), s = a.fra.w / w;
+  kanv.style.transition = "none"; kanv.style.transform = `translate(${a.fra.x - kr.left}px, ${a.fra.y - kr.top}px) scale(${s})`;
   void kanv.offsetWidth;
   kanv.style.transition = "transform .9s cubic-bezier(.3,.7,.3,1)"; kanv.style.transform = "";
-  arkTimere.push(setTimeout(() => { if (spill === sp) tellOpp(sp.poengNaa || 0); }, 950));
-  arkTimere.push(setTimeout(() => { if (spill === sp) rullTilMeg(); }, 1300));
-  arkTimere.push(setTimeout(() => { if (spill === sp) sprengBilde(); }, 5600));
+  arkTimere.push(setTimeout(() => { if (ark === a) tellOpp(a.poeng || 0); }, 950));
+  arkTimere.push(setTimeout(() => { if (ark === a) rullTilMeg(); }, 1300));
+  arkTimere.push(setTimeout(() => { if (ark === a) sprengBilde(); }, 5600));
 }
 // Trykk mens bildet står alene: rett til lista. Trykk på bildet øverst: spreng det nå.
 document.addEventListener("pointerdown", e => {
-  if (!spill || !spill.slutt || spill.tapt) return;
-  if (!$("resultat").classList.contains("vis")) { if (performance.now() - (spill.sluttT || 0) > 600) visArkade(); return; }
+  if (!ark || !ark.gyldig()) return;
+  if (!$("resultat").classList.contains("vis")) { if (performance.now() - (ark.sluttT || 0) > 600) visArkade(); return; }
   if (e.target === $("arkBilde")) sprengBilde();
 });
 // Lista ruller rolig ned til plassen din. Tar du i lista selv, stopper den.
@@ -1530,7 +1547,8 @@ async function ferdig() {
   $("resTittel").textContent = BRETT[spill.brett].navn;
   $("resInfo").dataset.kode = kode(spill.brett) + " · " + VALG.find(v => v.n === spill.n).navn + " · " + spill.n + " pieces";
   $("resPoeng").textContent = "0 points";
-  spill.poengNaa = p;
+  { const sp = spill; ark = { tema: "pusle", img: sp.img, fra: { x: geo.x0, y: geo.y0, w: geo.bredde }, poeng: p, sluttT: sp.sluttT, gyldig: () => spill === sp && !!sp.slutt && !sp.tapt,
+    neste: () => { if (spill !== sp) return; const n = nesteUlost(sp.brett); valgtAntall = sp.n; tilMeny(); if (n >= 0) visStartark(n); }, meny: tilMeny }; }
   $("resInfo").textContent = $("resInfo").dataset.kode + " · time " + fmt(s);
   $("resRekord").textContent = gammel ? (p > gammel.poeng ? "New personal best. Previous: " + gammel.poeng.toLocaleString("en") + "." : "Your best is " + gammel.poeng.toLocaleString("en") + ".") : "First time on this board.";
   visAlle = false; $("visAlle").textContent = "Show all";
@@ -1717,14 +1735,8 @@ function tilMeny() {
   tegnMeny();
 }
 $("utKnapp").onclick = tilMeny;
-$("tilbakeKnapp").onclick = tilMeny;
-$("nesteKnapp").onclick = () => {
-  if (!spill) return;
-  const neste = nesteUlost(spill.brett);
-  valgtAntall = spill.n;
-  tilMeny();
-  if (neste >= 0) visStartark(neste);
-};
+$("tilbakeKnapp").onclick = () => (ark?.meny || tilMeny)();
+$("nesteKnapp").onclick = () => ark?.neste?.();
 addEventListener("resize", () => { if (spill) oppsett(); });
 
 // ---------- SCRUB: såpebobler vasker møkka av kunstverket ----------
@@ -3063,18 +3075,15 @@ function shFerdig() {
   if (!fremdrift[id].scrub || s.poeng > fremdrift[id].scrub.poeng) fremdrift[id].scrub = { poeng: s.poeng };
   skrivLokal(fremdrift);
   let nesteI = -1; for (let j = s.i + 1; j < BRETT.length; j++) if (erApen(j)) { nesteI = j; break; }
-  shLagreRekord(s.poeng);
-  setTimeout(() => {
-    if (sh !== s) return;
-    let igjen = 8;
-    const neste = () => { if (sh === s && s.tilstand === "ferdig" && nesteI >= 0) shatterStart(nesteI, s.poeng, s.liv); };
-    const tekst = "All clean! " + s.poeng.toLocaleString("en") + " points" + (bonus ? " (+" + bonus + " for spare bubbles)" : "") + ".";
-    if (nesteI < 0) { shMelding(BRETT[s.i].navn, tekst + " Every board in this collection is clean.", [["Menu", shAvslutt, true]], true); shVisToppliste(s.poeng); return; }
-    shMelding(BRETT[s.i].navn, tekst + " Next: " + BRETT[nesteI].navn + ".", [["Next board →", neste, true], ["Menu", shAvslutt]], true);
-    shVisToppliste(s.poeng);
-    const knapp = $("shKnapper").firstElementChild;
-    const tell = setInterval(() => { if (sh !== s || s.tilstand !== "ferdig") return clearInterval(tell); igjen--; knapp.textContent = "Next board → " + igjen; if (igjen <= 0) { clearInterval(tell); neste(); } }, 1000);
-  }, 2600);
+  // Se på bildet i fred. Trykk, eller vent litt, så krymper det og SCRUB IT TOP 100 kommer.
+  ark = { tema: "scrub", img: s.img, fra: { x: shG.fx, y: shG.fy + SH_TOPP * shG.fw, w: shG.fw }, poeng: s.poeng, sluttT: performance.now(), gyldig: () => sh === s && s.tilstand === "ferdig",
+    neste: () => { if (sh !== s) return; if (nesteI >= 0) shatterStart(nesteI, s.poeng, s.liv); else shAvslutt(); }, meny: shAvslutt };
+  $("resTittel").textContent = BRETT[s.i].navn; $("resPoeng").textContent = "0 points";
+  $("resInfo").textContent = kode(s.i) + " · SCRUB IT" + (bonus ? " · +" + bonus.toLocaleString("en") + " for spare bubbles" : "");
+  $("resRekord").textContent = nesteI >= 0 ? "All clean!" : "All clean! Every board in this collection is clean.";
+  $("nesteKnapp").textContent = nesteI >= 0 ? "Next: " + BRETT[nesteI].navn + " →" : "Menu"; $("nesteKnapp").disabled = false;
+  shLagreRekord(s.poeng).then(() => shArkListe(s.poeng));
+  arkTimere.push(setTimeout(visArkade, 7000));
 }
 // Toppliste for SCRUB: beste poeng per samling, lagret i eget rekord-dokument.
 const SH_HUS = HUS.map((navn, j) => ({ id: "hus-" + navn, hus: true, navn, p: Math.round(600000 * Math.pow(0.7, j) / 100) * 100 }));
@@ -3105,6 +3114,29 @@ async function shVisToppliste(naa) {
     const pp = document.createElement("span"); pp.className = "p"; pp.textContent = r.p.toLocaleString("en");
     rad.append(a, n, pp); el.appendChild(rad);
   });
+}
+// SCRUB IT TOP 100 i arkadelista, med navnefelt på din rad.
+async function shArkListe(naa) {
+  const el = $("liste"); el.innerHTML = '<p class="liten">Loading leaderboard …</p>';
+  let ekte = [];
+  if (db) { try { const f = "sh_" + aktiv; const sn = await db.collection("rekorder").where(f, ">", 0).orderBy(f, "desc").limit(100).get(); ekte = sn.docs.map(d => ({ id: d.id, navn: d.data().navn, p: d.data()[f] })); } catch {} }
+  const best = Math.max(naa, shLagret()["best" + aktiv] || 0);
+  ekte = ekte.filter(r => r.id !== minId);
+  const liste = ekte.concat(SH_HUS, [{ id: "meg", meg: true, p: best }]).sort((a, b) => b.p - a.p);
+  const ider = ekte.map(r => r.id), prof = bruker && ider.length ? await bruker.profiles(ider) : {};
+  el.replaceChildren();
+  const plass = liste.findIndex(r => r.meg), vis = liste.slice(0, 100).map((r, i) => [r, i]); if (plass >= 100) vis.push([liste[plass], plass]);
+  for (const [r, i] of vis) {
+    const rad = document.createElement("div"); rad.className = "rad" + (r.meg ? " meg" : "") + (r.hus ? " hus" : "");
+    const nr = document.createElement("span"); nr.className = "r"; nr.textContent = i + 1;
+    const av = document.createElement("span");
+    let n = document.createElement("span"); n.className = "n"; n.textContent = r.meg ? (mittNavn || "You") : visNavn(r, prof[r.id]);
+    if (r.meg) { const n0 = n; n0.onclick = () => n0.replaceWith(navnFelt(n0)); if (!mittNavn) n = navnFelt(n); }
+    const p = document.createElement("span"); p.className = "p"; p.textContent = r.p.toLocaleString("en");
+    const t = document.createElement("span"); t.className = "t";
+    rad.append(nr, av, n, p, t); el.appendChild(rad);
+  }
+  if ($("resultat").classList.contains("vis")) rullTilMeg();
 }
 function shAvslutt() { cancelAnimationFrame(shRAF); sh = null; shMelding(); $("shatter").hidden = true; tilMeny(); }
 $("shUt").onclick = shAvslutt;
