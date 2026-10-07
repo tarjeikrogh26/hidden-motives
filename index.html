@@ -209,6 +209,7 @@ h1 .signatur{font-size:.55em;letter-spacing:.06em;white-space:nowrap}
   <div class="samlingsnavn" id="sammenTittel"></div>
   <div class="regel"><b>The race:</b> Your best score on each of the ten boards in a collection is added up. Finish #1 overall and you get the next collection for free. Anyone who takes first place later gets it too. Points: Easy (25 pieces) gives 10,000, Medium (49) 15,000, Hard (100) 20,000 and Chaos (144) 25,000 at normal speed. Be fast and you get up to double.</div>
   <div class="sammen" id="sammen"><p class="liten">Loading standings …</p></div>
+  <p class="liten" id="versjon" style="margin-top:28px;opacity:.5">Version 0.28</p>
 </section>
 
 <div class="ark" id="startark" hidden>
@@ -1171,23 +1172,27 @@ const SH_KOL = 24, SH_RAD = 36, SH_TOPP = 0.03, SH_R = 0.016, SH_TYKKEST = 20;
 // Feltets høyde følger skjermen, så staven står nær bunnen. Settes i shOppsett.
 let SH_H = 1.45, SH_PY = 1.36;
 const KAPSLER = [
-  { t: "W", navn: "WIDE", farge: "#3aa0ff", vekt: 5 },
-  { t: "S", navn: "SLOW", farge: "#ff9a3c", vekt: 4 },
-  { t: "M", navn: "MORE BUBBLES", farge: "#36e0e0", vekt: 4 },
-  { t: "B", navn: "BIG BUBBLES", farge: "#2f5bff", vekt: 3 },
-  { t: "G", navn: "GLUE", farge: "#48d26a", vekt: 3 },
-  { t: "A", navn: "ACID", farge: "#d6ff3a", vekt: 2 },
-  { t: "F", navn: "FLIPPERS", farge: "#ff7ac8", vekt: 3 },
-  { t: "+", navn: "EXTRA BUBBLE", farge: "#f4f1ea", vekt: 1 },
+  { t: "W", navn: "WIDE", farge: "#3aa0ff", vekt: 5, edel: "blaa" },
+  { t: "S", navn: "SLOW", farge: "#ff9a3c", vekt: 4, edel: "blaa" },
+  { t: "M", navn: "MORE BUBBLES", farge: "#36e0e0", vekt: 4, edel: "solv" },
+  { t: "B", navn: "BIG BUBBLES", farge: "#5b84ff", vekt: 3, edel: "gull" },
+  { t: "G", navn: "GLUE", farge: "#48d26a", vekt: 3, edel: "blaa" },
+  { t: "A", navn: "ACID", farge: "#d6ff3a", vekt: 2, edel: "solv" },
+  { t: "F", navn: "FLIPPERS", farge: "#ff7ac8", vekt: 3, edel: "gull" },
+  { t: "+", navn: "EXTRA BUBBLE", farge: "#f4f1ea", vekt: 1, edel: "gull" },
 ];
-// Én jordtype per brett: lys og mørk tone.
+// Våt gjørme: lys og mørk tone. Hvert spill blander to tilfeldige typer.
 const SH_JORD = [
-  { lys: [156, 124, 90], mork: [70, 52, 36] },
-  { lys: [150, 143, 130], mork: [66, 62, 56] },
-  { lys: [112, 90, 68], mork: [40, 31, 24] },
-  { lys: [172, 108, 74], mork: [86, 46, 32] },
-  { lys: [130, 122, 80], mork: [52, 52, 33] },
+  { lys: [128, 96, 66], mork: [44, 30, 20] },
+  { lys: [112, 100, 84], mork: [38, 34, 28] },
+  { lys: [98, 82, 52], mork: [30, 26, 16] },
+  { lys: [140, 86, 56], mork: [52, 28, 18] },
+  { lys: [100, 98, 64], mork: [34, 36, 22] },
+  { lys: [84, 66, 50], mork: [22, 16, 12] },
 ];
+// Edelstenene i de store klattene: gull, blå og sølv. Fargen hinter om hva du får, men sier det ikke.
+const SH_EDEL = { gull: ["#fff1b8", "#e0a91c", "#6e4800"], blaa: ["#cfe6ff", "#2f7bff", "#0a2470"], solv: ["#ffffff", "#c9d1da", "#56606b"] };
+const SH_N = 18;
 let sh = null, shRAF = 0, shSist = 0, shG = null;
 const shClamp = (v, a, b) => Math.min(b, Math.max(a, v));
 function shLagret() { try { return JSON.parse(localStorage.getItem("sm-shatter") || "{}"); } catch { return {}; } }
@@ -1217,7 +1222,7 @@ async function shatterStart(niva, poeng = 0, liv = 3) {
   const i = niva % BRETT.length;
   const img = await hentBilde(BRETT[i].src);
   const tykk = shMoekk(niva);
-  const klosser = [];
+  const klosser = [], j1 = Math.floor(Math.random() * SH_JORD.length), j2 = (j1 + 1 + Math.floor(Math.random() * (SH_JORD.length - 1))) % SH_JORD.length;
   for (let r = 0; r < SH_RAD; r++) for (let c = 0; c < SH_KOL; c++) {
     const h = tykk[r * SH_KOL + c];
     klosser.push({ r, c, x: c / SH_KOL, y: SH_TOPP + r / SH_RAD, w: 1 / SH_KOL, h: 1 / SH_RAD, liv: h, maks: h, glans: 0, sist: -9 });
@@ -1227,11 +1232,12 @@ async function shatterStart(niva, poeng = 0, liv = 3) {
   sh = { niva, i, img, klosser, igjen: klosser.length, poeng, liv, fart, grunnfart: fart, maksFart: Math.min(1.6, fart + 0.6),
     padX: 0.5, padW: 0.19, baller: [], kapsler: [], tekster: [], drypp: [], skum: [], stjerner: [], ringer: [],
     eff: { W: 0, B: 0, G: 0, A: 0, F: 0 }, tilstand: "klar", kombo: 0, ferdigT: 0, tid: 0, lydSist: {},
-    jord: SH_JORD[(niva + aktiv * 2) % SH_JORD.length], skitten: new Set(), milepael: 0, glimt: -9, sprekkT: 0,
+    jord: SH_JORD[j1], jord2: SH_JORD[j2], skitten: new Set(), milepael: 0, glimt: -9, sprekkT: 0,
+    klatter: [], splatter: [], sigT: 0, flomT: 14, dryppT: 1, flomIgjen: Math.round(klosser.reduce((a, k) => a + k.liv, 0) * .08),
     skyllT: 0, skylling: false, spor: [], glod: 0, flip: [{ t: 9, ledd: 0.08 }, { t: 9, ledd: 0.08 }] };
   shNyBall();
   $("shNiva").textContent = "Level " + (niva + 1) + " · " + BRETT[i].navn;
-  shMelding("Tap to launch", "Slide your finger to move the light. Wash off the mud.");
+  shMelding("Tap to launch", "Slide your finger to move the light. Wash off the mud, and catch what falls out of it.");
   shOppsett(); shLagMoekk(); shHud();
   cancelAnimationFrame(shRAF); shSist = performance.now(); shRAF = requestAnimationFrame(shSteg);
 }
@@ -1271,37 +1277,39 @@ function shMoekk(niva) {
   return ut;
 }
 // Møkka som bilde: tekstur, småstein, humper og sprekker regnes ut én gang per brett.
+// Gjørma som bilde: tekstur, humper, flekker og drypp regnes ut én gang per spill. Ny hver gang.
 function shLagMoekk() {
   const s = sh, MR = Math.round(shClamp(shG.fw * shG.dpr * 0.6, 240, 480));
   const cv = document.createElement("canvas"); cv.width = cv.height = MR;
   const x = cv.getContext("2d");
-  const N = MR * MR, tekstur = new Float32Array(N), kant = new Float32Array(N), hump = new Float32Array(N), sprekk = new Float32Array(N);
+  const N = MR * MR, tekstur = new Float32Array(N), kant = new Float32Array(N), hump = new Float32Array(N), blanding = new Float32Array(N), drypp = new Float32Array(MR);
   const frø = Math.floor(Math.random() * 1e6);
+  // Hvor langt gjørma henger ned i drypp under kantene, kolonne for kolonne.
+  for (let px = 0; px < MR; px++) { const n = shFbm(px / MR * 40, .5, frø + 500, 2); drypp[px] = Math.pow(Math.max(0, n - .42) / .58, 2) * .06; }
   for (let py = 0; py < MR; py++) for (let px = 0; px < MR; px++) {
     const u = px / MR, v = py / MR, k = py * MR + px;
-    // Store flekker (støvete og fuktige), mellomstore klumper og fin kornighet.
-    const flekk = shFbm(u * 3.2, v * 3.2, frø + 11, 3);
-    let t = shFbm(u * 9, v * 9, frø, 4) * .5 + flekk * .3 + shHash(px, py, frø + 7) * .2;
-    let h = shFbm(u * 7, v * 7, frø + 60, 3) * .65 + shFbm(u * 30, v * 30, frø + 50, 2) * .35;
-    const gx = u * 70, gy = v * 70, gi = Math.floor(gx), gj = Math.floor(gy), st = shHash(gi, gj, frø + 99);
-    if (st < .025) {
-      const rad = .22 + st * 4, d = Math.hypot(gx - gi - .5, gy - gj - .5);
-      if (d < rad) { t = t * .5 + (st < .012 ? .42 : .05); h += (1 - d / rad) * .3; }
-    }
-    tekstur[k] = t; hump[k] = h;
-    kant[k] = shFbm(u * 40, v * 40, frø + 200, 3);
-    const cx = u * 11, cy = v * 11, ci = Math.floor(cx), cj = Math.floor(cy);
-    let d1 = 9, d2 = 9;
-    for (let a = -1; a <= 1; a++) for (let b = -1; b <= 1; b++) {
-      const ox = ci + a + shHash(ci + a, cj + b, frø + 300), oy = cj + b + shHash(ci + a, cj + b, frø + 301), d = Math.hypot(cx - ox, cy - oy);
-      if (d < d1) { d2 = d1; d1 = d; } else if (d < d2) d2 = d;
-    }
-    // Sprekker bare der møkka har tørket mest, og tynne.
-    const tørr = Math.max(0, Math.min(1, (shFbm(u * 2.6, v * 2.6, frø + 400, 2) - .48) / .14));
-    sprekk[k] = Math.max(0, 1 - (d2 - d1) / .035) * tørr;
+    // Strukket på høykant, så den ser ut som den renner.
+    tekstur[k] = shFbm(u * 5, v * 4, frø, 3) * .7 + shFbm(u * 20, v * 16, frø + 20, 2) * .2 + shHash(px, py, frø + 7) * .1;
+    hump[k] = shFbm(u * 14, v * 12, frø + 50, 2) * .12;
+    kant[k] = shFbm(u * 34, v * 20, frø + 200, 3);
+    blanding[k] = shClamp((shFbm(u * 2.2, v * 2.2, frø + 400, 3) - .35) / .3, 0, 1);
   }
+  // Gjørma bygges av hundrevis av myke klatter lagt oppå hverandre: runde klumper og striper som renner.
+  let tilf = frø;
+  const rnd = () => (tilf = (Math.imul(tilf, 1664525) + 1013904223) >>> 0) / 4294967296;
+  for (let n = 0; n < 420; n++) {
+    const renner = rnd() < .35, rx = MR * (.018 + rnd() * .05), ry = rx * (renner ? 2 + rnd() * 2.5 : .8 + rnd() * .5);
+    const cx = rnd() * MR, cy = rnd() * MR, h = .5 + rnd() * .7;
+    const ax = Math.max(0, Math.floor(cx - rx)), bx = Math.min(MR - 1, Math.ceil(cx + rx)), ay = Math.max(0, Math.floor(cy - ry)), by = Math.min(MR - 1, Math.ceil(cy + ry));
+    for (let py = ay; py <= by; py++) for (let px = ax; px <= bx; px++) {
+      const dx = (px - cx) / rx, dy = (py - cy) / ry, q = 1 - dx * dx - dy * dy;
+      if (q > 0) hump[py * MR + px] += h * q * q;
+    }
+  }
+  // Toppene flates litt av, så klattene flyter sammen i stedet for å bli spisse.
+  for (let k = 0; k < N; k++) hump[k] = 1.4 * hump[k] / (1 + hump[k]);
   const n = SH_KOL * SH_RAD;
-  s.moekk = { MR, cv, x, data: x.createImageData(MR, MR), tekstur, kant, hump, sprekk, P: new Float32Array(n),
+  s.moekk = { MR, cv, x, data: x.createImageData(MR, MR), tekstur, kant, hump, blanding, drypp, flis: new Set(), P: new Float32Array(n),
     rL: new Float32Array(n), rW: new Float32Array(n), L: new Float32Array(n), W: new Float32Array(n) };
   for (let j = 0; j < n; j++) shCelle(j, true);
   for (let j = 0; j < n; j++) shGlattCelle(j);
@@ -1345,58 +1353,147 @@ const SH_LYS = (() => { const v = [-.45, -.6, .66], l = Math.hypot(...v); return
 const SH_HALV = (() => { const v = [SH_LYS[0], SH_LYS[1], SH_LYS[2] + 1], l = Math.hypot(...v); return v.map(q => q / l); })();
 const shGlatt = e => e <= .4 ? 0 : e >= .6 ? 1 : ((e - .4) / .2) * ((e - .4) / .2) * (3 - 2 * (e - .4) / .2);
 // Tegner møkka i et område: tørr og sprukken, våt og blank etter hvert treff, med skygge på kunsten.
+// Tegner gjørma i et område: våt og blank, tykk der det er mye, med drypp under kantene og skygge på kunsten.
 function shMal(x0, y0, x1, y1) {
-  const m = sh.moekk, MR = m.MR, d = m.data.data, jord = sh.jord;
+  const m = sh.moekk, MR = m.MR, d = m.data.data, J1 = sh.jord, J2 = sh.jord2;
   x0 = Math.max(0, Math.floor(x0)); y0 = Math.max(0, Math.floor(y0)); x1 = Math.min(MR, Math.ceil(x1)); y1 = Math.min(MR, Math.ceil(y1));
   if (x1 <= x0 || y1 <= y0) return;
   const ex0 = Math.max(0, x0 - 1), ey0 = Math.max(0, y0 - 1), ex1 = Math.min(MR, x1 + 1), ey1 = Math.min(MR, y1 + 1), bw = ex1 - ex0, bh = ey1 - ey0;
-  const H = new Float32Array(bw * bh), A = new Float32Array(bw * bh), Wt = new Float32Array(bw * bh), Lt = new Float32Array(bw * bh);
+  const H = new Float32Array(bw * bh), A = new Float32Array(bw * bh), Wt = new Float32Array(bw * bh);
   for (let py = ey0; py < ey1; py++) for (let px = ex0; px < ex1; px++) {
-    const k = py * MR + px, i = (py - ey0) * bw + px - ex0;
-    shBil((px + .5) / MR, (py + .5) / MR, true);
-    const a = shGlatt(bP + (m.kant[k] - .5) * .6);
-    A[i] = a; Wt[i] = bW; Lt[i] = bL;
-    H[i] = a * (.25 + .75 * bL + m.hump[k] * .35);
+    const k = py * MR + px, i = (py - ey0) * bw + px - ex0, u = (px + .5) / MR, v = (py + .5) / MR;
+    shBil(u, v, true);
+    const L = bL, W = bW, kn = m.kant[k] - .5;
+    let e = bP + kn * .5;
+    // Drypp: gjørma ovenfor henger ned som dråper.
+    const dl = m.drypp[px];
+    if (dl > .003 && e < .6) { shBil(u, v - dl, false); e = Math.max(e, bP * .97 + kn * .25); }
+    const a = shGlatt(e);
+    A[i] = a; Wt[i] = W;
+    H[i] = a * (.2 + .25 * L + m.hump[k] * (.7 + .3 * L));
   }
-  const K = MR / 110, sy = .009, sx = .006;
+  const K = MR / 45, sy = .009, sx = .006;
   for (let py = y0; py < y1; py++) for (let px = x0; px < x1; px++) {
     const k = py * MR + px, i = (py - ey0) * bw + px - ex0, o = k * 4;
     const ix = px - ex0, iy = py - ey0;
     const l = ix > 0 ? i - 1 : i, r = ix < bw - 1 ? i + 1 : i, u = iy > 0 ? i - bw : i, n = iy < bh - 1 ? i + bw : i;
     const a = A[i];
     shBil((px + .5) / MR - sx, (py + .5) / MR - sy, false);
-    const sa = shGlatt(bP + (m.kant[k] - .5) * .6) * .5;
+    const sa = shGlatt(bP + (m.kant[k] - .5) * .5) * .55;
     if (a <= 0 && sa <= 0) { d[o + 3] = 0; continue; }
-    const W = Wt[i], nx = -(H[r] - H[l]) * K, ny = -(H[n] - H[u]) * K, inv = 1 / Math.sqrt(nx * nx + ny * ny + 1);
+    const W = Wt[i], vaat = .5 + .5 * W, nx = -(H[r] - H[l]) * K, ny = -(H[n] - H[u]) * K, inv = 1 / Math.sqrt(nx * nx + ny * ny + 1);
     const dif = Math.max(0, (nx * SH_LYS[0] + ny * SH_LYS[1] + SH_LYS[2]) * inv);
     const sp = Math.max(0, (nx * SH_HALV[0] + ny * SH_HALV[1] + SH_HALV[2]) * inv);
-    const t = m.tekstur[k];
-    let R = jord.mork[0] + (jord.lys[0] - jord.mork[0]) * t, G = jord.mork[1] + (jord.lys[1] - jord.mork[1]) * t, B = jord.mork[2] + (jord.lys[2] - jord.mork[2]) * t;
-    const spr = 1 - m.sprekk[k] * .55 * (1 - W) * Math.min(1, Lt[i] * 3);
-    const gr = (R + G + B) / 3, mett = 1 + 1.1 * W, mork = (1 - .62 * W) * spr * (.3 + .85 * dif);
+    const t = m.tekstur[k], bl = m.blanding[k];
+    const mr = J1.mork[0] + (J2.mork[0] - J1.mork[0]) * bl, mg = J1.mork[1] + (J2.mork[1] - J1.mork[1]) * bl, mb = J1.mork[2] + (J2.mork[2] - J1.mork[2]) * bl;
+    const lr = J1.lys[0] + (J2.lys[0] - J1.lys[0]) * bl, lg = J1.lys[1] + (J2.lys[1] - J1.lys[1]) * bl, lb = J1.lys[2] + (J2.lys[2] - J1.lys[2]) * bl;
+    const tt = shClamp(t * .45 + m.hump[k] * .45, 0, 1);
+    let R = mr + (lr - mr) * tt, G = mg + (lg - mg) * tt, B = mb + (lb - mb) * tt;
+    const gr = (R + G + B) / 3, mett = 1 + .5 * W, mork = (1 - .3 * W) * (.18 + 1.05 * dif);
     R = (gr + (R - gr) * mett) * mork; G = (gr + (G - gr) * mett) * mork; B = (gr + (B - gr) * mett) * mork;
-    const blank = W * (Math.pow(sp, 60) * 260 + Math.pow(sp, 12) * 60);
-    const aa = a * (1 - .25 * W * W), ut = aa + sa * (1 - aa), f = aa / ut;
+    const sp2 = sp * sp, sp8 = sp2 * sp2 * sp2 * sp2, sp32 = sp8 * sp8 * sp8 * sp8;
+    const blank = vaat * (sp32 * 230 + sp8 * 35);
+    const aa = a * (1 - .22 * W * W), ut = aa + sa * (1 - aa), f = aa / ut;
     d[o] = (R + blank) * f; d[o + 1] = (G + blank) * f; d[o + 2] = (B + blank * 1.05) * f; d[o + 3] = ut * 255;
   }
   m.x.putImageData(m.data, 0, 0, x0, y0, x1 - x0, y1 - y0);
 }
 // Tegn om møkka der noe er endret, én gang per bilde.
+// Tegn om gjørma der noe er endret. Delt i fliser på 4 x 4 felt, og bare så mye per bilde at mobilen holder følge.
 function shRens() {
-  const s = sh; if (!s.skitten.size || !s.moekk) return;
-  const m = s.moekk, cw = m.MR / SH_KOL, ch = m.MR / SH_RAD, marg = 6, rom = [];
+  const s = sh; if (!s.moekk) return;
+  const m = s.moekk, fk = SH_KOL / 4, fr = SH_RAD / 4;
   for (const j of s.skitten) {
     const c = j % SH_KOL, r = (j / SH_KOL) | 0;
-    rom.push([(c - 3) * cw - marg, (r - 3) * ch - marg, (c + 4) * cw + marg, (r + 4) * ch + marg]);
+    for (let a = Math.max(0, (r - 3) >> 2); a <= Math.min(fr - 1, (r + 5) >> 2); a++)
+      for (let b = Math.max(0, (c - 3) >> 2); b <= Math.min(fk - 1, (c + 3) >> 2); b++) m.flis.add(a * fk + b);
   }
   s.skitten.clear();
-  // Mange endringer på én gang (sprut): tegn ett samlet område i stedet.
-  if (rom.length > 6) shMal(Math.min(...rom.map(q => q[0])), Math.min(...rom.map(q => q[1])), Math.max(...rom.map(q => q[2])), Math.max(...rom.map(q => q[3])));
-  else rom.forEach(q => shMal(...q));
+  const cw = m.MR / fk, ch = m.MR / fr; let budsjett = 70000;
+  for (const f of m.flis) {
+    if (budsjett <= 0) break;
+    m.flis.delete(f);
+    const a = (f / fk) | 0, b = f % fk;
+    shMal(b * cw, a * ch, (b + 1) * cw, (a + 1) * ch);
+    budsjett -= cw * ch;
+  }
 }
+// Endre tykkelsen på et felt når gjørma renner eller kommer ny. Holder tellingen av skitne felt riktig.
+function shSett(k, liv) {
+  const s = sh, j = k.r * SH_KOL + k.c;
+  if (k.liv <= 0 && liv > 0) { s.igjen++; k.maks = liv; }
+  else if (k.liv > 0 && liv <= 0) s.igjen--;
+  k.liv = liv; if (liv > k.maks) k.maks = liv;
+  shCelle(j); s.skitten.add(j);
+}
+// Gjørma lever: den siger ned i det som er vasket, nye bølger kommer ovenfra, og det drypper fra kantene.
+function shRenn(dt) {
+  const s = sh;
+  s.sigT -= dt;
+  if (s.sigT <= 0) {
+    s.sigT = .22;
+    let flytt = 0;
+    for (let n = 0; n < 90 && flytt < 6; n++) {
+      const j = Math.floor(Math.random() * SH_KOL * (SH_RAD - 1)), k = s.klosser[j];
+      if (k.liv < 2) continue;
+      const ned = s.klosser[j + SH_KOL];
+      if ((ned.liv === 0 && Math.random() < .5) || (ned.liv > 0 && ned.liv <= k.liv - 4 && Math.random() < .25)) {
+        const tom = ned.liv === 0;
+        shSett(k, k.liv - 1); shSett(ned, ned.liv + 1); flytt++;
+        if (tom && Math.random() < .3) shKlatt(ned.x + ned.w * (.3 + Math.random() * .4), ned.y + ned.h, .003 + Math.random() * .003, .02);
+      }
+    }
+  }
+  const andel = 1 - s.igjen / s.klosser.length;
+  s.flomT -= dt;
+  if (s.flomT <= 0 && andel > .12 && andel < .82 && s.flomIgjen > 0) {
+    s.flomT = 11 + Math.random() * 8;
+    const c0 = Math.floor(Math.random() * SH_KOL), bredde = 2 + Math.floor(Math.random() * 4), lag = 2 + Math.floor(s.niva / 3);
+    for (let c = Math.max(0, c0 - bredde); c <= Math.min(SH_KOL - 1, c0 + bredde); c++) for (let r = 0; r < 2; r++) {
+      const k = s.klosser[r * SH_KOL + c], ny = lag + (r === 0 ? 1 : 0);
+      shSett(k, k.liv + ny); s.flomIgjen -= ny;
+    }
+    shLyd("flom");
+    for (let q = 0; q < 6; q++) shKlatt((c0 + .5 + (Math.random() - .5) * bredde * 2) / SH_KOL, SH_TOPP + .03, .004 + Math.random() * .004, .05);
+  }
+  s.dryppT -= dt;
+  if (s.dryppT <= 0) {
+    s.dryppT = .2 + Math.random() * .3;
+    for (let q = 0; q < 14; q++) {
+      const j = Math.floor(Math.random() * SH_KOL * (SH_RAD - 1)), k = s.klosser[j];
+      if (k.liv > 0 && s.klosser[j + SH_KOL].liv === 0) { shKlatt(k.x + k.w * (.2 + Math.random() * .6), k.y + k.h * .95, .0025 + Math.random() * .0035, .01); break; }
+    }
+  }
+}
+function shKlatt(x, y, r, vy = .05) { if (sh.klatter.length < 80) sh.klatter.push({ x, y, r, vx: (Math.random() - .5) * .02, vy, fase: Math.random() * 6 }); }
 
 function shNyBall() { sh.baller = [shBall(sh.padX, SH_PY - SH_R, 0, 0, true)]; sh.tilstand = "klar"; }
-function shBall(x, y, vx, vy, fast) { return { x, y, vx, vy, fast, off: 0, str: 1, kraft: 1, kraftN: 0, boost: 1, vokse: 1, sqT: -9, sqA: 0, fase: Math.random() * 6 }; }
+function shBall(x, y, vx, vy, fast) {
+  return { x, y, vx, vy, fast, off: 0, str: 1, kraft: 1, kraftN: 0, boost: 1, vokse: 1, fase: Math.random() * 6,
+    d: new Float32Array(SH_N), dv: new Float32Array(SH_N), klemT: 0, klemV: null, klemOff: 0 };
+}
+// Boblen er myk: kanten er 18 punkter på fjærer. Et støt klemmer den flat, og den dirrer seg tilbake.
+function shStot(b, nx, ny, styrke) {
+  for (let i = 0; i < SH_N; i++) {
+    const a = i / SH_N * Math.PI * 2, c = -(Math.cos(a) * nx + Math.sin(a) * ny);
+    if (c <= 0) continue;
+    const f = c * c * c;
+    b.d[i] -= styrke * f * .3; b.dv[i] -= styrke * f * 14;
+  }
+}
+function shJelly(b, dt) {
+  const n = Math.max(1, Math.ceil(dt / (1 / 150))), h = dt / n, d = b.d, v = b.dv;
+  for (let s = 0; s < n; s++) {
+    let snitt = 0;
+    for (let i = 0; i < SH_N; i++) {
+      const a = -520 * d[i] - 4.5 * v[i] + 220 * (d[(i + SH_N - 1) % SH_N] + d[(i + 1) % SH_N] - 2 * d[i]);
+      v[i] += a * h;
+    }
+    for (let i = 0; i < SH_N; i++) { d[i] = shClamp(d[i] + v[i] * h, -.55, .6); snitt += d[i]; }
+    // Det den mister ett sted, buler ut et annet, som gummi.
+    snitt /= SH_N; for (let i = 0; i < SH_N; i++) d[i] -= snitt;
+  }
+}
 const shRad = b => SH_R * b.str * (0.35 + 0.65 * b.vokse);
 function shOppsett() {
   if (!sh) return;
@@ -1449,14 +1546,30 @@ function shSus(varighet, filter, frekv, styrke, Q = 1, tørr = .8, våt = .5, st
   src.start(t, Math.random() * .5); src.stop(t + varighet + .02);
 }
 const SH_PENTA = [0, 2, 4, 7, 9, 12, 14, 16, 19, 21, 24];
+// «Spoink»: en tone som dirrer og roer seg, som en gummiball.
+function shBoing(f, styrke) {
+  const c = ctx(); if (!c) return;
+  const o = c.createOscillator(), lfo = c.createOscillator(), lg = c.createGain(), g = c.createGain(), t = c.currentTime;
+  o.type = "sine"; o.frequency.setValueAtTime(f * .7, t); o.frequency.exponentialRampToValueAtTime(f, t + .03);
+  lfo.frequency.setValueAtTime(24, t); lfo.frequency.linearRampToValueAtTime(9, t + .3);
+  lg.gain.setValueAtTime(f * .2, t); lg.gain.exponentialRampToValueAtTime(f * .01, t + .35);
+  lfo.connect(lg).connect(o.frequency);
+  g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(styrke, t + .005); g.gain.exponentialRampToValueAtTime(.0001, t + .38);
+  o.connect(g); g.connect(c.destination);
+  const r = romInn(); if (r) { const gv = c.createGain(); gv.gain.value = .4; g.connect(gv).connect(r); }
+  o.start(t); lfo.start(t); o.stop(t + .4); lfo.stop(t + .4);
+}
 function shLyd(type, verdi) {
   if (!lydPa || !sh) return;
   // Ikke for mange like lyder samtidig.
-  const min = { moekk: .045, ren: .04, vegg: .03 }[type] || 0;
+  const min = { moekk: .045, ren: .04, vegg: .03, plopp: .06 }[type] || 0;
   if (sh.tid - (sh.lydSist[type] ?? -9) < min) return;
   sh.lydSist[type] = sh.tid;
-  if (type === "vegg") shGlid(900, 600, .07, .018, "sine", .7, .4);
-  else if (type === "racket") { shGlid(560, 380, .12, .045, "sine", .7, .5); tone(1120, 0, .06, .012, "triangle", .5, .8); }
+  if (type === "vegg") shBoing(620, .016);
+  else if (type === "racket") { shBoing(330, .055); tone(1320, 0, .05, .01, "triangle", .5, .8); }
+  else if (type === "flom") { shSus(.7, "lowpass", 260, .07, 2, .8, .4); shGlid(150, 60, .6, .04, "sine", .8, .4); }
+  else if (type === "plopp") { shGlid(240, 90, .12, .035, "sine", .8, .3); shSus(.07, "lowpass", 900, .04, 1, .8, .2); }
+  else if (type === "fang") { [0, 7, 12, 16].forEach((s, j) => tone(1046.5 * Math.pow(2, s / 12), j * .05, .3, .03, "sine", .4, 1.4)); shSus(.3, "highpass", 7000, .02, .7, .4, .8); }
   else if (type === "moekk") { const tyk = verdi || 1; shSus(.08, "lowpass", 380 + 900 / (1 + tyk * .3), .05, 1.5, .8, .2); shGlid(200, 95, .08, .025, "sine", .8, .2); }
   else if (type === "ren") {
     const f = 587.33 * Math.pow(2, SH_PENTA[Math.min(sh.kombo, SH_PENTA.length - 1)] / 12);
@@ -1529,19 +1642,20 @@ function shTreff(k, lag = 1, kilde = null) {
   if (kilde !== "syre" || Math.random() < .4) shSkum(mx, my, kilde ? 1 : 2, kilde === "syre");
   if (k.liv > 0) {
     s.poeng += 5 * lag; shLyd("moekk", k.liv); shHud();
-    if (Math.random() < .1) shDrypp(mx, k.y + k.h);
+    if (kilde !== "syre" && Math.random() < .3) shKlatt(mx + (Math.random() - .5) * k.w, k.y + k.h, .003 + Math.random() * .004, .08);
     return;
   }
   s.igjen--; s.kombo++;
   s.poeng += (20 + 10 * k.maks) * Math.min(1 + Math.floor(s.kombo / 8), 5);
   k.glans = 1;
   shLyd("ren"); shHud();
-  if (Math.random() < .4) shDrypp(mx, k.y + k.h * .8);
+  if (Math.random() < .3) shDrypp(mx, k.y + k.h * .8);
+  if (Math.random() < .45) shKlatt(mx, my, .004 + Math.random() * .006, .1);
   if (Math.random() < .3) shStjerne(k.x + Math.random() * k.w, k.y + Math.random() * k.h, .7);
   if (kilde !== "syre" && Math.random() < .025) {
     const sum = KAPSLER.reduce((a, q) => a + q.vekt, 0); let r = Math.random() * sum, valgt = KAPSLER[0];
     for (const q of KAPSLER) { if (r < q.vekt) { valgt = q; break; } r -= q.vekt; }
-    s.kapsler.push({ x: mx, y: my, t: valgt.t });
+    s.kapsler.push({ x: mx, y: my, t: valgt.t, r: .032, vy: .04, fase: Math.random() * 6 });
   }
   const andel = 1 - s.igjen / s.klosser.length, mål = [.25, .5, .75, .9][s.milepael];
   if (mål && andel >= mål) { s.milepael++; s.glimt = s.tid; shLyd("glimt"); }
@@ -1578,7 +1692,9 @@ function shSprekk(b) {
 }
 function shKapsel(t) {
   const s = sh, q = KAPSLER.find(k => k.t === t);
-  s.poeng += 100; shLyd("kapsel"); shHud();
+  s.poeng += 100; shLyd("fang"); shHud();
+  for (let n = 0; n < 6; n++) shStjerne(s.padX + (Math.random() - .5) * s.padW, SH_PY - .01 - Math.random() * .04, .6, n * .05);
+  s.splatter.push({ x: s.padX + (Math.random() - .5) * s.padW * .5, y: SH_PY, r: .02, t: 0, paa: true });
   s.tekster.push({ txt: q.navn, x: s.padX, y: SH_PY - 0.06, liv: 1, farge: q.farge });
   if (t === "W") s.eff.W = 15;
   if (t === "S") s.fart = Math.max(s.grunnfart * 0.75, s.fart * 0.7);
@@ -1609,7 +1725,8 @@ function shRacketTreff(b, R) {
   const s = sh, t = shClamp((b.x - s.padX) / (s.padW / 2), -1, 1);
   let a = t * 1.05;
   s.fart = Math.min(s.maksFart, s.fart * 1.008);
-  s.kombo = 0; s.glod = 1; b.sqT = s.tid; b.sqA = Math.PI / 2;
+  s.kombo = 0; s.glod = 1;
+  shStot(b, 0, -1, 1.15);
   if (s.eff.F > 0) {
     const fl = s.flip[b.x < s.padX ? 0 : 1];
     a = t * 1.1 + (Math.random() - .5) * .35;
@@ -1621,15 +1738,16 @@ function shRacketTreff(b, R) {
   } else shLyd("racket");
   // Dypblå stav: boblen vokser for hvert treff.
   if (s.eff.B > 0 && b.str < 3.4) { b.str = Math.min(3.4, b.str * 1.22); shLyd("voks", b.str); }
-  b.vx = s.fart * Math.sin(a); b.vy = -s.fart * Math.cos(a); b.y = SH_PY - shRad(b);
-  if (s.eff.G > 0) { b.fast = true; b.off = b.x - s.padX; b.slippT = 2; }
+  b.y = SH_PY - shRad(b);
+  if (s.eff.G > 0) { b.vx = s.fart * Math.sin(a); b.vy = -s.fart * Math.cos(a); b.fast = true; b.off = b.x - s.padX; b.slippT = 2; return; }
+  b.klemV = [s.fart * Math.sin(a), -s.fart * Math.cos(a)]; b.klemT = .075; b.klemOff = b.x - s.padX; b.vx = 0; b.vy = 0;
 }
 function shBevegBall(b, dt) {
   const s = sh, R = shRad(b), px = b.x, py = b.y;
   b.x += b.vx * dt; b.y += b.vy * dt;
-  if (b.x < R) { b.x = R; b.vx = Math.abs(b.vx); b.sqT = s.tid; b.sqA = 0; shLyd("vegg"); }
-  if (b.x > 1 - R) { b.x = 1 - R; b.vx = -Math.abs(b.vx); b.sqT = s.tid; b.sqA = 0; shLyd("vegg"); }
-  if (b.y < R) { b.y = R; b.vy = Math.abs(b.vy); b.sqT = s.tid; b.sqA = Math.PI / 2; shLyd("vegg"); }
+  if (b.x < R) { b.x = R; b.vx = Math.abs(b.vx); shStot(b, 1, 0, .6); shLyd("vegg"); }
+  if (b.x > 1 - R) { b.x = 1 - R; b.vx = -Math.abs(b.vx); shStot(b, -1, 0, .6); shLyd("vegg"); }
+  if (b.y < R) { b.y = R; b.vy = Math.abs(b.vy); shStot(b, 0, 1, .6); shLyd("vegg"); }
   if (b.vy > 0 && b.y + R >= SH_PY && py + R <= SH_PY + 0.014 && Math.abs(b.x - s.padX) <= s.padW / 2 + R) { shRacketTreff(b, R); return; }
   if (b.y > SH_H + R) { b.borte = true; return; }
   const alle = [], k = shKlossTreff(b.x, b.y, R, alle);
@@ -1643,10 +1761,9 @@ function shBevegBall(b, dt) {
   // Såpen sprer seg: hvert treff vasker en liten rund flekk. Større boble, større flekk.
   shVask(b.x, b.y, R + .04, lag);
   // Vasket den helt rent der den traff, flyr den ofte videre og graver en tunnel.
-  if (alle.every(q => q.liv <= 0) && Math.random() < .4) return;
+  if (alle.every(q => q.liv <= 0) && Math.random() < .4) { const v = Math.hypot(b.vx, b.vy) || 1; shStot(b, -b.vx / v, -b.vy / v, .25); return; }
   const fraSiden = px + R <= k.x || px - R >= k.x + k.w;
-  if (fraSiden) { b.vx = -b.vx; b.x = px; b.sqA = 0; } else { b.vy = -b.vy; b.y = py; b.sqA = Math.PI / 2; }
-  b.sqT = s.tid;
+  if (fraSiden) { b.vx = -b.vx; b.x = px; shStot(b, Math.sign(b.vx), 0, .5); } else { b.vy = -b.vy; b.y = py; shStot(b, 0, Math.sign(b.vy), .5); }
   if (s.tilstand === "spill" && s.tid - s.sprekkT > 9 && Math.random() < .02 * b.str) shSprekk(b);
 }
 function shOppdater(dt) {
@@ -1659,6 +1776,15 @@ function shOppdater(dt) {
     // Når den dypblå staven er borte, krymper boblene rolig tilbake.
     if (s.eff.B <= 0 && b.str > 1) b.str = Math.max(1, b.str - dt * .6);
     b.boost = 1 + (b.boost - 1) * Math.exp(-dt / 1.2);
+    shJelly(b, dt);
+    if (b.klemT > 0) {
+      b.klemT -= dt; b.x = shClamp(s.padX + b.klemOff, shRad(b), 1 - shRad(b)); b.y = SH_PY - shRad(b) * .62;
+      // Klemt flat mot staven: undersiden presses inn, sidene buler ut.
+      const dyp = .5 * Math.min(1, .45 + (.075 - b.klemT) / .03);
+      for (let i = 0; i < SH_N; i++) { const c = Math.sin(i / SH_N * Math.PI * 2); if (c > 0) { const mål = -dyp * c * c; if (b.d[i] > mål) { b.d[i] = mål; b.dv[i] = 0; } } }
+      if (b.klemT <= 0 && b.klemV) { b.vx = b.klemV[0]; b.vy = b.klemV[1]; b.klemV = null; b.y = SH_PY - shRad(b); }
+      continue;
+    }
     if (b.fast) {
       b.x = shClamp(s.padX + b.off, shRad(b), 1 - shRad(b)); b.y = SH_PY - shRad(b);
       if (b.slippT != null) { b.slippT -= dt; if (b.slippT <= 0) { const a = b.off * 3; b.vx = s.fart * Math.sin(a); b.vy = -s.fart * Math.cos(a); b.fast = false; b.slippT = null; } }
@@ -1682,11 +1808,12 @@ function shOppdater(dt) {
     }
   });
   for (const k of s.kapsler) {
-    k.y += 0.32 * dt;
-    if (k.y > SH_PY - 0.02 && k.y < SH_PY + 0.03 && Math.abs(k.x - s.padX) < s.padW / 2 + 0.035) { shKapsel(k.t); k.borte = true; }
-    if (k.y > SH_H + 0.05) k.borte = true;
+    k.vy = Math.min(.3, k.vy + .45 * dt); k.y += k.vy * dt;
+    if (k.y + k.r * .6 > SH_PY && k.y < SH_PY + .03 && Math.abs(k.x - s.padX) < s.padW / 2 + k.r * .8) { shKapsel(k.t); k.borte = true; }
+    if (k.y > SH_H - .01) { k.borte = true; s.splatter.push({ x: k.x, y: SH_H - .004, r: k.r * 1.3, t: 0 }); shLyd("plopp"); }
   }
   s.kapsler = s.kapsler.filter(k => !k.borte);
+  shRenn(dt);
   // Siste skylling: når nesten alt er rent, vaskes restene bort av seg selv.
   if (s.igjen > 0 && s.igjen <= Math.ceil(s.klosser.length * .025)) {
     if (!s.skylling) { s.skylling = true; s.tekster.push({ txt: "FINAL RINSE", x: .5, y: .5, liv: 1.4, farge: "#bfe9ff" }); }
@@ -1723,6 +1850,14 @@ function shPartikler(dt) {
     } else { d.vy = Math.min(.09, d.vy + .05 * dt); d.y += d.vy * dt; d.len = Math.min(.05, d.len + .03 * dt); d.liv -= dt * .4; }
   }
   s.drypp = s.drypp.filter(d => d.liv > 0);
+  for (const q of s.klatter) {
+    q.vy = Math.min(1.1, q.vy + .9 * dt); q.x += q.vx * dt; q.y += q.vy * dt;
+    if (q.y > SH_PY && q.y < SH_PY + .02 && Math.abs(q.x - s.padX) < s.padW / 2) { q.borte = true; s.splatter.push({ x: q.x, y: SH_PY, r: q.r * 1.6, t: 0, paa: true }); }
+    else if (q.y > SH_H - .004) { q.borte = true; s.splatter.push({ x: q.x, y: SH_H - .003, r: q.r * 1.8, t: 0 }); }
+  }
+  s.klatter = s.klatter.filter(q => !q.borte);
+  for (const q of s.splatter) q.t += dt;
+  s.splatter = s.splatter.filter(q => q.t < (q.paa ? .35 : 1.6));
   for (const st of s.stjerner) st.t += dt;
   s.stjerner = s.stjerner.filter(st => st.t < st.varighet);
   // Når bildet begynner å bli rent, blinker det her og der.
@@ -1749,7 +1884,7 @@ function shFerdig() {
   const s = sh; s.tilstand = "ferdig"; s.ferdigT = performance.now();
   const bonus = (s.liv - 1) * 500; s.poeng += bonus; shHud();
   s.baller = []; s.kapsler = [];
-  ferdigLyd(); s.glimt = s.tid; s.drypp = []; s.skum = [];
+  ferdigLyd(); s.glimt = s.tid; s.drypp = []; s.skum = []; s.klatter = [];
   for (let n = 0; n < 40; n++) shStjerne(Math.random(), SH_TOPP + Math.random(), .6 + Math.random() * .5, Math.random() * 1.6);
   const lag = shLagret(), nokkel = "niva" + aktiv; lag[nokkel] = Math.max(lag[nokkel] || 0, s.niva + 1); shLagre(lag);
   shLagreRekord(s.poeng);
@@ -1830,28 +1965,50 @@ function shStav(x, cx, cy, w, h, vinkel, pivot, s, alfa = 1) {
   x.restore();
 }
 // Såpeboblen: gjennomsiktig, med regnbuehinne. Klemmes flat og spretter tilbake når den treffer noe.
+// Glatt kurve gjennom punktene, lukket.
+function shKurve(x, pts) {
+  const n = pts.length, mid = (p, q) => [(p[0] + q[0]) / 2, (p[1] + q[1]) / 2];
+  x.beginPath(); const s0 = mid(pts[0], pts[1]); x.moveTo(s0[0], s0[1]);
+  for (let i = 1; i <= n; i++) { const p = pts[i % n], m = mid(p, pts[(i + 1) % n]); x.quadraticCurveTo(p[0], p[1], m[0], m[1]); }
+  x.closePath();
+}
+// Såpeboblen: gjennomsiktig med regnbuehinne. Formen følger fjærene, så den klemmes og dirrer.
 function shBobleTegn(x, b, f, s) {
-  const r = shRad(b) * f, dt = s.tid - b.sqT;
-  const kl = dt < .6 ? .3 * Math.exp(-dt / .13) * Math.cos(dt * 40) : 0;
-  x.save(); x.translate(b.x * f, b.y * f); x.rotate(b.sqA); x.scale(1 - kl, 1 + kl * .7); x.rotate(-b.sqA);
+  const R = shRad(b) * f, cx = b.x * f, cy = b.y * f, pts = [];
+  for (let i = 0; i < SH_N; i++) { const a = i / SH_N * Math.PI * 2, r = R * (1 + b.d[i]); pts.push([cx + Math.cos(a) * r, cy + Math.sin(a) * r]); }
+  x.save();
   if (b.kraftN > 0 || s.eff.A > 0) { x.shadowColor = s.eff.A > 0 ? "rgba(214,255,58,.9)" : "rgba(255,122,200,.9)"; x.shadowBlur = 16; }
-  const fyll = x.createRadialGradient(-r * .3, -r * .3, r * .1, 0, 0, r);
-  fyll.addColorStop(0, "rgba(255,255,255,.06)"); fyll.addColorStop(.7, "rgba(190,225,255,.10)"); fyll.addColorStop(.93, "rgba(255,255,255,.32)"); fyll.addColorStop(1, "rgba(255,255,255,.55)");
-  x.beginPath(); x.arc(0, 0, r, 0, Math.PI * 2); x.fillStyle = fyll; x.fill();
+  const fyll = x.createRadialGradient(cx - R * .3, cy - R * .3, R * .1, cx, cy, R * 1.1);
+  fyll.addColorStop(0, "rgba(255,255,255,.07)"); fyll.addColorStop(.7, "rgba(190,225,255,.12)"); fyll.addColorStop(.92, "rgba(255,255,255,.34)"); fyll.addColorStop(1, "rgba(255,255,255,.55)");
+  shKurve(x, pts); x.fillStyle = fyll; x.fill();
   x.shadowBlur = 0;
-  const rot = s.tid * 1.3 + b.fase;
   let hinne;
   if (x.createConicGradient) {
-    hinne = x.createConicGradient(rot, 0, 0);
-    [["255,90,200", 0], ["90,220,255", .2], ["255,240,110", .4], ["120,255,170", .6], ["170,120,255", .8], ["255,90,200", 1]].forEach(([c, p]) => hinne.addColorStop(p, `rgba(${c},.6)`));
-  } else { hinne = x.createLinearGradient(-r, -r, r, r); hinne.addColorStop(0, "rgba(255,90,200,.6)"); hinne.addColorStop(.5, "rgba(90,220,255,.6)"); hinne.addColorStop(1, "rgba(255,240,110,.6)"); }
+    hinne = x.createConicGradient(s.tid * 1.3 + b.fase, cx, cy);
+    [["255,90,200", 0], ["90,220,255", .2], ["255,240,110", .4], ["120,255,170", .6], ["170,120,255", .8], ["255,90,200", 1]].forEach(([c, p]) => hinne.addColorStop(p, `rgba(${c},.65)`));
+  } else { hinne = x.createLinearGradient(cx - R, cy - R, cx + R, cy + R); hinne.addColorStop(0, "rgba(255,90,200,.6)"); hinne.addColorStop(.5, "rgba(90,220,255,.6)"); hinne.addColorStop(1, "rgba(255,240,110,.6)"); }
   if (s.eff.A > 0) hinne = "rgba(214,255,58,.85)";
-  x.lineWidth = Math.max(1.2, r * .13); x.strokeStyle = hinne; x.beginPath(); x.arc(0, 0, r * .94, 0, Math.PI * 2); x.stroke();
+  x.lineWidth = Math.max(1.2, R * .13); x.strokeStyle = hinne; x.stroke();
+  // Lyset følger formen: høylyset sitter oppe til venstre, der kanten er nå.
+  const ia = Math.round(SH_N * 5 / 8) % SH_N, rl = R * (1 + b.d[ia]), hx = cx - .7071 * rl * .55, hy = cy - .7071 * rl * .6;
   x.fillStyle = "rgba(255,255,255,.9)";
-  x.beginPath(); x.ellipse(-r * .38, -r * .42, r * .3, r * .15, -.7, 0, Math.PI * 2); x.fill();
+  x.beginPath(); x.ellipse(hx, hy, R * .3 * (1 + b.d[ia]), R * .15, -.7, 0, Math.PI * 2); x.fill();
+  const ib = Math.round(SH_N / 8), rb = R * (1 + b.d[ib]);
   x.fillStyle = "rgba(255,255,255,.45)";
-  x.beginPath(); x.arc(r * .4, r * .38, r * .09, 0, Math.PI * 2); x.fill();
+  x.beginPath(); x.arc(cx + .7071 * rb * .55, cy + .7071 * rb * .55, R * .09, 0, Math.PI * 2); x.fill();
   x.restore();
+}
+// En gjørmeklatt: myk og våt, strekker seg når den faller.
+function shKlattTegn(x, X, Y, r, st, jord, fase, tid) {
+  const [r1, g1, b1] = jord.mork, [r2, g2, b2] = jord.lys, pts = [];
+  for (let i = 0; i < 10; i++) {
+    const a = i / 10 * Math.PI * 2, w = 1 + .1 * Math.sin(a * 3 + fase + tid * 5) + .06 * Math.sin(a * 5 - tid * 4);
+    pts.push([X + Math.cos(a) * r * w / Math.sqrt(st), Y + Math.sin(a) * r * w * (Math.sin(a) < 0 ? st * 1.25 : 1)]);
+  }
+  const gr = x.createRadialGradient(X - r * .35, Y - r * .4, r * .1, X, Y, r * 1.2);
+  gr.addColorStop(0, `rgb(${r2},${g2},${b2})`); gr.addColorStop(1, `rgb(${r1},${g1},${b1})`);
+  shKurve(x, pts); x.fillStyle = gr; x.fill();
+  x.fillStyle = "rgba(255,255,255,.55)"; x.beginPath(); x.ellipse(X - r * .32, Y - r * .35, r * .22, r * .14, -.6, 0, 7); x.fill();
 }
 function shTegn(t) {
   const c = $("shCanvas"), x = c.getContext("2d"), g = shG, s = sh, f = g.fw, iy = SH_TOPP * f;
@@ -1925,15 +2082,31 @@ function shTegn(t) {
     x.beginPath(); x.arc(r.x * f, r.y * f, (r.r + .09 * u) * f, 0, 7); x.stroke();
   }
   x.globalCompositeOperation = "source-over";
+  // Klatter som har landet: på staven eller nederst.
+  for (const q of s.splatter) {
+    const u = q.t / (q.paa ? .35 : 1.6), [r1, g1, b1] = s.jord.mork;
+    x.fillStyle = `rgba(${r1},${g1},${b1},${.85 * (1 - u)})`;
+    x.beginPath(); x.ellipse(q.x * f, q.y * f, q.r * f * (1 + u * .6), q.r * f * .35, 0, 0, 7); x.fill();
+  }
+  // Fallende gjørme.
+  for (const q of s.klatter) shKlattTegn(x, q.x * f, q.y * f, q.r * f, 1 + Math.min(1.4, q.vy * 2), s.jord, q.fase, s.tid);
+  // Store klatter med en edelsten inni. Du vet ikke helt hva du får.
   for (const k of s.kapsler) {
-    const q = KAPSLER.find(z => z.t === k.t), w = 0.075 * f, h = 0.03 * f, kx = k.x * f, ky = k.y * f;
-    x.save(); x.shadowColor = q.farge; x.shadowBlur = 10;
-    const gr = x.createLinearGradient(0, ky - h / 2, 0, ky + h / 2);
-    gr.addColorStop(0, "#ffffff"); gr.addColorStop(.35, q.farge); gr.addColorStop(1, q.farge);
-    shRund(x, kx - w / 2, ky - h / 2, w, h, h / 2); x.fillStyle = gr; x.fill(); x.restore();
-    x.fillStyle = "rgba(255,255,255,.6)"; shRund(x, kx - w / 2 + h * .45, ky - h * .36, w - h * .9, h * .2, h * .1); x.fill();
-    x.fillStyle = k.t === "B" ? "#fff" : "#111"; x.font = `800 ${h * 0.78}px "Syne", sans-serif`;
-    x.textAlign = "center"; x.textBaseline = "middle"; x.fillText(k.t, kx, ky + 1);
+    const q = KAPSLER.find(z => z.t === k.t), e = SH_EDEL[q.edel], r = k.r * f, X = k.x * f, Y = k.y * f;
+    x.save(); x.shadowColor = e[1]; x.shadowBlur = 8 + 6 * Math.sin(s.tid * 5 + k.fase);
+    shKlattTegn(x, X, Y, r, 1 + Math.min(.6, k.vy), s.jord, k.fase, s.tid); x.restore();
+    const g = r * .62, gx = X + r * .1, gy = Y - r * .12, rot = Math.sin(s.tid * 2 + k.fase) * .25;
+    x.save(); x.translate(gx, gy); x.rotate(rot);
+    const eg = x.createLinearGradient(-g, -g, g, g); eg.addColorStop(0, e[0]); eg.addColorStop(.5, e[1]); eg.addColorStop(1, e[2]);
+    x.beginPath(); x.moveTo(0, -g); x.lineTo(g * .8, -g * .15); x.lineTo(0, g); x.lineTo(-g * .8, -g * .15); x.closePath(); x.fillStyle = eg; x.fill();
+    x.strokeStyle = "rgba(255,255,255,.7)"; x.lineWidth = Math.max(.6, g * .08);
+    x.beginPath(); x.moveTo(-g * .8, -g * .15); x.lineTo(g * .8, -g * .15); x.moveTo(-g * .3, -g * .15); x.lineTo(0, -g); x.lineTo(g * .3, -g * .15); x.lineTo(0, g); x.stroke();
+    x.restore();
+    // Gjørme over den nederste delen av steinen, så den ser ut til å sitte inni.
+    const [r1, g1, b1] = s.jord.mork;
+    x.fillStyle = `rgba(${r1},${g1},${b1},.92)`;
+    x.beginPath(); x.ellipse(X - r * .1, Y + r * .5, r * .75, r * .38, .2, 0, 7); x.fill();
+    if (Math.sin(s.tid * 3 + k.fase) > .8) { x.globalCompositeOperation = "lighter"; shStjerneTegn(x, gx, gy - g * .6, r * .7, .8); x.globalAlpha = 1; x.globalCompositeOperation = "source-over"; }
   }
   if (s.tilstand !== "ferdig") {
     const w = s.padW * f, h = 0.02 * f, cy = SH_PY * f + h / 2, fa = shStavFarger(s);
@@ -1973,7 +2146,7 @@ function shSteg(t) {
 }
 addEventListener("resize", () => { if (sh) shOppsett(); });
 // Bare for automatisk testing lokalt (?autotest).
-if (location.search.includes("autotest")) { window.__sh = () => sh; window.__shOppdater = dt => { shOppdater(dt); if (sh) { sh.tid += dt; shPartikler(dt); } }; window.__shTreff = shTreff; window.__shSprekk = shSprekk; }
+if (location.search.includes("autotest")) { window.__sh = () => sh; window.__shOppdater = dt => { shOppdater(dt); if (sh) { sh.tid += dt; shPartikler(dt); } }; window.__shTreff = shTreff; window.__shSprekk = shSprekk; window.__shTegn = () => { shRens(); shTegn(performance.now()); }; }
 $("shatterKnapp").onclick = () => { ctx(); shatterStart((shLagret()["niva" + aktiv] || 0) % BRETT.length); };
 
 
