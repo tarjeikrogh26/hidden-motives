@@ -39,6 +39,13 @@ button:focus-visible{outline:2px solid var(--signal);outline-offset:2px}
 .topp{display:flex;align-items:baseline;justify-content:space-between;gap:16px;flex-wrap:wrap}
 h1{font-family:var(--display);font-weight:800;font-size:clamp(30px,5.4vw,58px);line-height:.95;letter-spacing:-.01em;margin:0;text-wrap:balance}
 h1 .tittel span{color:var(--signal)}
+.moduser{display:flex;flex-wrap:wrap;gap:.15em .7em;align-items:baseline}
+.modus{font:inherit;color:var(--tekst);background:none;border:0;padding:0 0 .08em;cursor:pointer;opacity:.32;border-bottom:3px solid transparent;transition:opacity .25s}
+.modus[aria-selected="true"]{opacity:1;border-bottom-color:var(--signal)}
+#modusScrub .tittel{color:var(--signal)}
+.av-linje{font-family:var(--brod);color:var(--demp);margin:10px 0 0;font-size:14px}
+.av-linje .signatur{font-family:var(--display);font-weight:800;letter-spacing:.06em;color:var(--tekst);margin-left:.3em}
+.tid.slutt{color:#ff5a4a!important;animation:dunk .5s ease-in-out infinite}
 h1 .av{font-family:var(--brod);font-weight:400;font-size:.32em;letter-spacing:.02em;color:var(--demp);margin:0 .15em 0 .35em}
 h1 .signatur{font-size:.55em;letter-spacing:.06em;white-space:nowrap}
 .under{color:var(--demp);max-width:46ch;margin:10px 0 0}
@@ -198,12 +205,15 @@ h1 .signatur{font-size:.55em;letter-spacing:.06em;white-space:nowrap}
 <section id="meny" class="skjerm" aria-label="Collections">
   <div class="topp">
     <div>
-      <h1><span class="tittel">HIDDEN <span>MOTIVES</span></span> <span class="av">by</span> <span class="signatur">KROGHX</span></h1>
-      <p class="under">You never see the picture until it's done. Place the pieces and the image reveals itself at the end.</p>
+      <h1 class="moduser" role="tablist">
+        <button class="modus" id="modusPuslespill" role="tab"><span class="tittel">HIDDEN <span>MOTIVES</span></span></button>
+        <button class="modus" id="modusScrub" role="tab"><span class="tittel">SCRUB</span></button>
+      </h1>
+      <p class="av-linje">by <span class="signatur">KROGHX</span></p>
+      <p class="under" id="modusTekst"></p>
     </div>
   </div>
   <div class="faner" id="faner" role="tablist"></div>
-  <button class="shatter-knapp" id="shatterKnapp"><b>SCRUB</b><span id="scrubTekst">Scrub game. Wash the mud off the art. →</span></button>
   <div class="samlingsnavn samling-tittel" id="samlingTittel"></div>
   <div class="rutenett" id="brettliste"></div>
   <div class="samlingsnavn">Next collection</div>
@@ -211,9 +221,19 @@ h1 .signatur{font-size:.55em;letter-spacing:.06em;white-space:nowrap}
   <div class="samlingsnavn" id="sammenTittel"></div>
   <div class="regel"><b>The race:</b> Your best score on each of the ten boards in a collection is added up. Finish #1 overall and you get the next collection for free. Anyone who takes first place later gets it too. Points: Easy (25 pieces) gives 10,000, Medium (49) 15,000, Hard (100) 20,000 and Chaos (144) 25,000 at normal speed. Be fast and you get up to double.</div>
   <div class="sammen" id="sammen"><p class="liten">Loading standings …</p></div>
-  <p class="liten" id="versjon" style="margin-top:28px;opacity:.5">Version 0.31</p>
+  <p class="liten" id="versjon" style="margin-top:28px;opacity:.5">Version 0.32</p>
 </section>
 
+<div class="ark" id="tidUtArk" hidden style="z-index:200001">
+  <div class="ark-boks" role="dialog" aria-labelledby="tidUtTittel">
+    <h2 id="tidUtTittel">Time's up</h2>
+    <p class="liten" id="tidUtTekst" style="margin:0">The picture stays hidden this time.</p>
+    <div class="knapper">
+      <button class="hoved" id="tidUtIgjen">Try again</button>
+      <button class="sekundar" id="tidUtMeny">Menu</button>
+    </div>
+  </div>
+</div>
 <div class="ark" id="startark" hidden>
   <div class="ark-boks" role="dialog" aria-labelledby="startTittel">
     <h2 id="startTittel">/01/01</h2>
@@ -343,14 +363,21 @@ function tegnFaner() {
   const nb = document.createElement("b"); nb.textContent = "/" + nr + " " + (SAMLINGSNAVN[aktiv + 1] || "");
   s2.firstElementChild.append(nb, fremdrift["samling" + (aktiv + 2)] ? "Unlocked for free because you finished #1 overall." : (SAMLINGER[aktiv + 1] ? "Open for beta testers. Later: paid, or free for #1 overall in /" + SAMLING + "." : "Coming. Paid, or free for #1 overall in /" + SAMLING + "."));
 }
-// SCRUB bruker bare brett du har løst i puslespillet, så motivet ikke avsløres før du har pusla det.
-function løsteBrett() { return BRETT.map((b, i) => i).filter(i => erLost(BRETT[i].id)); }
-function tegnScrubKnapp() {
-  const n = løsteBrett().length;
-  $("scrubTekst").textContent = n ? "Scrub game. Wash the mud off your " + n + " solved board" + (n === 1 ? "" : "s") + ". →" : "Scrub game. Solve a board first, then wash it here. →";
+// To måter å spille på: pusle eller vaske. Løser du et brett i ett av dem, åpnes neste.
+let modus = "pusle";
+try { if (localStorage.getItem("sm-modus") === "scrub") modus = "scrub"; } catch {}
+function velgModus(m) { modus = m; try { localStorage.setItem("sm-modus", m); } catch {} tegnMeny(); }
+$("modusPuslespill").onclick = () => velgModus("pusle");
+$("modusScrub").onclick = () => { ctx(); velgModus("scrub"); };
+function tegnModus() {
+  $("modusPuslespill").setAttribute("aria-selected", String(modus === "pusle"));
+  $("modusScrub").setAttribute("aria-selected", String(modus === "scrub"));
+  $("modusTekst").textContent = modus === "pusle"
+    ? "You never see the picture until it's done. Place the pieces before the clock runs out, and the image reveals itself."
+    : "The art is buried in mud. Wash it off with soap bubbles. Clear a board in either game and the next one opens.";
 }
 async function tegnMeny() {
-  tegnScrubKnapp();
+  tegnModus();
   tegnFaner();
   tegnSammen().catch(() => { $("sammen").innerHTML = '<p class="liten">Could not load the standings.</p>'; });
   const liste = $("brettliste");
@@ -369,10 +396,10 @@ async function tegnMeny() {
     nr.append(kd, nv);
     const st = document.createElement("span");
     const beste = besteLokal(b.id);
-    st.textContent = erLost(b.id) ? (beste ? beste.poeng.toLocaleString("en") + " pts" : "Solved") : "";
+    st.textContent = erLost(b.id) ? (beste ? beste.poeng.toLocaleString("en") + " pts" : fremdrift[b.id]?.scrub ? "Scrubbed" : "Solved") : "";
     st.className = "status";
     merke.append(nr, st); kort.appendChild(merke);
-    if (erApen(i)) kort.onclick = () => visStartark(i);
+    if (erApen(i)) kort.onclick = () => { if (modus === "scrub") { ctx(); shatterStart(i); } else visStartark(i); };
     liste.appendChild(kort);
     hentBilde(b.src).then(img => {
       if (erLost(b.id)) { c.width = 400; c.height = 400; const x = c.getContext("2d"); x.drawImage(img, 0, 0, 400, 400); c.style.imageRendering = "auto"; }
@@ -382,7 +409,7 @@ async function tegnMeny() {
 }
 function besteLokal(id) {
   const f = fremdrift[id]; if (!f) return null;
-  let b = null; for (const k in f) if (!b || f[k].poeng > b.poeng) b = f[k]; return b;
+  let b = null; for (const k in f) if (+k && (!b || f[k].poeng > b.poeng)) b = f[k]; return b;
 }
 
 // ---------- startark ----------
@@ -402,7 +429,7 @@ function visStartark(i) {
     v.appendChild(b);
   });
   const f = fremdrift[BRETT[i].id]?.[valgtAntall];
-  $("startInfo").textContent = f ? "Your best: " + f.poeng.toLocaleString("en") + " points in " + fmt(f.tid) + "." : "The clock starts when you touch the first piece.";
+  $("startInfo").textContent = "You have " + fmt(tidsfrist(i, valgtAntall)) + ". The clock starts when you touch the first piece." + (f ? " Your best: " + f.poeng.toLocaleString("en") + " points in " + fmt(f.tid) + "." : "");
   $("startark").hidden = false;
 }
 $("avbrytKnapp").onclick = () => { $("startark").hidden = true; };
@@ -972,7 +999,7 @@ function koble(b) {
     return true;
   }
   b.el.addEventListener("pointerdown", e => {
-    if (b.ferdig || !treffer(b, e)) return;
+    if (b.ferdig || spill.tapt || !treffer(b, e)) return;
     e.preventDefault();
     cancelAnimationFrame(glid); glid = 0;
     if (!spill.start) spill.start = Date.now();
@@ -1074,17 +1101,32 @@ $("hintKnapp").onclick = () => {
 function oppdaterTeller() { $("teller").textContent = spill.lagt + " / " + spill.biter.length; }
 function sekunder() { if (!spill?.start) return 0; return Math.floor(((spill.slutt || Date.now()) - spill.start) / 1000) + (spill.straff || 0); }
 function fmt(s) { return Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0"); }
+// Tiden du har på et brett: ti sekunder per brikke, litt ulikt per brett.
+function tidsfrist(brettNr, n) { return Math.round(n * 10 * (1 + ((brettNr * 7) % 5) * .04) / 5) * 5; }
 function tikk() {
-  const s = sekunder();
-  $("tid").textContent = fmt(s);
+  const s = sekunder(), frist = spill ? tidsfrist(spill.brett, spill.n) : 0, igjen = Math.max(0, frist - s);
+  $("tid").textContent = fmt(igjen);
   $("tid").classList.toggle("gar", !!spill?.start && !spill.slutt);
+  $("tid").classList.toggle("slutt", !!spill?.start && !spill.slutt && igjen <= 30);
+  if (spill?.start && !spill.slutt && igjen <= 10 && igjen > 0 && igjen !== spill.sistTikk) { spill.sistTikk = igjen; if (lydPa) tone(igjen <= 3 ? 1320 : 990, 0, .06, .03, "sine", .8, .3); }
+  if (spill?.start && !spill.slutt && igjen <= 0) { tidUt(); return; }
   visMal(s);
 }
+function tidUt() {
+  spill.slutt = Date.now(); spill.tapt = true; clearInterval(timer);
+  $("tid").classList.remove("gar", "slutt");
+  if (lydPa) { tone(220, 0, .3, .06, "sawtooth", .6, .6); tone(147, .15, .45, .06, "sawtooth", .6, .6); }
+  $("tidUtTekst").textContent = spill.lagt + " of " + spill.biter.length + " pieces placed. The picture stays hidden this time.";
+  $("tidUtArk").hidden = false;
+}
+$("tidUtIgjen").onclick = () => { $("tidUtArk").hidden = true; if (spill) startSpill(spill.brett, spill.n); };
+$("tidUtMeny").onclick = () => { $("tidUtArk").hidden = true; tilMeny(); };
 // Hvem kan du fortsatt slå? Lista sortert på poeng er den samme som sortert på tid.
 function visMal(s) {
   const m = $("mal");
   if (!spill || spill.slutt) { m.replaceChildren(); return; }
-  const andre = (spill.liste || []).filter(r => r.id !== minId).sort((a, b) => a.t - b.t);
+  const frist = tidsfrist(spill.brett, spill.n);
+  const andre = (spill.liste || []).filter(r => r.id !== minId && r.t <= frist).sort((a, b) => a.t - b.t);
   const plass = andre.findIndex(r => r.t > s);
   m.classList.toggle("tapt", plass < 0);
   if (!andre.length) { m.replaceChildren(); return; }
@@ -1338,11 +1380,12 @@ function shFbm(x, y, s, okt) {
   return v / sum;
 }
 
-async function shatterStart(niva, poeng = 0, liv = 3) {
+async function shatterStart(i, poeng = 0, liv = 3) {
+  // Vanskeligere for hvert brett, og for hver samling.
+  const niva = i + aktiv * 2;
   stoppFest(); clearInterval(timer); spill = null;
   document.querySelectorAll(".bit").forEach(e => e.remove());
   $("meny").hidden = true; $("spill").hidden = true; $("shatter").hidden = false;
-  const løst = løsteBrett(), i = løst.length ? løst[niva % løst.length] : 0;
   const img = await hentBilde(BRETT[i].src);
   const tykk = shMoekk(niva);
   const klosser = [], j1 = Math.floor(Math.random() * SH_JORD.length), j2 = (j1 + 1 + Math.floor(Math.random() * (SH_JORD.length - 1))) % SH_JORD.length;
@@ -1360,7 +1403,7 @@ async function shatterStart(niva, poeng = 0, liv = 3) {
     klatter: [], splatter: [], sigT: 0, flomT: 14, dryppT: 1, flomIgjen: Math.round(klosser.reduce((a, k) => a + k.liv, 0) * .05),
     skyllT: 0, skylling: false, spor: [], glod: 0, flip: [{ t: 9, ledd: 0.08 }, { t: 9, ledd: 0.08 }] };
   shNyBall();
-  $("shNiva").textContent = "Level " + (niva + 1) + " · " + BRETT[i].navn;
+  $("shNiva").textContent = kode(i) + " · " + BRETT[i].navn;
   shMelding("Tap to launch", "Drag anywhere to move the light, or hold the left or right side. Wash off the mud, and catch what falls out of it.");
   shOppsett(); shLagMoekk(); shHud();
   cancelAnimationFrame(shRAF); shSist = performance.now(); shRAF = requestAnimationFrame(shSteg);
@@ -2053,7 +2096,7 @@ function shMistetLiv() {
     s.tilstand = "over";
     const forrige = shLagret()["best" + aktiv] || 0, ny = s.poeng > forrige;
     shMelding("Game over", s.poeng.toLocaleString("en") + " points" + (ny ? " · New best!" : " · Best " + forrige.toLocaleString("en")),
-      [["Try again", () => shatterStart(0), true], ["Menu", shAvslutt]], true);
+      [["Try again", () => shatterStart(s.i), true], ["Menu", shAvslutt]], true);
     shLagreRekord(s.poeng).then(() => shVisToppliste(s.poeng));
     return;
   }
@@ -2065,17 +2108,22 @@ function shFerdig() {
   s.baller = []; s.kapsler = [];
   ferdigLyd(); s.glimt = s.tid; s.drypp = []; s.skum = []; s.klatter = [];
   for (let n = 0; n < 40; n++) shStjerne(Math.random(), SH_TOPP + Math.random(), .6 + Math.random() * .5, Math.random() * 1.6);
-  const lag = shLagret(), nokkel = "niva" + aktiv; lag[nokkel] = Math.max(lag[nokkel] || 0, s.niva + 1); shLagre(lag);
+  // Et vasket brett teller som løst, så neste brett åpnes.
+  const id = BRETT[s.i].id; fremdrift[id] = fremdrift[id] || {};
+  if (!fremdrift[id].scrub || s.poeng > fremdrift[id].scrub.poeng) fremdrift[id].scrub = { poeng: s.poeng };
+  skrivLokal(fremdrift);
+  let nesteI = -1; for (let j = s.i + 1; j < BRETT.length; j++) if (erApen(j)) { nesteI = j; break; }
   shLagreRekord(s.poeng);
   setTimeout(() => {
     if (sh !== s) return;
     let igjen = 8;
-    const neste = () => { if (sh === s && s.tilstand === "ferdig") shatterStart(s.niva + 1, s.poeng, s.liv); };
-    shMelding(BRETT[s.i].navn, "All clean! " + s.poeng.toLocaleString("en") + " points" + (bonus ? " (+" + bonus + " for spare bubbles)" : "") + ". Level " + (s.niva + 2) + " is next.",
-      [["Next level →", neste, true], ["Menu", shAvslutt]], true);
+    const neste = () => { if (sh === s && s.tilstand === "ferdig" && nesteI >= 0) shatterStart(nesteI, s.poeng, s.liv); };
+    const tekst = "All clean! " + s.poeng.toLocaleString("en") + " points" + (bonus ? " (+" + bonus + " for spare bubbles)" : "") + ".";
+    if (nesteI < 0) { shMelding(BRETT[s.i].navn, tekst + " Every board in this collection is clean.", [["Menu", shAvslutt, true]], true); shVisToppliste(s.poeng); return; }
+    shMelding(BRETT[s.i].navn, tekst + " Next: " + BRETT[nesteI].navn + ".", [["Next board →", neste, true], ["Menu", shAvslutt]], true);
     shVisToppliste(s.poeng);
     const knapp = $("shKnapper").firstElementChild;
-    const tell = setInterval(() => { if (sh !== s || s.tilstand !== "ferdig") return clearInterval(tell); igjen--; knapp.textContent = "Next level → " + igjen; if (igjen <= 0) { clearInterval(tell); neste(); } }, 1000);
+    const tell = setInterval(() => { if (sh !== s || s.tilstand !== "ferdig") return clearInterval(tell); igjen--; knapp.textContent = "Next board → " + igjen; if (igjen <= 0) { clearInterval(tell); neste(); } }, 1000);
   }, 2600);
 }
 // Toppliste for SCRUB: beste poeng per samling, lagret i eget rekord-dokument.
@@ -2331,12 +2379,8 @@ function shSteg(t) {
 }
 addEventListener("resize", () => { if (sh) shOppsett(); });
 // Bare for automatisk testing lokalt (?autotest).
-if (location.search.includes("autotest")) { window.__sh = () => sh; window.__shOppdater = dt => { shOppdater(dt); if (sh) { sh.tid += dt; shPartikler(dt); } }; window.__shTreff = shTreff; window.__shSprekk = shSprekk; window.__shTegn = () => { shRens(); shTegn(performance.now()); }; }
-$("shatterKnapp").onclick = () => {
-  ctx();
-  if (!løsteBrett().length) { const t = $("scrubTekst"); t.textContent = "Solve at least one board in this collection first."; setTimeout(tegnScrubKnapp, 2500); return; }
-  shatterStart(shLagret()["niva" + aktiv] || 0);
-};
+if (location.search.includes("autotest")) { window.__sh = () => sh; window.__shOppdater = dt => { shOppdater(dt); if (sh) { sh.tid += dt; shPartikler(dt); } }; window.__shTreff = shTreff; window.__shSprekk = shSprekk; window.__shTegn = () => { shRens(); shTegn(performance.now()); }; window.__spill = () => spill; }
+
 
 
 // Behold et påbegynt brett når siden oppdateres.
