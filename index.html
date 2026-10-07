@@ -216,6 +216,15 @@ body.lys #kraftLinje button,body.lys #shKraftLinje button{color:#fff7e6}
 @media (max-width:480px){#kraftLinje button{font-size:10.5px;letter-spacing:.08em;padding:6px 10px}}
 .butikk{position:fixed;inset:0;z-index:6000;display:grid;place-items:center;background:rgba(10,8,6,.55)}
 .butikk[hidden]{display:none}
+#meny .topp{position:relative}
+.tannhjul{position:absolute;top:2px;right:0;width:42px;height:42px;border-radius:50%;border:1px solid var(--linje,rgba(127,127,127,.35));background:transparent;color:var(--demp);display:grid;place-items:center;cursor:pointer;z-index:2}
+.tannhjul:active{transform:scale(.94)}
+.innst{min-width:min(300px,84vw)}
+.miks{display:grid;grid-template-columns:72px 1fr 34px;align-items:center;gap:10px;margin:14px 0;font-family:var(--brod);font-weight:600;letter-spacing:.06em;text-transform:uppercase;font-size:12px}
+.miks input[type=range]{width:100%;accent-color:#ffb000;height:28px}
+.miks b{font-family:var(--tall);font-weight:500;text-align:right;color:#ffd27a}
+.miks.bryter button{margin:0;justify-self:start;min-width:64px}
+.miks.bryter button[aria-pressed=false]{opacity:.55}
 .butikk .boks{max-width:340px;margin:16px;padding:20px 22px;border-radius:12px;background:#1d1812;color:#f3e9d8;border:1px solid rgba(255,190,90,.45);font-size:14px;line-height:1.45;box-shadow:0 10px 40px rgba(0,0,0,.5)}
 .butikk h3{margin:0 0 8px;font-family:var(--display);letter-spacing:.06em;color:#ffd27a}
 .butikk button{margin-top:12px;padding:8px 16px;border-radius:999px;border:1px solid rgba(255,190,90,.6);background:#2f2416;color:#fff;font-weight:700}
@@ -357,6 +366,7 @@ body:has(.resultat.vis) #spill .linje{opacity:0;pointer-events:none;transition:o
 <section id="meny" class="skjerm" aria-label="Collections">
   <div class="topp">
     <div>
+      <button class="tannhjul" id="tannhjul" aria-label="Settings"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path fill="currentColor" d="M19.4 13a7.5 7.5 0 0 0 0-2l2-1.6-2-3.4-2.4 1a7.4 7.4 0 0 0-1.7-1L15 3.5h-4l-.4 2.5a7.4 7.4 0 0 0-1.7 1l-2.4-1-2 3.4 2 1.6a7.5 7.5 0 0 0 0 2l-2 1.6 2 3.4 2.4-1a7.4 7.4 0 0 0 1.7 1l.4 2.5h4l.4-2.5a7.4 7.4 0 0 0 1.7-1l2.4 1 2-3.4zM13 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7z" transform="translate(-1 0)"/></svg></button>
       <h1 class="hm-logo"><span class="hm-navn"><span class="hm-l1">HIDDEN</span><span class="hm-l2">MOTIVES</span></span><a class="hm-av" href="https://kroghx.com" target="_blank" rel="noopener"><span>by</span><b>KROGHX</b></a></h1>
       <div class="moduser" role="tablist" aria-label="Choose a game">
         <button class="modus" id="modusPuslespill" role="tab"><span class="tittel">PIECE&nbsp;IT</span></button>
@@ -374,7 +384,7 @@ body:has(.resultat.vis) #spill .linje{opacity:0;pointer-events:none;transition:o
   <div class="regel"><b>The race:</b> Your best score on each of the ten boards in a collection is added up. Finish #1 overall and you get the next collection for free. Anyone who takes first place later gets it too. Points: Easy (25 pieces) gives 10,000, Medium (49) 15,000, Hard (100) 20,000 and Chaos (144) 25,000 at normal speed. Be fast and you get up to double.</div>
   <div class="sammen" id="sammen"><p class="liten">Loading standings …</p></div>
   <p class="kreditt">© 2001–2026 Tarjei Krogh. All photography, music and art. <a href="https://kroghx.com" target="_blank" rel="noopener">kroghx.com</a></p>
-  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 0.92<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
+  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 0.93<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
 </section>
 
 <div class="ark" id="tidUtArk" hidden style="z-index:200001">
@@ -438,6 +448,13 @@ body:has(.resultat.vis) #spill .linje{opacity:0;pointer-events:none;transition:o
     <button class="kraft" id="shKraftTrip">TRIP <span class="pris">◆ 3</span></button>
     <button class="lommebok" id="shLommebok">◆ <span id="shCreditTall">10</span> +</button>
   </div>
+  <div class="butikk" id="innstillinger" hidden><div class="boks innst">
+    <h3>SETTINGS</h3>
+    <label class="miks"><span>Music</span><input type="range" id="miksMusikk" min="0" max="100" step="1"><b id="miksMusikkTall"></b></label>
+    <label class="miks"><span>Effects</span><input type="range" id="miksEffekter" min="0" max="100" step="1"><b id="miksEffekterTall"></b></label>
+    <label class="miks bryter"><span>Sound</span><button id="miksLyd" aria-pressed="true">On</button></label>
+    <button id="innstLukk">Close</button>
+  </div></div>
   <div class="butikk" id="butikk" hidden><div class="boks">
     <h3>CREDITS</h3>
     <p id="butikkTekst"></p>
@@ -562,7 +579,7 @@ function tilpassLogo() {
   const pass = (el, maks, ekstra) => { el.style.fontSize = maks + "px"; const w = el.scrollWidth + ekstra; if (w > bredde) el.style.fontSize = Math.max(12, Math.floor(maks * bredde / w * 0.98)) + "px"; };
   const navn = document.querySelector(".hm-navn"), av = document.querySelector(".hm-av");
   // HIDDEN og MOTIVES får hver sin størrelse, så begge linjene blir like brede (HIDDEN får litt større skrift).
-  if (navn) { const mål = Math.min(bredde - av.offsetWidth - 16, 420);
+  if (navn) { const mål = Math.min(bredde - av.offsetWidth - 16 - 50, 420);
     for (const l of navn.children) { l.style.fontSize = "100px"; l.style.fontSize = Math.floor(100 * mål / l.offsetWidth * 10) / 10 + "px"; } }
   const m = document.querySelector(".moduser"); if (m) pass(m, 34, 0);
 }
@@ -642,6 +659,16 @@ $("startKnapp").onclick = () => { $("startark").hidden = true; startSpill(valgtB
 // ---------- lyd: kort og myk, laget i nettleseren ----------
 let lydPa = true, lydCtx = null;
 try { lydPa = localStorage.getItem("sm-lyd") !== "av"; } catch {}
+// Lydmikser: musikk og effekter har hver sin kanal med egen styrke (0–1). Huskes mellom besøk.
+let lydMiks = { musikk: .8, effekter: .8 };
+try { const m = JSON.parse(localStorage.getItem("sm-miks") || "null"); if (m && typeof m.musikk === "number") lydMiks = { musikk: m.musikk, effekter: m.effekter }; } catch {}
+const kurve = v => v * v; // Mer naturlig styrke for øret.
+function effektUt(c) { if (!c.effektBuss) { c.effektBuss = c.createGain(); c.effektBuss.gain.value = kurve(lydMiks.effekter) * 1.25; c.effektBuss.connect(c.destination); } return c.effektBuss; }
+function musikkUt(c) { if (!c.musikkBuss) { c.musikkBuss = c.createGain(); c.musikkBuss.gain.value = kurve(lydMiks.musikk) * 1.25; c.musikkBuss.connect(c.destination); } return c.musikkBuss; }
+function settMiks(del, v) {
+  lydMiks[del] = v; try { localStorage.setItem("sm-miks", JSON.stringify(lydMiks)); } catch {}
+  const c = lydCtx; if (!c) return; const b = del === "musikk" ? musikkUt(c) : effektUt(c); b.gain.setTargetAtTime(kurve(v) * 1.25, c.currentTime, .05);
+}
 function ctx() {
   if (!lydCtx) {
     // iPhone: «playback» gjør at lyden spilles selv om ringebryteren står på stille.
@@ -693,7 +720,7 @@ function romInn() {
     const g = c.createGain(); g.gain.value = 0.38;
     const lp = c.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = 6500;
     const hp = c.createBiquadFilter(); hp.type = "highpass"; hp.frequency.value = 300;
-    g.connect(pre).connect(conv).connect(hp).connect(lp).connect(c.destination);
+    g.connect(pre).connect(conv).connect(hp).connect(lp).connect(effektUt(c));
     rom = g;
   }
   return rom;
@@ -717,7 +744,7 @@ function tone(frekv, start, varighet, styrke, type, tørr = 1, våt = 1) {
   g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(styrke, t + 0.003);
   g.gain.exponentialRampToValueAtTime(0.0001, t + varighet);
   o.connect(g);
-  const gt = c.createGain(); gt.gain.value = tørr; plassert(c, g.connect(gt)).connect(c.destination);
+  const gt = c.createGain(); gt.gain.value = tørr; plassert(c, g.connect(gt)).connect(effektUt(c));
   const r = romInn(); if (r) { const gv = c.createGain(); gv.gain.value = våt; g.connect(gv).connect(r); }
   o.start(t); o.stop(t + varighet + 0.02);
 }
@@ -729,7 +756,7 @@ function torden(start, varighet) {
   for (let i = 0; i < len; i++) { const u = i / len; sist = (sist + .04 * (Math.random() * 2 - 1)) / 1.02; d[i] = sist * 4 * Math.pow(1 - u, 1.5) * (.55 + .45 * Math.sin(u * 19 + Math.sin(u * 7) * 3)); }
   const src = c.createBufferSource(); src.buffer = buf;
   const lp = c.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = 420;
-  const g = c.createGain(); g.gain.value = .9; src.connect(lp).connect(g); g.connect(c.destination);
+  const g = c.createGain(); g.gain.value = .9; src.connect(lp).connect(g); g.connect(effektUt(c));
   const r = romInn(); if (r) { const gv = c.createGain(); gv.gain.value = .6; g.connect(gv).connect(r); }
   src.start(c.currentTime + start);
 }
@@ -741,7 +768,7 @@ function tsjing(start, styrke, tørr = 1, våt = 1, frekv = 7500) {
   const bp = c.createBiquadFilter(); bp.type = "bandpass"; bp.frequency.value = frekv; bp.Q.value = 2.5;
   const g = c.createGain(); g.gain.value = styrke;
   src.connect(bp).connect(g);
-  const gt = c.createGain(); gt.gain.value = tørr; plassert(c, g.connect(gt)).connect(c.destination);
+  const gt = c.createGain(); gt.gain.value = tørr; plassert(c, g.connect(gt)).connect(effektUt(c));
   const r = romInn(); if (r) { const gv = c.createGain(); gv.gain.value = våt; g.connect(gv).connect(r); }
   src.start(c.currentTime + start);
 }
@@ -1121,7 +1148,7 @@ function startPad() {
   const lp = c.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = 1400; lp.Q.value = 0.3;
   const lfo = c.createOscillator(), lfoG = c.createGain(); lfo.frequency.value = 0.08; lfoG.gain.value = 400;
   lfo.connect(lfoG).connect(lp.frequency); lfo.start();
-  lp.connect(ut); ut.connect(c.destination);
+  lp.connect(ut); ut.connect(musikkUt(c));
   const r = romInn(); if (r) { const v = c.createGain(); v.gain.value = 1.4; ut.connect(v).connect(r); }
   const osc = [lfo];
   [0, 7, 11, 14, 16, 19].forEach((st, i) => {
@@ -1243,7 +1270,7 @@ async function spillMusikk(id) {
     kilde.buffer = buf; kilde.loop = true;
     kilde.loopStart = st / buf.sampleRate; kilde.loopEnd = Math.min(buf.duration, (st + L) / buf.sampleRate);
     g.gain.setValueAtTime(0, c.currentTime); g.gain.linearRampToValueAtTime(.32, c.currentTime + 1.5);
-    kilde.connect(g).connect(c.destination); kilde.start(0, kilde.loopStart);
+    kilde.connect(g).connect(musikkUt(c)); kilde.start(0, kilde.loopStart);
     musikk = { kilde, g, id, fil: m.fil };
   } catch {}
 }
@@ -1269,6 +1296,17 @@ function visLydKnapp() { const k = $("lydKnapp"); k.textContent = lydPa ? "Sound
 $("lydKnapp").onclick = () => { lydPa = !lydPa; try { localStorage.setItem("sm-lyd", lydPa ? "på" : "av"); } catch {} visLydKnapp(); if (lydPa) { plingLyd(0); if (spill?.slutt) startPad(); if (spill) spillMusikk(BRETT[spill.brett].id); låsOppLyd(); } else { stoppPad(); stoppMusikk(.3); if (stilleLyd) stilleLyd.pause(); } visLydStatus(); };
 // Trykk på lydstatusen i menyen for å slå lyden av og på.
 $("lydStatus").onclick = () => $("lydKnapp").click();
+function visInnst() {
+  for (const [del, id] of [["musikk", "miksMusikk"], ["effekter", "miksEffekter"]]) { $(id).value = Math.round(lydMiks[del] * 100); $(id + "Tall").textContent = Math.round(lydMiks[del] * 100); }
+  $("miksLyd").textContent = lydPa ? "On" : "Off"; $("miksLyd").setAttribute("aria-pressed", String(lydPa));
+}
+$("tannhjul").onclick = () => { ctx(); visInnst(); $("innstillinger").hidden = false; };
+$("innstLukk").onclick = () => { $("innstillinger").hidden = true; };
+$("innstillinger").addEventListener("pointerdown", e => { if (e.target === $("innstillinger")) $("innstillinger").hidden = true; });
+$("miksMusikk").oninput = e => { settMiks("musikk", e.target.value / 100); visInnst(); };
+let miksPlingT = 0;
+$("miksEffekter").oninput = e => { settMiks("effekter", e.target.value / 100); visInnst(); const n = performance.now(); if (lydPa && n - miksPlingT > 160) { miksPlingT = n; plingLyd(.5); } };
+$("miksLyd").onclick = e => { e.preventDefault(); $("lydKnapp").click(); visInnst(); };
 visLydKnapp();
 
 // ---------- puslebiter ----------
@@ -2087,7 +2125,7 @@ $("kraftMagnet").onclick = () => brukKraft("magnet");
 $("kraftHint").onclick = () => brukKraft("hint");
 $("kraftLim").onclick = () => brukKraft("lim");
 $("kraftFamilie").onclick = () => brukKraft("familie");
-for (const id of ["kraftLinje", "shKraftLinje", "butikk"]) document.body.appendChild($(id));
+for (const id of ["kraftLinje", "shKraftLinje", "butikk", "innstillinger"]) document.body.appendChild($(id));
 for (const id of ["kraftLinje", "shKraftLinje", "butikk"]) $(id).addEventListener("pointerdown", e => e.stopPropagation());
 function tikk() {
   visKraftLinje();
@@ -2438,17 +2476,17 @@ function vannLyd(styrke = 1) {
   const src = c.createBufferSource(); src.buffer = buf;
   const lp = c.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = 1500 + Math.random() * 500; lp.Q.value = .6;
   const hp = c.createBiquadFilter(); hp.type = "highpass"; hp.frequency.value = 220;
-  const g = c.createGain(); g.gain.value = .32 * styrke; src.connect(lp).connect(hp).connect(g); g.connect(c.destination);
+  const g = c.createGain(); g.gain.value = .32 * styrke; src.connect(lp).connect(hp).connect(g); g.connect(effektUt(c));
   const r = romInn(); if (r) { const gv = c.createGain(); gv.gain.value = .35; g.connect(gv).connect(r); }
   src.start(c.currentTime);
   { const o = c.createOscillator(), go = c.createGain(), t = c.currentTime; o.type = "sine"; o.frequency.setValueAtTime(190, t); o.frequency.exponentialRampToValueAtTime(70, t + .22);
-    go.gain.setValueAtTime(0, t); go.gain.linearRampToValueAtTime(.09 * styrke, t + .012); go.gain.exponentialRampToValueAtTime(.0005, t + .3); o.connect(go); go.connect(c.destination); if (r) { const gv = c.createGain(); gv.gain.value = .4; go.connect(gv).connect(r); } o.start(t); o.stop(t + .32); }
+    go.gain.setValueAtTime(0, t); go.gain.linearRampToValueAtTime(.09 * styrke, t + .012); go.gain.exponentialRampToValueAtTime(.0005, t + .3); o.connect(go); go.connect(effektUt(c)); if (r) { const gv = c.createGain(); gv.gain.value = .4; go.connect(gv).connect(r); } o.start(t); o.stop(t + .32); }
   // Små dråper som faller etter: korte, myke «plopp» som stiger litt i tone.
   for (let n = 0; n < 8; n++) {
     const t = c.currentTime + .08 + Math.random() * .7, o = c.createOscillator(), gg = c.createGain(), f0 = 450 + Math.random() * 850;
     o.type = "sine"; o.frequency.setValueAtTime(f0, t); o.frequency.exponentialRampToValueAtTime(f0 * 1.7, t + .045);
     gg.gain.setValueAtTime(0, t); gg.gain.linearRampToValueAtTime(.035, t + .006); gg.gain.exponentialRampToValueAtTime(.0004, t + .07);
-    o.connect(gg); gg.connect(c.destination); if (r) { const gv = c.createGain(); gv.gain.value = .5; gg.connect(gv).connect(r); }
+    o.connect(gg); gg.connect(effektUt(c)); if (r) { const gv = c.createGain(); gv.gain.value = .5; gg.connect(gv).connect(r); }
     o.start(t); o.stop(t + .09);
   }
 }
@@ -3644,7 +3682,7 @@ function shGlid(f0, f1, varighet, styrke, type = "sine", tørr = .8, våt = .6, 
   o.type = type; o.frequency.setValueAtTime(f0, t); o.frequency.exponentialRampToValueAtTime(f1, t + varighet);
   g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(styrke, t + .004); g.gain.exponentialRampToValueAtTime(.0001, t + varighet);
   o.connect(g);
-  const gt = c.createGain(); gt.gain.value = tørr; g.connect(gt).connect(c.destination);
+  const gt = c.createGain(); gt.gain.value = tørr; g.connect(gt).connect(effektUt(c));
   const r = romInn(); if (r) { const gv = c.createGain(); gv.gain.value = våt; g.connect(gv).connect(r); }
   o.start(t); o.stop(t + varighet + .02);
 }
@@ -3656,7 +3694,7 @@ function shSus(varighet, filter, frekv, styrke, Q = 1, tørr = .8, våt = .5, st
   src.buffer = shStoyBuf; fl.type = filter; fl.frequency.value = frekv; fl.Q.value = Q;
   g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(styrke, t + .005); g.gain.exponentialRampToValueAtTime(.0001, t + varighet);
   src.connect(fl).connect(g);
-  const gt = c.createGain(); gt.gain.value = tørr; g.connect(gt).connect(c.destination);
+  const gt = c.createGain(); gt.gain.value = tørr; g.connect(gt).connect(effektUt(c));
   const r = romInn(); if (r) { const gv = c.createGain(); gv.gain.value = våt; g.connect(gv).connect(r); }
   src.start(t, Math.random() * .5); src.stop(t + varighet + .02);
 }
@@ -3670,7 +3708,7 @@ function shBoing(f, styrke) {
   lg.gain.setValueAtTime(f * .2, t); lg.gain.exponentialRampToValueAtTime(f * .01, t + .35);
   lfo.connect(lg).connect(o.frequency);
   g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(styrke, t + .005); g.gain.exponentialRampToValueAtTime(.0001, t + .38);
-  o.connect(g); g.connect(c.destination);
+  o.connect(g); g.connect(effektUt(c));
   const r = romInn(); if (r) { const gv = c.createGain(); gv.gain.value = .4; g.connect(gv).connect(r); }
   o.start(t); lfo.start(t); o.stop(t + .4); lfo.stop(t + .4);
 }
@@ -5739,7 +5777,7 @@ function shSteg(t) {
 }
 addEventListener("resize", () => { if (sh) shOppsett(); });
 // Bare for automatisk testing lokalt (?autotest).
-if (location.search.includes("autotest")) { window.__sh = () => sh; window.__shOppdater = dt => { shOppdater(dt); if (sh) { sh.tid += dt; shPartikler(dt); } }; window.__shTreff = shTreff; window.__shGalaga = shGalagaStart; window.__shSopp = shSopp; window.__shBytte = shByttetStart; window.__shOrm = shOrmStart; window.__levende = levendeStart; window.__gn = () => ({ gnister, raf: gnistRAF }); window.__hendelse = t => t === "tilt" ? tilt(true) : t === "vokse" ? vokseBrikke() : t === "break" ? puzzleBreak() : t === "speilX" ? speilStart("x") : t === "speilY" ? speilStart("y") : lynnedslag(); window.__shSprekk = shSprekk; window.__shTegn = () => { shRens(); shTegn(performance.now()); }; window.__spill = () => spill; window.__banner = banner; window.__kast = kast; window.__speilSlutt = speilSlutt; window.__geo = () => geo; window.__plasser = plasser; window.__skjermPkt = skjermPkt; }
+if (location.search.includes("autotest")) { window.__sh = () => sh; window.__shOppdater = dt => { shOppdater(dt); if (sh) { sh.tid += dt; shPartikler(dt); } }; window.__shTreff = shTreff; window.__shGalaga = shGalagaStart; window.__shSopp = shSopp; window.__shBytte = shByttetStart; window.__shOrm = shOrmStart; window.__levende = levendeStart; window.__gn = () => ({ gnister, raf: gnistRAF }); window.__hendelse = t => t === "tilt" ? tilt(true) : t === "vokse" ? vokseBrikke() : t === "break" ? puzzleBreak() : t === "speilX" ? speilStart("x") : t === "speilY" ? speilStart("y") : lynnedslag(); window.__shSprekk = shSprekk; window.__shTegn = () => { shRens(); shTegn(performance.now()); }; window.__spill = () => spill; window.__banner = banner; window.__kast = kast; window.__lyd = () => { const c = lydCtx; return c ? { musikk: musikkUt(c).gain.value, effekt: effektUt(c).gain.value } : null; }; window.__speilSlutt = speilSlutt; window.__geo = () => geo; window.__plasser = plasser; window.__skjermPkt = skjermPkt; }
 
 
 
