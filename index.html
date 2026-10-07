@@ -306,7 +306,7 @@ body:has(.resultat.vis) #spill .linje{opacity:0;pointer-events:none;transition:o
   <div class="topp">
     <div>
       <h1 class="moduser" role="tablist">
-        <button class="modus" id="modusPuslespill" role="tab"><span class="tittel">HIDDEN<br><span>MOTIVES</span></span></button>
+        <button class="modus" id="modusPuslespill" role="tab"><span class="tittel">PIECE&nbsp;IT</span></button>
         <span class="eller" aria-hidden="true">or</span>
         <button class="modus" id="modusScrub" role="tab"><span class="tittel">SCRUB&nbsp;IT</span></button>
       </h1>
@@ -323,7 +323,7 @@ body:has(.resultat.vis) #spill .linje{opacity:0;pointer-events:none;transition:o
   <div class="regel"><b>The race:</b> Your best score on each of the ten boards in a collection is added up. Finish #1 overall and you get the next collection for free. Anyone who takes first place later gets it too. Points: Easy (25 pieces) gives 10,000, Medium (49) 15,000, Hard (100) 20,000 and Chaos (144) 25,000 at normal speed. Be fast and you get up to double.</div>
   <div class="sammen" id="sammen"><p class="liten">Loading standings …</p></div>
   <p class="kreditt">© 2001–2026 Tarjei Krogh. All photography, music and art. <a href="https://kroghx.com" target="_blank" rel="noopener">kroghx.com</a></p>
-  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 0.66<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
+  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 0.67<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
 </section>
 
 <div class="ark" id="tidUtArk" hidden style="z-index:200001">
@@ -386,7 +386,7 @@ body:has(.resultat.vis) #spill .linje{opacity:0;pointer-events:none;transition:o
     </div>
     </div>
     <div class="ark-hoyre">
-    <div class="ark-hode" id="arkHode">HIDDEN<span>TOP 100</span></div>
+    <div class="ark-hode" id="arkHode">PIECE IT<span>TOP 100</span></div>
     <div class="liste" id="liste"><p class="liten">Loading leaderboard …</p></div>
     <button class="sekundar" id="visAlle" hidden>Show all</button>
     </div>
@@ -809,7 +809,7 @@ function visArkade() {
   const a = ark, sp = a, res = $("resultat");
   if (!a || !a.gyldig() || res.classList.contains("vis")) return;
   res.classList.toggle("tema-scrub", a.tema === "scrub"); res.classList.toggle("tema-pusle", a.tema !== "scrub");
-  $("arkHode").innerHTML = (a.tema === "scrub" ? "SCRUB IT" : "HIDDEN") + "<span>TOP 100</span>";
+  $("arkHode").innerHTML = (a.tema === "scrub" ? "SCRUB IT" : "PIECE IT") + "<span>TOP 100</span>";
   const kanv = $("arkBilde"), plass = $("arkPlass");
   $("magi").style.opacity = 0; setTimeout(magiStopp, 520);
   plass.classList.remove("borte"); kanv.style.opacity = "";
@@ -1411,7 +1411,7 @@ function tegnBit(b) {
     ctx.globalCompositeOperation = "source-over"; ctx.globalAlpha = .42; ctx.fillStyle = "#8a5a2a"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
     const fs = Math.max(6, Math.min(bw, bh) * .15); ctx.font = `800 ${fs}px "Syne", sans-serif`;
     ctx.save(); ctx.translate(t + bw / 2, t + bh / 2); ctx.rotate(-.12);
-    ctx.fillText("HIDDEN", 0, -fs * .55); ctx.fillText("MOTIVES", 0, fs * .55); ctx.restore();
+    ctx.font = `800 ${fs * 1.25}px "Syne", sans-serif`; ctx.fillText("PIECE", 0, -fs * .6); ctx.fillText("IT", 0, fs * .7); ctx.restore();
     ctx.globalCompositeOperation = "source-over"; ctx.globalAlpha = 1;
   } else ctx.drawImage(img, t - b.c * bw, t - b.r * bh, bredde, hoyde);
   if (b.svidd > 0) sviBit(ctx, t, bw, bh, b.svidd, b.id);
@@ -1439,7 +1439,7 @@ function plasser(b) {
   }
   // Løftet: biten blir litt større og skyggen lenger. Dunk: den trykkes litt ned når den lander.
   const l = b.loft || 0, s = (1 + .07 * l - .035 * (b.dunk || 0)) * (b.vekst || 1);
-  const rot = b.ferdig ? 0 : (b.rot || 0), sx = (b.sx ?? 1) * (b.fx ?? 1), sy = b.fy ?? 1;
+  const pu = b.pust || 0, rot = (b.ferdig ? 0 : (b.rot || 0)) + (b.svai || 0), sx = (b.sx ?? 1) * (b.fx ?? 1) * (1 + pu), sy = (b.fy ?? 1) * (1 - pu * .8);
   b.el.style.transform = `translate(${x0 + b.x * bredde - t + (b.dirr || 0) * (Math.random() - .5)}px, ${y0 + b.y * hoyde - t + (b.dirr || 0) * (Math.random() - .5)}px)` + (rot ? ` rotate(${rot.toFixed(2)}deg)` : "") + (s !== 1 || sx !== 1 || sy !== 1 ? ` scale(${(s * sx).toFixed(4)},${(s * sy).toFixed(4)})` : "");
   if (!b.ferdig || b.lander) {
     const g = Math.round((b.glod || 0) * 8) / 8, lq = Math.round(l * 10) / 10;
@@ -1492,11 +1492,16 @@ function skyvBort(b) {
 function settNed(b, fraX, fraY, lyd) {
   const mx = slotC(b) / spill.k, my = slotR(b) / spill.r, t0 = performance.now(), l0 = b.loft || 0, sp = spill;
   løftes.delete(b); b.lander = true;
+  let vx = (b.glidV?.[0] || 0) * 60, vy = (b.glidV?.[1] || 0) * 60, sist = t0; b.glidV = null; b.x = fraX; b.y = fraY;
+  const d0 = Math.hypot((mx - fraX) * geo.bredde, (my - fraY) * geo.hoyde) || 1;
   const steg = t => {
     if (spill !== sp || !b.el.isConnected) return;
-    const u = Math.min(1, (t - t0) / 230), e = 1 - Math.pow(1 - u, 3);
-    b.x = fraX + (mx - fraX) * e; b.y = fraY + (my - fraY) * e; b.loft = l0 * (1 - e) + .35 * Math.sin(Math.PI * u) * (1 - u);
-    if (u < 1) { plasser(b); requestAnimationFrame(steg); return; }
+    const dt = Math.min(.033, Math.max(.001, (t - sist) / 1000)); sist = t;
+    const K = 140, C = 2 * Math.sqrt(K);
+    vx += (K * (mx - b.x) - C * vx) * dt; vy += (K * (my - b.y) - C * vy) * dt; b.x += vx * dt; b.y += vy * dt;
+    const d = Math.hypot((mx - b.x) * geo.bredde, (my - b.y) * geo.hoyde), fart = Math.hypot(vx * geo.bredde, vy * geo.hoyde), e = 1 - Math.min(1, d / d0);
+    b.loft = l0 * (1 - e) + .25 * Math.sin(Math.PI * e) * (1 - e);
+    if ((d > .35 || fart > 25) && t - t0 < 1200) { plasser(b); requestAnimationFrame(steg); return; }
     b.x = mx; b.y = my; b.loft = 0; b.glod = 0;
     const t1 = performance.now();
     const dunk = t2 => {
@@ -1658,7 +1663,7 @@ function koble(b) {
       // Sprett mykt av kanten på skjermen.
       if (b.x !== fx && Math.abs(b.x - fx) > 1e-6 && (b.x <= geo.minX || b.x >= geo.maxX)) { vx *= -0.65; if (lydPa && Math.abs(vx) > .002) tone(150, 0, .05, .02, "triangle", .8, .2); }
       if (b.y !== fy && Math.abs(b.y - fy) > 1e-6 && (b.y <= geo.minY || b.y >= geo.maxY)) { vy *= -0.65; if (lydPa && Math.abs(vy) > .002) tone(150, 0, .05, .02, "triangle", .8, .2); }
-      if (provSmett()) { glid = 0; return; }
+      b.glidV = [vx, vy]; if (provSmett()) { glid = 0; return; } b.glidV = null;
       if (Math.hypot(vx * geo.bredde, vy * geo.hoyde) < 0.3) { glid = 0; b.glod = 0; plasser(b); return; }
       glid = requestAnimationFrame(steg);
     };
@@ -1859,7 +1864,8 @@ function vokseBrikke() {
   const voks = t => {
     if (spill !== sp || !b.ferdig) { b.vokser = false; b.dirr = 0; return; }
     const u = Math.min(1, (t - t0) / VOKS), e = u * u;
-    b.vekst = 1 + (MAKS - 1) * e + Math.sin(t / 45) * .02 * u; b.dirr = 1 + 5 * u; plasser(b);
+    b.vekst = 1 + (MAKS - 1) * e + Math.sin(t / 45) * .02 * u; b.dirr = 1 + 4 * u;
+    b.pust = u * (.07 * Math.sin(t / 150) + .035 * Math.sin(t / 71 + 1)); plasser(b);
     if (u < 1) { requestAnimationFrame(voks); return; }
     sprett();
   };
@@ -1886,10 +1892,13 @@ function vokseBrikke() {
   const krymp = () => {
     const k0 = performance.now(), v0 = b.vekst || MAKS, D = 7000;
     const steg = t => {
-      if (spill !== sp || b.ferdig) { b.vekst = 1; b.vokser = false; return; }
+      if (spill !== sp || b.ferdig) { b.vekst = 1; b.pust = 0; b.svai = 0; b.vokser = false; plasser(b); return; }
       const u = Math.min(1, (t - k0) / D), e = u * u * (3 - 2 * u);
-      b.vekst = 1 + (v0 - 1) * (1 - e) + Math.sin(t / 260) * .012 * (1 - u); plasser(b);
-      if (u < 1) requestAnimationFrame(steg); else { b.vekst = 1; b.vokser = false; plasser(b); }
+      // Pusten: sakte inn og ut, litt ujevnt, og den roer seg mens brikka krymper.
+      const a = 1 - e;
+      b.vekst = 1 + (v0 - 1) * a; b.pust = a * (.08 * Math.sin(t / 420) + .035 * Math.sin(t / 190 + 1.3)); b.svai = a * 3.5 * Math.sin(t / 610);
+      plasser(b);
+      if (u < 1) requestAnimationFrame(steg); else { b.vekst = 1; b.pust = 0; b.svai = 0; b.vokser = false; plasser(b); }
     };
     requestAnimationFrame(steg);
   };
@@ -1958,14 +1967,14 @@ function brannSteg(t) {
     let ny = Math.min(1, v + .6 * dt);
     if (B.slange) { const [cx, cy] = brannPos(b); if (Math.hypot(cx - B.slange.x, cy - B.slange.y) < Math.max(geo.bw, geo.bh) * 1.25) ny -= 2.6 * dt; }
     if (ny <= 0) { B.ild.delete(id); tegnBit(b); plasser(b); continue; }
-    B.ild.set(id, ny); b.svidd = Math.min(1, (b.svidd || 0) + ny * dt * .17);
-    if (ny > .45) {
+    B.ild.set(id, ny); b.svidd = Math.min(1, (b.svidd || 0) + ny * dt * .12);
+    if (ny > .35) {
       const [bx, by] = brannPos(b), nær = Math.max(geo.bw, geo.bh) * 1.05;
       for (const n of sp.biter) {
         if (n === b || n.iBunke || n.lander || B.ild.has(n.id) || !(n.ferdig || n.el.isConnected)) continue;
         const [nx, ny2] = brannPos(n), d = Math.hypot(nx - bx, ny2 - by);
         // Rett over eller under: tar fyr fort. Inntil: litt saktere.
-        if (d < nær && Math.random() < (d < nær * .55 ? .9 : .35) * dt) B.ild.set(n.id, .45);
+        if (d < nær && Math.random() < (d < nær * .55 ? 1.2 : .6) * dt) B.ild.set(n.id, .45);
       }
     }
   }
@@ -1982,7 +1991,7 @@ function brannSteg(t) {
       if (lydPa) [0, 4, 7].forEach((st, j) => tone(784 * Math.pow(2, st / 12), j * .07, .25, .02, "sine", .5, 1.2));
     }
     // La plasket og dampen ebbe ut før laget ryddes.
-    if (B.plask.some(p => p.t < .9) || B.damp.length || B.partikler.some(p => p.liv > 0)) { brannRAF = requestAnimationFrame(brannSteg); return; }
+    if (B.plask.some(p => p.t < .9) || B.damp.length || B.partikler.some(p => p.liv > 0) || B.vått?.length || B.renn?.length) { brannRAF = requestAnimationFrame(brannSteg); return; }
     sp.brann = null; brannRAF = 0; tegnBrann({ ild: new Map(), partikler: [], plask: [], damp: [] }, 0, t);
     return;
   }
@@ -1996,17 +2005,42 @@ function brannPos(b) {
 }
 function plask(px, py) {
   const B = spill?.brann; if (!B) return;
-  const drops = Array.from({ length: 26 }, () => { const a = Math.random() * Math.PI * 2, v = 60 + Math.random() * 220; return { x: px, y: py, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 80, r: 1.5 + Math.random() * 3.5 }; });
+  // En skikkelig bøtte: mange dråper, et stort plask, og en våt flekk som blir liggende.
+  const drops = Array.from({ length: 64 }, () => { const a = Math.random() * Math.PI * 2, v = 50 + Math.random() * 300; return { x: px, y: py, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 110, r: 1.5 + Math.random() * 4.5 }; });
   B.plask.push({ x: px, y: py, t: 0, drops });
+  const R = Math.max(geo.bw, geo.bh);
+  B.vått = B.vått || []; B.renn = B.renn || [];
+  B.vått.push({ x: px, y: py, r: R * (.9 + Math.random() * .4), liv: 1, frø: Math.random() * 100 });
+  for (let n = 0; n < 3; n++) B.renn.push({ x: px + (Math.random() - .5) * R, y0: py, y: py, v: 12 + Math.random() * 22, liv: 1, b: 2 + Math.random() * 2.5 });
   let traff = 0;
   for (const [id, v] of B.ild) {
     const b = spill.biter[id], [cx, cy] = brannPos(b);
-    if (Math.hypot(cx - px, cy - py) > Math.max(geo.bw, geo.bh) * 1.6) continue;
-    traff++; const ny = v - .85;
-    for (let n = 0; n < 4; n++) B.damp.push({ x: cx + (Math.random() - .5) * geo.bw * .7, y: cy + (Math.random() - .5) * geo.bh * .4, r: 8 + Math.random() * 10, liv: 1, vy: -(25 + Math.random() * 30) });
+    if (Math.hypot(cx - px, cy - py) > R * 2) continue;
+    traff++; const ny = v - .5;
+    for (let n = 0; n < 5; n++) B.damp.push({ x: cx + (Math.random() - .5) * geo.bw * .8, y: cy + (Math.random() - .5) * geo.bh * .5, r: 9 + Math.random() * 12, liv: 1, vy: -(25 + Math.random() * 35) });
     if (ny <= 0) { B.ild.delete(id); tegnBit(b); plasser(b); } else B.ild.set(id, ny);
   }
-  if (lydPa) { tsjing(0, .05, .8, .9, 1300); tone(140, 0, .12, .04, "sine", .8, .4); if (traff) tsjing(.05, .03, .6, .8, 6500); }
+  if (lydPa) { vannLyd(); if (traff) tsjing(.06, .025, .5, .9, 5200); }
+}
+// Vannlyd: et mykt, behagelig plask med små dråper etterpå. Ingen skarp støy.
+function vannLyd() {
+  const c = ctx(); if (!c) return;
+  const len = Math.floor(c.sampleRate * .95), buf = c.createBuffer(1, len, c.sampleRate), d = buf.getChannelData(0);
+  for (let i = 0; i < len; i++) { const u = i / len; d[i] = (Math.random() * 2 - 1) * Math.min(1, u * 35) * Math.pow(1 - u, 2.4) * (.65 + .35 * Math.sin(u * 95 + Math.sin(u * 33) * 4)); }
+  const src = c.createBufferSource(); src.buffer = buf;
+  const lp = c.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = 1500 + Math.random() * 500; lp.Q.value = .6;
+  const hp = c.createBiquadFilter(); hp.type = "highpass"; hp.frequency.value = 220;
+  const g = c.createGain(); g.gain.value = .32; src.connect(lp).connect(hp).connect(g); g.connect(c.destination);
+  const r = romInn(); if (r) { const gv = c.createGain(); gv.gain.value = .35; g.connect(gv).connect(r); }
+  src.start(c.currentTime);
+  // Små dråper som faller etter: korte, myke «plopp» som stiger litt i tone.
+  for (let n = 0; n < 8; n++) {
+    const t = c.currentTime + .08 + Math.random() * .7, o = c.createOscillator(), gg = c.createGain(), f0 = 450 + Math.random() * 850;
+    o.type = "sine"; o.frequency.setValueAtTime(f0, t); o.frequency.exponentialRampToValueAtTime(f0 * 1.7, t + .045);
+    gg.gain.setValueAtTime(0, t); gg.gain.linearRampToValueAtTime(.035, t + .006); gg.gain.exponentialRampToValueAtTime(.0004, t + .07);
+    o.connect(gg); gg.connect(c.destination); if (r) { const gv = c.createGain(); gv.gain.value = .5; gg.connect(gv).connect(r); }
+    o.start(t); o.stop(t + .09);
+  }
 }
 function tegnBrann(B, dt, t) {
   const c = $("brannLag"), x = c.getContext("2d"), dpr = c.width / innerWidth;
@@ -2057,12 +2091,31 @@ function tegnBrann(B, dt, t) {
   x.save();
   for (const p of B.plask || []) {
     p.t += dt; if (p.t > .9) continue;
-    const u = p.t / .9, rr = 16 + 70 * Math.sqrt(u);
+    const u = p.t / .9, rr = 22 + 110 * Math.sqrt(u);
     const sk = x.createRadialGradient(p.x, p.y, 0, p.x, p.y, rr * 1.1); sk.addColorStop(0, `rgba(200,235,255,${.35 * (1 - u)})`); sk.addColorStop(1, "rgba(200,235,255,0)");
     x.fillStyle = sk; x.fillRect(p.x - rr * 1.1, p.y - rr * 1.1, rr * 2.2, rr * 2.2);
     x.strokeStyle = `rgba(235,248,255,${.8 * (1 - u)})`; x.lineWidth = 2.5 * (1 - u) + .5; x.beginPath(); x.ellipse(p.x, p.y, rr, rr * .72, 0, 0, 7); x.stroke();
     for (const d of p.drops) { d.x += d.vx * dt; d.y += d.vy * dt; d.vy += 520 * dt; x.fillStyle = `rgba(220,242,255,${.9 * (1 - u)})`; x.beginPath(); x.ellipse(d.x, d.y, d.r * .7, d.r, Math.atan2(d.vy, d.vx) + Math.PI / 2, 0, 7); x.fill(); }
   }
+  for (const v of B.vått || []) {
+    v.liv -= dt / 7; if (v.liv <= 0) continue; const a = Math.min(1, v.liv * 1.4);
+    for (let j = 0; j < 5; j++) {
+      const ox = Math.sin(v.frø + j * 2.1) * v.r * .45, oy = Math.cos(v.frø * 1.3 + j * 1.7) * v.r * .3, rr = v.r * (.45 + .25 * Math.sin(v.frø + j));
+      const g = x.createRadialGradient(v.x + ox, v.y + oy, 0, v.x + ox, v.y + oy, rr);
+      g.addColorStop(0, `rgba(40,70,110,${.16 * a})`); g.addColorStop(.75, `rgba(40,70,110,${.12 * a})`); g.addColorStop(1, "rgba(40,70,110,0)");
+      x.fillStyle = g; x.beginPath(); x.ellipse(v.x + ox, v.y + oy, rr, rr * .8, 0, 0, 7); x.fill();
+      x.strokeStyle = `rgba(255,255,255,${.35 * a})`; x.lineWidth = 1.5; x.beginPath(); x.ellipse(v.x + ox, v.y + oy, rr * .82, rr * .65, 0, Math.PI * 1.1, Math.PI * 1.6); x.stroke();
+    }
+    x.fillStyle = `rgba(255,255,255,${.5 * a})`; x.beginPath(); x.ellipse(v.x - v.r * .2, v.y - v.r * .15, v.r * .08, v.r * .035, -.5, 0, 7); x.fill();
+  }
+  if (B.vått) B.vått = B.vått.filter(v => v.liv > 0);
+  for (const q of B.renn || []) {
+    q.liv -= dt / 6; q.y += q.v * dt; q.v *= Math.exp(-dt * .25); if (q.liv <= 0) continue; const a = Math.min(1, q.liv * 1.5);
+    const g = x.createLinearGradient(0, q.y0, 0, q.y); g.addColorStop(0, "rgba(180,215,245,0)"); g.addColorStop(1, `rgba(180,215,245,${.45 * a})`);
+    x.strokeStyle = g; x.lineWidth = q.b; x.lineCap = "round"; x.beginPath(); x.moveTo(q.x, q.y0); x.lineTo(q.x + Math.sin(q.y * .05) * 2, q.y); x.stroke();
+    x.fillStyle = `rgba(230,245,255,${.7 * a})`; x.beginPath(); x.ellipse(q.x, q.y, q.b * .8, q.b * 1.1, 0, 0, 7); x.fill();
+  }
+  if (B.renn) B.renn = B.renn.filter(q => q.liv > 0);
   // Damp der vannet treffer ilden.
   for (const d of B.damp || []) { d.liv -= dt * .9; d.y += d.vy * dt; d.r += 14 * dt; if (d.liv <= 0) continue; const g2 = x.createRadialGradient(d.x, d.y, 0, d.x, d.y, d.r); g2.addColorStop(0, `rgba(240,240,240,${.4 * d.liv})`); g2.addColorStop(1, "rgba(240,240,240,0)"); x.fillStyle = g2; x.fillRect(d.x - d.r, d.y - d.r, d.r * 2, d.r * 2); }
   if (B.damp) B.damp = B.damp.filter(d => d.liv > 0);
@@ -3112,6 +3165,23 @@ function shSkum(x, y, n, syre) {
 function shDrypp(x, y) { if (sh.drypp.length < 80) sh.drypp.push({ x: x + (Math.random() - .5) * .012, y, vy: .01, len: .004, liv: 1 }); }
 function shStjerne(x, y, str, vent = 0) { if (sh.stjerner.length < 70) sh.stjerner.push({ x, y, str, t: -vent, varighet: .55 + Math.random() * .5 }); }
 // Ett treff vasker bort ett eller flere lag. kilde "syre" = sprut og renn fra en sprukket boble.
+// Skum der boblene sprekker: det blir liggende en stund og vasker bort ett lag om gangen rundt seg,
+// så de siste små, harde flekkene forsvinner også.
+function shSkumFlekk(x, y) {
+  const s = sh; s.skumFlekk = s.skumFlekk || [];
+  const nær = s.skumFlekk.find(q => Math.hypot(q.x - x, q.y - y) < .03);
+  if (nær) { nær.liv = Math.min(1.5, nær.liv + .35); nær.r = Math.min(.045, nær.r + .002); return; }
+  if (s.skumFlekk.length >= 50) s.skumFlekk.shift();
+  s.skumFlekk.push({ x, y, r: .026, liv: 1, tikk: .3 + Math.random() * .3, frø: Math.random() * 100 });
+}
+function shSkumSteg(dt) {
+  const s = sh; if (!s.skumFlekk) return;
+  for (const q of s.skumFlekk) {
+    q.liv -= dt / 6; q.tikk -= dt;
+    if (q.tikk <= 0 && q.liv > 0) { q.tikk = .5; shVask(q.x, q.y, q.r, 1, "syre"); }
+  }
+  s.skumFlekk = s.skumFlekk.filter(q => q.liv > 0);
+}
 function shTreff(k, lag = 1, kilde = null) {
   const s = sh; if (k.liv <= 0 || s.tilstand === "ferdig" || s.tilstand === "over") return;
   const j = k.r * SH_KOL + k.c;
@@ -3940,10 +4010,11 @@ function shOppdater(dt) {
       if (bo) { bo.borte = true; q.borte = true; shStov(bo.x, bo.y, 6, "180,140,90", .08); continue; }
     }
     const k = shKlossVed(q.x, q.y);
-    if (k) { shTreff(k, 1); q.budsjett--; q.vy *= .55; if (q.budsjett <= 0) { q.borte = true; for (let n = 0; n < 3; n++) s.skum.push({ x: q.x + (Math.random() - .5) * .02, y: q.y, r: .002 + Math.random() * .004, liv: 1, fart: 1.6 }); } }
+    if (k) { shTreff(k, 1); q.budsjett--; q.vy *= .55; if (q.budsjett <= 0) { q.borte = true; shSkumFlekk(q.x, q.y); for (let n = 0; n < 3; n++) s.skum.push({ x: q.x + (Math.random() - .5) * .02, y: q.y, r: .002 + Math.random() * .004, liv: 1, fart: 1.6 }); } }
     if (q.y < 0) q.borte = true;
   }
   s.skudd = s.skudd.filter(q => !q.borte);
+  shSkumSteg(dt);
   shRenn(dt);
   // Siste skylling: når nesten alt er rent, vaskes restene bort av seg selv.
   if (!s.galaga && s.igjen > 0 && s.igjen <= Math.ceil(s.klosser.length * .08)) {
@@ -4061,7 +4132,7 @@ function shFerdig() {
   if (sh.bytte) { const ute = sh.bytte.tidUte; sh.bytte = null; sh.tekster.push({ txt: ute ? "TIME'S UP" : "THE FLIPPER WON", x: .5, y: .42, liv: 3, farge: "#ff7ad9" }, { txt: ute ? "THE FLIPPER HELD ON" : "IT CLEANED THE PAINTING", x: .5, y: .48, liv: 3, farge: "#ffb0e6", liten: true }); }
   const s = sh; s.tilstand = "ferdig"; s.ferdigT = performance.now();
   const bonus = (s.liv - 1) * 500, tidBonus = Math.max(0, Math.round((150 - s.tid) * 40 / 10) * 10); s.poeng += bonus + tidBonus; shHud();
-  s.baller = []; s.kapsler = []; s.smaa = []; s.skudd = []; s.galaga = null; s.sabot = []; s.orm = null;
+  s.baller = []; s.kapsler = []; s.smaa = []; s.skudd = []; s.galaga = null; s.sabot = []; s.orm = null; s.skumFlekk = [];
   for (const k of s.klosser) k.glans = 0;
   magiStart(s.kunst || s.img, { x: shG.fx, y: shG.fy + SH_TOPP * shG.fw, w: shG.fw, h: shG.fw }, 3.4);
   ferdigLyd(); dempMusikk(); s.glimt = s.tid; s.drypp = []; s.skum = []; s.klatter = []; s.kantFall = [];
@@ -4554,6 +4625,15 @@ function shTegn(t) {
     ng.addColorStop(0, "rgba(160,235,255,.75)"); ng.addColorStop(1, "rgba(160,235,255,0)"); x.fillStyle = ng; x.fillRect(nx - nr, ny - nr, nr * 2, nr * 2); x.restore();
   }
   // Bobler fra BUBBLE GUN.
+  // Skummet: hvite, små bobler i en klynge som synker sammen etter hvert.
+  for (const q of s.skumFlekk || []) {
+    const a = Math.min(1, q.liv), X = q.x * f, Y = q.y * f, R = q.r * f;
+    for (let j = 0; j < 14; j++) {
+      const ox = Math.sin(q.frø + j * 2.39) * R * .8, oy = Math.cos(q.frø * 1.7 + j * 1.91) * R * .6, rr = R * (.12 + .14 * ((j * 7) % 5) / 5) * (.6 + .4 * a);
+      x.fillStyle = `rgba(245,250,255,${.55 * a})`; x.beginPath(); x.arc(X + ox, Y + oy, rr, 0, 7); x.fill();
+      x.strokeStyle = `rgba(190,225,255,${.5 * a})`; x.lineWidth = .8; x.stroke();
+    }
+  }
   for (const q of s.skudd) {
     const X = q.x * f, Y = q.y * f, r = q.r * f;
     x.fillStyle = "rgba(200,240,255,.14)"; x.beginPath(); x.arc(X, Y, r, 0, 7); x.fill();
