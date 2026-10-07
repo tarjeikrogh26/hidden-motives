@@ -179,7 +179,7 @@ h1 .signatur{font-size:.55em;letter-spacing:.06em;white-space:nowrap}
 #kraftLinje button.aktiv,#shKraftLinje button.aktiv{border-color:#7fe8ff;box-shadow:0 0 16px rgba(127,232,255,.7),inset 0 1px 0 rgba(255,255,255,.25)}
 #kraftLinje button.lommebok,#shKraftLinje button.lommebok{background:linear-gradient(180deg,#5a3f10,#2f2008);border-color:rgba(255,210,122,.8)}
 #kraftLinje button:active,#shKraftLinje button:active{transform:translateY(1px)}
-@media (max-width:480px){#kraftLinje,#shKraftLinje{gap:5px}#kraftLinje button,#shKraftLinje button{padding:7px 10px;font-size:11px;letter-spacing:.04em;gap:5px}#kraftLinje button .pris,#shKraftLinje button .pris{font-size:10px}}
+@media (max-width:480px){#kraftLinje,#shKraftLinje{gap:4px}#kraftLinje button,#shKraftLinje button{padding:7px 8px;font-size:11px;letter-spacing:.04em;gap:5px}#kraftLinje button .pris,#shKraftLinje button .pris{font-size:10px}}
 body.lys #kraftLinje button,body.lys #shKraftLinje button{color:#fff7e6}
 .butikk{position:fixed;inset:0;z-index:6000;display:grid;place-items:center;background:rgba(10,8,6,.55)}
 .butikk[hidden]{display:none}
@@ -341,7 +341,7 @@ body:has(.resultat.vis) #spill .linje{opacity:0;pointer-events:none;transition:o
   <div class="regel"><b>The race:</b> Your best score on each of the ten boards in a collection is added up. Finish #1 overall and you get the next collection for free. Anyone who takes first place later gets it too. Points: Easy (25 pieces) gives 10,000, Medium (49) 15,000, Hard (100) 20,000 and Chaos (144) 25,000 at normal speed. Be fast and you get up to double.</div>
   <div class="sammen" id="sammen"><p class="liten">Loading standings …</p></div>
   <p class="kreditt">© 2001–2026 Tarjei Krogh. All photography, music and art. <a href="https://kroghx.com" target="_blank" rel="noopener">kroghx.com</a></p>
-  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 0.77<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
+  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 0.78<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
 </section>
 
 <div class="ark" id="tidUtArk" hidden style="z-index:200001">
@@ -391,9 +391,10 @@ body:has(.resultat.vis) #spill .linje{opacity:0;pointer-events:none;transition:o
   <canvas id="fest"></canvas>
   <div class="bunke-tall" id="bunkeTall" hidden></div>
   <div id="kraftLinje" hidden>
-    <button class="kraft" id="kraftTilt">TILT <span class="pris">◆ 2</span></button>
+    <button class="kraft" id="kraftTilt">TILT <span class="pris">◆ 1</span></button>
     <button class="kraft" id="kraftMagnet">MAGNET <span class="pris">◆ 3</span></button>
     <button class="kraft" id="kraftHint">HINT <span class="pris">◆ 1</span></button>
+    <button class="kraft" id="kraftLim">GLUE <span class="pris">◆ 3</span></button>
     <button class="lommebok" id="lommebok">◆ <span id="creditTall">10</span> +</button>
   </div>
   <div id="shKraftLinje" hidden>
@@ -1278,7 +1279,7 @@ async function startSpill(i, n, gjenoppta) {
   spill.hint = HINT_ANTALL; visHintKnapp();
   spill.tilt = 2; visTilt();
   // Beta: Krogh skal alltid kunne prøve TILT, MAGNET og HINT to ganger hver (2×2 + 2×3 + 2×1 = 12). Ved lansering: fjernes.
-  if (BETA) settCredits(Math.max(credits(), 12)); spill.hendelser = gjestekort(o.n); spill.brann = null;
+  if (BETA) settCredits(Math.max(credits(), 14)); spill.hendelser = gjestekort(o.n); spill.brann = null;
   spill.liste = husListe(i, o.n);
   hentListe(i, o.n).then(l => { if (spill && spill.brett === i && spill.n === o.n) spill.liste = l; });
   oppsett();
@@ -1895,7 +1896,7 @@ function tidsfrist(brettNr, n) { const perBrikke = n <= 25 ? 8.5 : n <= 49 ? 10 
 // ---------- credits og power-ups ----------
 // Credits tjenes bare ved å klare et brett uten power-ups: +2 første gang, +1 for ny personlig rekord.
 // Hver power-up koster credits og trekker poeng, så ingen kan kjøpe seg til en bedre plass på lista.
-const KRAFT = { tilt: { pris: 2, trekk: .06 }, magnet: { pris: 3, trekk: .10 }, hint: { pris: 1, trekk: .05 } };
+const KRAFT = { tilt: { pris: 1, trekk: .05 }, magnet: { pris: 3, trekk: .10 }, hint: { pris: 1, trekk: .05 }, lim: { pris: 3, trekk: .08 } };
 const BAR = 58;
 function credits() { try { const v = localStorage.getItem("sm-credits"); return v == null ? 10 : Math.max(0, +v || 0); } catch { return 10; } }
 function settCredits(n) { try { localStorage.setItem("sm-credits", String(Math.max(0, n))); } catch {} visCredits(); }
@@ -1906,6 +1907,7 @@ function visKraftLinje() {
   const H = innerHeight, w = el.offsetWidth || 300; el.style.left = Math.min(innerWidth - w / 2 - 8, Math.max(w / 2 + 8, geo.x0 + geo.bredde / 2)) + "px";
   el.style.top = (geo.staaende ? H - BAR + 8 : Math.min(H - BAR + 8, geo.y0 + geo.hoyde + 12)) + "px";
   $("kraftMagnet").classList.toggle("aktiv", (spill.magnetTil || 0) > performance.now());
+  $("kraftLim").classList.toggle("aktiv", !!spill.limBrukt); $("kraftLim").disabled = !!spill.limBrukt;
   visCredits();
 }
 function åpneButikk(mangler) {
@@ -1914,15 +1916,27 @@ function åpneButikk(mangler) {
 }
 $("butikkLukk").onclick = () => { $("butikk").hidden = true; };
 $("lommebok").onclick = () => åpneButikk(0);
+// GLUE: én gang per spill limes alle brikkene som ligger på plass. De er trygge for dinosauren,
+// prison break og brikker som vokser. Brann kan de fortsatt få.
+function limBrikker() {
+  const sp = spill; sp.limBrukt = true; let n = 0;
+  for (const b of sp.biter) if (b.ferdig && !b.lander) { b.limt = true; n++; }
+  banner("GLUED!", n + " PIECES ARE SAFE · NOTHING CAN KNOCK THEM OUT", "#ffcf6b", 3400);
+  // En gyllen glans går over de limte brikkene.
+  gnister.push({ halo: true, t: 0, liv: 1.1, c: sp.k / 2, r: sp.r / 2, lim: true }); if (!gnistRAF) gnistRAF = requestAnimationFrame(gnistSteg);
+  if (lydPa) { tone(392, 0, .3, .04, "sine", .7, .8); tone(523, .08, .3, .035, "sine", .7, .8); tone(784, .16, .5, .03, "sine", .7, 1); }
+}
 function brukKraft(type) {
   if (!spill || spill.slutt || spill.tapt) return false;
   const k = KRAFT[type], har = credits();
   if (har < k.pris) { åpneButikk(k.pris); return false; }
   if (type === "hint" && !nesteHint()) return false;
+  if (type === "lim" && (spill.limBrukt || !spill.biter.some(b => b.ferdig))) return false;
   settCredits(har - k.pris); spill.trekk = (spill.trekk || 0) + k.trekk; spill.brukteKraft = true;
   if (!spill.start) spill.start = Date.now();
   if (lydPa) { tone(660, 0, .12, .04, "sine", .7, .6); tone(990, .06, .14, .03, "sine", .7, .6); }
   if (type === "tilt") { tilt(false); spill.tiltMagnetTil = performance.now() + 8000; }
+  if (type === "lim") limBrikker();
   if (type === "magnet") {
     const på = (spill.magnetTil || 0) > performance.now();
     spill.magnetNiva = på ? Math.min(3, (spill.magnetNiva || 1) + 1) : 1; spill.magnetTil = performance.now() + 20000;
@@ -1940,6 +1954,7 @@ function brukKraft(type) {
 $("kraftTilt").onclick = () => brukKraft("tilt");
 $("kraftMagnet").onclick = () => brukKraft("magnet");
 $("kraftHint").onclick = () => brukKraft("hint");
+$("kraftLim").onclick = () => brukKraft("lim");
 for (const id of ["kraftLinje", "shKraftLinje", "butikk"]) document.body.appendChild($(id));
 for (const id of ["kraftLinje", "shKraftLinje", "butikk"]) $(id).addEventListener("pointerdown", e => e.stopPropagation());
 function tikk() {
@@ -2061,7 +2076,12 @@ $("tiltKnapp").onclick = () => { if (!spill || spill.slutt || spill.tilt <= 0) r
 // TILT: det dunker i bordet. Løse brikker på brettet hopper opp og lander på nye plasser, noen rett på plass.
 function tilt(dino) {
   const sp = spill;
-  banner(dino ? "A DINOSAUR WALKS BY" : "TILT!", dino ? "TILT! THE LOOSE PIECES JUMP" : "THE LOOSE PIECES JUMP", "#ffd23a");
+  banner(dino ? "A DINOSAUR WALKS BY" : "TILT!", dino ? "THE TABLE SHAKES · LOOSE PIECES JUMP" : "PATTERN SECURED · ONLY LOOSE PIECES MOVE", "#ffd23a");
+  // Dinosauren kan av og til slå én brikke som ligger på plass, ut av rammen (ikke limte). TILT gjør det aldri.
+  if (dino && Math.random() < .6) {
+    const fast = sp.biter.filter(b => b.ferdig && !b.lander && !b.limt && !sp.brann?.ild.has(b.id));
+    if (fast.length > 3) { const b = fast[(Math.random() * fast.length) | 0]; setTimeout(() => { if (spill !== sp || !b.ferdig) return; b.ferdig = false; sp.lagt--; b.z = ++sp.ztopp; tegnBit(b); plasser(b); oppdaterTeller(); visHintKnapp(); kast(b, false); }, 600); }
+  }
   const bord = $("bord"); bord.classList.remove("rist"); void bord.offsetWidth; bord.classList.add("rist"); setTimeout(() => bord.classList.remove("rist"), 800);
   if (lydPa) [0, dino ? .5 : null, dino ? 1 : null].forEach(t => { if (t == null) return; tone(46, t, .45, .14, "sine", .9, .3); tone(92, t, .12, .05, "triangle", .9, .2); });
   const løse = sp.biter.filter(b => !b.ferdig && !b.iBunke && !b.lander && !b.el.classList.contains("drar"));
@@ -2089,7 +2109,7 @@ function bobleUnder(b, mengde) {
   if (!gnistRAF) gnistRAF = requestAnimationFrame(gnistSteg);
 }
 function vokseBrikke() {
-  const sp = spill, kand = sp.biter.filter(b => b.ferdig && !b.lander && !sp.brann?.ild.has(b.id));
+  const sp = spill, kand = sp.biter.filter(b => b.ferdig && !b.lander && !b.limt && !sp.brann?.ild.has(b.id));
   if (!kand.length) return;
   const b = kand[(Math.random() * kand.length) | 0], t0 = performance.now(), VOKS = 2000, MAKS = 1.75;
   banner("GROWING PIECE!", "IT DOESN'T FIT ANYMORE", "#9cff7a", 3200);
@@ -2141,7 +2161,7 @@ function vokseBrikke() {
   requestAnimationFrame(voks);
 }
 function puzzleBreak() {
-  const sp = spill, lagte = sp.biter.filter(b => b.ferdig && !b.lander);
+  const sp = spill, lagte = sp.biter.filter(b => b.ferdig && !b.lander && !b.limt);
   const n = Math.min(lagte.length, 1 + (Math.random() < .55) + (Math.random() < .25));
   if (!n) return;
   const rømte = lagte.sort(() => Math.random() - .5).slice(0, n);
