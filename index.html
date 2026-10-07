@@ -384,7 +384,7 @@ body:has(.resultat.vis) #spill .linje{opacity:0;pointer-events:none;transition:o
   <div class="regel"><b>The race:</b> Your best score on each of the ten boards in a collection is added up. Finish #1 overall and you get the next collection for free. Anyone who takes first place later gets it too. Points: Easy (25 pieces) gives 10,000, Medium (49) 15,000, Hard (100) 20,000 and Chaos (144) 25,000 at normal speed. Be fast and you get up to double.</div>
   <div class="sammen" id="sammen"><p class="liten">Loading standings …</p></div>
   <p class="kreditt">© 2001–2026 Tarjei Krogh. All photography, music and art. <a href="https://kroghx.com" target="_blank" rel="noopener">kroghx.com</a></p>
-  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 0.93<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
+  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 0.94<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
 </section>
 
 <div class="ark" id="tidUtArk" hidden style="z-index:200001">
@@ -904,6 +904,64 @@ function magiStopp() { cancelAnimationFrame(magiRAF); magiRAF = 0; const c = $("
 // Når bildet er ferdig, våkner det et par sekunder: øynene blunker, munnen åpner seg og rekker tunge,
 // virvler snurrer, ører vifter og lys pulserer. Alt lages av selve bildet, ut fra punktene på hvert brett.
 let levRAF = 0;
+const FEIR_FS = `precision highp float;
+uniform sampler2D tK;uniform vec2 uRes;uniform float uT,uV,uAsp,uN;uniform vec3 uHot[4];
+void main(){
+  vec2 uv=gl_FragCoord.xy/uRes;uv.y=1.-uv.y;
+  float A=smoothstep(0.,.3,uT)*(1.-smoothstep(uV-.8,uV,uT));
+  vec2 asp=vec2(uAsp,1.),q=uv,dc=(uv-.5)*asp;float d=length(dc);
+  // Bølgeringer fra midten.
+  float front=uT*.6,w=exp(-pow((d-front)*6.,2.)),w2=exp(-pow((d-front*.62)*7.,2.));
+  float rip=(sin((d-front)*52.)*w+.6*sin((d-front*.62)*44.)*w2)*.019*A;
+  q+=(dc/(d+1e-4))/asp*rip;
+  // Liquify: bildet sveller og trekker seg sammen rundt øyne og munn.
+  for(int i=0;i<4;i++){ if(float(i)>=uN) break; vec3 h=uHot[i]; vec2 dv=(q-h.xy)*asp; float R=h.z*2.4; float k=exp(-dot(dv,dv)/(R*R));
+    float puls=sin(uT*3.4+float(i)*1.9); q-=(dv/asp)*k*.45*A*puls*smoothstep(.3,1.,uT); }
+  // Hele bildet puster litt.
+  q=.5+(q-.5)*(1.-.012*A*sin(uT*4.4));
+  float ca=abs(rip)*1.8+.0015*A;
+  vec3 col=vec3(texture2D(tK,q+vec2(ca,0.)).r,texture2D(tK,q).g,texture2D(tK,q-vec2(ca,0.)).b);
+  float l=dot(col,vec3(.3,.59,.11));col=mix(vec3(l),col,1.+.3*A);col*=1.+.16*A*(w+w2*.6);
+  gl_FragColor=vec4(col,1.);
+}`;
+let feirRAF = 0, feirStøtte = null;
+function feiringKan() { if (feirStøtte == null) { try { feirStøtte = !!document.createElement("canvas").getContext("webgl"); } catch { feirStøtte = false; } } return feirStøtte; }
+function feiringStopp() { cancelAnimationFrame(feirRAF); feirRAF = 0; const c = document.getElementById("feiring"); if (c) c.remove(); }
+function feiringStart(img, R, brettId, varighet, opasitet = () => 1) {
+  if (!feiringKan() || matchMedia("(prefers-reduced-motion: reduce)").matches) return false;
+  feiringStopp();
+  const c = document.createElement("canvas"); c.id = "feiring"; const dpr = Math.min(devicePixelRatio || 1, 2);
+  c.width = Math.round(R.w * dpr); c.height = Math.round(R.h * dpr);
+  Object.assign(c.style, { position: "fixed", left: R.x + "px", top: R.y + "px", width: R.w + "px", height: R.h + "px", pointerEvents: "none", zIndex: 249, opacity: 0 });
+  const gl = c.getContext("webgl", { premultipliedAlpha: false, antialias: false }); if (!gl) return false;
+  try {
+    const sk = (t, src) => { const s = gl.createShader(t); gl.shaderSource(s, src); gl.compileShader(s); if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s)); return s; };
+    const pr = gl.createProgram(); gl.attachShader(pr, sk(gl.VERTEX_SHADER, SH_GL_VS)); gl.attachShader(pr, sk(gl.FRAGMENT_SHADER, FEIR_FS)); gl.linkProgram(pr); gl.useProgram(pr);
+    const buf = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, buf); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
+    const ap = gl.getAttribLocation(pr, "p"); gl.enableVertexAttribArray(ap); gl.vertexAttribPointer(ap, 2, gl.FLOAT, false, 0, 0);
+    const t = gl.createTexture(); gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, t);
+    for (const [a, b] of [[gl.TEXTURE_MIN_FILTER, gl.LINEAR], [gl.TEXTURE_MAG_FILTER, gl.LINEAR], [gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE], [gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE]]) gl.texParameteri(gl.TEXTURE_2D, a, b);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img);
+    const U = n => gl.getUniformLocation(pr, n);
+    gl.uniform1i(U("tK"), 0); gl.uniform2f(U("uRes"), c.width, c.height); gl.uniform1f(U("uV"), varighet); gl.uniform1f(U("uAsp"), R.w / R.h);
+    // Øyne og munn fra brettets levende punkter (maks fire). Har brettet ingen, brukes tre steder midt i bildet.
+    const pk = (SH_LEVENDE[brettId] || []).filter(p => p.t === "oye" || p.t === "brille" || p.t === "munn").slice(0, 4);
+    const hot = pk.length ? pk.map(p => [p.x, p.y, p.r]) : [[.36, .4, .07], [.64, .4, .07], [.5, .66, .09]];
+    const arr = new Float32Array(12); hot.forEach((h, i) => arr.set(h, i * 3)); gl.uniform3fv(U("uHot"), arr); gl.uniform1f(U("uN"), hot.length);
+    var uT = U("uT");
+  } catch (e) { console.warn("Feiring av:", e.message); return false; }
+  document.body.appendChild(c);
+  const t0 = performance.now();
+  const steg = tid => {
+    const tt = (tid - t0) / 1000;
+    if (tt >= varighet || !c.isConnected) { feiringStopp(); return; }
+    gl.viewport(0, 0, c.width, c.height); gl.uniform1f(uT, tt); gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+    c.style.opacity = String(Math.min(opasitet(), Math.min(1, (varighet - tt) / .35)));
+    feirRAF = requestAnimationFrame(steg);
+  };
+  feirRAF = requestAnimationFrame(steg);
+  return true;
+}
 function levendeStart(img, R, brettId, varighet) {
   const punkter = SH_LEVENDE[brettId] || [];
   if (!punkter.length || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
@@ -978,7 +1036,7 @@ function levendeStart(img, R, brettId, varighet) {
 }
 function levendeStopp() { cancelAnimationFrame(levRAF); levRAF = 0; const c = $("levende"); c.getContext("2d").clearRect(0, 0, c.width, c.height); }
 function stoppFest() {
-  magiStopp(); levendeStopp(); nullstillBord(); ark = null; $("resultat").classList.remove("vis");
+  magiStopp(); levendeStopp(); feiringStopp(); nullstillBord(); ark = null; $("resultat").classList.remove("vis");
   arkTimere.forEach(clearTimeout); arkTimere = []; cancelAnimationFrame(stovRAF); stovRAF = 0; cancelAnimationFrame(rullRAF); rullRAF = 0;
   cancelAnimationFrame(brannRAF); brannRAF = 0; { const bl = $("brannLag"); bl.getContext("2d").clearRect(0, 0, bl.width, bl.height); }
   const sl = $("stovLag"); sl.getContext("2d").clearRect(0, 0, sl.width, sl.height);
@@ -2674,8 +2732,8 @@ async function ferdig() {
   const sEkte = sekunder(), trekk = Math.min(.6, spill.trekk || 0), s = trekk ? Math.round((sEkte + spill.n * 5) / (1 - trekk) - spill.n * 5) : sEkte, p = regnPoeng(spill.n, s), b = BRETT[spill.brett];
   $("kraftLinje").hidden = true;
   setTimeout(() => $("avslor").classList.add("vis"), 350);
-  $("avslor").classList.add("bolge"); $("ramme").classList.add("neon");
-  { const sp = spill; setTimeout(() => { if (spill === sp && !$("resultat").classList.contains("vis")) { magiStart(sp.img, { x: geo.x0, y: geo.y0, w: geo.bredde, h: geo.hoyde }, 2.6); levendeStart(sp.img, { x: geo.x0, y: geo.y0, w: geo.bredde, h: geo.hoyde }, BRETT[sp.brett].id, 2.5); $("avslor").classList.add("magisk"); setTimeout(() => $("avslor").classList.remove("magisk"), 2300); } }, 250); }
+  if (!feiringKan()) $("avslor").classList.add("bolge"); $("ramme").classList.add("neon");
+  { const sp = spill; setTimeout(() => { if (spill === sp && !$("resultat").classList.contains("vis")) { magiStart(sp.img, { x: geo.x0, y: geo.y0, w: geo.bredde, h: geo.hoyde }, 2.6); const R = { x: geo.x0, y: geo.y0, w: geo.bredde, h: geo.hoyde }; if (!feiringStart(sp.img, R, BRETT[sp.brett].id, 2.55, () => +getComputedStyle($("avslor")).opacity || 0)) { $("avslor").classList.add("magisk"); setTimeout(() => $("avslor").classList.remove("magisk"), 2300); } } }, 250); }
   startFest();
   const gammel = fremdrift[b.id]?.[spill.n];
   fremdrift[b.id] = fremdrift[b.id] || {};
@@ -5005,7 +5063,7 @@ function shFerdig() {
   s.baller = []; s.kapsler = []; s.smaa = []; s.skudd = []; s.galaga = null; s.sabot = []; s.orm = null; s.ormer = []; s.ormFase = false; s.skumFlekk = []; s.tripB = []; s.tripS = []; s.sug = []; s.syre = []; s.tripP = [];
   for (const k of s.klosser) k.glans = 0;
   magiStart(s.kunst || s.img, { x: shG.fx, y: shG.fy + SH_TOPP * shG.fw, w: shG.fw, h: shG.fw }, 3.4);
-  levendeStart(s.img, { x: shG.fx, y: shG.fy + SH_TOPP * shG.fw, w: shG.fw, h: shG.fw }, BRETT[s.i].id, 3.2);
+  feiringStart(s.img, { x: shG.fx, y: shG.fy + SH_TOPP * shG.fw, w: shG.fw, h: shG.fw }, BRETT[s.i].id, 3.2);
   ferdigLyd(); dempMusikk(); s.glimt = s.tid; s.drypp = []; s.skum = []; s.klatter = []; s.kantFall = [];
   for (const h of s.levende || []) { h.bule = 1; h.blink = 1; h.holder = null; }
   for (let n = 0; n < 40; n++) shStjerne(Math.random(), SH_TOPP + Math.random(), .6 + Math.random() * .5, Math.random() * 1.6);
