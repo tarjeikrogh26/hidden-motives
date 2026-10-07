@@ -373,7 +373,7 @@ body:has(.resultat.vis) #spill .linje{opacity:0;pointer-events:none;transition:o
   <div class="regel"><b>The race:</b> Your best score on each of the ten boards in a collection is added up. Finish #1 overall and you get the next collection for free. Anyone who takes first place later gets it too. Points: Easy (25 pieces) gives 10,000, Medium (49) 15,000, Hard (100) 20,000 and Chaos (144) 25,000 at normal speed. Be fast and you get up to double.</div>
   <div class="sammen" id="sammen"><p class="liten">Loading standings …</p></div>
   <p class="kreditt">© 2001–2026 Tarjei Krogh. All photography, music and art. <a href="https://kroghx.com" target="_blank" rel="noopener">kroghx.com</a></p>
-  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 0.90<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
+  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 0.91<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
 </section>
 
 <div class="ark" id="tidUtArk" hidden style="z-index:200001">
@@ -1668,19 +1668,21 @@ function skyvBort(b) {
   });
 }
 function settNed(b, fraX, fraY, lyd) {
-  const mx = slotC(b) / spill.k, my = slotR(b) / spill.r, t0 = performance.now(), l0 = b.loft || 0, sp = spill, rot0 = b.rot || 0;
-  løftes.delete(b); b.lander = true;
+  let mx = slotC(b) / spill.k, my = slotR(b) / spill.r; const t0 = performance.now(), l0 = b.loft || 0, sp = spill, rot0 = b.rot || 0;
+  løftes.delete(b); b.lander = true; b.iFart = true;
   let vx = (b.glidV?.[0] || 0) * 60, vy = (b.glidV?.[1] || 0) * 60, sist = t0; b.glidV = null; b.x = fraX; b.y = fraY;
   const d0 = Math.hypot((mx - fraX) * geo.bredde, (my - fraY) * geo.hoyde) || 1;
   const steg = t => {
     if (spill !== sp || !b.el.isConnected) return;
     const dt = Math.min(.033, Math.max(.001, (t - sist) / 1000)); sist = t;
+    // Målet regnes ut hvert bilde: flipper brettet underveis, går brikka til den nye plassen sin.
+    mx = slotC(b) / sp.k; my = slotR(b) / sp.r;
     const K = 80, C = 2 * Math.sqrt(K);
     vx += (K * (mx - b.x) - C * vx) * dt; vy += (K * (my - b.y) - C * vy) * dt; b.x += vx * dt; b.y += vy * dt;
     const d = Math.hypot((mx - b.x) * geo.bredde, (my - b.y) * geo.hoyde), fart = Math.hypot(vx * geo.bredde, vy * geo.hoyde), e = 1 - Math.min(1, d / d0);
     b.loft = l0 * (1 - e) + .25 * Math.sin(Math.PI * e) * (1 - e); b.rot = rot0 * (1 - e);
     if ((d > .35 || fart > 25) && t - t0 < 1500) { plasser(b); requestAnimationFrame(steg); return; }
-    b.x = mx; b.y = my; b.loft = 0; b.glod = 0; b.rot = 0;
+    b.x = mx; b.y = my; b.loft = 0; b.glod = 0; b.rot = 0; b.iFart = false;
     const t1 = performance.now();
     const dunk = t2 => {
       if (spill !== sp || !b.el.isConnected) return;
@@ -2026,9 +2028,10 @@ function familie() {
     const steg = t => {
       if (spill !== sp || b.ferdig) return;
       const u = Math.min(1, (t - t0) / D), e = u * u * (3 - 2 * u);
-      b.x = fx + (mx - fx) * e; b.y = fy + (my - fy) * e - Math.sin(Math.PI * u) * .08; b.loft = Math.sin(Math.PI * u) * 1.2; b.rot = r0 * (1 - e); plasser(b);
+      const nx = slotC(b) / sp.k, ny = slotR(b) / sp.r;
+      b.x = fx + (nx - fx) * e; b.y = fy + (ny - fy) * e - Math.sin(Math.PI * u) * .08; b.loft = Math.sin(Math.PI * u) * 1.2; b.rot = r0 * (1 - e); plasser(b);
       if (u < 1) { requestAnimationFrame(steg); return; }
-      b.loft = 0; b.rot = 0; b.x = mx; b.y = my;
+      b.loft = 0; b.rot = 0; b.x = nx; b.y = ny;
       if (!b.provSmett()) plasser(b);
       brikkeTekst(b, rolle, farge);
     };
@@ -2150,7 +2153,7 @@ function vendBordet(sp, akse, inn, straks = false) {
   const ramme = $("ramme"), fMål = inn ? -1 : 1, felt = akse === "x" ? "fx" : "fy", t0 = performance.now(), D = straks ? 0 : 1100;
   ramme.style.transition = straks ? "none" : "transform 1.1s cubic-bezier(.55,0,.3,1)";
   ramme.style.transform = inn ? (akse === "x" ? "scale(-1,1)" : "scale(1,-1)") : "";
-  const data = sp.biter.map(b => ({ b, f0: b[felt] ?? 1, x0: b.x, y0: b.y, x1: b.ferdig ? slotC(b) / sp.k : null, y1: b.ferdig ? slotR(b) / sp.r : null,
+  const data = sp.biter.map(b => ({ b, f0: b[felt] ?? 1, x0: b.x, y0: b.y, x1: b.ferdig && !b.iFart ? slotC(b) / sp.k : null, y1: b.ferdig && !b.iFart ? slotR(b) / sp.r : null,
     vent: b.ferdig && !straks ? (akse === "x" ? slotC(b) / sp.k : slotR(b) / sp.r) * 350 : 0 }));
   const steg = t => {
     if (spill !== sp) return;
@@ -2832,7 +2835,7 @@ function nesteUlost(fra) {
   return -1;
 }
 function tilMeny() {
-  stoppFest(); stoppMusikk(); $("bunkeTall").hidden = true;
+  stoppFest(); stoppMusikk(); $("bunkeTall").hidden = true; $("kraftLinje").hidden = true;
   clearInterval(timer); spill = null;
   document.querySelectorAll(".bit").forEach(e => e.remove());
   $("spill").hidden = true; $("meny").hidden = false;
@@ -3141,7 +3144,7 @@ async function shatterStart(i, poeng = 0, liv = 3) {
   const niva = (i + aktiv * 10) * .1;
   stoppFest(); clearInterval(timer); spill = null;
   document.querySelectorAll(".bit").forEach(e => e.remove());
-  $("meny").hidden = true; $("spill").hidden = true; $("shatter").hidden = false; oppdaterTema();
+  $("meny").hidden = true; $("spill").hidden = true; $("shatter").hidden = false; oppdaterTema(); $("kraftLinje").hidden = true;
   const img = await hentBilde(BRETT[i].src);
   const tykk = shMoekk(niva); shBalanser(tykk);
   const klosser = [], j1 = Math.floor(Math.random() * SH_JORD.length), j2 = (j1 + 1 + Math.floor(Math.random() * (SH_JORD.length - 1))) % SH_JORD.length;
@@ -5696,7 +5699,7 @@ function shSteg(t) {
 }
 addEventListener("resize", () => { if (sh) shOppsett(); });
 // Bare for automatisk testing lokalt (?autotest).
-if (location.search.includes("autotest")) { window.__sh = () => sh; window.__shOppdater = dt => { shOppdater(dt); if (sh) { sh.tid += dt; shPartikler(dt); } }; window.__shTreff = shTreff; window.__shGalaga = shGalagaStart; window.__shSopp = shSopp; window.__shBytte = shByttetStart; window.__shOrm = shOrmStart; window.__levende = levendeStart; window.__gn = () => ({ gnister, raf: gnistRAF }); window.__hendelse = t => t === "tilt" ? tilt(true) : t === "vokse" ? vokseBrikke() : t === "break" ? puzzleBreak() : t === "speilX" ? speilStart("x") : t === "speilY" ? speilStart("y") : lynnedslag(); window.__shSprekk = shSprekk; window.__shTegn = () => { shRens(); shTegn(performance.now()); }; window.__spill = () => spill; window.__banner = banner; window.__kast = kast; window.__geo = () => geo; window.__plasser = plasser; window.__skjermPkt = skjermPkt; }
+if (location.search.includes("autotest")) { window.__sh = () => sh; window.__shOppdater = dt => { shOppdater(dt); if (sh) { sh.tid += dt; shPartikler(dt); } }; window.__shTreff = shTreff; window.__shGalaga = shGalagaStart; window.__shSopp = shSopp; window.__shBytte = shByttetStart; window.__shOrm = shOrmStart; window.__levende = levendeStart; window.__gn = () => ({ gnister, raf: gnistRAF }); window.__hendelse = t => t === "tilt" ? tilt(true) : t === "vokse" ? vokseBrikke() : t === "break" ? puzzleBreak() : t === "speilX" ? speilStart("x") : t === "speilY" ? speilStart("y") : lynnedslag(); window.__shSprekk = shSprekk; window.__shTegn = () => { shRens(); shTegn(performance.now()); }; window.__spill = () => spill; window.__banner = banner; window.__kast = kast; window.__speilSlutt = speilSlutt; window.__geo = () => geo; window.__plasser = plasser; window.__skjermPkt = skjermPkt; }
 
 
 
