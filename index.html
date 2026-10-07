@@ -28,6 +28,19 @@
   color-scheme:dark;
 }
 html,body{height:100%}
+/* HIDDEN MOTIVES: en varm, lys gallerivegg med mykt lys ovenfra. Brettet ligger i et litt mørkere passepartout, så bildet trer fram. */
+body.lys{--rom:#e7e1d7;--flate:#f3efe8;--strek:rgba(60,45,30,.17);--tekst:#27221d;--demp:#6e6459;--signal:#b26a00;--godt:#2f8a5c;color-scheme:light;
+  background:radial-gradient(ellipse 120% 85% at 50% 12%,#f6f2eb 0%,#ebe5db 50%,#dcd4c7 100%) fixed,#e7e1d7}
+body.lys #spill,body.lys #meny{background:transparent}
+body.lys .brett{box-shadow:0 8px 22px rgba(60,40,20,.16),0 1px 3px rgba(60,40,20,.12)}
+body.lys .brett .merke{color:#f4efe8}
+body.lys .hoved{color:#fffaf0}
+body.lys #ramme{background:linear-gradient(#d2c7b6,#c9bdab);border-color:rgba(60,45,30,.25);box-shadow:inset 0 2px 16px rgba(60,40,20,.3),0 1px 0 rgba(255,255,255,.7),0 14px 40px rgba(60,40,20,.14)}
+body.lys .linje{background:rgba(245,241,234,.94);border-color:rgba(60,45,30,.14);box-shadow:0 2px 14px rgba(60,40,20,.08)}
+body.lys .modus[aria-selected="true"]{text-shadow:0 0 10px rgba(255,170,0,.55),0 0 26px rgba(255,170,0,.35)}
+body.lys .hud-knapper button{background:#ece6dc}
+/* Arkadelista er en mørk spillehall, også når veggen er lys. */
+.resultat{--rom:#141312;--flate:#1f1d1b;--strek:#3a3633;--tekst:#efe9e1;--demp:#a39b91;--signal:#ffb000;color:var(--tekst)}
 body{background:var(--rom);color:var(--tekst);font-family:var(--brod);font-size:15px;line-height:1.45;overflow:hidden;-webkit-user-select:none;user-select:none;touch-action:none}
 button{font:inherit;color:inherit;cursor:pointer;border:0;background:none}
 button:focus-visible{outline:2px solid var(--signal);outline-offset:2px}
@@ -305,7 +318,7 @@ body:has(.resultat.vis) #spill .linje{opacity:0;pointer-events:none;transition:o
   <div class="regel"><b>The race:</b> Your best score on each of the ten boards in a collection is added up. Finish #1 overall and you get the next collection for free. Anyone who takes first place later gets it too. Points: Easy (25 pieces) gives 10,000, Medium (49) 15,000, Hard (100) 20,000 and Chaos (144) 25,000 at normal speed. Be fast and you get up to double.</div>
   <div class="sammen" id="sammen"><p class="liten">Loading standings …</p></div>
   <p class="kreditt">© 2001–2026 Tarjei Krogh. All photography, music and art. <a href="https://kroghx.com" target="_blank" rel="noopener">kroghx.com</a></p>
-  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 0.54<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
+  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 0.55<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
 </section>
 
 <div class="ark" id="tidUtArk" hidden style="z-index:200001">
@@ -462,12 +475,15 @@ try { if (localStorage.getItem("sm-modus") === "scrub") modus = "scrub"; } catch
 function velgModus(m) { modus = m; try { localStorage.setItem("sm-modus", m); } catch {} tegnMeny(); }
 $("modusPuslespill").onclick = () => velgModus("pusle");
 $("modusScrub").onclick = () => { ctx(); velgModus("scrub"); };
+// Lys vegg i HIDDEN MOTIVES (menyen og brettet), mørk i SCRUB IT.
+function oppdaterTema() { document.body.classList.toggle("lys", !$("spill").hidden || (!$("meny").hidden && modus === "pusle")); }
 function tegnModus() {
   $("modusPuslespill").setAttribute("aria-selected", String(modus === "pusle"));
   $("modusScrub").setAttribute("aria-selected", String(modus === "scrub"));
   $("modusTekst").textContent = modus === "pusle"
     ? "You never see the picture until it's done. Place the pieces before the clock runs out, and the image reveals itself."
     : "The art is buried in mud. Wash it off with soap bubbles. Clear a board in either game and the next one opens.";
+  oppdaterTema();
 }
 async function tegnMeny() {
   tegnModus();
@@ -1033,7 +1049,7 @@ let timer = 0;
 async function startSpill(i, n, gjenoppta) {
   const o = VALG.find(v => v.n === n);
   const img = await hentBilde(BRETT[i].src);
-  $("meny").hidden = true; $("spill").hidden = false;
+  $("meny").hidden = true; $("spill").hidden = false; oppdaterTema();
   stoppFest();
   $("resultat").classList.remove("vis"); $("avslor").classList.remove("vis", "bolge"); $("ramme").classList.remove("neon");
   document.querySelectorAll(".bit").forEach(e => e.remove());
@@ -1222,7 +1238,7 @@ function oppsett() {
   // Et svakt omriss av alle brikkene på brettet, så du ser hvor de skal.
   const om = $("omriss"); om.width = Math.round(bredde * dpr); om.height = Math.round(hoyde * dpr);
   const ox = om.getContext("2d"); ox.setTransform(dpr, 0, 0, dpr, 0, 0); ox.clearRect(0, 0, bredde, hoyde);
-  ox.lineWidth = 1; ox.strokeStyle = "rgba(255,255,255,.11)"; ox.lineJoin = "round";
+  ox.lineWidth = 1; ox.strokeStyle = document.body.classList.contains("lys") ? "rgba(70,50,30,.2)" : "rgba(255,255,255,.11)"; ox.lineJoin = "round";
   for (const b of spill.biter) { bitSti(ox, b.c * bw, b.r * bh, bw, bh, b.kanter); ox.stroke(); }
   const gl = $("gnistLag"); gl.width = Math.round(W * dpr); gl.height = Math.round(H * dpr); gl.style.width = W + "px"; gl.style.height = H + "px";
   spill.biter.forEach(b => { tegnBit(b); plasser(b); });
@@ -2219,7 +2235,7 @@ async function shatterStart(i, poeng = 0, liv = 3) {
   const niva = i + aktiv * 2;
   stoppFest(); clearInterval(timer); spill = null;
   document.querySelectorAll(".bit").forEach(e => e.remove());
-  $("meny").hidden = true; $("spill").hidden = true; $("shatter").hidden = false;
+  $("meny").hidden = true; $("spill").hidden = true; $("shatter").hidden = false; oppdaterTema();
   const img = await hentBilde(BRETT[i].src);
   const tykk = shMoekk(niva); shBalanser(tykk);
   const klosser = [], j1 = Math.floor(Math.random() * SH_JORD.length), j2 = (j1 + 1 + Math.floor(Math.random() * (SH_JORD.length - 1))) % SH_JORD.length;
