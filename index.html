@@ -373,7 +373,7 @@ body:has(.resultat.vis) #spill .linje{opacity:0;pointer-events:none;transition:o
   <div class="regel"><b>The race:</b> Your best score on each of the ten boards in a collection is added up. Finish #1 overall and you get the next collection for free. Anyone who takes first place later gets it too. Points: Easy (25 pieces) gives 10,000, Medium (49) 15,000, Hard (100) 20,000 and Chaos (144) 25,000 at normal speed. Be fast and you get up to double.</div>
   <div class="sammen" id="sammen"><p class="liten">Loading standings …</p></div>
   <p class="kreditt">© 2001–2026 Tarjei Krogh. All photography, music and art. <a href="https://kroghx.com" target="_blank" rel="noopener">kroghx.com</a></p>
-  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 0.89<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
+  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 0.90<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
 </section>
 
 <div class="ark" id="tidUtArk" hidden style="z-index:200001">
@@ -1446,8 +1446,11 @@ function kast(b, heldig) {
   }
   løftes.delete(b); b.z = ++sp.ztopp;
   const fx = b.x, fy = b.y, t0 = performance.now(), varighet = (380 + Math.hypot((mx - fx) * geo.bredde, (my - fy) * geo.hoyde) * .25) * 1.1;
-  const r0 = b.rot || 0, rMål = heldig ? 0 : (Math.random() - .5) * 24, spinn = (Math.random() < .5 ? -1 : 1) * (70 + Math.random() * 140);
-  const vend = !heldig && !b.bak && Math.random() < .18 && (sp.vendKvote == null || sp.vendKvote-- > 0);
+  const smetter = !heldig && !!b.kanSmette?.(mx, my);
+  if (smetter) { mx = slotC(b) / sp.k; my = slotR(b) / sp.r; }
+  b.tilPlass = heldig || smetter;
+  const r0 = b.rot || 0, rMål = heldig || smetter ? 0 : (Math.random() - .5) * 24, spinn = (Math.random() < .5 ? -1 : 1) * (70 + Math.random() * 140);
+  const vend = !heldig && !smetter && !b.bak && Math.random() < .18 && (sp.vendKvote == null || sp.vendKvote-- > 0);
   if (lydPa) { tone(420, 0, .07, .012, "triangle", .6, .4); tone(840, .02, .05, .006, "sine", .6, .4); }
   const steg = t => {
     if (spill !== sp || !b.el.isConnected) return;
@@ -1457,8 +1460,10 @@ function kast(b, heldig) {
     if (vend) { b.sx = Math.max(.02, Math.abs(Math.cos(Math.PI * u))); if (u >= .5 && !b.bak) { b.bak = true; tegnBit(b); } }
     if (u < 1) { plasser(b); requestAnimationFrame(steg); return; }
     b.x = mx; b.y = my; b.loft = 0; b.rot = rMål; b.sx = 1;
-    if (heldig && b.provSmett && b.provSmett()) { gnistKast(b); return; }
-    if (!heldig && b.provSmett && b.provSmett()) return;
+    const vilPlass = b.tilPlass; b.tilPlass = false;
+    if (vilPlass && !b.provSmett?.()) plasser(b);
+    if (heldig && b.ferdig) { gnistKast(b); return; }
+    if (b.ferdig || (!heldig && b.provSmett && b.provSmett())) return;
     if (lydPa) tone(170, 0, .06, .03, "sine", .9, .2);
     const t1 = performance.now();
     const dunk = t2 => { if (spill !== sp) return; const v = Math.min(1, (t2 - t1) / 140); b.dunk = Math.sin(Math.PI * v) * .6; plasser(b); if (v < 1) requestAnimationFrame(dunk); else { b.dunk = 0; plasser(b); } };
@@ -1605,13 +1610,13 @@ function tegnBit(b) {
 }
 function plasser(b) {
   const { x0, y0, bredde, hoyde, p: t } = geo;
-  if (!b.ferdig) {
+  if (!b.ferdig && !b.tilPlass) {
     b.x = Math.min(Math.max(b.x, geo.minX), geo.maxX);
     b.y = Math.min(Math.max(b.y, geo.minY), geo.maxY);
   }
   // Løftet: biten blir litt større og skyggen lenger. Dunk: den trykkes litt ned når den lander.
   const l = b.loft || 0, s = (1 + .07 * l - .035 * (b.dunk || 0)) * (b.vekst || 1);
-  const pu = b.pust || 0, rot = (b.ferdig ? 0 : (b.rot || 0)) + (b.svai || 0), sx = (b.sx ?? 1) * (b.fx ?? 1) * (1 + pu), sy = (b.fy ?? 1) * (1 - pu * .8);
+  const pu = b.pust || 0, rot = (b.ferdig && !b.lander ? 0 : (b.rot || 0)) + (b.svai || 0), sx = (b.sx ?? 1) * (b.fx ?? 1) * (1 + pu), sy = (b.fy ?? 1) * (1 - pu * .8);
   b.el.style.transform = `translate(${x0 + b.x * bredde - t + (b.dirr || 0) * (Math.random() - .5)}px, ${y0 + b.y * hoyde - t + (b.dirr || 0) * (Math.random() - .5)}px)` + (rot ? ` rotate(${rot.toFixed(2)}deg)` : "") + (s !== 1 || sx !== 1 || sy !== 1 ? ` scale(${(s * sx).toFixed(4)},${(s * sy).toFixed(4)})` : "");
   if (!b.ferdig || b.lander || b.vokser) {
     const g = Math.round((b.glod || 0) * 8) / 8, lq = Math.round(l * 10) / 10, fa = Math.round((b.farge || 0) * 30) / 30;
@@ -1663,7 +1668,7 @@ function skyvBort(b) {
   });
 }
 function settNed(b, fraX, fraY, lyd) {
-  const mx = slotC(b) / spill.k, my = slotR(b) / spill.r, t0 = performance.now(), l0 = b.loft || 0, sp = spill;
+  const mx = slotC(b) / spill.k, my = slotR(b) / spill.r, t0 = performance.now(), l0 = b.loft || 0, sp = spill, rot0 = b.rot || 0;
   løftes.delete(b); b.lander = true;
   let vx = (b.glidV?.[0] || 0) * 60, vy = (b.glidV?.[1] || 0) * 60, sist = t0; b.glidV = null; b.x = fraX; b.y = fraY;
   const d0 = Math.hypot((mx - fraX) * geo.bredde, (my - fraY) * geo.hoyde) || 1;
@@ -1673,15 +1678,16 @@ function settNed(b, fraX, fraY, lyd) {
     const K = 80, C = 2 * Math.sqrt(K);
     vx += (K * (mx - b.x) - C * vx) * dt; vy += (K * (my - b.y) - C * vy) * dt; b.x += vx * dt; b.y += vy * dt;
     const d = Math.hypot((mx - b.x) * geo.bredde, (my - b.y) * geo.hoyde), fart = Math.hypot(vx * geo.bredde, vy * geo.hoyde), e = 1 - Math.min(1, d / d0);
-    b.loft = l0 * (1 - e) + .25 * Math.sin(Math.PI * e) * (1 - e);
+    b.loft = l0 * (1 - e) + .25 * Math.sin(Math.PI * e) * (1 - e); b.rot = rot0 * (1 - e);
     if ((d > .35 || fart > 25) && t - t0 < 1500) { plasser(b); requestAnimationFrame(steg); return; }
-    b.x = mx; b.y = my; b.loft = 0; b.glod = 0;
+    b.x = mx; b.y = my; b.loft = 0; b.glod = 0; b.rot = 0;
     const t1 = performance.now();
     const dunk = t2 => {
       if (spill !== sp || !b.el.isConnected) return;
-      const v = Math.min(1, (t2 - t1) / 150); b.dunk = Math.sin(Math.PI * v);
+      const v = Math.min(1, (t2 - t1) / 220); b.dunk = Math.pow(Math.sin(Math.PI * v), 2) * .8;
       if (v < 1) { plasser(b); requestAnimationFrame(dunk); return; }
-      b.dunk = 0; b.lander = false; b.el.style.filter = ""; b.fil = ""; tegnBit(b); plasser(b);
+      b.dunk = 0; b.lander = false; b.el.style.filter = ""; b.fil = ""; plasser(b);
+      requestAnimationFrame(() => requestAnimationFrame(() => { if (spill === sp && b.el.isConnected) tegnBit(b); }));
       b.el.classList.remove("klikk"); void b.el.offsetWidth; b.el.classList.add("klikk");
       // Glorien brer seg fra den nye brikka ut over alle som ligger på plass, og er borte på et halvt sekund.
       if (!matchMedia("(prefers-reduced-motion: reduce)").matches) { for (let i = gnister.length - 1; i >= 0; i--) if (gnister[i].halo) gnister.splice(i, 1); gnister.push({ halo: true, t: 0, liv: .75, c: slotC(b), r: slotR(b) }); if (!gnistRAF) gnistRAF = requestAnimationFrame(gnistSteg); }
@@ -1800,6 +1806,14 @@ function koble(b) {
     b.glod = d < R * 1.3 ? 1 - d / (R * 1.3) : 0;
     return [x, y];
   }
+  // Vil brikka smette på plass hvis den lander her? (Samme regler som provSmett, men uten å gjøre noe.)
+  function kanSmette(x, y) {
+    const mx = slotC(b) / spill.k, my = slotR(b) / spill.r;
+    if (Math.hypot((x - mx) * geo.bredde, (y - my) * geo.hoyde) >= Math.min(geo.bw, geo.bh) * mag().smett) return false;
+    if (b.bak || (b.vekst || 1) > 1.04) return false;
+    return ![[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dc, dr]) => { const c = b.c + dc, r = b.r + dr; if (c < 0 || r < 0 || c >= spill.k || r >= spill.r) return false; const n = spill.biter[r * spill.k + c]; return n.ferdig && (n.svidd > .06 || spill.brann?.ild.has(n.id)); });
+  }
+  b.kanSmette = kanSmette;
   function provSmett(vis) {
     const mx = slotC(b) / spill.k, my = slotR(b) / spill.r;
     const avstand = Math.hypot((b.x - mx) * geo.bredde, (b.y - my) * geo.hoyde);
@@ -2625,14 +2639,14 @@ async function ferdig() {
   fremdrift[b.id] = fremdrift[b.id] || {};
   if (!gammel || p > gammel.poeng) fremdrift[b.id][spill.n] = { poeng: p, tid: s };
   skrivLokal(fremdrift);
-  const neste = nesteUlost(spill.brett);
-  $("nesteKnapp").textContent = neste >= 0 ? "Next: " + BRETT[neste].navn + " →" : "Collection complete";
-  $("nesteKnapp").disabled = neste < 0;
+  const neste = nesteIRekke(spill.brett);
+  $("nesteKnapp").textContent = neste >= 0 ? "Next: " + BRETT[neste].navn + " →" : "Menu";
+  $("nesteKnapp").disabled = false;
   $("resTittel").textContent = BRETT[spill.brett].navn;
   $("resInfo").dataset.kode = kode(spill.brett) + " · " + VALG.find(v => v.n === spill.n).navn + " · " + spill.n + " pieces";
   $("resPoeng").textContent = "0 points";
   { const sp = spill; ark = { tema: "pusle", img: sp.img, fra: { x: geo.x0, y: geo.y0, w: geo.bredde }, poeng: p, sluttT: sp.sluttT, gyldig: () => spill === sp && !!sp.slutt && !sp.tapt,
-    neste: () => { if (spill !== sp) return; const n = nesteUlost(sp.brett); valgtAntall = sp.n; tilMeny(); if (n >= 0) visStartark(n); }, meny: tilMeny }; }
+    neste: () => { if (spill !== sp) return; const n = nesteIRekke(sp.brett); valgtAntall = sp.n; tilMeny(); if (n >= 0) visStartark(n); }, meny: tilMeny }; }
   $("resInfo").textContent = $("resInfo").dataset.kode + " · time " + fmt(sEkte) + (trekk ? " · power-ups −" + Math.round(trekk * 100) + " %" : "");
   $("resRekord").textContent = gammel ? (p > gammel.poeng ? "New personal best. Previous: " + gammel.poeng.toLocaleString("en") + "." : "Your best is " + gammel.poeng.toLocaleString("en") + ".") : "First time on this board.";
   // Credits: bare for et brett klart uten power-ups.
@@ -2811,6 +2825,8 @@ $("visAlle").onclick = () => { visAlle = !visAlle; $("visAlle").textContent = vi
 
 // ---------- navigasjon ----------
 // Neste brett du ikke har løst ennå, etter det du var på. Løste brett hoppes over.
+// Neste brett i rekkefølge i samme samling (også om det er klart før). Siste brett: -1, da går knappen til menyen.
+function nesteIRekke(fra) { const i = fra + 1; return i < BRETT.length && erApen(i) ? i : -1; }
 function nesteUlost(fra) {
   for (let j = 1; j <= BRETT.length; j++) { const i = (fra + j) % BRETT.length; if (!erLost(BRETT[i].id) && erApen(i)) return i; }
   return -1;
@@ -5680,7 +5696,7 @@ function shSteg(t) {
 }
 addEventListener("resize", () => { if (sh) shOppsett(); });
 // Bare for automatisk testing lokalt (?autotest).
-if (location.search.includes("autotest")) { window.__sh = () => sh; window.__shOppdater = dt => { shOppdater(dt); if (sh) { sh.tid += dt; shPartikler(dt); } }; window.__shTreff = shTreff; window.__shGalaga = shGalagaStart; window.__shSopp = shSopp; window.__shBytte = shByttetStart; window.__shOrm = shOrmStart; window.__levende = levendeStart; window.__gn = () => ({ gnister, raf: gnistRAF }); window.__hendelse = t => t === "tilt" ? tilt(true) : t === "vokse" ? vokseBrikke() : t === "break" ? puzzleBreak() : t === "speilX" ? speilStart("x") : t === "speilY" ? speilStart("y") : lynnedslag(); window.__shSprekk = shSprekk; window.__shTegn = () => { shRens(); shTegn(performance.now()); }; window.__spill = () => spill; window.__banner = banner; window.__geo = () => geo; window.__plasser = plasser; window.__skjermPkt = skjermPkt; }
+if (location.search.includes("autotest")) { window.__sh = () => sh; window.__shOppdater = dt => { shOppdater(dt); if (sh) { sh.tid += dt; shPartikler(dt); } }; window.__shTreff = shTreff; window.__shGalaga = shGalagaStart; window.__shSopp = shSopp; window.__shBytte = shByttetStart; window.__shOrm = shOrmStart; window.__levende = levendeStart; window.__gn = () => ({ gnister, raf: gnistRAF }); window.__hendelse = t => t === "tilt" ? tilt(true) : t === "vokse" ? vokseBrikke() : t === "break" ? puzzleBreak() : t === "speilX" ? speilStart("x") : t === "speilY" ? speilStart("y") : lynnedslag(); window.__shSprekk = shSprekk; window.__shTegn = () => { shRens(); shTegn(performance.now()); }; window.__spill = () => spill; window.__banner = banner; window.__kast = kast; window.__geo = () => geo; window.__plasser = plasser; window.__skjermPkt = skjermPkt; }
 
 
 
