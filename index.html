@@ -699,7 +699,8 @@ function myntTikk(andel) {
 // ---------- musikk: én loop per brett, av Krogh ----------
 // takt: hvor lang loopen er fra første lyd (sekunder). Skjøten settes der musikken gjentar seg, så den går sømløst.
 const MUSIKK = {
-  b1: { fil: "musikk/poetrigger.mp4", tittel: "Poetrigger", takt: 44.3077, spotify: "" },
+  b1: { fil: "musikk/poetrigger.mp4", tittel: "Poetrigger", takt: 44.3077, spotify: "https://open.spotify.com/track/34PGffFCkwW0vsxZ48rzD5" },
+  b3: { fil: "musikk/blume.mp4", tittel: "Blume", takt: 40.4211, spotify: "https://open.spotify.com/track/4pNfudlyzaRlv5eN5t2WyB" },
 };
 let musikk = null, musikkØnske = null;
 const musikkBuf = {};
@@ -718,6 +719,11 @@ async function spillMusikk(id) {
     const L = Math.round(m.takt * buf.sampleRate), N = Math.round(.05 * buf.sampleRate);
     if (!buf.sømløs && st + L + N < buf.length) {
       for (let ch = 0; ch < buf.numberOfChannels; ch++) { const k = buf.getChannelData(ch); for (let i = 0; i < N; i++) { const w = i / N; k[st + i] = k[st + L + i] * (1 - w) + k[st + i] * w; } }
+      buf.sømløs = true;
+    } else if (!buf.sømløs) {
+      // Ingen musikk etter skjøten i fila: tone inn og ut over 3 ms, så skjøten ikke klikker.
+      const M = Math.round(.003 * buf.sampleRate), slutt = Math.min(buf.length, st + L);
+      for (let ch = 0; ch < buf.numberOfChannels; ch++) { const k = buf.getChannelData(ch); for (let i = 0; i < M; i++) { const w = i / M; k[st + i] *= w; k[slutt - 1 - i] *= w; } }
       buf.sømløs = true;
     }
     kilde.buffer = buf; kilde.loop = true;
