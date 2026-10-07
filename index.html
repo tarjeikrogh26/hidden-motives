@@ -172,8 +172,8 @@ h1 .signatur{font-size:.55em;letter-spacing:.06em;white-space:nowrap}
 #brannLag{position:fixed;inset:0;pointer-events:none;z-index:255}
 :root{--kontur:2px 0 0 #120b04,-2px 0 0 #120b04,0 2px 0 #120b04,0 -2px 0 #120b04,1.5px 1.5px 0 #120b04,-1.5px 1.5px 0 #120b04,1.5px -1.5px 0 #120b04,-1.5px -1.5px 0 #120b04}
 .hendelse{position:fixed;left:50%;top:40%;z-index:266;pointer-events:none;text-align:center;transform:translate(-50%,-50%);font-family:var(--display);font-weight:800;
-  font-size:clamp(26px,5.5vw,52px);letter-spacing:.06em;line-height:1;color:#ff5a6a;text-shadow:0 0 18px rgba(255,90,106,.75),0 3px 0 rgba(0,0,0,.6);animation:hendelse 2.2s ease-out forwards;white-space:nowrap}
-.hendelse small{display:block;font-family:var(--tall);font-weight:700;font-size:max(18px,.46em);line-height:1.35;letter-spacing:.08em;color:#fff;margin:.6em auto 0;max-width:min(80vw,520px);white-space:normal;
+  font-size:clamp(20px,6.4vw,42px);letter-spacing:.04em;line-height:1;color:#ff5a6a;text-shadow:0 0 18px rgba(255,90,106,.75),0 3px 0 rgba(0,0,0,.6);animation:hendelse 2.2s ease-out forwards;white-space:nowrap}
+.hendelse small{display:block;font-family:var(--brod);font-weight:600;font-size:15px;line-height:1.4;letter-spacing:.07em;color:#fff;margin:.6em auto 0;max-width:min(80vw,520px);white-space:normal;
   padding:.35em .8em;border-radius:12px;background:rgba(12,8,4,.55);text-shadow:var(--kontur)}
 @keyframes hendelse{0%{opacity:0;transform:translate(-50%,-50%) scale(.5)}12%{opacity:1;transform:translate(-50%,-50%) scale(1.12)}22%{transform:translate(-50%,-50%) scale(1)}80%{opacity:1}100%{opacity:0;transform:translate(-50%,-62%) scale(1)}}
 .lynblink{position:fixed;inset:0;z-index:250;pointer-events:none;background:#fff;animation:lynblink .6s ease-out forwards}
@@ -187,7 +187,8 @@ h1 .signatur{font-size:.55em;letter-spacing:.06em;white-space:nowrap}
   .linje .tid{font-size:20px}.mal{padding-top:4px;font-size:10.5px}.mal b{font-size:13px}
   .hud-knapper{gap:4px}.hud-knapper button{padding:4px 3px;font-size:11px}.hud-knapper .hint span{font-size:10px}
 }
-.flaks.lang{font-size:14px;letter-spacing:.06em;animation:flaks 2.8s ease-out forwards}
+.flaks.lang{font-family:var(--brod);font-weight:700;font-size:12.5px;letter-spacing:.12em;animation:flaksLang 3s ease-out forwards}
+@keyframes flaksLang{0%{opacity:0;transform:translate(-50%,-30%) scale(.7)}8%{opacity:1;transform:translate(-50%,-55%) scale(1.08)}16%{transform:translate(-50%,-60%) scale(1)}45%{opacity:1}100%{opacity:0;transform:translate(-50%,-130%) scale(1)}}
 .flaks{position:fixed;z-index:265;pointer-events:none;font-family:var(--display);font-weight:800;font-size:18px;letter-spacing:.08em;color:#ffd23a;text-shadow:0 0 10px rgba(255,190,40,.9);transform:translate(-50%,-50%);animation:flaks 1.2s ease-out forwards}
 @keyframes flaks{0%{opacity:0;transform:translate(-50%,-30%) scale(.6)}15%{opacity:1;transform:translate(-50%,-60%) scale(1.15)}100%{opacity:0;transform:translate(-50%,-160%) scale(1)}}
 /* Power-up-linja: pilleformede knapper under brettet, og lommeboka med credits. */
@@ -369,7 +370,7 @@ body:has(.resultat.vis) #spill .linje{opacity:0;pointer-events:none;transition:o
   <div class="regel"><b>The race:</b> Your best score on each of the ten boards in a collection is added up. Finish #1 overall and you get the next collection for free. Anyone who takes first place later gets it too. Points: Easy (25 pieces) gives 10,000, Medium (49) 15,000, Hard (100) 20,000 and Chaos (144) 25,000 at normal speed. Be fast and you get up to double.</div>
   <div class="sammen" id="sammen"><p class="liten">Loading standings …</p></div>
   <p class="kreditt">© 2001–2026 Tarjei Krogh. All photography, music and art. <a href="https://kroghx.com" target="_blank" rel="noopener">kroghx.com</a></p>
-  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 0.86<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
+  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 0.87<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
 </section>
 
 <div class="ark" id="tidUtArk" hidden style="z-index:200001">
@@ -1990,7 +1991,7 @@ function familie() {
   sp.familieGaar = true;
   const roller = [["MOTHER", "#ff9ad5"], ["FATHER", "#7fd1ff"], ["SISTER", "#ffd27a"], ["BROTHER", "#9cff7a"]];
   const ferd = sted.mor ? [sted.mor, ...sted.resten] : sted.resten;
-  banner("FAMILY!", "THEY FIND EACH OTHER", "#ff9ad5", 2600);
+  banner("FAMILY!", "THEY FIND EACH OTHER", "#ff9ad5", 1800);
   ferd.forEach((b, j) => setTimeout(() => {
     if (spill !== sp) return;
     const [rolle, farge] = roller[j];
@@ -1998,7 +1999,7 @@ function familie() {
     // Flyr fra der den ligger (også fra bunken) til plassen sin, og legger seg på plass.
     const i = sp.bunke.indexOf(b); if (i >= 0) { sp.bunke.splice(i, 1); leggBunke(); }
     b.iBunke = false; if (b.bak) { b.bak = false; tegnBit(b); } b.z = ++sp.ztopp; løftes.delete(b);
-    const fx = b.x, fy = b.y, mx = slotC(b) / sp.k, my = slotR(b) / sp.r, r0 = b.rot || 0, t0 = performance.now(), D = 900;
+    const fx = b.x, fy = b.y, mx = slotC(b) / sp.k, my = slotR(b) / sp.r, r0 = b.rot || 0, t0 = performance.now(), D = 560;
     if (lydPa) tone([523, 659, 784, 1047][j], 0, .35, .04, "sine", .7, .9);
     const steg = t => {
       if (spill !== sp || b.ferdig) return;
@@ -2010,7 +2011,7 @@ function familie() {
       brikkeTekst(b, rolle, farge);
     };
     requestAnimationFrame(steg);
-  }, 250 + j * 1300));
+  }, 120 + j * 480));
   // Til slutt: en ring av lys rundt hele familien.
   setTimeout(() => {
     if (spill !== sp) return; sp.familieGaar = false;
@@ -2018,7 +2019,7 @@ function familie() {
     gnister.push({ familieRing: true, t: 0, liv: 1.6, c: c0, r: r0 }); if (!gnistRAF) gnistRAF = requestAnimationFrame(gnistSteg);
     banner("FAMILY UNITED!", null, "#ffd27a", 2400);
     if (lydPa) [0, 4, 7, 12].forEach((st, j) => tone(523 * Math.pow(2, st / 12), j * .08, .5, .03, "sine", .6, 1.1));
-  }, 250 + ferd.length * 1300 + 700);
+  }, 120 + ferd.length * 480 + 650);
 }
 function limBrikker() {
   const sp = spill; sp.limBrukt = true; let n = 0;
@@ -2167,10 +2168,16 @@ function banner(tittel, under, farge, ms = 2300, paaBrett = false) {
   document.querySelectorAll(".hendelse").forEach(e => e.remove());
   const el = document.createElement("div"); el.className = "hendelse"; el.textContent = tittel;
   el.style.textShadow = `var(--kontur),0 0 22px ${farge || "rgba(255,90,106,.75)"}`; if (farge) el.style.color = farge;
-  if (under) { const s = document.createElement("small"); s.textContent = under; el.appendChild(s); }
-  ms = Math.round(ms * 1.9); el.style.animationDuration = (ms - 100) / 1000 + "s";
+  if (under) { const s = document.createElement("small"); under.split(" · ").forEach((d, j) => { if (j) s.appendChild(document.createElement("br")); s.appendChild(document.createTextNode(d)); }); el.appendChild(s); }
+  ms = Math.round(ms * 1.15); el.style.animationDuration = (ms - 100) / 1000 + "s";
   if (paaBrett && geo) { const [px, py] = skjermPkt(geo.x0 + geo.bredde / 2, geo.y0 + geo.hoyde / 2); el.style.left = px + "px"; el.style.top = py + "px"; }
   document.body.appendChild(el); setTimeout(() => el.remove(), ms);
+  // Krymp tittelen til den får plass i 90 % av bredden (undertittelen brytes selv over flere linjer).
+  // Måles uten animasjonen (den starter i halv størrelse).
+  el.style.animationName = "none"; el.style.transform = "none";
+  const maks = innerWidth * .9, r = document.createRange(); r.selectNodeContents(el.firstChild); const b = r.getBoundingClientRect().width;
+  if (b > maks) el.style.fontSize = parseFloat(getComputedStyle(el).fontSize) * maks / b + "px";
+  el.style.transform = ""; void el.offsetWidth; el.style.animationName = "";
 }
 function visTilt() {
   const k = $("tiltKnapp"); if (!spill) return;
