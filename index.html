@@ -79,6 +79,15 @@ body.lys #modusScrub{--farge:#e07800;--glod:224,120,0}
 .moduser .modus:hover{opacity:.6}
 .moduser .modus[aria-selected="true"],body.lys .moduser .modus[aria-selected="true"]{opacity:1;border-bottom-color:var(--farge);text-shadow:0 0 12px rgba(var(--glod),.6),0 0 30px rgba(var(--glod),.35);background:radial-gradient(ellipse at 50% 60%,rgba(var(--glod),.14),rgba(var(--glod),0) 70%)}
 .moduser .modus:active{transform:scale(.96);text-shadow:0 0 18px rgba(var(--glod),.75);background:rgba(var(--glod),.08)}
+.variant{display:flex;gap:6px;margin-top:12px;min-height:30px}
+.variant button{font-family:var(--brod);font-weight:600;font-size:11.5px;letter-spacing:.16em;padding:6px 14px;border-radius:999px;border:1px solid rgba(var(--vg),.35);background:transparent;color:rgba(var(--vg),.6);cursor:pointer}
+.variant button[aria-checked=true]{color:#fff;background:rgba(var(--vg),.85);border-color:rgba(var(--vg),1);box-shadow:0 0 14px rgba(var(--vg),.35)}
+.variant.v-pusle{--vg:226,61,132}
+.variant.v-scrub{--vg:224,120,0}
+.resultat.peace .ark-hoyre{display:none}
+.resultat.peace .poeng{color:#ff5fa2}
+#resRekord.ny-rekord{color:#ff5fa2;font-weight:700}
+body.peace-modus #tid,body.peace-modus #mal,body.peace-modus #tiltKnapp{display:none!important}
 .eller{font-family:var(--brod);font-weight:400;font-size:max(12px,.3em);color:var(--demp);letter-spacing:.08em;text-transform:lowercase}
 .av-linje{font-family:var(--brod);color:var(--demp);margin:10px 0 0;font-size:14px}
 .av-linje a.signatur{text-decoration:none}
@@ -376,6 +385,7 @@ body:has(.resultat.vis) #spill .linje{opacity:0;pointer-events:none;transition:o
         <button class="modus" id="modusPuslespill" role="tab"><span class="tittel">PIECE&nbsp;IT</span></button>
         <button class="modus" id="modusScrub" role="tab"><span class="tittel">SCRUB&nbsp;IT</span></button>
       </div>
+      <div class="variant" id="variant" role="radiogroup" aria-label="Mode"></div>
       <p class="under" id="modusTekst"></p>
     </div>
   </div>
@@ -388,7 +398,7 @@ body:has(.resultat.vis) #spill .linje{opacity:0;pointer-events:none;transition:o
   <div class="regel"><b>The race:</b> Your best score on each of the ten boards in a collection is added up. Finish #1 overall and you get the next collection for free. Anyone who takes first place later gets it too. Points: Easy (25 pieces) gives 10,000, Medium (49) 15,000, Hard (100) 20,000 and Chaos (144) 25,000 at normal speed. Be fast and you get up to double.</div>
   <div class="sammen" id="sammen"><p class="liten">Loading standings …</p></div>
   <p class="kreditt">© 2001–2026 Tarjei Krogh. All photography, music and art. <a href="https://kroghx.com" target="_blank" rel="noopener">kroghx.com</a></p>
-  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 0.98<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
+  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 0.99<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
 </section>
 
 <div class="ark" id="tidUtArk" hidden style="z-index:200001">
@@ -553,7 +563,11 @@ function hentBilde(src) {
 }
 
 // ---------- meny ----------
-function erLost(id) { return !!fremdrift[id] && Object.keys(fremdrift[id]).length > 0; }
+// Et brett klart i Peace teller ikke for å åpne nye brett (Peace åpner ingenting, det spiller det du har).
+function erLost(id) { return !!fremdrift[id] && Object.keys(fremdrift[id]).some(k => k !== "peace"); }
+let variant = { pusle: "game", scrub: "1p" };
+try { const v = JSON.parse(localStorage.getItem("sm-variant") || "null"); if (v) variant = { ...variant, ...v }; } catch {}
+const iPeace = () => modus === "pusle" && variant.pusle === "peace";
 // BETA: alle brett er åpne for testerne. Sett til false for låsing én og én.
 const BETA = true;
 function erApen(i) { return BETA || i === 0 || erLost(BRETT[i - 1].id); }
@@ -597,8 +611,16 @@ function tegnModus() {
   $("modusPuslespill").setAttribute("aria-selected", String(modus === "pusle"));
   $("modusScrub").setAttribute("aria-selected", String(modus === "scrub"));
   $("modusTekst").textContent = modus === "pusle"
-    ? "You never see the picture until it's done. Place the pieces before the clock runs out, and the image reveals itself."
+    ? (iPeace() ? "Piece it in peace. No clock, no surprises. Just the pieces, the picture and calm music."
+      : "You never see the picture until it's done. Place the pieces before the clock runs out, and the image reveals itself.")
     : "The art is buried in mud. Wash it off with soap bubbles. Clear a board in either game and the next one opens.";
+  // Bryteren under spillet som er valgt (SCRUB IT får 1P | 2P når 2P er bygget).
+  const vr = $("variant"); vr.replaceChildren(); vr.className = "variant " + (modus === "pusle" ? "v-pusle" : "v-scrub");
+  if (modus === "pusle") for (const [v, navn] of [["game", "GAME"], ["peace", "PEACE"]]) {
+    const b = document.createElement("button"); b.textContent = navn; b.setAttribute("role", "radio"); b.setAttribute("aria-checked", String(variant.pusle === v));
+    b.onclick = () => { variant.pusle = v; try { localStorage.setItem("sm-variant", JSON.stringify(variant)); } catch {} tegnMeny(); };
+    vr.appendChild(b);
+  }
   oppdaterTema();
 }
 async function tegnMeny() {
@@ -622,13 +644,14 @@ async function tegnMeny() {
     nr.append(kd, nv);
     const st = document.createElement("span");
     const beste = besteLokal(b.id);
-    st.textContent = erLost(b.id) ? (beste ? beste.poeng.toLocaleString("en") + " pts" : fremdrift[b.id]?.scrub ? "Scrubbed" : "Solved") : "";
+    const pf = fremdrift[b.id]?.peace;
+    st.textContent = iPeace() ? (pf ? "✓ " + fmt(pf.tid) : "") : erLost(b.id) ? (beste ? beste.poeng.toLocaleString("en") + " pts" : fremdrift[b.id]?.scrub ? "Scrubbed" : "Solved") : "";
     st.className = "status";
     merke.append(nr, st); kort.appendChild(merke);
     if (erApen(i)) kort.onclick = () => { if (modus === "scrub") { ctx(); shatterStart(i); } else visStartark(i); };
     liste.appendChild(kort);
     hentBilde(b.src).then(img => {
-      if (erLost(b.id)) { c.width = 400; c.height = 400; const x = c.getContext("2d"); x.drawImage(img, 0, 0, 400, 400); c.style.imageRendering = "auto"; }
+      if (erLost(b.id) || (iPeace() && fremdrift[b.id]?.peace)) { c.width = 400; c.height = 400; const x = c.getContext("2d"); x.drawImage(img, 0, 0, 400, 400); c.style.imageRendering = "auto"; }
       else { c.width = 7; c.height = 7; const x = c.getContext("2d"); x.drawImage(img, 0, 0, 7, 7); } // grov mosaikk: ingen fasit
     });
   });
@@ -1059,7 +1082,7 @@ for (const id of ["mynter", "resultat", "stovLag"]) document.body.appendChild($(
 function visArkade() {
   const a = ark, sp = a, res = $("resultat");
   if (!a || !a.gyldig() || res.classList.contains("vis")) return;
-  res.classList.toggle("tema-scrub", a.tema === "scrub"); res.classList.toggle("tema-pusle", a.tema !== "scrub");
+  res.classList.toggle("tema-scrub", a.tema === "scrub"); res.classList.toggle("tema-pusle", a.tema !== "scrub"); res.classList.toggle("peace", !!a.peace);
   $("arkHode").innerHTML = (a.tema === "scrub" ? "SCRUB IT" : "PIECE IT") + "<span>TOP 100</span>";
   const kanv = $("arkBilde"), plass = $("arkPlass");
   $("magi").style.opacity = 0; setTimeout(magiStopp, 520); $("levende").style.opacity = 0; setTimeout(levendeStopp, 520);
@@ -1076,6 +1099,7 @@ function visArkade() {
   kanv.style.transition = "none"; kanv.style.transform = `translate(${a.fra.x - kr.left}px, ${a.fra.y - kr.top}px) scale(${s})`;
   void kanv.offsetWidth;
   kanv.style.transition = "transform .9s cubic-bezier(.3,.7,.3,1)"; kanv.style.transform = "";
+  if (a.peace) return; // Peace: bildet og tiden din, ingen opptelling og ingen liste.
   const telleTid = a.tema === "scrub" ? 1400 : 1900;
   if (a.trinn) arkTimere.push(setTimeout(() => { if (ark === a) tellTrinn(a, () => { if (ark === a) sprengBilde(); }); }, 950));
   else arkTimere.push(setTimeout(() => { if (ark === a) tellOpp(a.poeng || 0, () => { if (ark === a) sprengBilde(); }, telleTid); }, 950));
@@ -1446,11 +1470,13 @@ async function startSpill(i, n, gjenoppta) {
   }
   spill = { brett: i, n: o.n, k: o.k, r: o.r, img, biter, start: gjenoppta?.start ? Date.now() - gjenoppta.start : 0, slutt: 0, lagt: biter.filter(b => b.ferdig).length, ztopp: biter.length, straff: gjenoppta?.straff || 0 };
   $("hudKode").textContent = kode(i); $("hudNavn").textContent = BRETT[i].navn;
-  if (!gjenoppta || musikkØnske !== BRETT[i].id) spillMusikk(BRETT[i].id);
+  spill.peace = iPeace(); document.body.classList.toggle("peace-modus", spill.peace);
+  if (spill.peace) { stoppMusikk(.6); stoppPad(); setTimeout(() => { if (spill?.peace && !spill.slutt) startPad(); }, 700); }
+  else if (!gjenoppta || musikkØnske !== BRETT[i].id) spillMusikk(BRETT[i].id);
   spill.hint = HINT_ANTALL; visHintKnapp();
   spill.tilt = 2; visTilt();
   // Beta: Krogh skal alltid kunne prøve TILT, MAGNET og HINT to ganger hver (2×2 + 2×3 + 2×1 = 12). Ved lansering: fjernes.
-  if (BETA) settCredits(Math.max(credits(), 22)); spill.hendelser = gjestekort(o.n); spill.brann = null;
+  if (BETA) settCredits(Math.max(credits(), 22)); spill.hendelser = spill.peace ? [] : gjestekort(o.n); spill.brann = null; if (spill.peace) { spill.tilt = 0; spill.hint = 999; }
   spill.liste = husListe(i, o.n);
   hentListe(i, o.n).then(l => { if (spill && spill.brett === i && spill.n === o.n) spill.liste = l; });
   oppsett();
@@ -1575,7 +1601,7 @@ function kast(b, heldig) {
   if (smetter) { mx = slotC(b) / sp.k; my = slotR(b) / sp.r; }
   b.tilPlass = heldig || smetter;
   const r0 = b.rot || 0, rMål = heldig || smetter ? 0 : (Math.random() - .5) * 24, spinn = (Math.random() < .5 ? -1 : 1) * (70 + Math.random() * 140);
-  const vend = !heldig && !smetter && !b.bak && Math.random() < .18 && (sp.vendKvote == null || sp.vendKvote-- > 0);
+  const vend = !heldig && !smetter && !b.bak && !sp.peace && Math.random() < .18 && (sp.vendKvote == null || sp.vendKvote-- > 0);
   if (lydPa) { tone(420, 0, .07, .012, "triangle", .6, .4); tone(840, .02, .05, .006, "sine", .6, .4); }
   const steg = t => {
     if (spill !== sp || !b.el.isConnected) return;
@@ -2079,6 +2105,7 @@ function visHintKnapp() {
   const b = spill.slutt ? null : nesteHint();
   if (spill.hint <= 0) { k.innerHTML = "Out of hints"; k.disabled = true; return; }
   k.disabled = !b;
+  if (spill.peace) { k.innerHTML = "Hint"; return; }
   k.innerHTML = "Hint · " + spill.hint + " left<span>" + (b ? "+" + HINT_PRIS[bitType(b)] + " s" : "") + "</span>";
 }
 $("hintKnapp").onclick = () => {
@@ -2108,7 +2135,7 @@ function credits() { try { const v = localStorage.getItem("sm-credits"); return 
 function settCredits(n) { try { localStorage.setItem("sm-credits", String(Math.max(0, n))); } catch {} visCredits(); }
 function visCredits() { for (const id of ["creditTall", "shCreditTall"]) { const el = $(id); if (el) el.textContent = credits(); } }
 function visKraftLinje() {
-  const el = $("kraftLinje"), vis = !!spill && !spill.slutt && !$("spill").hidden && $("shatter").hidden && modus !== "scrub" && !!geo;
+  const el = $("kraftLinje"), vis = !!spill && !spill.slutt && !spill.peace && !$("spill").hidden && $("shatter").hidden && modus !== "scrub" && !!geo;
   el.hidden = !vis; if (!vis) return;
   const H = innerHeight, w = el.offsetWidth || 300; el.style.left = Math.min(innerWidth - w / 2 - 8, Math.max(w / 2 + 8, geo.x0 + geo.bredde / 2)) + "px";
   el.style.top = (geo.staaende ? H - BAR + 6 : Math.min(H - BAR + 8, geo.y0 + geo.hoyde + 12)) + "px";
@@ -2215,6 +2242,8 @@ for (const id of ["kraftLinje", "shKraftLinje", "butikk", "innstillinger"]) docu
 for (const id of ["kraftLinje", "shKraftLinje", "butikk"]) $(id).addEventListener("pointerdown", e => e.stopPropagation());
 function tikk() {
   visKraftLinje();
+  // Peace: ingen klokke, ingen frist, ingen hendelser.
+  if (spill?.peace) { $("tid").textContent = ""; $("mal").replaceChildren(); return; }
   const s = sekunder(), frist = spill ? tidsfrist(spill.brett, spill.n) : 0, igjen = Math.max(0, frist - s);
   $("tid").textContent = fmt(igjen);
   $("tid").classList.toggle("gar", !!spill?.start && !spill.slutt);
@@ -2763,6 +2792,21 @@ async function ferdig() {
   if (!feiringKan()) $("avslor").classList.add("bolge"); $("ramme").classList.add("neon");
   { const sp = spill; setTimeout(() => { if (spill === sp && !$("resultat").classList.contains("vis")) { magiStart(sp.img, { x: geo.x0, y: geo.y0, w: geo.bredde, h: geo.hoyde }, 2.6); const R = { x: geo.x0, y: geo.y0, w: geo.bredde, h: geo.hoyde }; if (!feiringStart(sp.img, R, BRETT[sp.brett].id, 2.55, () => +getComputedStyle($("avslor")).opacity || 0)) { $("avslor").classList.add("magisk"); setTimeout(() => $("avslor").classList.remove("magisk"), 2300); } } }, 250); }
   startFest();
+  if (spill.peace) {
+    const id = b.id, før = fremdrift[id]?.peace?.tid, ny = !før || sEkte < før;
+    fremdrift[id] = fremdrift[id] || {}; fremdrift[id].peace = { tid: ny ? sEkte : før }; skrivLokal(fremdrift);
+    const neste = nesteIRekke(spill.brett), sp = spill;
+    $("nesteKnapp").textContent = neste >= 0 ? "Next: " + BRETT[neste].navn + " →" : "Menu"; $("nesteKnapp").disabled = false;
+    $("resTittel").textContent = BRETT[spill.brett].navn; $("resPoeng").textContent = fmt(sEkte);
+    $("resInfo").textContent = kode(spill.brett) + " · Peace · " + spill.n + " pieces";
+    $("resRekord").textContent = ny ? (før ? "New best time! Before: " + fmt(før) + "." : "Your first time on this board.") : "Your best is " + fmt(før) + ".";
+    $("resRekord").classList.toggle("ny-rekord", ny && !!før);
+    ark = { tema: "pusle", peace: true, img: sp.img, fra: { x: geo.x0, y: geo.y0, w: geo.bredde }, poeng: 0, sluttT: sp.sluttT, gyldig: () => spill === sp && !!sp.slutt,
+      neste: () => { if (spill !== sp) return; valgtAntall = sp.n; tilMeny(); if (neste >= 0) visStartark(neste); }, meny: tilMeny };
+    arkTimere.push(setTimeout(visArkade, 3000));
+    return;
+  }
+  $("resRekord").classList.remove("ny-rekord");
   const gammel = fremdrift[b.id]?.[spill.n];
   fremdrift[b.id] = fremdrift[b.id] || {};
   if (!gammel || p > gammel.poeng) fremdrift[b.id][spill.n] = { poeng: p, tid: s };
@@ -2960,7 +3004,7 @@ function nesteUlost(fra) {
   return -1;
 }
 function tilMeny() {
-  stoppFest(); stoppMusikk(); $("bunkeTall").hidden = true; $("kraftLinje").hidden = true;
+  stoppFest(); stoppMusikk(); stoppPad(); document.body.classList.remove("peace-modus"); $("bunkeTall").hidden = true; $("kraftLinje").hidden = true;
   clearInterval(timer); spill = null;
   document.querySelectorAll(".bit").forEach(e => e.remove());
   $("spill").hidden = true; $("meny").hidden = false;
