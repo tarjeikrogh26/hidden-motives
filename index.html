@@ -126,6 +126,7 @@ h1 .signatur{font-size:.55em;letter-spacing:.06em;white-space:nowrap}
 .rad.hus .n{color:var(--demp)}
 .hud-knapper{margin-top:auto;display:flex;flex-direction:column;gap:6px}
 .hud-knapper button{border:1px solid var(--strek);border-radius:6px;padding:7px 4px;font-size:12px;line-height:1.15;color:var(--demp);background:var(--rom)}
+.hud-knapper .hint{display:none!important}
 .hud-knapper .hint:disabled{opacity:.45;border-color:var(--strek);color:var(--demp)}
 .hud-knapper .hint{border-color:rgba(255,176,0,.5);color:var(--signal);font-weight:600;display:flex;flex-direction:column;align-items:center}
 .hud-knapper .hint span{font-family:var(--tall);font-weight:500;font-size:11px;color:var(--demp)}
@@ -169,6 +170,22 @@ h1 .signatur{font-size:.55em;letter-spacing:.06em;white-space:nowrap}
 }
 .flaks{position:fixed;z-index:265;pointer-events:none;font-family:var(--display);font-weight:800;font-size:18px;letter-spacing:.08em;color:#ffd23a;text-shadow:0 0 10px rgba(255,190,40,.9);transform:translate(-50%,-50%);animation:flaks 1.2s ease-out forwards}
 @keyframes flaks{0%{opacity:0;transform:translate(-50%,-30%) scale(.6)}15%{opacity:1;transform:translate(-50%,-60%) scale(1.15)}100%{opacity:0;transform:translate(-50%,-160%) scale(1)}}
+/* Power-up-linja: pilleformede knapper under brettet, og lommeboka med credits. */
+#kraftLinje{position:fixed;z-index:5000;display:flex;gap:8px;align-items:center;transform:translateX(-50%);white-space:nowrap}
+#kraftLinje[hidden]{display:none}
+#kraftLinje button{display:flex;align-items:center;gap:7px;border-radius:999px;padding:8px 15px;font-family:var(--display);font-weight:800;font-size:12px;letter-spacing:.08em;
+  color:#fff7e6;background:linear-gradient(180deg,#3a2f22,#1f1912);border:1px solid rgba(255,190,90,.55);box-shadow:0 3px 10px rgba(0,0,0,.35),inset 0 1px 0 rgba(255,255,255,.18);cursor:pointer}
+#kraftLinje button .pris{font-family:var(--tall);font-weight:500;font-size:11px;color:#ffd27a;letter-spacing:0}
+#kraftLinje button.aktiv{border-color:#7fe8ff;box-shadow:0 0 16px rgba(127,232,255,.7),inset 0 1px 0 rgba(255,255,255,.25)}
+#kraftLinje button.lommebok{background:linear-gradient(180deg,#5a3f10,#2f2008);border-color:rgba(255,210,122,.8)}
+#kraftLinje button:active{transform:translateY(1px)}
+@media (max-width:480px){#kraftLinje{gap:5px}#kraftLinje button{padding:7px 10px;font-size:11px;letter-spacing:.04em;gap:5px}#kraftLinje button .pris{font-size:10px}}
+body.lys #kraftLinje button{color:#fff7e6}
+.butikk{position:fixed;inset:0;z-index:6000;display:grid;place-items:center;background:rgba(10,8,6,.55)}
+.butikk[hidden]{display:none}
+.butikk .boks{max-width:340px;margin:16px;padding:20px 22px;border-radius:12px;background:#1d1812;color:#f3e9d8;border:1px solid rgba(255,190,90,.45);font-size:14px;line-height:1.45;box-shadow:0 10px 40px rgba(0,0,0,.5)}
+.butikk h3{margin:0 0 8px;font-family:var(--display);letter-spacing:.06em;color:#ffd27a}
+.butikk button{margin-top:12px;padding:8px 16px;border-radius:999px;border:1px solid rgba(255,190,90,.6);background:#2f2416;color:#fff;font-weight:700}
 .bunke-tall{position:fixed;z-index:260;pointer-events:none;font-family:var(--tall);font-size:12px;letter-spacing:.06em;color:var(--signal);background:rgba(20,19,18,.88);border:1px solid rgba(255,176,0,.5);border-radius:999px;padding:3px 10px;transform:translate(-50%,-100%);white-space:nowrap;box-shadow:0 2px 10px rgba(0,0,0,.5)}
 #bord.vik{transition:transform .6s cubic-bezier(.3,.7,.3,1) 2.6s}
 #ramme{position:absolute;border:1px solid var(--strek);background:
@@ -323,7 +340,7 @@ body:has(.resultat.vis) #spill .linje{opacity:0;pointer-events:none;transition:o
   <div class="regel"><b>The race:</b> Your best score on each of the ten boards in a collection is added up. Finish #1 overall and you get the next collection for free. Anyone who takes first place later gets it too. Points: Easy (25 pieces) gives 10,000, Medium (49) 15,000, Hard (100) 20,000 and Chaos (144) 25,000 at normal speed. Be fast and you get up to double.</div>
   <div class="sammen" id="sammen"><p class="liten">Loading standings …</p></div>
   <p class="kreditt">© 2001–2026 Tarjei Krogh. All photography, music and art. <a href="https://kroghx.com" target="_blank" rel="noopener">kroghx.com</a></p>
-  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 0.70<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
+  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 0.71<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
 </section>
 
 <div class="ark" id="tidUtArk" hidden style="z-index:200001">
@@ -372,6 +389,18 @@ body:has(.resultat.vis) #spill .linje{opacity:0;pointer-events:none;transition:o
   </div>
   <canvas id="fest"></canvas>
   <div class="bunke-tall" id="bunkeTall" hidden></div>
+  <div id="kraftLinje" hidden>
+    <button class="kraft" id="kraftTilt">TILT <span class="pris">◆ 2</span></button>
+    <button class="kraft" id="kraftMagnet">MAGNET <span class="pris">◆ 3</span></button>
+    <button class="kraft" id="kraftHint">HINT <span class="pris">◆ 1</span></button>
+    <button class="lommebok" id="lommebok">◆ <span id="creditTall">10</span> +</button>
+  </div>
+  <div class="butikk" id="butikk" hidden><div class="boks">
+    <h3>CREDITS</h3>
+    <p id="butikkTekst"></p>
+    <p>Credit packs and membership are coming soon.</p>
+    <button id="butikkLukk">Close</button>
+  </div></div>
   <canvas id="brannLag"></canvas>
   <canvas id="mynter"></canvas>
   <aside class="resultat" id="resultat" aria-live="polite">
@@ -1355,18 +1384,19 @@ function oppsett() {
     // Liggende: brettet til venstre, kolonnen helt til høyre, bitene imellom.
     toppKant = 0; hoyreKant = panel.width ? panel.left : W;
     const venstreKant = Math.max(16, W * 0.04, venstre + 8);
-    hoyde = Math.min(H - 2 * marg, (W * 0.6) / forhold, (hoyreKant - venstreKant - 12) * 0.62 / forhold);
+    hoyde = Math.min(H - 2 * marg - BAR, (W * 0.6) / forhold, (hoyreKant - venstreKant - 12) * 0.62 / forhold);
     bredde = hoyde * forhold;
-    x0 = venstreKant; y0 = (H - hoyde) / 2;
+    x0 = venstreKant; y0 = (H - BAR - hoyde) / 2;
   }
   const bw = bredde / spill.k, bh = hoyde / spill.r, t = Math.min(bw, bh) * 0.25;
   const dpr = Math.min(devicePixelRatio || 1, 2);
   // Løse biter skal være innenfor skjermen og utenfor panelet.
   // Hele brikka, med tapper, skal alltid synes og kunne tas: vant rundt hele banen.
   const minX = (-x0 + t + 6) / bredde, maxX = (hoyreKant - x0 - bw - t - 6) / bredde;
-  const minY = (toppKant + t + 8 - y0) / hoyde, maxY = (H - y0 - bh - t - 6) / hoyde;
+  const minY = (toppKant + t + 8 - y0) / hoyde, maxY = (H - BAR - y0 - bh - t - 6) / hoyde;
   // p: luft rundt hver brikke, med plass til skyggen som tegnes inn i den.
   geo = { x0, y0, bredde, hoyde, bw, bh, t, p: t + 10, dpr, minX, maxX, minY, maxY, staaende };
+  setTimeout(visKraftLinje, 0);
   const ramme = $("ramme");
   Object.assign(ramme.style, { left: x0 + "px", top: y0 + "px", width: bredde + "px", height: hoyde + "px" });
   const av = $("avslor");
@@ -1561,7 +1591,7 @@ function gnistSteg() {
 }
 function koble(b) {
   let dra = null, glid = 0;
-  const mag = () => VALG.find(v => v.n === spill.n);
+  const mag = () => { const v = VALG.find(v => v.n === spill.n); return (spill.magnetTil || 0) > performance.now() ? { ...v, rekk: v.rekk * 1.5, drag: Math.min(.95, v.drag * 1.3), smett: v.smett * 1.35 } : v; };
   // Magnet og glød, brukt både mens du drar og mens biten glir.
   function trekk(x, y) {
     const mx = slotC(b) / spill.k, my = slotR(b) / spill.r, m = mag();
@@ -1729,7 +1759,54 @@ function sekunder() { if (!spill?.start) return 0; return Math.floor(((spill.slu
 function fmt(s) { return Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0"); }
 // Tiden du har på et brett: ti sekunder per brikke, litt ulikt per brett.
 function tidsfrist(brettNr, n) { const perBrikke = n <= 25 ? 8.5 : n <= 49 ? 10 : 11; return Math.round(n * perBrikke * (1 + ((brettNr * 7) % 5) * .04) / 5) * 5; }
+// ---------- credits og power-ups ----------
+// Credits tjenes bare ved å klare et brett uten power-ups: +2 første gang, +1 for ny personlig rekord.
+// Hver power-up koster credits og trekker poeng, så ingen kan kjøpe seg til en bedre plass på lista.
+const KRAFT = { tilt: { pris: 2, trekk: .06 }, magnet: { pris: 3, trekk: .10 }, hint: { pris: 1, trekk: .05 } };
+const BAR = 58;
+function credits() { try { const v = localStorage.getItem("sm-credits"); return v == null ? 10 : Math.max(0, +v || 0); } catch { return 10; } }
+function settCredits(n) { try { localStorage.setItem("sm-credits", String(Math.max(0, n))); } catch {} visCredits(); }
+function visCredits() { const el = $("creditTall"); if (el) el.textContent = credits(); }
+function visKraftLinje() {
+  const el = $("kraftLinje"), vis = !!spill && !spill.slutt && !$("spill").hidden && !!geo;
+  el.hidden = !vis; if (!vis) return;
+  const H = innerHeight, w = el.offsetWidth || 300; el.style.left = Math.min(innerWidth - w / 2 - 8, Math.max(w / 2 + 8, geo.x0 + geo.bredde / 2)) + "px";
+  el.style.top = (geo.staaende ? H - BAR + 8 : Math.min(H - BAR + 8, geo.y0 + geo.hoyde + 12)) + "px";
+  $("kraftMagnet").classList.toggle("aktiv", (spill.magnetTil || 0) > performance.now());
+  visCredits();
+}
+function åpneButikk(mangler) {
+  $("butikkTekst").textContent = (mangler ? "You need ◆ " + mangler + " for that. " : "") + "You have ◆ " + credits() + " credits. Earn credits by finishing boards without power-ups: +2 the first time, +1 for a new personal best.";
+  $("butikk").hidden = false;
+}
+$("butikkLukk").onclick = () => { $("butikk").hidden = true; };
+$("lommebok").onclick = () => åpneButikk(0);
+function brukKraft(type) {
+  if (!spill || spill.slutt || spill.tapt) return false;
+  const k = KRAFT[type], har = credits();
+  if (har < k.pris) { åpneButikk(k.pris); return false; }
+  if (type === "hint" && !nesteHint()) return false;
+  settCredits(har - k.pris); spill.trekk = (spill.trekk || 0) + k.trekk; spill.brukteKraft = true;
+  if (!spill.start) spill.start = Date.now();
+  if (lydPa) { tone(660, 0, .12, .04, "sine", .7, .6); tone(990, .06, .14, .03, "sine", .7, .6); }
+  if (type === "tilt") tilt(false);
+  if (type === "magnet") { spill.magnetTil = performance.now() + 20000; banner("MAGNET!", "STRONGER MAGNET · 20 SECONDS", "#7fe8ff", 2600); }
+  if (type === "hint") {
+    const b = nesteHint(), m = $("mal-plass");
+    Object.assign(m.style, { left: geo.x0 + slotC(b) * geo.bw + "px", top: geo.y0 + slotR(b) * geo.bh + "px", width: geo.bw + "px", height: geo.bh + "px" });
+    m.classList.remove("blink"); void m.offsetWidth; m.classList.add("blink");
+    if (b.iBunke) kast(b, false); else { b.z = ++spill.ztopp; plasser(b); if (b.bak) vend(b); }
+    b.el.classList.remove("vis"); void b.el.offsetWidth; b.el.classList.add("vis");
+  }
+  visKraftLinje(); return true;
+}
+$("kraftTilt").onclick = () => brukKraft("tilt");
+$("kraftMagnet").onclick = () => brukKraft("magnet");
+$("kraftHint").onclick = () => brukKraft("hint");
+for (const id of ["kraftLinje", "butikk"]) document.body.appendChild($(id));
+for (const id of ["kraftLinje", "butikk"]) $(id).addEventListener("pointerdown", e => e.stopPropagation());
 function tikk() {
+  visKraftLinje();
   const s = sekunder(), frist = spill ? tidsfrist(spill.brett, spill.n) : 0, igjen = Math.max(0, frist - s);
   $("tid").textContent = fmt(igjen);
   $("tid").classList.toggle("gar", !!spill?.start && !spill.slutt);
@@ -2193,7 +2270,8 @@ async function ferdig() {
   }
   spill.slutt = spill.slutt || Date.now(); spill.sluttT = performance.now(); $("bunkeTall").hidden = true; visTilt();
   if (spill.biter.some(b => b.svidd > 0)) { const av = $("avslor"), ax = av.getContext("2d"); ax.drawImage(spill.img, 0, 0, av.width, av.height); brannMerker(ax, av.width, av.height); } clearInterval(timer); tikk(); dempMusikk();
-  const s = sekunder(), p = regnPoeng(spill.n, s), b = BRETT[spill.brett];
+  const sEkte = sekunder(), trekk = Math.min(.6, spill.trekk || 0), s = trekk ? Math.round((sEkte + spill.n * 5) / (1 - trekk) - spill.n * 5) : sEkte, p = regnPoeng(spill.n, s), b = BRETT[spill.brett];
+  $("kraftLinje").hidden = true;
   setTimeout(() => $("avslor").classList.add("vis"), 350);
   $("avslor").classList.add("bolge"); $("ramme").classList.add("neon");
   { const sp = spill; setTimeout(() => { if (spill === sp && !$("resultat").classList.contains("vis")) { magiStart(sp.img, { x: geo.x0, y: geo.y0, w: geo.bredde, h: geo.hoyde }, 2.6); $("avslor").classList.add("magisk"); setTimeout(() => $("avslor").classList.remove("magisk"), 2300); } }, 250); }
@@ -2210,8 +2288,12 @@ async function ferdig() {
   $("resPoeng").textContent = "0 points";
   { const sp = spill; ark = { tema: "pusle", img: sp.img, fra: { x: geo.x0, y: geo.y0, w: geo.bredde }, poeng: p, sluttT: sp.sluttT, gyldig: () => spill === sp && !!sp.slutt && !sp.tapt,
     neste: () => { if (spill !== sp) return; const n = nesteUlost(sp.brett); valgtAntall = sp.n; tilMeny(); if (n >= 0) visStartark(n); }, meny: tilMeny }; }
-  $("resInfo").textContent = $("resInfo").dataset.kode + " · time " + fmt(s);
+  $("resInfo").textContent = $("resInfo").dataset.kode + " · time " + fmt(sEkte) + (trekk ? " · power-ups −" + Math.round(trekk * 100) + " %" : "");
   $("resRekord").textContent = gammel ? (p > gammel.poeng ? "New personal best. Previous: " + gammel.poeng.toLocaleString("en") + "." : "Your best is " + gammel.poeng.toLocaleString("en") + ".") : "First time on this board.";
+  // Credits: bare for et brett klart uten power-ups.
+  { const tjent = spill.brukteKraft ? 0 : !gammel ? 2 : p > gammel.poeng ? 1 : 0;
+    if (tjent) settCredits(credits() + tjent);
+    $("resRekord").textContent += spill.brukteKraft ? " No credits when power-ups are used." : tjent ? " +" + tjent + " credits." : ""; }
   visAlle = false; $("visAlle").textContent = "Show all";
   arkTimere.push(setTimeout(visArkade, 3000));
   await lagreRekord(b.id, spill.n, p, s);
