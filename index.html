@@ -318,7 +318,7 @@ body:has(.resultat.vis) #spill .linje{opacity:0;pointer-events:none;transition:o
   <div class="regel"><b>The race:</b> Your best score on each of the ten boards in a collection is added up. Finish #1 overall and you get the next collection for free. Anyone who takes first place later gets it too. Points: Easy (25 pieces) gives 10,000, Medium (49) 15,000, Hard (100) 20,000 and Chaos (144) 25,000 at normal speed. Be fast and you get up to double.</div>
   <div class="sammen" id="sammen"><p class="liten">Loading standings …</p></div>
   <p class="kreditt">© 2001–2026 Tarjei Krogh. All photography, music and art. <a href="https://kroghx.com" target="_blank" rel="noopener">kroghx.com</a></p>
-  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 0.55<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
+  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 0.56<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
 </section>
 
 <div class="ark" id="tidUtArk" hidden style="z-index:200001">
@@ -2232,7 +2232,8 @@ function shBalanser(tykk) {
 }
 async function shatterStart(i, poeng = 0, liv = 3) {
   // Vanskeligere for hvert brett, og for hver samling.
-  const niva = i + aktiv * 2;
+  // Vanskeligheten øker bare litt for hvert brett og hver samling: 0,1 per brett, 1 per samling.
+  const niva = (i + aktiv * 10) * .1;
   stoppFest(); clearInterval(timer); spill = null;
   document.querySelectorAll(".bit").forEach(e => e.remove());
   $("meny").hidden = true; $("spill").hidden = true; $("shatter").hidden = false; oppdaterTema();
@@ -2245,7 +2246,7 @@ async function shatterStart(i, poeng = 0, liv = 3) {
     klosser.push({ r, c, x: c / SH_KOL, y: SH_TOPP + r / SH_RAD, w: 1 / SH_KOL, h: 1 / SH_RAD, liv: h, maks: h, vis: myk ? .42 : 1, glans: 0, sist: -9, myk });
   }
   // Rolig start, så farten øker litt for hvert nivå og litt underveis.
-  const fart = (0.5 + Math.min(niva, 14) * 0.03) * .81;
+  const fart = (0.5 + Math.min(niva, 14) * 0.03) * .89;
   sh = { niva, i, img, klosser, igjen: klosser.length, poeng, liv, fart, grunnfart: fart, maksFart: Math.min(1.4, fart + 0.68),
     padX: 0.5, padW: 0.26, baller: [], kapsler: [], tekster: [], smaa: [], stov: [], stavSkitt: [], skudd: [], skuddT: 0, lamper: 0, galaga: null, galagaPause: 20, wingmen: [], galagaKommet: false, padMål: null, sopp: 0, soppSide: -1, padY: .7, soppOverg: 1, soppTilbake: 1, bytte: null, byttePlan: Math.random() < .22, sabot: [], sabotT: 14 + Math.random() * 10, drypp: [], skum: [], stjerner: [], ringer: [],
     eff: { W: 0, B: 0, G: 0, A: 0, F: 0, K: 0 }, tilstand: "klar", kombo: 0, ferdigT: 0, tid: 0, lydSist: {},
@@ -2265,7 +2266,7 @@ async function shatterStart(i, poeng = 0, liv = 3) {
 const SH_MONSTER = ["band", "sjakk", "diamant", "ramme", "soyler", "klynger", "pil", "kryss", "trapp", "hjerte"];
 function shMoekk(niva) {
   const maks = Math.min(SH_TYKKEST, 3 + Math.floor(niva * 1.25));
-  const type = SH_MONSTER[(niva * 3 + Math.floor(Math.random() * 4)) % SH_MONSTER.length];
+  const type = SH_MONSTER[(Math.floor(niva * 3) + Math.floor(Math.random() * 4)) % SH_MONSTER.length];
   const frø = [0, 1, 2, 3].map(() => [Math.random() - .5, Math.random() * .7 - .4]);
   const s = Math.floor(Math.random() * 1e6), ut = new Int16Array(SH_KOL * SH_RAD);
   for (let r = 0; r < SH_RAD; r++) for (let c = 0; c < SH_KOL; c++) {
@@ -2487,7 +2488,7 @@ function shRenn(dt) {
   s.flomT -= dt;
   if (s.flomT <= 0 && andel > .12 && andel < .82 && s.flomIgjen > 0) {
     s.flomT = 11 + Math.random() * 8;
-    const c0 = Math.floor(Math.random() * SH_KOL), bredde = 2 + Math.floor(Math.random() * 4), lag = 2 + Math.floor(s.niva / 3);
+    const c0 = Math.floor(Math.random() * SH_KOL), bredde = 2 + Math.floor(Math.random() * 4), lag = 2 + Math.floor(s.niva);
     for (let c = Math.max(0, c0 - bredde); c <= Math.min(SH_KOL - 1, c0 + bredde); c++) for (let r = 0; r < 2; r++) {
       const k = s.klosser[r * SH_KOL + c], ny = k.myk ? 0 : lag + (r === 0 ? 1 : 0);
       shSett(k, k.liv + ny); s.flomIgjen -= ny;
@@ -3063,14 +3064,14 @@ function shSoppTreff(b, R, vx0, side) {
 // ALIEN SWITCH: du er bossen øverst og slipper store gjørmebomber. Flipperen spiller av seg selv og prøver å vaske.
 function shByttetStart() {
   const s = sh; s.byttePlan = false; s.sopp = 0;
-  s.bytte = { t: 20, x: .5, bomber: [], bombeT: .3, figur: (Math.random() * 9) | 0, mål: Math.min(.85, s.igjen / s.klosser.length + .3) };
+  s.bytte = { x: .5, bomber: [], bombeT: .3, figur: (Math.random() * 9) | 0, mål: .92 };
   s.tekster.push({ txt: "ALIEN SWITCH!", x: .5, y: .42, liv: 2, farge: "#6dff8a" });
-  s.tekster.push({ txt: "YOU ARE THE BOSS · COVER THE PAINTING", x: .5, y: .5, liv: 2, farge: "#ffffff", liten: true });
+  s.tekster.push({ txt: "YOU NOW CONTROL THE BOSS", x: .5, y: .5, liv: 3, farge: "#ffffff", liten: true });
+  s.tekster.push({ txt: "COVER THE WHOLE PAINTING · BEAT THE FLIPPER", x: .5, y: .55, liv: 3, farge: "#6dff8a", liten: true });
   shLyd("boss");
 }
 function shByttetSteg(dt) {
   const s = sh, B = s.bytte;
-  B.t -= dt;
   // Du styrer bossen med samme bevegelse som flipperen. Flipperen følger ballen av seg selv.
   const mål = s.padMål ?? (shPekr && !shPekr.dratt ? (shPekr.sistX - shG.fx) / shG.fw : B.x);
   B.x += shClamp(shClamp(mål, .08, .92) - B.x, -1.4 * dt, 1.4 * dt);
@@ -3092,7 +3093,7 @@ function shByttetSteg(dt) {
     for (const b of s.baller) b.borte = false;
     shFerdig(); return;
   }
-  if (B.t <= 0) { s.bytte = null; s.tekster.push({ txt: "BACK TO THE FLIPPERS", x: .5, y: .45, liv: 1.6, farge: "#ff7ad9" }); shLyd("tap"); }
+
 }
 function shByttetTegn(x, f, s) {
   const B = s.bytte, fig = s.figurer || { b: [] }, sp = fig.b.length ? fig.b[B.figur % fig.b.length] : null, X = B.x * f, Y = .1 * f, R = .15 * f;
@@ -3106,7 +3107,7 @@ function shByttetTegn(x, f, s) {
   x.fillStyle = "rgba(0,0,0,.55)"; x.fillRect(f * .05, SH_PY * f + f * .045, f * .9, f * .022);
   x.fillStyle = "#6dff8a"; x.fillRect(f * .05, SH_PY * f + f * .045, f * .9 * Math.min(1, dekket / B.mål), f * .022);
   x.font = `800 ${.034 * f}px "Syne", sans-serif`; x.textAlign = "center"; x.fillStyle = "#ffffff";
-  x.fillText(`COVER IT · ${Math.ceil(B.t)} s · ${Math.round(dekket * 100)} % / ${Math.round(B.mål * 100)} %`, f / 2, SH_PY * f + f * .035);
+  x.fillText(`YOU ARE THE BOSS · COVERED ${Math.round(dekket * 100)} % / ${Math.round(B.mål * 100)} %`, f / 2, SH_PY * f + f * .035);
 }
 function shKapsel(t) {
   const s = sh, q = KAPSLER.find(k => k.t === t);
@@ -3466,6 +3467,8 @@ function shMistetLiv() {
   shNyBall(); shHud(); shMelding("Tap to launch", s.liv - 1 ? (s.liv - 1) + " spare " + (s.liv - 1 === 1 ? "bubble" : "bubbles") + " left." : "Last bubble.");
 }
 function shFerdig() {
+  // Vasket flipperen alt mens du var bossen, vant den.
+  if (sh.bytte) { sh.bytte = null; sh.tekster.push({ txt: "THE FLIPPER CLEANED IT", x: .5, y: .45, liv: 1.8, farge: "#ff7ad9" }); }
   const s = sh; s.tilstand = "ferdig"; s.ferdigT = performance.now();
   const bonus = (s.liv - 1) * 500; s.poeng += bonus; shHud();
   s.baller = []; s.kapsler = []; s.smaa = []; s.skudd = []; s.galaga = null; s.sabot = [];
@@ -3785,8 +3788,17 @@ function shTegn(t) {
   for (const q of s.klatter) shKlattTegn(x, q.x * f, q.y * f, q.r * f, 1 + Math.min(1.4, q.vy * 2), s.jord, q.fase, s.tid);
   // Store steiner som har falt ut av gjørma. Du vet ikke helt hva du får.
   for (const k of s.kapsler) {
-    const q = KAPSLER.find(z => z.t === k.t), e = SH_EDEL[q.edel];
-    shEdelsten(x, k.x * f, k.y * f, k.r * f * .8, e, k.fase + s.tid * .6, s.tid + k.fase);
+    // En virvel av farget støv i power-upens farge, med et svakt lys rundt. Ingen kule, så den ikke ligner boblen.
+    const q = KAPSLER.find(z => z.t === k.t), e = SH_EDEL[q.edel], X = k.x * f, Y = k.y * f, r = k.r * f * 1.2;
+    x.save(); x.globalCompositeOperation = "lighter";
+    const gl = x.createRadialGradient(X, Y, 0, X, Y, r * 1.6); gl.addColorStop(0, q.farge + "38"); gl.addColorStop(1, q.farge + "00");
+    x.fillStyle = gl; x.fillRect(X - r * 1.6, Y - r * 1.6, r * 3.2, r * 3.2);
+    for (let j = 0; j < 30; j++) {
+      const a = k.fase + s.tid * (1.2 + (j % 3) * .4) + j * 2.399, d = r * (.15 + .85 * ((j * 53) % 30) / 30), bl = .4 + .45 * Math.sin(s.tid * 7 + j * 1.3);
+      x.globalAlpha = Math.max(0, bl) * .8; x.fillStyle = j % 4 === 0 ? e[0] : j % 2 ? q.farge : e[1];
+      const pr = Math.max(.8, r * (.05 + .035 * (j % 3))); x.fillRect(X + Math.cos(a) * d - pr, Y + Math.sin(a) * d * .85 - pr, pr * 2, pr * 2);
+    }
+    x.restore(); x.globalAlpha = 1;
   }
   // Små steiner og gullstøv på vei ned.
   for (const g of s.smaa) {
@@ -3800,7 +3812,7 @@ function shTegn(t) {
       // En liten selvlysende sopp: hatt med prikker og en lys stilk.
       x.save(); x.globalCompositeOperation = "lighter"; const gl = x.createRadialGradient(X, Y, 0, X, Y, r * 1.8); gl.addColorStop(0, "rgba(190,110,255,.55)"); gl.addColorStop(1, "rgba(120,255,170,0)");
       x.fillStyle = gl; x.fillRect(X - r * 1.8, Y - r * 1.8, r * 3.6, r * 3.6); x.restore();
-      x.save(); x.translate(X, Y); x.rotate(Math.sin(s.tid * 3 + g.vinkel) * .3);
+      x.save(); x.globalAlpha = .6; x.translate(X, Y); x.rotate(Math.sin(s.tid * 3 + g.vinkel) * .3);
       x.fillStyle = "#f3ffe8"; x.beginPath(); x.ellipse(0, r * .35, r * .28, r * .55, 0, 0, 7); x.fill();
       const hg = x.createLinearGradient(0, -r, 0, r * .2); hg.addColorStop(0, "#e9b8ff"); hg.addColorStop(1, "#8a2fe0");
       x.fillStyle = hg; x.beginPath(); x.ellipse(0, -r * .05, r, r * .62, 0, Math.PI, 0); x.closePath(); x.fill();
