@@ -205,6 +205,8 @@ h1 .signatur{font-size:.55em;letter-spacing:.06em;white-space:nowrap}
 body.lys #kraftLinje button,body.lys #shKraftLinje button{color:#fff7e6}
 #shKraftLinje{touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 #shKraftLinje button{background:linear-gradient(180deg,rgba(58,47,34,.62),rgba(31,25,18,.62));text-shadow:0 1px 2px rgba(0,0,0,.9);touch-action:none}
+#shKraftLinje button{font-family:var(--brod);font-weight:600;font-size:11px;letter-spacing:.1em;padding:7px 12px;gap:6px}
+@media (max-width:480px){#shKraftLinje{gap:4px}#shKraftLinje button{padding:8px 8px;font-size:10.5px;letter-spacing:.06em;gap:4px;min-height:34px}#shKraftLinje button .pris{font-size:10px}}
 #shKraftLinje button.trykket{transform:scale(.93);border-color:#7fe8ff}
 @media (max-width:480px){#kraftLinje{display:grid;grid-template-columns:repeat(3,auto);gap:5px 5px;justify-content:center}#kraftLinje button{justify-content:center;padding:6px 10px}}
 /* Lettere skrift i PIECE IT-linja: tynnere, litt mindre, mer luft mellom bokstavene. */
@@ -371,7 +373,7 @@ body:has(.resultat.vis) #spill .linje{opacity:0;pointer-events:none;transition:o
   <div class="regel"><b>The race:</b> Your best score on each of the ten boards in a collection is added up. Finish #1 overall and you get the next collection for free. Anyone who takes first place later gets it too. Points: Easy (25 pieces) gives 10,000, Medium (49) 15,000, Hard (100) 20,000 and Chaos (144) 25,000 at normal speed. Be fast and you get up to double.</div>
   <div class="sammen" id="sammen"><p class="liten">Loading standings …</p></div>
   <p class="kreditt">© 2001–2026 Tarjei Krogh. All photography, music and art. <a href="https://kroghx.com" target="_blank" rel="noopener">kroghx.com</a></p>
-  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 0.88<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
+  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 0.89<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
 </section>
 
 <div class="ark" id="tidUtArk" hidden style="z-index:200001">
@@ -432,6 +434,7 @@ body:has(.resultat.vis) #spill .linje{opacity:0;pointer-events:none;transition:o
     <button class="kraft" id="shKraftTilt">TILT <span class="pris">◆ 2</span></button>
     <button class="kraft" id="shKraftOrm">WORM <span class="pris">◆ 3</span></button>
     <button class="kraft" id="shKraftMagnet">VACUMA <span class="pris">◆ 3</span></button>
+    <button class="kraft" id="shKraftTrip">TRIP <span class="pris">◆ 3</span></button>
     <button class="lommebok" id="shLommebok">◆ <span id="shCreditTall">10</span> +</button>
   </div>
   <div class="butikk" id="butikk" hidden><div class="boks">
@@ -3133,6 +3136,11 @@ async function shatterStart(i, poeng = 0, liv = 3) {
     const myk = !ramme && tykk[r * SH_KOL + c] < 0, h = ramme ? Math.max(Math.abs(tykk[r * SH_KOL + c]), 1) + 1 : Math.abs(tykk[r * SH_KOL + c]);
     klosser.push({ r, c, x: c / SH_KOL, y: SH_TOPP + r / SH_RAD, w: 1 / SH_KOL, h: 1 / SH_RAD, liv: h, maks: h, vis: myk ? .42 : 1, glans: 0, sist: -9, myk, ramme });
   }
+  // Leira er ikke lik overalt: noen partier er harde og tykke (1–3 lag ekstra), og tar flere treff.
+  { const frø = Math.floor(Math.random() * 1e5);
+    for (const k of klosser) { if (k.ramme || k.myk || k.liv <= 0) continue;
+      const n = shFbm(k.c / SH_KOL * 3.2, k.r / SH_RAD * 3.2, frø, 3);
+      if (n > .52) { const ekstra = Math.min(3, 1 + Math.round((n - .52) * 12)); k.liv += ekstra; k.maks += ekstra; k.hardLeire = true; } } }
   // Rolig start, så farten øker litt for hvert nivå og litt underveis.
   const fart = (0.5 + Math.min(niva, 14) * 0.03) * .98;
   sh = { niva, i, img, klosser, igjen: klosser.length, poeng, liv, fart, grunnfart: fart, maksFart: Math.min(1.45, fart + 0.68),
@@ -3759,14 +3767,14 @@ function shSkumFlekk(x, y, mengde = 1) {
   const s = sh; s.skumFlekk = s.skumFlekk || [];
   const nær = s.skumFlekk.find(q => Math.hypot(q.x - x, q.y - y) < .035);
   if (nær) { nær.liv = Math.min(1.8, nær.liv + .35 * mengde); nær.r = Math.min(.06, nær.r + .003 * mengde); return; }
-  if (s.skumFlekk.length >= 90) s.skumFlekk.shift();
+  if (s.skumFlekk.length >= 40) s.skumFlekk.shift();
   s.skumFlekk.push({ x, y, r: .03 + .008 * mengde, liv: .7 + .3 * mengde, tikk: .3 + Math.random() * .3, frø: Math.random() * 100 });
 }
 function shSkumSteg(dt) {
   const s = sh; if (!s.skumFlekk) return;
   for (const q of s.skumFlekk) {
     q.liv -= dt / 8; q.tikk -= dt;
-    if (q.tikk <= 0 && q.liv > 0) { q.tikk = .42; shVask(q.x, q.y, q.r, 1, "syre"); }
+    if (q.tikk <= 0 && q.liv > 0) { q.tikk = .9; shVask(q.x, q.y, q.r, 1, "syre"); }
   }
   s.skumFlekk = s.skumFlekk.filter(q => q.liv > 0);
 }
@@ -3985,7 +3993,7 @@ function shGalagaSteg(dt) {
         else { e.tilstand = "stup"; e.side = e.x < .5 ? -.2 : 1.2; }
       }
       e.bombeT -= dt;
-      if (e.bombeT <= 0) { e.bombeT = (1.8 + Math.random() * 2.6) * (.4 + .6 * andel); g.bomber.push({ x: e.x, y: e.y + .02, vy: .18, mål: SH_TOPP + .15 + Math.random() * .75 }); }
+      if (e.bombeT <= 0) { e.bombeT = (1.3 + Math.random() * 2) * (.4 + .6 * andel); g.bomber.push({ x: e.x, y: e.y + .02, vy: .18, mål: SH_TOPP + .15 + Math.random() * .75 }); }
     } else if (e.tilstand === "dykk") {
       e.dt += dt; const u = Math.min(1, e.dt / 2.6);
       e.x = e.dx0 + (e.mx - e.dx0) * Math.sin(Math.PI * u) + Math.sin(u * Math.PI * 2) * .12;
@@ -4026,7 +4034,7 @@ function shGalagaSteg(dt) {
         // Gjørme som drypper ned på flipperne gjør dem tunge og trege.
         if (Math.abs(q.x - s.padX) < s.padW / 2 + .04) { shSkitt(q.x, .03); shSkitt(q.x + (Math.random() - .5) * .05, .025); s.splatter.push({ x: q.x, y: SH_PY, r: .035, t: 0, paa: true }); shLyd("plopp"); }
         else s.splatter.push({ x: q.x, y: SH_PY + .01, r: .03, t: 0 });
-      } else shNyGjorme(q.x, q.y, q.stor ? .075 : .035, 1);
+      } else shNyGjorme(q.x, q.y, q.stor ? .085 : .05, 2);
     }
   }
   g.bomber = g.bomber.filter(q => !q.borte);
@@ -4288,7 +4296,7 @@ function shByttetTegn(x, f, s) {
 // SNAKE: flipperen skyter opp en selvlysende slange. Den slynger seg mot gjørma og spiser den lag for lag,
 // blir lengre og tykkere, og når den er mett, krøller den seg til en tung, lysende klump som faller ned.
 // Tar du klumpen med flipperne, skytes den opp en siste gang og sprekker i syre der den treffer.
-const SH_KRAFT = { tilt: { pris: 2, trekk: .06 }, orm: { pris: 3, trekk: .1 }, magnet: { pris: 3, trekk: .08 } };
+const SH_KRAFT = { tilt: { pris: 2, trekk: .06 }, orm: { pris: 3, trekk: .1 }, magnet: { pris: 3, trekk: .08 }, trip: { pris: 3, trekk: .08 } };
 function visShKraft() {
   const el = $("shKraftLinje"), s = sh, vis = !!s && !$("shatter").hidden && (s.tilstand === "spill" || s.tilstand === "klar") && !s.bytte && typeof shG !== "undefined" && shG;
   el.hidden = !vis; if (!vis) return;
@@ -4303,16 +4311,18 @@ function shBrukKraft(type) {
   const k = SH_KRAFT[type], har = credits();
   if (har < k.pris) { åpneButikk(k.pris); return; }
   if (type === "orm" && (s.ormer?.length || !s.baller.length)) return;
+  if (type === "trip" && s.eff.T > 0) return;
   settCredits(har - k.pris); s.trekk = (s.trekk || 0) + k.trekk;
   if (s.tilstand === "klar") s.tilstand = "spill";
   s.tekster = s.tekster.filter(tk => !tk.kapsel); const før = s.tekster.length;
   if (type === "tilt") shTilt();
   if (type === "orm") shOrmFraBaller();
+  if (type === "trip") { shKapsel("T"); s.poeng -= 100; shHud(); }
   if (type === "magnet") { const b = s.baller.find(b => !b.fanget) || s.baller[0]; if (b) { b.magnet = 7; b.masse = b.masse || 0; } s.tekster.push({ txt: "VACUMA!", x: .5, y: SH_TOPP + .52, liv: 3.2, fade: 1.4, farge: "#7fe8ff", stor: true }, { txt: "IT PULLS IN THE MUD · THEN BURSTS ON THE FLIPPERS", x: .5, y: SH_TOPP + .58, liv: 3.2, fade: 1.4, farge: "#ffffff", liten: true }); shLyd("power"); }
   for (const tk of s.tekster.slice(før)) if (tk.stor || tk.liten) tk.kapsel = true;
   visShKraft();
 }
-for (const [id, gjør] of [["shKraftTilt", () => shBrukKraft("tilt")], ["shKraftOrm", () => shBrukKraft("orm")], ["shKraftMagnet", () => shBrukKraft("magnet")], ["shLommebok", () => åpneButikk(0)]]) {
+for (const [id, gjør] of [["shKraftTilt", () => shBrukKraft("tilt")], ["shKraftOrm", () => shBrukKraft("orm")], ["shKraftMagnet", () => shBrukKraft("magnet")], ["shKraftTrip", () => shBrukKraft("trip")], ["shLommebok", () => åpneButikk(0)]]) {
   const el = $(id); let sist = 0, fraPeker = false;
   const kjør = e => { e.preventDefault(); e.stopPropagation(); fraPeker = true; const nå = performance.now(); if (nå - sist < 350) return; sist = nå; ctx(); gjør(); el.classList.add("trykket"); setTimeout(() => el.classList.remove("trykket"), 160); };
   el.addEventListener("pointerdown", kjør); el.addEventListener("click", e => { e.preventDefault(); if (!fraPeker) gjør(); fraPeker = false; });
@@ -4431,7 +4441,11 @@ function shOrmEn(O, dt) {
       if ((k && k.liv > 0 && O.vy < 0) || O.y < SH_TOPP + .02 || (O.vy > 0 && O.y < SH_TOPP + .5)) {
         // Sprekker: all gjørma den har spist, blir syre som etser der den lander.
         shSprekk({ x: O.x, y: O.y, str: 2.6, vokse: 0, kraft: 1, kraftN: 0, d: [], dv: [] });
-        shVask(O.x, O.y, .14, 3, "syre");
+        shVask(O.x, O.y, .17, 3, "syre"); s.rist = Math.max(s.rist || 0, .7); s.glod = 1;
+        // Syresprut flyr utover i alle retninger og etser seg gjennom gjørma der de farer.
+        s.syre = s.syre || [];
+        for (let j = 0; j < 12; j++) { const a = j / 12 * Math.PI * 2 + Math.random() * .4, v = .7 + Math.random() * .6; s.syre.push({ x: O.x, y: O.y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, t: 0, liv: .55 + Math.random() * .35, r: .012 + Math.random() * .01 }); }
+        shStov(O.x, O.y, 80, "214,255,58", .5); shLyd("sprekk", 2.5);
         s.tekster.push({ txt: "ACID BURST!", x: O.x, y: O.y - .04, liv: 2, fade: 1.2, farge: "#d6ff3a" });
         return false;
       }
@@ -4620,6 +4634,14 @@ function shOppdater(dt) {
   // Hvor fort flipperne flyttes: boble-slangen sikter den veien.
   s.padV = (s.padV || 0) * .8 + (s.padX - (s.padXFør ?? s.padX)) / Math.max(dt, 1e-3) * .2; s.padXFør = s.padX;
   if (s.rist > 0) s.rist = Math.max(0, s.rist - dt);
+  if (s.syre?.length) {
+    for (const q of s.syre) {
+      q.t += dt; const brems = Math.max(0, 1 - dt * 2.2); q.vx *= brems; q.vy *= brems; q.x += q.vx * dt; q.y += q.vy * dt;
+      if (q.x < .01 || q.x > .99) { q.vx *= -1; q.x = shClamp(q.x, .01, .99); } if (q.y < SH_TOPP || q.y > SH_TOPP + 1) { q.vy *= -1; q.y = shClamp(q.y, SH_TOPP, SH_TOPP + 1); }
+      q.vaskT = (q.vaskT || 0) - dt; if (q.vaskT <= 0) { q.vaskT = .05; shVask(q.x, q.y, .05, 2, "syre"); }
+    }
+    s.syre = s.syre.filter(q => q.t < q.liv);
+  }
   if (s.sug?.length) {
     for (const q of s.sug) { const dx = q.b.x - q.x, dy = q.b.y - q.y, d = Math.hypot(dx, dy) || 1; q.v = Math.min(1.6, q.v + dt * 3); const st = Math.min(d, q.v * dt); q.x += dx / d * st; q.y += dy / d * st; q.liv -= dt * .8; if (d < .012) q.liv = 0; }
     s.sug = s.sug.filter(q => q.liv > 0 && s.baller.includes(q.b));
@@ -4739,7 +4761,7 @@ function shOppdater(dt) {
       s.skuddT += angrep ? .075 : .03;
       const sikte = shClamp(s.padV * .6, -.6, .6) + Math.sin(s.tid * 7) * .05, v = 1.4 + Math.random() * .3;
       const kilder = [s.padX].concat(s.wingmen.filter(w => w.klar).map(w => s.padX + w.side * (s.padW / 2 + .05)));
-      for (const kx of kilder) s.skudd.push({ x: kx + (Math.random() - .5) * .025, y: SH_PY - .03, vx: Math.sin(sikte) * v + (Math.random() - .5) * .06, vy: -Math.cos(sikte) * v, r: .008 + Math.random() * .006, budsjett: 2, fase: Math.random() * 6 });
+      for (const kx of kilder) s.skudd.push({ x: kx + (Math.random() - .5) * .025, y: SH_PY - .03, vx: Math.sin(sikte) * v + (Math.random() - .5) * .06, vy: -Math.cos(sikte) * v, r: .008 + Math.random() * .006, budsjett: angrep ? 1 : 2, fase: Math.random() * 6, angrep });
       shLyd("skudd");
     }
     if (s.skuddT < -.1) s.skuddT = 0;
@@ -4772,7 +4794,7 @@ function shOppdater(dt) {
       if (bo) { bo.borte = true; q.borte = true; shStov(bo.x, bo.y, 6, "180,140,90", .08); continue; }
     }
     const k = shKlossVed(q.x, q.y);
-    if (k) { shTreff(k, 1); shSkumFlekk(q.x, q.y, .5); q.budsjett--; q.vy *= .55; if (q.budsjett <= 0) { q.borte = true; shSkumFlekk(q.x, q.y); for (let n = 0; n < 3; n++) s.skum.push({ x: q.x + (Math.random() - .5) * .02, y: q.y, r: .002 + Math.random() * .004, liv: 1, fart: 1.6 }); } }
+    if (k) { if (!q.angrep || Math.random() < .3) shTreff(k, 1); if (!q.angrep || Math.random() < .3) shSkumFlekk(q.x, q.y, .5); q.budsjett--; q.vy *= .55; if (q.budsjett <= 0) { q.borte = true; if (!q.angrep) shSkumFlekk(q.x, q.y); for (let n = 0; n < 3; n++) s.skum.push({ x: q.x + (Math.random() - .5) * .02, y: q.y, r: .002 + Math.random() * .004, liv: 1, fart: 1.6 }); } }
     if (q.y < 0) q.borte = true;
   }
   s.skudd = s.skudd.filter(q => !q.borte);
@@ -4901,7 +4923,7 @@ function shFerdig() {
   const s = sh; s.tilstand = "ferdig"; s.ferdigT = performance.now();
   const bonus = (s.liv - 1) * 500, tidBonus = Math.max(0, Math.round((150 - s.tid) * 40 / 10) * 10); s.poeng += bonus + tidBonus;
   const trekk = Math.min(.6, s.trekk || 0); if (trekk) s.poeng = Math.round(s.poeng * (1 - trekk)); shHud();
-  s.baller = []; s.kapsler = []; s.smaa = []; s.skudd = []; s.galaga = null; s.sabot = []; s.orm = null; s.ormer = []; s.ormFase = false; s.skumFlekk = []; s.tripB = []; s.tripS = []; s.sug = [];
+  s.baller = []; s.kapsler = []; s.smaa = []; s.skudd = []; s.galaga = null; s.sabot = []; s.orm = null; s.ormer = []; s.ormFase = false; s.skumFlekk = []; s.tripB = []; s.tripS = []; s.sug = []; s.syre = [];
   for (const k of s.klosser) k.glans = 0;
   magiStart(s.kunst || s.img, { x: shG.fx, y: shG.fy + SH_TOPP * shG.fw, w: shG.fw, h: shG.fw }, 3.4);
   levendeStart(s.img, { x: shG.fx, y: shG.fy + SH_TOPP * shG.fw, w: shG.fw, h: shG.fw }, BRETT[s.i].id, 3.2);
@@ -5573,6 +5595,11 @@ function shTegn(t) {
       x.restore();
     }
   }
+  // Syresprut fra ormklumpen: lysende grønne dråper med glød.
+  if (s.syre?.length) { x.save(); x.globalCompositeOperation = "lighter";
+    for (const q of s.syre) { const a = 1 - q.t / q.liv, r = q.r * f * (1 + q.t), g = x.createRadialGradient(q.x * f, q.y * f, 0, q.x * f, q.y * f, r * 2.5);
+      g.addColorStop(0, `rgba(230,255,120,${.9 * a})`); g.addColorStop(.4, `rgba(180,255,40,${.45 * a})`); g.addColorStop(1, "rgba(120,255,0,0)"); x.fillStyle = g; x.fillRect(q.x * f - r * 2.5, q.y * f - r * 2.5, r * 5, r * 5); }
+    x.restore(); }
   // Gjørmesmuler som suges inn i VACUMA-boblen, med en kort hale.
   if (s.sug?.length) { const [m1, m2, m3] = s.jord.mork; x.lineCap = "round";
     for (const q of s.sug) { const dx = q.b.x - q.x, dy = q.b.y - q.y, d = Math.hypot(dx, dy) || 1, hl = Math.min(.03, q.v * .02);
@@ -5583,7 +5610,9 @@ function shTegn(t) {
   for (const tk of s.tekster) {
     const lang = tk.stor || tk.kapsel;
     tk.y -= (tk.liv > 1 ? 0.0012 : 0.004) * tdt * 60 * (lang ? .25 : 1); tk.liv -= (lang ? .62 : 1.2) * tdt; x.globalAlpha = Math.max(0, Math.min(1, tk.liv / (tk.fade || 1)));
-    const fs = (tk.stor ? .075 : tk.liten ? (tk.kapsel ? .04 : .032) : .042) * f; x.font = `800 ${fs}px "Syne", sans-serif`; x.textAlign = "center"; x.lineJoin = "round";
+    let fs = (tk.stor ? .075 : tk.liten ? (tk.kapsel ? .042 : .032) : .042) * f; const lett = tk.liten && tk.kapsel;
+    x.font = lett ? `600 ${fs}px "IBM Plex Sans", sans-serif` : `800 ${fs}px "Syne", sans-serif`; x.textAlign = "center"; x.lineJoin = "round";
+    if (!lett) { const bw = x.measureText(tk.txt).width, mx = f * (tk.stor ? .78 : .9); if (bw > mx) { fs *= mx / bw; x.font = `800 ${fs}px "Syne", sans-serif`; } }
     const linjer = tk.kapsel && tk.liten ? shBrytTekst(x, tk.txt, f * .86) : [tk.txt], lh = fs * 1.2, y1 = tk.y * f + (tk.kapsel && tk.liten ? fs * .4 : 0);
     if (tk.kapsel && tk.liten) { const bw = Math.max(...linjer.map(l => x.measureText(l).width)) + fs * 1.2, bh = lh * linjer.length + fs * .5; x.fillStyle = "rgba(12,8,4,.55)"; x.beginPath(); if (x.roundRect) x.roundRect(tk.x * f - bw / 2, y1 - fs * 1.05, bw, bh, fs * .45); else x.rect(tk.x * f - bw / 2, y1 - fs * 1.05, bw, bh); x.fill(); }
     linjer.forEach((l, j) => {
