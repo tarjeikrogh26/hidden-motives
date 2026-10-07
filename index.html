@@ -118,15 +118,19 @@ h1 .signatur{font-size:.55em;letter-spacing:.06em;white-space:nowrap}
 @media (orientation:portrait){
   .linje{top:0;left:0;right:0;bottom:auto;width:auto;height:auto;border-left:0;border-bottom:1px solid var(--strek);
     padding:max(8px,env(safe-area-inset-top,0px)) 12px 8px;
-    display:grid;grid-template-columns:1fr auto;grid-template-areas:"brett tid" "mal mal" "knapper knapper";gap:4px 12px;text-align:left;align-items:center}
-  .hud-brett{grid-area:brett;border:0;padding:0;flex-direction:row;align-items:baseline;gap:8px;min-width:0}
+    display:grid;grid-template-columns:minmax(0,1fr) auto auto;grid-template-areas:"brett brett tid" "mal knapper knapper";gap:3px 8px;text-align:left;align-items:center;padding-bottom:6px}
+  .hud-brett{grid-area:brett;border:0;padding:0;flex-direction:row;align-items:baseline;gap:8px;min-width:0;white-space:nowrap;overflow:hidden}
+  .hud-brett b{min-width:0;overflow:hidden;text-overflow:ellipsis;flex:0 1 auto;white-space:nowrap;text-wrap:nowrap}
+  .hud-brett .spor{flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis}
   .hud-brett b{font-size:13px;line-height:1.15}
   .linje .tid{grid-area:tid;font-size:24px;text-align:right}
   .linje .teller{display:none}
-  .mal{grid-area:mal;border:0;padding:0;flex-direction:row;flex-wrap:wrap;align-items:baseline;gap:0 6px;font-size:12px}
+  .mal{grid-area:mal;border:0;padding:0;flex-direction:row;flex-wrap:nowrap;align-items:baseline;gap:0 5px;font-size:11px;white-space:nowrap;overflow:hidden;min-width:0}
+  .mal > span:first-child{display:none}
   .mal b{font-size:13px}
   .hud-knapper{grid-area:knapper;margin:0;flex-direction:row;gap:6px}
-  .hud-knapper button{padding:5px 8px;flex:1;white-space:nowrap}
+  .hud-knapper button{padding:4px 6px;flex:0 0 auto;white-space:nowrap;font-size:11px}
+  .hud-knapper .hint span{display:none}
   .hud-knapper .hint{flex-direction:row;gap:5px}
 }
 #bord{position:absolute;inset:0;transform-origin:0 0}
@@ -301,7 +305,7 @@ body:has(.resultat.vis) #spill .linje{opacity:0;pointer-events:none;transition:o
   <div class="regel"><b>The race:</b> Your best score on each of the ten boards in a collection is added up. Finish #1 overall and you get the next collection for free. Anyone who takes first place later gets it too. Points: Easy (25 pieces) gives 10,000, Medium (49) 15,000, Hard (100) 20,000 and Chaos (144) 25,000 at normal speed. Be fast and you get up to double.</div>
   <div class="sammen" id="sammen"><p class="liten">Loading standings …</p></div>
   <p class="kreditt">© 2001–2026 Tarjei Krogh. All photography, music and art. <a href="https://kroghx.com" target="_blank" rel="noopener">kroghx.com</a></p>
-  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 0.52<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
+  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 0.53<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
 </section>
 
 <div class="ark" id="tidUtArk" hidden style="z-index:200001">
@@ -1125,7 +1129,7 @@ function kast(b, heldig) {
     mx = (m.c + (Math.random() - .5) * .22) / sp.k; my = (m.r + (Math.random() - .5) * .22) / sp.r;
   }
   løftes.delete(b); b.z = ++sp.ztopp;
-  const fx = b.x, fy = b.y, t0 = performance.now(), varighet = 380 + Math.hypot((mx - fx) * geo.bredde, (my - fy) * geo.hoyde) * .25;
+  const fx = b.x, fy = b.y, t0 = performance.now(), varighet = (380 + Math.hypot((mx - fx) * geo.bredde, (my - fy) * geo.hoyde) * .25) * 1.1;
   if (lydPa) { tone(420, 0, .07, .012, "triangle", .6, .4); tone(840, .02, .05, .006, "sine", .6, .4); }
   const steg = t => {
     if (spill !== sp || !b.el.isConnected) return;
@@ -1204,8 +1208,9 @@ function oppsett() {
   const bw = bredde / spill.k, bh = hoyde / spill.r, t = Math.min(bw, bh) * 0.25;
   const dpr = Math.min(devicePixelRatio || 1, 2);
   // Løse biter skal være innenfor skjermen og utenfor panelet.
-  const minX = (-x0 + 4) / bredde, maxX = (hoyreKant - x0 - bw - 6) / bredde;
-  const minY = (toppKant + 4 - y0) / hoyde, maxY = (H - y0 - bh - 4) / hoyde;
+  // Hele brikka, med tapper, skal alltid synes og kunne tas: vant rundt hele banen.
+  const minX = (-x0 + t + 6) / bredde, maxX = (hoyreKant - x0 - bw - t - 6) / bredde;
+  const minY = (toppKant + t + 8 - y0) / hoyde, maxY = (H - y0 - bh - t - 6) / hoyde;
   // p: luft rundt hver brikke, med plass til skyggen som tegnes inn i den.
   geo = { x0, y0, bredde, hoyde, bw, bh, t, p: t + 10, dpr, minX, maxX, minY, maxY, staaende };
   const ramme = $("ramme");
@@ -1441,7 +1446,7 @@ function koble(b) {
     let vx = (b.x - gml.x) / dt * 16, vy = (b.y - gml.y) / dt * 16; // per bilde (16 ms)
     const fart = Math.hypot(vx * geo.bredde, vy * geo.hoyde);
     if (fart < 1.5) { b.glod = 0; plasser(b); return; }
-    const maks = 45 / fart; if (maks < 1) { vx *= maks; vy *= maks; }
+    const maks = 40 / fart; if (maks < 1) { vx *= maks; vy *= maks; } vx *= .9; vy *= .9;
     const steg = () => {
       if (!spill || b.ferdig || !b.el.isConnected) { glid = 0; return; }
       vx *= 0.93; vy *= 0.93;
@@ -1449,8 +1454,8 @@ function koble(b) {
       [b.x, b.y] = trekk(fx, fy);
       plasser(b);
       // Sprett mykt av kanten på skjermen.
-      if (b.x !== fx && Math.abs(b.x - fx) > 1e-6 && (b.x <= geo.minX || b.x >= geo.maxX)) vx *= -0.4;
-      if (b.y !== fy && Math.abs(b.y - fy) > 1e-6 && (b.y <= geo.minY || b.y >= geo.maxY)) vy *= -0.4;
+      if (b.x !== fx && Math.abs(b.x - fx) > 1e-6 && (b.x <= geo.minX || b.x >= geo.maxX)) { vx *= -0.65; if (lydPa && Math.abs(vx) > .002) tone(150, 0, .05, .02, "triangle", .8, .2); }
+      if (b.y !== fy && Math.abs(b.y - fy) > 1e-6 && (b.y <= geo.minY || b.y >= geo.maxY)) { vy *= -0.65; if (lydPa && Math.abs(vy) > .002) tone(150, 0, .05, .02, "triangle", .8, .2); }
       if (provSmett()) { glid = 0; return; }
       if (Math.hypot(vx * geo.bredde, vy * geo.hoyde) < 0.3) { glid = 0; b.glod = 0; plasser(b); return; }
       glid = requestAnimationFrame(steg);
@@ -1555,7 +1560,7 @@ function banner(tittel, under, farge) {
 function visTilt() {
   const k = $("tiltKnapp"); if (!spill) return;
   k.disabled = spill.tilt <= 0 || !!spill.slutt;
-  k.innerHTML = "Tilt<span>" + (spill.tilt > 0 ? spill.tilt + " left" : "used") + "</span>";
+  k.innerHTML = "Tilt · " + spill.tilt + "<span>" + (spill.tilt > 0 ? "left" : "used") + "</span>";
 }
 $("tiltKnapp").onclick = () => { if (!spill || spill.slutt || spill.tilt <= 0) return; if (!spill.start) spill.start = Date.now(); spill.tilt--; visTilt(); tilt(false); };
 // TILT: det dunker i bordet. Løse brikker på brettet hopper opp og lander på nye plasser, noen rett på plass.
@@ -2224,8 +2229,8 @@ async function shatterStart(i, poeng = 0, liv = 3) {
     klosser.push({ r, c, x: c / SH_KOL, y: SH_TOPP + r / SH_RAD, w: 1 / SH_KOL, h: 1 / SH_RAD, liv: h, maks: h, vis: myk ? .42 : 1, glans: 0, sist: -9, myk });
   }
   // Rolig start, så farten øker litt for hvert nivå og litt underveis.
-  const fart = (0.5 + Math.min(niva, 14) * 0.03) * .9;
-  sh = { niva, i, img, klosser, igjen: klosser.length, poeng, liv, fart, grunnfart: fart, maksFart: Math.min(1.55, fart + 0.76),
+  const fart = (0.5 + Math.min(niva, 14) * 0.03) * .81;
+  sh = { niva, i, img, klosser, igjen: klosser.length, poeng, liv, fart, grunnfart: fart, maksFart: Math.min(1.4, fart + 0.68),
     padX: 0.5, padW: 0.26, baller: [], kapsler: [], tekster: [], smaa: [], stov: [], stavSkitt: [], skudd: [], skuddT: 0, lamper: 0, galaga: null, galagaPause: 20, wingmen: [], galagaKommet: false, padMål: null, sopp: 0, soppSide: -1, padY: .7, soppOverg: 1, soppTilbake: 1, bytte: null, byttePlan: Math.random() < .22, sabot: [], sabotT: 14 + Math.random() * 10, drypp: [], skum: [], stjerner: [], ringer: [],
     eff: { W: 0, B: 0, G: 0, A: 0, F: 0, K: 0 }, tilstand: "klar", kombo: 0, ferdigT: 0, tid: 0, lydSist: {},
     jord: SH_JORD[j1], jord2: SH_JORD[j2], skitten: new Set(), milepael: 0, glimt: -9, sprekkT: 0,
@@ -3193,7 +3198,7 @@ function shBevegBall(b, dt) {
 function shOppdater(dt) {
   const s = sh;
   for (const k in s.eff) if (s.eff[k] > 0) s.eff[k] = Math.max(0, s.eff[k] - dt);
-  if (s.tilstand === "spill") s.fart = Math.min(s.maksFart, s.fart + dt * 0.008);
+  if (s.tilstand === "spill") s.fart = Math.min(s.maksFart, s.fart + dt * 0.0072);
   // Alltid flippere. WIDE gjør flipperne lengre.
   s.padW += ((s.eff.W > 0 ? 0.36 : 0.26) - s.padW) * Math.min(1, dt * 8);
   s.treg = Math.min(.65, s.stavSkitt.reduce((a, q) => a + Math.min(1, q.a), 0) * .1);
@@ -3785,7 +3790,13 @@ function shTegn(t) {
       x.fillStyle = hg; x.beginPath(); x.ellipse(0, -r * .05, r, r * .62, 0, Math.PI, 0); x.closePath(); x.fill();
       x.fillStyle = "#c8ffd9"; for (const [dx, dy] of [[-.45, -.3], [.1, -.5], [.5, -.22], [-.1, -.15]]) { x.beginPath(); x.arc(dx * r, dy * r, r * .12, 0, 7); x.fill(); }
       x.restore();
-    } else shEdelsten(x, X, Y, r, g.type.e, g.vinkel, s.tid + g.vinkel);
+    } else {
+      // Små steiner er bare et svakt glitter i steinens farge, så de ikke kan forveksles med boblene.
+      x.save(); x.globalCompositeOperation = "lighter";
+      for (let j = 0; j < 7; j++) { const a = g.vinkel + j * 2.4, d = r * (.2 + .65 * ((j * 37) % 10) / 10), bl = .35 + .4 * Math.sin(s.tid * 9 + j * 1.7);
+        x.globalAlpha = Math.max(0, bl) * .7; x.fillStyle = j % 3 ? g.type.e[1] : g.type.e[0]; const pr = Math.max(.7, r * (.07 + .04 * (j % 3))); x.fillRect(X + Math.cos(a) * d - pr, Y + Math.sin(a) * d * .8 - pr, pr * 2, pr * 2); }
+      x.restore(); x.globalAlpha = 1;
+    }
   }
   // GALAGA: figurer fra Kroghs bilder med neonvinger, bossen, wingmen og gjørmebomber.
   {
