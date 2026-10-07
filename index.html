@@ -130,6 +130,16 @@ h1 .signatur{font-size:.55em;letter-spacing:.06em;white-space:nowrap}
   .hud-knapper .hint{flex-direction:row;gap:5px}
 }
 #bord{position:absolute;inset:0;transform-origin:0 0}
+#bord.rist{animation:rist .75s cubic-bezier(.3,.6,.4,1)}
+@keyframes rist{0%,100%{translate:0 0}10%{translate:-9px 5px}22%{translate:8px -6px}34%{translate:-7px 4px}46%{translate:6px -3px}58%{translate:-4px 3px}70%{translate:3px -2px}84%{translate:-2px 1px}}
+#brannLag{position:fixed;inset:0;pointer-events:none;z-index:255}
+.hendelse{position:fixed;left:50%;top:40%;z-index:266;pointer-events:none;text-align:center;transform:translate(-50%,-50%);font-family:var(--display);font-weight:800;
+  font-size:clamp(26px,5.5vw,52px);letter-spacing:.06em;line-height:1;color:#ff5a6a;text-shadow:0 0 18px rgba(255,90,106,.75),0 3px 0 rgba(0,0,0,.6);animation:hendelse 2.2s ease-out forwards;white-space:nowrap}
+.hendelse small{display:block;font-family:var(--tall);font-weight:500;font-size:.34em;letter-spacing:.14em;color:#fff;margin-top:.5em;text-shadow:0 0 8px rgba(0,0,0,.8)}
+@keyframes hendelse{0%{opacity:0;transform:translate(-50%,-50%) scale(.5)}12%{opacity:1;transform:translate(-50%,-50%) scale(1.12)}22%{transform:translate(-50%,-50%) scale(1)}80%{opacity:1}100%{opacity:0;transform:translate(-50%,-62%) scale(1)}}
+.lynblink{position:fixed;inset:0;z-index:264;pointer-events:none;background:#fff;animation:lynblink .45s ease-out forwards}
+@keyframes lynblink{0%{opacity:.95}15%{opacity:.2}30%{opacity:.8}100%{opacity:0}}
+.hud-knapper .tilt{border-color:rgba(255,90,106,.5);color:#ff5a6a}
 .flaks{position:fixed;z-index:265;pointer-events:none;font-family:var(--display);font-weight:800;font-size:18px;letter-spacing:.08em;color:#ffd23a;text-shadow:0 0 10px rgba(255,190,40,.9);transform:translate(-50%,-50%);animation:flaks 1.2s ease-out forwards}
 @keyframes flaks{0%{opacity:0;transform:translate(-50%,-30%) scale(.6)}15%{opacity:1;transform:translate(-50%,-60%) scale(1.15)}100%{opacity:0;transform:translate(-50%,-160%) scale(1)}}
 .bunke-tall{position:fixed;z-index:260;pointer-events:none;font-family:var(--tall);font-size:12px;letter-spacing:.06em;color:var(--signal);background:rgba(20,19,18,.88);border:1px solid rgba(255,176,0,.5);border-radius:999px;padding:3px 10px;transform:translate(-50%,-100%);white-space:nowrap;box-shadow:0 2px 10px rgba(0,0,0,.5)}
@@ -283,7 +293,7 @@ body:has(.resultat.vis) #spill .linje{opacity:0;pointer-events:none;transition:o
   <div class="regel"><b>The race:</b> Your best score on each of the ten boards in a collection is added up. Finish #1 overall and you get the next collection for free. Anyone who takes first place later gets it too. Points: Easy (25 pieces) gives 10,000, Medium (49) 15,000, Hard (100) 20,000 and Chaos (144) 25,000 at normal speed. Be fast and you get up to double.</div>
   <div class="sammen" id="sammen"><p class="liten">Loading standings …</p></div>
   <p class="kreditt">© 2001–2026 Tarjei Krogh. All photography, music and art. <a href="https://kroghx.com" target="_blank" rel="noopener">kroghx.com</a></p>
-  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 0.48<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
+  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 0.49<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
 </section>
 
 <div class="ark" id="tidUtArk" hidden style="z-index:200001">
@@ -319,6 +329,7 @@ body:has(.resultat.vis) #spill .linje{opacity:0;pointer-events:none;transition:o
     <span class="mal" id="mal" aria-live="off"></span>
     <div class="hud-knapper">
       <button class="hint" id="hintKnapp">Hint<span>+10 s</span></button>
+      <button class="hint tilt" id="tiltKnapp">Tilt<span>2 left</span></button>
       <button class="lyd" id="lydKnapp" aria-pressed="true">Sound on</button>
       <button class="ut" id="utKnapp">Menu</button>
     </div>
@@ -331,6 +342,7 @@ body:has(.resultat.vis) #spill .linje{opacity:0;pointer-events:none;transition:o
   </div>
   <canvas id="fest"></canvas>
   <div class="bunke-tall" id="bunkeTall" hidden></div>
+  <canvas id="brannLag"></canvas>
   <canvas id="mynter"></canvas>
   <aside class="resultat" id="resultat" aria-live="polite">
     <div class="ark-venstre">
@@ -666,6 +678,7 @@ function nullstillBord() { const b = $("bord"); b.classList.remove("vik"); b.sty
 function stoppFest() {
   nullstillBord(); ark = null; $("resultat").classList.remove("vis");
   arkTimere.forEach(clearTimeout); arkTimere = []; cancelAnimationFrame(stovRAF); stovRAF = 0; cancelAnimationFrame(rullRAF); rullRAF = 0;
+  cancelAnimationFrame(brannRAF); brannRAF = 0; { const bl = $("brannLag"); bl.getContext("2d").clearRect(0, 0, bl.width, bl.height); }
   const sl = $("stovLag"); sl.getContext("2d").clearRect(0, 0, sl.width, sl.height);
   $("arkPlass").classList.remove("borte"); $("arkBilde").style.opacity = "";
   cancelAnimationFrame(festRAF); festRAF = 0;
@@ -692,6 +705,7 @@ function visArkade() {
   const dpr = Math.min(devicePixelRatio || 1, 2);
   kanv.width = Math.round(w * dpr); kanv.height = Math.round(h * dpr); kanv.style.width = w + "px"; kanv.style.height = h + "px";
   kanv.getContext("2d").drawImage(sp.img, 0, 0, kanv.width, kanv.height);
+  if (a.tema === "pusle") brannMerker(kanv.getContext("2d"), kanv.width, kanv.height);
   const kr = kanv.getBoundingClientRect(), s = a.fra.w / w;
   kanv.style.transition = "none"; kanv.style.transform = `translate(${a.fra.x - kr.left}px, ${a.fra.y - kr.top}px) scale(${s})`;
   void kanv.offsetWidth;
@@ -1032,6 +1046,7 @@ async function startSpill(i, n, gjenoppta) {
   $("hudKode").textContent = kode(i); $("hudNavn").textContent = BRETT[i].navn;
   if (!gjenoppta || musikkØnske !== BRETT[i].id) spillMusikk(BRETT[i].id);
   spill.hint = HINT_ANTALL; visHintKnapp();
+  spill.tilt = 2; visTilt(); spill.hendelser = gjestekort(o.n); spill.brann = null;
   spill.liste = husListe(i, o.n);
   hentListe(i, o.n).then(l => { if (spill && spill.brett === i && spill.n === o.n) spill.liste = l; });
   oppsett();
@@ -1190,7 +1205,7 @@ function oppsett() {
   const av = $("avslor");
   Object.assign(av.style, { left: x0 + "px", top: y0 + "px", width: bredde + "px", height: hoyde + "px" });
   av.width = Math.round(bredde * dpr); av.height = Math.round(hoyde * dpr);
-  av.getContext("2d").drawImage(spill.img, 0, 0, av.width, av.height);
+  av.getContext("2d").drawImage(spill.img, 0, 0, av.width, av.height); brannMerker(av.getContext("2d"), av.width, av.height);
   // Et svakt omriss av alle brikkene på brettet, så du ser hvor de skal.
   const om = $("omriss"); om.width = Math.round(bredde * dpr); om.height = Math.round(hoyde * dpr);
   const ox = om.getContext("2d"); ox.setTransform(dpr, 0, 0, dpr, 0, 0); ox.clearRect(0, 0, bredde, hoyde);
@@ -1219,6 +1234,7 @@ function tegnBit(b) {
   bitSti(ctx, t, t, bw, bh, b.kanter);
   ctx.save(); ctx.clip();
   ctx.drawImage(img, t - b.c * bw, t - b.r * bh, bredde, hoyde);
+  if (b.svidd > 0) sviBit(ctx, t, bw, bh, b.svidd, b.id);
   if (tykk) {
     // Hevet kant: lys øverst til venstre, mørk nederst til høyre.
     const g = ctx.createLinearGradient(t, t, t + bw, t + bh);
@@ -1498,13 +1514,185 @@ function tikk() {
   $("tid").classList.toggle("slutt", !!spill?.start && !spill.slutt && igjen <= 30);
   if (spill?.start && !spill.slutt && igjen <= 10 && igjen > 0 && igjen !== spill.sistTikk) { spill.sistTikk = igjen; if (lydPa) tone(igjen <= 3 ? 1320 : 990, 0, .06, .03, "sine", .8, .3); }
   if (spill?.start && !spill.slutt && igjen <= 0) { tidUt(); return; }
+  hendelseSjekk();
   visMal(s);
 }
-function tidUt() {
-  spill.slutt = Date.now(); spill.tapt = true; clearInterval(timer);
+// ---------- hendelser i puslespillet: TILT, PUZZLE BREAK og LIGHTNING STRIKE ----------
+// Hvert brett får 1–4 hendelser i tilfeldig rekkefølge, utløst når du har lagt en viss andel.
+function gjestekort(n) {
+  const antall = n < 16 ? 1 : n < 36 ? 2 + (Math.random() < .5) : 3 + (Math.random() < .5);
+  const typer = ["tilt", "break", "lyn"].sort(() => Math.random() - .5);
+  while (typer.length < antall) typer.push(["tilt", "break"][(Math.random() * 2) | 0]);
+  return typer.slice(0, antall).map((t, j) => ({ t, ved: .18 + (j + Math.random() * .8) * (.62 / antall) })).sort((a, b) => a.ved - b.ved);
+}
+function hendelseSjekk() {
+  const sp = spill; if (!sp || !sp.start || sp.slutt || sp.tapt || !sp.hendelser?.length || sp.brann) return;
+  const h = sp.hendelser[0], andel = sp.lagt / sp.biter.length;
+  if (andel < h.ved || sp.lagt > sp.biter.length - 2) return;
+  if (performance.now() - (sp.sistHendelse || 0) < 9000) return;
+  const løse = sp.biter.filter(b => !b.ferdig && !b.iBunke && !b.lander).length;
+  if (h.t === "tilt" && løse < 3) return;
+  if (h.t === "break" && sp.lagt < 4) return;
+  if (h.t === "lyn" && sp.lagt < 6) return;
+  sp.hendelser.shift(); sp.sistHendelse = performance.now();
+  if (h.t === "tilt") tilt(true); else if (h.t === "break") puzzleBreak(); else lynnedslag();
+}
+function banner(tittel, under, farge) {
+  document.querySelectorAll(".hendelse").forEach(e => e.remove());
+  const el = document.createElement("div"); el.className = "hendelse"; el.textContent = tittel;
+  if (farge) { el.style.color = farge; el.style.textShadow = `0 0 18px ${farge},0 3px 0 rgba(0,0,0,.6)`; }
+  if (under) { const s = document.createElement("small"); s.textContent = under; el.appendChild(s); }
+  document.body.appendChild(el); setTimeout(() => el.remove(), 2300);
+}
+function visTilt() {
+  const k = $("tiltKnapp"); if (!spill) return;
+  k.disabled = spill.tilt <= 0 || !!spill.slutt;
+  k.innerHTML = "Tilt<span>" + (spill.tilt > 0 ? spill.tilt + " left" : "used") + "</span>";
+}
+$("tiltKnapp").onclick = () => { if (!spill || spill.slutt || spill.tilt <= 0) return; if (!spill.start) spill.start = Date.now(); spill.tilt--; visTilt(); tilt(false); };
+// TILT: det dunker i bordet. Løse brikker på brettet hopper opp og lander på nye plasser, noen rett på plass.
+function tilt(dino) {
+  const sp = spill;
+  banner(dino ? "A DINOSAUR WALKS BY" : "TILT!", dino ? "TILT! THE LOOSE PIECES JUMP" : "THE LOOSE PIECES JUMP", "#ffd23a");
+  const bord = $("bord"); bord.classList.remove("rist"); void bord.offsetWidth; bord.classList.add("rist"); setTimeout(() => bord.classList.remove("rist"), 800);
+  if (lydPa) [0, dino ? .5 : null, dino ? 1 : null].forEach(t => { if (t == null) return; tone(46, t, .45, .14, "sine", .9, .3); tone(92, t, .12, .05, "triangle", .9, .2); });
+  const løse = sp.biter.filter(b => !b.ferdig && !b.iBunke && !b.lander && !b.el.classList.contains("drar"));
+  løse.forEach((b, j) => setTimeout(() => { if (spill === sp && !b.ferdig) kast(b, Math.random() < HELDIG * 1.3); }, (dino ? 450 : 150) + j * 45));
+}
+// PUZZLE BREAK: 1–3 brikker som lå på plass, rømmer og hopper ned i bunken.
+function puzzleBreak() {
+  const sp = spill, lagte = sp.biter.filter(b => b.ferdig && !b.lander);
+  const n = Math.min(lagte.length, 1 + (Math.random() < .55) + (Math.random() < .25));
+  if (!n) return;
+  const rømte = lagte.sort(() => Math.random() - .5).slice(0, n);
+  banner("PUZZLE BREAK!", n === 1 ? "ONE PIECE ESCAPED" : n === 2 ? "TWO PIECES ESCAPED" : "THREE PIECES ESCAPED");
+  if (lydPa) for (let j = 0; j < 4; j++) tone(j % 2 ? 660 : 880, j * .22, .2, .028, "square", .6, .5);
+  for (const b of rømte) {
+    b.ferdig = false; sp.lagt--; b.z = ++sp.ztopp; tegnBit(b); plasser(b);
+    const p = bunkePlass(), fx = b.x, fy = b.y, t0 = performance.now(), varighet = 800;
+    const steg = t => {
+      if (spill !== sp || !b.el.isConnected) return;
+      const u = Math.min(1, (t - t0) / varighet), e = u * u * (3 - 2 * u);
+      b.x = fx + (p.x - fx) * e; b.y = fy + (p.y - fy) * e - Math.sin(Math.PI * u) * .25; b.loft = Math.sin(Math.PI * u) * 1.3; plasser(b);
+      if (u < 1) { requestAnimationFrame(steg); return; }
+      b.loft = 0; b.iBunke = true; b.bj = [(Math.random() - .5) * 12, (Math.random() - .5) * 8]; sp.bunke.push(b); leggBunke();
+    };
+    requestAnimationFrame(steg);
+  }
+  oppdaterTeller(); visHintKnapp();
+}
+// LIGHTNING STRIKE: lynet slår ned, bildet begynner å brenne. Dra fingeren over bålet for å spyle med vannslangen.
+let brannRAF = 0;
+function lynnedslag() {
+  const sp = spill, lagte = sp.biter.filter(b => b.ferdig && !b.lander);
+  if (!lagte.length) return;
+  const mål = lagte[(Math.random() * lagte.length) | 0];
+  const blink = document.createElement("div"); blink.className = "lynblink"; document.body.appendChild(blink); setTimeout(() => blink.remove(), 500);
+  banner("LIGHTNING STRIKE!", "PUT OUT THE FIRE · DRAG TO SPRAY WATER", "#bfe9ff");
+  if (lydPa) { tsjing(0, .14, .8, 1.4, 4200); tone(55, .05, .9, .14, "sawtooth", .7, .9); tone(40, .1, 1.2, .1, "sine", .8, .8); }
+  sp.brann = { ild: new Map([[mål.id, .55]]), lyn: { x: geo.x0 + (mål.c + .5) * geo.bw, y: geo.y0 + (mål.r + .5) * geo.bh, t: 0 }, partikler: [], sist: performance.now(), tegnT: 0, slange: null };
+  const c = $("brannLag"), dpr = Math.min(devicePixelRatio || 1, 2); c.width = innerWidth * dpr; c.height = innerHeight * dpr; c.style.width = innerWidth + "px"; c.style.height = innerHeight + "px";
+  cancelAnimationFrame(brannRAF); brannRAF = requestAnimationFrame(brannSteg);
+}
+function brannSteg(t) {
+  const sp = spill, B = sp?.brann; if (!B || sp.slutt) { brannRAF = 0; return; }
+  const dt = Math.min(.05, (t - B.sist) / 1000); B.sist = t;
+  const k = sp.k, bitAv = id => sp.biter[id];
+  // Brannen vokser og sprer seg til naboer som ligger på plass. Vannet slukker der du drar.
+  for (const [id, v] of [...B.ild]) {
+    const b = bitAv(id); if (!b.ferdig) { B.ild.delete(id); continue; }
+    let ny = Math.min(1, v + .2 * dt);
+    if (B.slange) { const cx = geo.x0 + (b.c + .5) * geo.bw, cy = geo.y0 + (b.r + .5) * geo.bh; if (Math.hypot(cx - B.slange.x, cy - B.slange.y) < Math.max(geo.bw, geo.bh) * 1.25) ny -= 2.6 * dt; }
+    if (ny <= 0) { B.ild.delete(id); tegnBit(b); plasser(b); continue; }
+    B.ild.set(id, ny); b.svidd = Math.min(1, (b.svidd || 0) + ny * dt * .085);
+    if (ny > .55) for (const [dc, dr] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+      const c = b.c + dc, r = b.r + dr; if (c < 0 || r < 0 || c >= k || r >= sp.r) continue;
+      const n = bitAv(r * k + c); if (n.ferdig && !n.lander && !B.ild.has(n.id) && Math.random() < .18 * dt) B.ild.set(n.id, .25);
+    }
+  }
+  // Brennende brikker blir gradvis svidde.
+  B.tegnT -= dt; if (B.tegnT <= 0) { B.tegnT = .4; for (const id of B.ild.keys()) { tegnBit(bitAv(id)); plasser(bitAv(id)); } }
+  const tapt = sp.biter.reduce((a, b) => a + (b.svidd || 0), 0) / sp.biter.length;
+  tegnBrann(B, dt, t);
+  if (tapt > .33) { B.ild.clear(); sp.brann = null; brannRAF = 0; tegnBrann({ ild: new Map(), partikler: [] }, 0, t); tidUt("Burned", "Too much of the picture went up in flames. It can't be approved."); return; }
+  if (!B.ild.size) {
+    sp.brann = null; brannRAF = 0; tegnBrann({ ild: new Map(), partikler: [] }, 0, t);
+    const svidd = sp.biter.filter(b => b.svidd > .05).length;
+    banner("FIRE OUT!", svidd ? svidd + (svidd === 1 ? " PIECE" : " PIECES") + " SCORCHED" : "NOTHING BURNED", "#7fe8ff");
+    if (lydPa) [0, 4, 7].forEach((st, j) => tone(784 * Math.pow(2, st / 12), j * .07, .25, .02, "sine", .5, 1.2));
+    return;
+  }
+  if (lydPa && Math.random() < dt * 6) tsjing(0, .012 + Math.random() * .01, .7, .5, 2500 + Math.random() * 2000);
+  brannRAF = requestAnimationFrame(brannSteg);
+}
+function tegnBrann(B, dt, t) {
+  const c = $("brannLag"), x = c.getContext("2d"), dpr = c.width / innerWidth;
+  x.setTransform(dpr, 0, 0, dpr, 0, 0); x.clearRect(0, 0, innerWidth, innerHeight);
+  // Lynet: en takket stråle fra toppen de første tidelene.
+  if (B.lyn && B.lyn.t < .35) {
+    B.lyn.t += dt; x.save(); x.globalCompositeOperation = "lighter"; x.strokeStyle = `rgba(220,240,255,${1 - B.lyn.t / .35})`; x.lineWidth = 3; x.shadowColor = "#bfe9ff"; x.shadowBlur = 18;
+    x.beginPath(); let px = B.lyn.x + (Math.random() - .5) * 80, py = 0; x.moveTo(px, py);
+    while (py < B.lyn.y) { py = Math.min(B.lyn.y, py + 20 + Math.random() * 30); px += (Math.random() - .5) * 40 + (B.lyn.x - px) * .25; x.lineTo(py >= B.lyn.y ? B.lyn.x : px, py); }
+    x.stroke(); x.restore();
+  }
+  // Flammer: varme partikler som stiger fra brennende brikker.
+  for (const [id, v] of B.ild) {
+    const b = spill.biter[id], cx = geo.x0 + (b.c + .5) * geo.bw, cy = geo.y0 + (b.r + .5) * geo.bh;
+    for (let n = 0; n < 5; n++) if (Math.random() < v) B.partikler.push({ x: cx + (Math.random() - .5) * geo.bw * .9, y: cy + (Math.random() - .1) * geo.bh * .45, vy: -(40 + Math.random() * 70), liv: 1, r: 7 + Math.random() * 14 * v });
+  }
+  x.save(); x.globalCompositeOperation = "lighter";
+  for (const p of B.partikler) {
+    p.liv -= dt * 1.6; p.y += p.vy * dt; p.x += Math.sin(t / 120 + p.y * .05) * 12 * dt;
+    if (p.liv <= 0) continue;
+    // Tunger av ild: avlange, gule i kjernen og røde ytterst, som krymper mens de stiger.
+    const r = p.r * (.4 + .6 * p.liv), g = x.createRadialGradient(p.x, p.y, 0, p.x, p.y, r);
+    g.addColorStop(0, `rgba(255,${200 + 55 * p.liv | 0},${90 * p.liv | 0},${.7 * p.liv})`); g.addColorStop(.5, `rgba(255,${90 + 60 * p.liv | 0},0,${.4 * p.liv})`); g.addColorStop(1, "rgba(200,30,0,0)");
+    x.save(); x.translate(p.x, p.y); x.scale(.7, 1.5); x.translate(-p.x, -p.y); x.fillStyle = g; x.fillRect(p.x - r, p.y - r, r * 2, r * 2); x.restore();
+  }
+  x.restore();
+  B.partikler = B.partikler.filter(p => p.liv > 0).slice(-500);
+  // Vannslangen: en stråle fra bunnen av skjermen til fingeren, med sprut.
+  if (B.slange) {
+    const sx = innerWidth / 2, sy = innerHeight + 10, ex = B.slange.x, ey = B.slange.y, mx = (sx + ex) / 2, my = Math.min(sy, ey) - 80;
+    x.save(); x.lineCap = "round";
+    x.strokeStyle = "rgba(150,210,255,.35)"; x.lineWidth = 14; x.beginPath(); x.moveTo(sx, sy); x.quadraticCurveTo(mx, my, ex, ey); x.stroke();
+    x.strokeStyle = "rgba(230,245,255,.75)"; x.lineWidth = 4; x.stroke();
+    x.fillStyle = "rgba(220,240,255,.85)";
+    for (let n = 0; n < 14; n++) { const a = Math.random() * Math.PI * 2, d = Math.random() * 26; x.beginPath(); x.arc(ex + Math.cos(a) * d, ey + Math.sin(a) * d * .6, 1 + Math.random() * 2.5, 0, 7); x.fill(); }
+    x.restore();
+  }
+}
+// Vannslangen: dra på brettet mens det brenner (ikke på løse brikker).
+const slangePos = e => { const B = spill?.brann; if (B && B.slangeId === e.pointerId) B.slange = { x: e.clientX, y: e.clientY }; };
+document.addEventListener("pointerdown", e => {
+  const B = spill?.brann; if (!B || e.target.closest?.("button") || (e.target.classList?.contains("bit") && !e.target.classList.contains("ferdig"))) return;
+  B.slangeId = e.pointerId; B.slange = { x: e.clientX, y: e.clientY };
+  if (lydPa) tsjing(0, .02, .6, .6, 1800);
+});
+document.addEventListener("pointermove", slangePos);
+for (const ev of ["pointerup", "pointercancel"]) document.addEventListener(ev, e => { const B = spill?.brann; if (B && B.slangeId === e.pointerId) { B.slange = null; B.slangeId = null; } });
+// Brannmerker: svidde kanter og mørke flekker, så det brente fortsatt ser bra ut.
+function sviBit(ctx, t, bw, bh, s, id) {
+  s = Math.min(1, s * 2.4); ctx.save();
+  ctx.globalCompositeOperation = "multiply";
+  const cx = t + bw / 2, cy = t + bh / 2, R = Math.max(bw, bh) * .75;
+  const g = ctx.createRadialGradient(cx + Math.sin(id) * bw * .15, cy + Math.cos(id * 1.7) * bh * .15, R * .1, cx, cy, R);
+  g.addColorStop(0, `rgba(150,80,30,${.55 * s})`); g.addColorStop(.6, `rgba(90,40,12,${.8 * s})`); g.addColorStop(1, `rgba(25,10,4,${.95 * s})`);
+  ctx.fillStyle = g; ctx.fillRect(t - bw, t - bh, bw * 3, bh * 3);
+  ctx.globalCompositeOperation = "source-over";
+  for (let n = 0; n < 5; n++) { const a = id * 2.3 + n * 1.9, d = (n % 3) * .22; ctx.fillStyle = `rgba(10,5,2,${.45 * s})`; ctx.beginPath(); ctx.ellipse(cx + Math.cos(a) * bw * d, cy + Math.sin(a) * bh * d, bw * (.05 + .05 * s), bh * (.04 + .04 * s), a, 0, 7); ctx.fill(); }
+  ctx.restore();
+}
+function brannMerker(ctx, W, H) {
+  if (!spill) return;
+  const bw = W / spill.k, bh = H / spill.r;
+  for (const b of spill.biter) if (b.svidd > 0) { ctx.save(); ctx.translate(b.c * bw, b.r * bh); ctx.beginPath(); ctx.rect(0, 0, bw, bh); ctx.clip(); sviBit(ctx, 0, bw, bh, b.svidd, b.id); ctx.restore(); }
+}
+function tidUt(tittel = "Time's up", tekst = null) {
+  spill.slutt = Date.now(); spill.tapt = true; clearInterval(timer); $("tidUtTittel").textContent = tittel;
   $("tid").classList.remove("gar", "slutt");
   if (lydPa) { tone(220, 0, .3, .06, "sawtooth", .6, .6); tone(147, .15, .45, .06, "sawtooth", .6, .6); }
-  $("tidUtTekst").textContent = spill.lagt + " of " + spill.biter.length + " pieces placed. The picture stays hidden this time.";
+  $("tidUtTekst").textContent = tekst || spill.lagt + " of " + spill.biter.length + " pieces placed. The picture stays hidden this time.";
   $("tidUtArk").hidden = false;
 }
 $("tidUtIgjen").onclick = () => { $("tidUtArk").hidden = true; if (spill) startSpill(spill.brett, spill.n); };
@@ -1532,7 +1720,8 @@ function visMal(s) {
 function regnPoeng(n, s) { return Math.round((GRUNN[n] || n * 300) * 2 * (n * 5) / (s + n * 5)); }
 
 async function ferdig() {
-  spill.slutt = Date.now(); spill.sluttT = performance.now(); $("bunkeTall").hidden = true; clearInterval(timer); tikk(); dempMusikk();
+  spill.slutt = Date.now(); spill.sluttT = performance.now(); $("bunkeTall").hidden = true; visTilt();
+  if (spill.biter.some(b => b.svidd > 0)) { const av = $("avslor"), ax = av.getContext("2d"); ax.drawImage(spill.img, 0, 0, av.width, av.height); brannMerker(ax, av.width, av.height); } clearInterval(timer); tikk(); dempMusikk();
   const s = sekunder(), p = regnPoeng(spill.n, s), b = BRETT[spill.brett];
   setTimeout(() => $("avslor").classList.add("vis"), 350);
   $("avslor").classList.add("bolge"); $("ramme").classList.add("neon");
@@ -3609,7 +3798,7 @@ function shSteg(t) {
 }
 addEventListener("resize", () => { if (sh) shOppsett(); });
 // Bare for automatisk testing lokalt (?autotest).
-if (location.search.includes("autotest")) { window.__sh = () => sh; window.__shOppdater = dt => { shOppdater(dt); if (sh) { sh.tid += dt; shPartikler(dt); } }; window.__shTreff = shTreff; window.__shGalaga = shGalagaStart; window.__shSprekk = shSprekk; window.__shTegn = () => { shRens(); shTegn(performance.now()); }; window.__spill = () => spill; }
+if (location.search.includes("autotest")) { window.__sh = () => sh; window.__shOppdater = dt => { shOppdater(dt); if (sh) { sh.tid += dt; shPartikler(dt); } }; window.__shTreff = shTreff; window.__shGalaga = shGalagaStart; window.__hendelse = t => t === "tilt" ? tilt(true) : t === "break" ? puzzleBreak() : lynnedslag(); window.__shSprekk = shSprekk; window.__shTegn = () => { shRens(); shTegn(performance.now()); }; window.__spill = () => spill; }
 
 
 
