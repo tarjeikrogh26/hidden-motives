@@ -10,7 +10,7 @@
 <title>Hidden Motives</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Syne:wght@600;800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pacifico&family=Syne:wght@600;800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap">
 <style>
 /* Layout: ett mørkt galleri-rom. Brettet til venstre, løse biter rundt. Samme mørke i begge tema, valgt med vilje. */
 :root{
@@ -85,6 +85,18 @@ body.lys #modusScrub{--farge:#e07800;--glod:224,120,0}
 .variant.v-pusle{--vg:226,61,132}
 .variant.v-scrub{--vg:224,120,0}
 .resultat.peace .ark-hoyre{display:none}
+#kraftLinje.peace #kraftMagnet,#kraftLinje.peace #kraftLim,#kraftLinje.peace #lommebok,#kraftLinje.peace .pris{display:none}
+#kraftLinje.peace button{font-family:"Pacifico",cursive;font-weight:400;font-size:16px;letter-spacing:.02em;text-transform:lowercase;color:#fff;padding:5px 18px 8px;border:0;
+  background:radial-gradient(ellipse at 35% 25%,#ffd3ea 0%,#ff9fcf 45%,#f27bb5 100%);box-shadow:inset 0 -4px 8px rgba(160,30,90,.35),inset 0 3px 6px rgba(255,255,255,.65),0 5px 14px rgba(120,30,80,.35);text-shadow:0 1px 2px rgba(150,30,90,.6)}
+#kraftLinje.peace button:active{transform:scale(.95)}
+#kraftLinje.peace button::first-letter{text-transform:uppercase}
+body.peace-modus #hintKnapp{display:none!important}
+body.peace-modus #ramme{box-shadow:0 0 0 10px #f7f0e6,0 0 0 11px rgba(60,40,20,.25),0 22px 60px rgba(0,0,0,.5)}
+body.peace-modus #spill{z-index:1}
+#peaceBg{position:fixed;inset:0;z-index:0;pointer-events:none}
+#timeglass{display:none;width:30px;height:48px}
+body.peace-modus #timeglass{display:block}
+.resultat.peace-look .poeng{color:#ff5fa2}
 .resultat.peace .poeng{color:#ff5fa2}
 #resRekord.ny-rekord{color:#ff5fa2;font-weight:700}
 body.peace-modus #tid,body.peace-modus #mal,body.peace-modus #tiltKnapp{display:none!important}
@@ -398,7 +410,7 @@ body:has(.resultat.vis) #spill .linje{opacity:0;pointer-events:none;transition:o
   <div class="regel"><b>The race:</b> Your best score on each of the ten boards in a collection is added up. Finish #1 overall and you get the next collection for free. Anyone who takes first place later gets it too. Points: Easy (25 pieces) gives 10,000, Medium (49) 15,000, Hard (100) 20,000 and Chaos (144) 25,000 at normal speed. Be fast and you get up to double.</div>
   <div class="sammen" id="sammen"><p class="liten">Loading standings …</p></div>
   <p class="kreditt">© 2001–2026 Tarjei Krogh. All photography, music and art. <a href="https://kroghx.com" target="_blank" rel="noopener">kroghx.com</a></p>
-  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 1.01<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
+  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 1.02<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
 </section>
 
 <div class="ark" id="tidUtArk" hidden style="z-index:200001">
@@ -430,6 +442,7 @@ body:has(.resultat.vis) #spill .linje{opacity:0;pointer-events:none;transition:o
   <div class="linje">
     <div class="hud-brett"><span id="hudKode">/01/01</span><b id="hudNavn"></b><span class="spor" id="hudSpor"></span></div>
     <span class="tid" id="tid">0:00</span>
+    <canvas id="timeglass" aria-label="Hourglass"></canvas>
     <span class="teller" id="teller">0 / 25</span>
     <span class="mal" id="mal" aria-live="off"></span>
     <div class="hud-knapper">
@@ -564,7 +577,9 @@ function hentBilde(src) {
 
 // ---------- meny ----------
 // Et brett klart i Peace teller ikke for å åpne nye brett (Peace åpner ingenting, det spiller det du har).
-function erLost(id) { return !!fremdrift[id] && Object.keys(fremdrift[id]).some(k => k !== "peace" && k !== "p2"); }
+function erLost(id) { return !!fremdrift[id] && Object.keys(fremdrift[id]).some(k => !k.startsWith("peace") && k !== "p2"); }
+const PEACE_TID = 1.35; // Peace har romsligere tid (men den vises bare som et timeglass).
+const peaceBeste = id => { const f = fremdrift[id] || {}; let b = null; for (const k in f) if (k.startsWith("peace_") && (!b || f[k].poeng > b.poeng)) b = f[k]; return b; };
 let variant = { pusle: "game", scrub: "1p" };
 try { const v = JSON.parse(localStorage.getItem("sm-variant") || "null"); if (v) variant = { ...variant, ...v }; } catch {}
 const iPeace = () => modus === "pusle" && variant.pusle === "peace";
@@ -592,6 +607,7 @@ function tegnFaner() {
 let modus = "pusle";
 try { if (localStorage.getItem("sm-modus") === "scrub") modus = "scrub"; } catch {}
 function velgModus(m) { modus = m; try { localStorage.setItem("sm-modus", m); } catch {} tegnMeny(); }
+function plasserVariant() { const vr = $("variant"), valgt = $(modus === "pusle" ? "modusPuslespill" : "modusScrub"); if (!vr || !valgt) return; vr.style.paddingLeft = Math.max(0, valgt.offsetLeft - vr.offsetLeft) + "px"; }
 function tilpassLogo() {
   const meny = $("meny"); if (!meny || meny.hidden) return;
   const cs = getComputedStyle(meny), bredde = meny.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
@@ -601,6 +617,7 @@ function tilpassLogo() {
   if (navn) { const mål = Math.min(bredde - av.offsetWidth - 16 - 50, 420);
     for (const l of navn.children) { l.style.fontSize = "100px"; l.style.fontSize = Math.floor(100 * mål / l.offsetWidth * 10) / 10 + "px"; } }
   const m = document.querySelector(".moduser"); if (m) pass(m, 34, 0);
+  plasserVariant();
 }
 addEventListener("resize", tilpassLogo); document.fonts?.ready.then(tilpassLogo); setTimeout(tilpassLogo, 50);
 $("modusPuslespill").onclick = () => velgModus("pusle");
@@ -611,12 +628,13 @@ function tegnModus() {
   $("modusPuslespill").setAttribute("aria-selected", String(modus === "pusle"));
   $("modusScrub").setAttribute("aria-selected", String(modus === "scrub"));
   $("modusTekst").textContent = modus === "pusle"
-    ? (iPeace() ? "Piece it in peace. No clock, no surprises. Just the pieces, the picture and calm music."
+    ? (iPeace() ? "Piece it in peace. No fire, no surprises. Just the pieces, calm music and an hourglass. Beat the sand, and climb the Peace list."
       : "You never see the picture until it's done. Place the pieces before the clock runs out, and the image reveals itself.")
     : variant.scrub === "2p" ? "Two players, one screen. A flipper at each end: wash the picture clean together. No shop, only what the mud gives you."
     : "The art is buried in mud. Wash it off with soap bubbles. Clear a board in either game and the next one opens.";
   // Bryteren under spillet som er valgt (SCRUB IT får 1P | 2P når 2P er bygget).
   const vr = $("variant"); vr.replaceChildren(); vr.className = "variant " + (modus === "pusle" ? "v-pusle" : "v-scrub");
+  requestAnimationFrame(plasserVariant);
   const del = modus === "pusle" ? "pusle" : "scrub";
   for (const [v, navn] of del === "pusle" ? [["game", "GAME"], ["peace", "PEACE"]] : [["1p", "1P"], ["2p", "2P"]]) {
     const b = document.createElement("button"); b.textContent = navn; b.setAttribute("role", "radio"); b.setAttribute("aria-checked", String(variant[del] === v));
@@ -646,14 +664,14 @@ async function tegnMeny() {
     nr.append(kd, nv);
     const st = document.createElement("span");
     const beste = besteLokal(b.id);
-    const pf = fremdrift[b.id]?.peace;
-    st.textContent = iPeace() ? (pf ? "✓ " + fmt(pf.tid) : "") : erLost(b.id) ? (beste ? beste.poeng.toLocaleString("en") + " pts" : fremdrift[b.id]?.scrub ? "Scrubbed" : "Solved") : "";
+    const pf = peaceBeste(b.id);
+    st.textContent = iPeace() ? (pf ? pf.poeng.toLocaleString("en") + " pts" : "") : erLost(b.id) ? (beste ? beste.poeng.toLocaleString("en") + " pts" : fremdrift[b.id]?.scrub ? "Scrubbed" : "Solved") : "";
     st.className = "status";
     merke.append(nr, st); kort.appendChild(merke);
     if (erApen(i)) kort.onclick = () => { if (modus === "scrub") { ctx(); shatterStart(i); } else visStartark(i); };
     liste.appendChild(kort);
     hentBilde(b.src).then(img => {
-      if (erLost(b.id) || (iPeace() && fremdrift[b.id]?.peace)) { c.width = 400; c.height = 400; const x = c.getContext("2d"); x.drawImage(img, 0, 0, 400, 400); c.style.imageRendering = "auto"; }
+      if (erLost(b.id) || (iPeace() && peaceBeste(b.id))) { c.width = 400; c.height = 400; const x = c.getContext("2d"); x.drawImage(img, 0, 0, 400, 400); c.style.imageRendering = "auto"; }
       else { c.width = 7; c.height = 7; const x = c.getContext("2d"); x.drawImage(img, 0, 0, 7, 7); } // grov mosaikk: ingen fasit
     });
   });
@@ -1084,8 +1102,8 @@ for (const id of ["mynter", "resultat", "stovLag"]) document.body.appendChild($(
 function visArkade() {
   const a = ark, sp = a, res = $("resultat");
   if (!a || !a.gyldig() || res.classList.contains("vis")) return;
-  res.classList.toggle("tema-scrub", a.tema === "scrub"); res.classList.toggle("tema-pusle", a.tema !== "scrub"); res.classList.toggle("peace", !!a.peace || !!a.utenListe);
-  $("arkHode").innerHTML = (a.tema === "scrub" ? "SCRUB IT" : "PIECE IT") + "<span>TOP 100</span>";
+  res.classList.toggle("tema-scrub", a.tema === "scrub"); res.classList.toggle("tema-pusle", a.tema !== "scrub"); res.classList.toggle("peace", !!a.peace || !!a.utenListe); res.classList.toggle("peace-look", !!a.peaceLook);
+  $("arkHode").innerHTML = (a.tema === "scrub" ? "SCRUB IT" : a.peaceLook ? "PEACE" : "PIECE IT") + "<span>TOP 100</span>";
   const kanv = $("arkBilde"), plass = $("arkPlass");
   $("magi").style.opacity = 0; setTimeout(magiStopp, 520); $("levende").style.opacity = 0; setTimeout(levendeStopp, 520);
   plass.classList.remove("borte"); kanv.style.opacity = "";
@@ -1101,7 +1119,6 @@ function visArkade() {
   kanv.style.transition = "none"; kanv.style.transform = `translate(${a.fra.x - kr.left}px, ${a.fra.y - kr.top}px) scale(${s})`;
   void kanv.offsetWidth;
   kanv.style.transition = "transform .9s cubic-bezier(.3,.7,.3,1)"; kanv.style.transform = "";
-  if (a.peace) return; // Peace: bildet og tiden din, ingen opptelling og ingen liste.
   const telleTid = a.tema === "scrub" ? 1400 : 1900;
   if (a.trinn) arkTimere.push(setTimeout(() => { if (ark === a) tellTrinn(a, () => { if (ark === a) sprengBilde(); }); }, 950));
   else arkTimere.push(setTimeout(() => { if (ark === a) tellOpp(a.poeng || 0, () => { if (ark === a) sprengBilde(); }, telleTid); }, 950));
@@ -1473,8 +1490,9 @@ async function startSpill(i, n, gjenoppta) {
   spill = { brett: i, n: o.n, k: o.k, r: o.r, img, biter, start: gjenoppta?.start ? Date.now() - gjenoppta.start : 0, slutt: 0, lagt: biter.filter(b => b.ferdig).length, ztopp: biter.length, straff: gjenoppta?.straff || 0 };
   $("hudKode").textContent = kode(i); $("hudNavn").textContent = BRETT[i].navn;
   spill.peace = iPeace(); document.body.classList.toggle("peace-modus", spill.peace);
-  if (spill.peace) { stoppMusikk(.6); stoppPad(); setTimeout(() => { if (spill?.peace && !spill.slutt) startPad(); }, 700); }
+  if (spill.peace) { stoppMusikk(.6); stoppPad(); setTimeout(() => { if (spill?.peace && !spill.slutt) startPad(); }, 700); timeglassStart(); peaceBg(i); }
   else if (!gjenoppta || musikkØnske !== BRETT[i].id) spillMusikk(BRETT[i].id);
+  if (!spill.peace) peaceBg(-1);
   spill.hint = HINT_ANTALL; visHintKnapp();
   spill.tilt = 2; visTilt();
   // Beta: Krogh skal alltid kunne prøve TILT, MAGNET og HINT to ganger hver (2×2 + 2×3 + 2×1 = 12). Ved lansering: fjernes.
@@ -2137,8 +2155,9 @@ function credits() { try { const v = localStorage.getItem("sm-credits"); return 
 function settCredits(n) { try { localStorage.setItem("sm-credits", String(Math.max(0, n))); } catch {} visCredits(); }
 function visCredits() { for (const id of ["creditTall", "shCreditTall"]) { const el = $(id); if (el) el.textContent = credits(); } }
 function visKraftLinje() {
-  const el = $("kraftLinje"), vis = !!spill && !spill.slutt && !spill.peace && !$("spill").hidden && $("shatter").hidden && modus !== "scrub" && !!geo;
+  const el = $("kraftLinje"), vis = !!spill && !spill.slutt && !$("spill").hidden && $("shatter").hidden && modus !== "scrub" && !!geo;
   el.hidden = !vis; if (!vis) return;
+  el.classList.toggle("peace", !!spill.peace);
   const H = innerHeight, w = el.offsetWidth || 300; el.style.left = Math.min(innerWidth - w / 2 - 8, Math.max(w / 2 + 8, geo.x0 + geo.bredde / 2)) + "px";
   el.style.top = (geo.staaende ? H - BAR + 6 : Math.min(H - BAR + 8, geo.y0 + geo.hoyde + 12)) + "px";
   $("kraftMagnet").classList.toggle("aktiv", (spill.magnetTil || 0) > performance.now());
@@ -2210,12 +2229,13 @@ function limBrikker() {
 }
 function brukKraft(type) {
   if (!spill || spill.slutt || spill.tapt) return false;
-  const k = KRAFT[type], har = credits();
-  if (har < k.pris) { åpneButikk(k.pris); return false; }
+  const k = KRAFT[type], har = credits(), gratis = !!spill.peace;
+  if (gratis && !["tilt", "hint", "familie"].includes(type)) return false;
+  if (!gratis && har < k.pris) { åpneButikk(k.pris); return false; }
   if (type === "hint" && !nesteHint()) return false;
   if (type === "lim" && (spill.limBrukt || !spill.biter.some(b => b.ferdig))) return false;
   if (type === "familie" && (spill.familieGaar || !familieSted())) return false;
-  settCredits(har - k.pris); spill.trekk = (spill.trekk || 0) + k.trekk; spill.brukteKraft = true;
+  if (!gratis) { settCredits(har - k.pris); spill.trekk = (spill.trekk || 0) + k.trekk; spill.brukteKraft = true; }
   if (!spill.start) spill.start = Date.now();
   if (lydPa) { tone(660, 0, .12, .04, "sine", .7, .6); tone(990, .06, .14, .03, "sine", .7, .6); }
   if (type === "tilt") { tilt(false); spill.tiltMagnetTil = performance.now() + 8000; }
@@ -2242,10 +2262,83 @@ $("kraftLim").onclick = () => brukKraft("lim");
 $("kraftFamilie").onclick = () => brukKraft("familie");
 for (const id of ["kraftLinje", "shKraftLinje", "butikk", "innstillinger"]) document.body.appendChild($(id));
 for (const id of ["kraftLinje", "shKraftLinje", "butikk"]) $(id).addEventListener("pointerdown", e => e.stopPropagation());
+// Timeglass: sanden renner. De siste 30 sekundene får det en rolig, rosa aura (ikke blink).
+let glassRAF = 0;
+function timeglassStart() {
+  const c = $("timeglass"), dpr = Math.min(devicePixelRatio || 1, 2); c.width = 30 * dpr; c.height = 48 * dpr; const x = c.getContext("2d");
+  cancelAnimationFrame(glassRAF);
+  const korn = [];
+  const steg = t => {
+    if (!spill?.peace || spill.slutt) { glassRAF = 0; return; }
+    const frist = Math.round(tidsfrist(spill.brett, spill.n) * PEACE_TID), s = sekunder(), u = spill.start ? Math.min(1, s / frist) : 0, igjen = frist - s;
+    x.setTransform(dpr, 0, 0, dpr, 0, 0); x.clearRect(0, 0, 30, 48);
+    if (spill.start && igjen <= 30) { const a = .35 + .25 * Math.sin(t / 700); const g = x.createRadialGradient(15, 24, 2, 15, 24, 24); g.addColorStop(0, `rgba(255,140,200,${a})`); g.addColorStop(1, "rgba(255,140,200,0)"); x.fillStyle = g; x.fillRect(0, 0, 30, 48); }
+    const glass = () => { x.beginPath(); x.moveTo(6, 5); x.bezierCurveTo(6, 17, 13, 20, 14, 24); x.bezierCurveTo(13, 28, 6, 31, 6, 43); x.lineTo(24, 43); x.bezierCurveTo(24, 31, 17, 28, 16, 24); x.bezierCurveTo(17, 20, 24, 17, 24, 5); x.closePath(); };
+    x.save(); glass(); x.clip();
+    x.fillStyle = "rgba(255,255,255,.18)"; x.fillRect(0, 0, 30, 48);
+    const sand = "#e9c98f";
+    // Øverst: sanden synker. Nederst: haugen vokser.
+    const top = 6 + 17 * u; x.fillStyle = sand; x.fillRect(0, top, 30, 23 - top);
+    const h = 18 * u; x.beginPath(); x.moveTo(5, 43); x.quadraticCurveTo(15, 43 - h * 1.6, 25, 43); x.fill();
+    if (spill.start && u < 1) { x.fillRect(14.4, 23, 1.2, 20 - h * .8); if (Math.random() < .6) korn.push({ y: 24, v: 20 + Math.random() * 20 }); }
+    for (const k of korn) { k.y += k.v / 60; x.fillRect(14.2 + Math.random() * 1.6, k.y, 1, 1); }
+    while (korn.length && korn[0].y > 42 - h) korn.shift();
+    x.restore();
+    x.strokeStyle = "rgba(255,255,255,.85)"; x.lineWidth = 1.2; glass(); x.stroke();
+    x.fillStyle = "#c98fb0"; x.fillRect(4, 2, 22, 3); x.fillRect(4, 43, 22, 3);
+    glassRAF = requestAnimationFrame(steg);
+  };
+  glassRAF = requestAnimationFrame(steg);
+}
+let bgRAF = 0;
+function peaceBg(i) {
+  cancelAnimationFrame(bgRAF); bgRAF = 0; let c = $("peaceBg");
+  if (i < 0) { if (c) c.remove(); return; }
+  if (!c) { c = document.createElement("canvas"); c.id = "peaceBg"; document.body.prepend(c); }
+  const scene = ["strand", "aaker", "fjell", "skyer"][i % 4], dpr = Math.min(devicePixelRatio || 1, 2);
+  const frø = i * 97 + 13, rnd = (n) => { const v = Math.sin(frø * 12.9898 + n * 78.233) * 43758.5; return v - Math.floor(v); };
+  const stjerner = Array.from({ length: 160 }, (_, n) => ({ x: rnd(n), y: rnd(n + 500) * .62, r: .4 + rnd(n + 900) * 1.3, f: rnd(n + 1300) * 6 }));
+  const siv = Array.from({ length: 70 }, (_, n) => ({ x: rnd(n + 2000), h: .12 + rnd(n + 2100) * .2, f: rnd(n + 2200) * 6, b: .6 + rnd(n + 2300) }));
+  const skyer = Array.from({ length: 9 }, (_, n) => ({ x: rnd(n + 3000), y: .08 + rnd(n + 3100) * .5, s: .15 + rnd(n + 3200) * .25, v: .004 + rnd(n + 3300) * .008 }));
+  const steg = t => {
+    if (!c.isConnected) return;
+    const W = innerWidth, H = innerHeight; if (c.width !== Math.round(W * dpr)) { c.width = Math.round(W * dpr); c.height = Math.round(H * dpr); c.style.width = W + "px"; c.style.height = H + "px"; }
+    const x = c.getContext("2d"); x.setTransform(dpr, 0, 0, dpr, 0, 0); const tt = t / 1000;
+    const himmel = (stopp) => { const g = x.createLinearGradient(0, 0, 0, H); stopp.forEach(([o, f]) => g.addColorStop(o, f)); x.fillStyle = g; x.fillRect(0, 0, W, H); };
+    const stjernehimmel = () => { for (const s of stjerner) { x.globalAlpha = .45 + .45 * Math.sin(tt * 1.3 + s.f); x.fillStyle = "#fff"; x.beginPath(); x.arc(s.x * W, s.y * H, s.r, 0, 7); x.fill(); } x.globalAlpha = 1; };
+    const sivrad = (bunn, farge, skala) => { x.strokeStyle = farge; x.lineCap = "round"; for (const s of siv) { const bx = s.x * W, by = bunn, h = s.h * H * skala, sv = Math.sin(tt * (.9 + s.b * .4) + s.f) * h * .12;
+      x.lineWidth = 1.6 * s.b; x.beginPath(); x.moveTo(bx, by); x.quadraticCurveTo(bx + sv * .4, by - h * .6, bx + sv, by - h); x.stroke();
+      if (s.b > 1.2) { x.fillStyle = farge; x.beginPath(); x.ellipse(bx + sv, by - h - 6, 2.5, 8, sv * .01, 0, 7); x.fill(); } } };
+    if (scene === "strand") {
+      himmel([[0, "#f6c8b8"], [.45, "#fbe3c9"], [.55, "#bfe0e6"], [1, "#e9d6b4"]]);
+      const hav = H * .55; x.fillStyle = "#86c3cf"; x.fillRect(0, hav, W, H * .13);
+      for (let j = 0; j < 6; j++) { x.strokeStyle = `rgba(255,255,255,${.35 - j * .04})`; x.lineWidth = 1.2; x.beginPath(); for (let px = 0; px <= W; px += 8) x.lineTo(px, hav + 8 + j * 9 + Math.sin(px * .02 + tt * (.6 + j * .1) + j) * 2.5); x.stroke(); }
+      x.fillStyle = "#ead7b0"; x.fillRect(0, hav + H * .13, W, H);
+      const sk = x.createRadialGradient(W * .78, H * .3, 0, W * .78, H * .3, H * .12); sk.addColorStop(0, "rgba(255,240,215,.95)"); sk.addColorStop(1, "rgba(255,240,215,0)"); x.fillStyle = sk; x.fillRect(0, 0, W, H);
+      sivrad(H, "rgba(120,110,70,.75)", 1.1);
+    } else if (scene === "aaker") {
+      himmel([[0, "#0b1030"], [.6, "#27305e"], [.7, "#3b3a5a"], [1, "#1b1a26"]]); stjernehimmel();
+      x.fillStyle = "#1c1b2a"; x.beginPath(); x.moveTo(0, H * .68); for (let px = 0; px <= W; px += 20) x.lineTo(px, H * .68 - Math.sin(px * .006) * 12); x.lineTo(W, H); x.lineTo(0, H); x.fill();
+      sivrad(H, "rgba(210,190,130,.5)", .9);
+    } else if (scene === "fjell") {
+      himmel([[0, "#070b22"], [.55, "#1d2a55"], [1, "#3c3f63"]]); stjernehimmel();
+      const måne = x.createRadialGradient(W * .25, H * .18, 0, W * .25, H * .18, 60); måne.addColorStop(0, "rgba(255,250,235,.95)"); måne.addColorStop(.25, "rgba(255,250,235,.9)"); måne.addColorStop(.3, "rgba(255,250,235,.15)"); måne.addColorStop(1, "rgba(255,250,235,0)"); x.fillStyle = måne; x.fillRect(0, 0, W, H);
+      for (const [y0, farge, amp] of [[.62, "#232a4a", .14], [.72, "#171c33", .1], [.84, "#0e1122", .07]]) { x.fillStyle = farge; x.beginPath(); x.moveTo(0, H); for (let px = 0; px <= W; px += 12) x.lineTo(px, H * y0 - Math.abs(Math.sin(px * .004 + y0 * 9)) * H * amp - Math.sin(px * .021) * 6); x.lineTo(W, H); x.fill(); }
+    } else {
+      himmel([[0, "#9fc4e8"], [.6, "#dbe9f5"], [1, "#f4ecdf"]]);
+      for (const s of skyer) { const sx = ((s.x + tt * s.v) % 1.4 - .2) * W, sy = s.y * H, r = s.s * W; x.fillStyle = "rgba(255,255,255,.75)";
+        for (let j = 0; j < 5; j++) { x.beginPath(); x.ellipse(sx + (j - 2) * r * .35, sy + Math.abs(j - 2) * r * .06, r * (.35 - Math.abs(j - 2) * .05), r * .2, 0, 0, 7); x.fill(); } }
+    }
+    bgRAF = requestAnimationFrame(steg);
+  };
+  bgRAF = requestAnimationFrame(steg);
+}
 function tikk() {
   visKraftLinje();
-  // Peace: ingen klokke, ingen frist, ingen hendelser.
-  if (spill?.peace) { $("tid").textContent = ""; $("mal").replaceChildren(); return; }
+  // Peace: ingen klokke å se på, bare timeglasset. Ingen hendelser. Går sanden ut, er runden over.
+  if (spill?.peace) { $("mal").replaceChildren(); const igjen = Math.round(tidsfrist(spill.brett, spill.n) * PEACE_TID) - sekunder();
+    if (spill.start && !spill.slutt && igjen <= 0) tidUt("The sand ran out", spill.lagt + " of " + spill.biter.length + " pieces placed. Take a breath and try again.");
+    return; }
   const s = sekunder(), frist = spill ? tidsfrist(spill.brett, spill.n) : 0, igjen = Math.max(0, frist - s);
   $("tid").textContent = fmt(igjen);
   $("tid").classList.toggle("gar", !!spill?.start && !spill.slutt);
@@ -2831,17 +2924,18 @@ async function ferdig() {
   { const sp = spill; setTimeout(() => { if (spill === sp && !$("resultat").classList.contains("vis")) { magiStart(sp.img, { x: geo.x0, y: geo.y0, w: geo.bredde, h: geo.hoyde }, 2.6); const R = { x: geo.x0, y: geo.y0, w: geo.bredde, h: geo.hoyde }; if (!feiringStart(sp.img, R, BRETT[sp.brett].id, 2.55, () => +getComputedStyle($("avslor")).opacity || 0)) { $("avslor").classList.add("magisk"); setTimeout(() => $("avslor").classList.remove("magisk"), 2300); } } }, 250); }
   startFest();
   if (spill.peace) {
-    const id = b.id, før = fremdrift[id]?.peace?.tid, ny = !før || sEkte < før;
-    fremdrift[id] = fremdrift[id] || {}; fremdrift[id].peace = { tid: ny ? sEkte : før }; skrivLokal(fremdrift);
+    const id = b.id, k = "peace_" + spill.n, gml = fremdrift[id]?.[k], pp = regnPoeng(spill.n, sEkte), ny = !gml || pp > gml.poeng, før = gml?.tid;
+    fremdrift[id] = fremdrift[id] || {}; if (ny) fremdrift[id][k] = { poeng: pp, tid: sEkte }; skrivLokal(fremdrift);
     const neste = nesteIRekke(spill.brett), sp = spill;
     $("nesteKnapp").textContent = neste >= 0 ? "Next: " + BRETT[neste].navn + " →" : "Menu"; $("nesteKnapp").disabled = false;
-    $("resTittel").textContent = BRETT[spill.brett].navn; $("resPoeng").textContent = fmt(sEkte);
-    $("resInfo").textContent = kode(spill.brett) + " · Peace · " + spill.n + " pieces";
-    $("resRekord").textContent = ny ? (før ? "New best time! Before: " + fmt(før) + "." : "Your first time on this board.") : "Your best is " + fmt(før) + ".";
+    $("resTittel").textContent = BRETT[spill.brett].navn; $("resPoeng").textContent = "0 points";
+    $("resInfo").textContent = kode(spill.brett) + " · Peace · " + spill.n + " pieces · time " + fmt(sEkte);
+    $("resRekord").textContent = ny ? (gml ? "New Peace best! Before: " + gml.poeng.toLocaleString("en") + "." : "First time on this board in Peace.") : "Your Peace best is " + gml.poeng.toLocaleString("en") + ".";
     $("resRekord").classList.toggle("ny-rekord", ny && !!før);
-    ark = { tema: "pusle", peace: true, img: sp.img, fra: { x: geo.x0, y: geo.y0, w: geo.bredde }, poeng: 0, sluttT: sp.sluttT, gyldig: () => spill === sp && !!sp.slutt,
+    ark = { tema: "pusle", peaceLook: true, img: sp.img, fra: { x: geo.x0, y: geo.y0, w: geo.bredde }, poeng: pp, sluttT: sp.sluttT, gyldig: () => spill === sp && !!sp.slutt,
       neste: () => { if (spill !== sp) return; valgtAntall = sp.n; tilMeny(); if (neste >= 0) visStartark(neste); }, meny: tilMeny };
     arkTimere.push(setTimeout(visArkade, 3000));
+    await lagreRekord(id + "P", spill.n, pp, sEkte); await visToppliste();
     return;
   }
   $("resRekord").classList.remove("ny-rekord");
@@ -2953,12 +3047,13 @@ async function hentListe(brettNr, n) {
   let ekte = [];
   if (db) {
     try {
-      const f = felt(BRETT[brettNr].id, n);
+      const f = felt(BRETT[brettNr].id + (spill?.peace ? "P" : ""), n);
       const snap = await db.collection("rekorder").where(f, ">", 0).orderBy(f, "desc").limit(100).get();
       ekte = snap.docs.map(d => { const t = d.data()["t" + f.slice(1)]; return { id: d.id, navn: d.data().navn, p: typeof t === "number" ? regnPoeng(n, t) : d.data()[f], t: t || 0 }; });
     } catch {}
   }
-  return ekte.concat(husListe(brettNr, n)).sort((a, b) => b.p - a.p).slice(0, 100);
+  const hus = spill?.peace ? husListe(brettNr, n).map(r => { const t = Math.round(r.t * PEACE_TID); return { ...r, t, p: regnPoeng(n, t) }; }) : husListe(brettNr, n);
+  return ekte.concat(hus).sort((a, b) => b.p - a.p).slice(0, 100);
 }
 
 // ---------- toppliste (delt, via db) ----------
@@ -3005,7 +3100,7 @@ async function visToppliste() {
   try {
     let rader = await hentListe(spill.brett, spill.n);
     // Uten innlogging lagres rekorden bare lokalt; vis den likevel på lista.
-    const lokal = fremdrift[BRETT[spill.brett].id]?.[spill.n];
+    const lokal = spill.peace ? fremdrift[BRETT[spill.brett].id]?.["peace_" + spill.n] : fremdrift[BRETT[spill.brett].id]?.[spill.n];
     if (lokal && !rader.some(r => r.id === minId)) rader = rader.concat({ id: minId || "lokal", p: lokal.poeng, t: lokal.tid, lokal: true }).sort((a, b) => b.p - a.p);
     const ekteIder = rader.filter(r => !r.hus && !r.lokal).map(r => r.id);
     const profiler = bruker && ekteIder.length ? await bruker.profiles(ekteIder) : {};
@@ -3042,7 +3137,7 @@ function nesteUlost(fra) {
   return -1;
 }
 function tilMeny() {
-  stoppFest(); stoppMusikk(); stoppPad(); document.body.classList.remove("peace-modus"); $("bunkeTall").hidden = true; $("kraftLinje").hidden = true;
+  stoppFest(); stoppMusikk(); stoppPad(); document.body.classList.remove("peace-modus"); peaceBg(-1); $("bunkeTall").hidden = true; $("kraftLinje").hidden = true;
   clearInterval(timer); spill = null;
   document.querySelectorAll(".bit").forEach(e => e.remove());
   $("spill").hidden = true; $("meny").hidden = false;
