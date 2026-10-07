@@ -171,16 +171,16 @@ h1 .signatur{font-size:.55em;letter-spacing:.06em;white-space:nowrap}
 .flaks{position:fixed;z-index:265;pointer-events:none;font-family:var(--display);font-weight:800;font-size:18px;letter-spacing:.08em;color:#ffd23a;text-shadow:0 0 10px rgba(255,190,40,.9);transform:translate(-50%,-50%);animation:flaks 1.2s ease-out forwards}
 @keyframes flaks{0%{opacity:0;transform:translate(-50%,-30%) scale(.6)}15%{opacity:1;transform:translate(-50%,-60%) scale(1.15)}100%{opacity:0;transform:translate(-50%,-160%) scale(1)}}
 /* Power-up-linja: pilleformede knapper under brettet, og lommeboka med credits. */
-#kraftLinje{position:fixed;z-index:5000;display:flex;gap:8px;align-items:center;transform:translateX(-50%);white-space:nowrap}
-#kraftLinje[hidden]{display:none}
-#kraftLinje button{display:flex;align-items:center;gap:7px;border-radius:999px;padding:8px 15px;font-family:var(--display);font-weight:800;font-size:12px;letter-spacing:.08em;
+#kraftLinje,#shKraftLinje{position:fixed;z-index:5000;display:flex;gap:8px;align-items:center;transform:translateX(-50%);white-space:nowrap}
+#kraftLinje[hidden],#shKraftLinje[hidden]{display:none}
+#kraftLinje button,#shKraftLinje button{display:flex;align-items:center;gap:7px;border-radius:999px;padding:8px 15px;font-family:var(--display);font-weight:800;font-size:12px;letter-spacing:.08em;
   color:#fff7e6;background:linear-gradient(180deg,#3a2f22,#1f1912);border:1px solid rgba(255,190,90,.55);box-shadow:0 3px 10px rgba(0,0,0,.35),inset 0 1px 0 rgba(255,255,255,.18);cursor:pointer}
-#kraftLinje button .pris{font-family:var(--tall);font-weight:500;font-size:11px;color:#ffd27a;letter-spacing:0}
-#kraftLinje button.aktiv{border-color:#7fe8ff;box-shadow:0 0 16px rgba(127,232,255,.7),inset 0 1px 0 rgba(255,255,255,.25)}
-#kraftLinje button.lommebok{background:linear-gradient(180deg,#5a3f10,#2f2008);border-color:rgba(255,210,122,.8)}
-#kraftLinje button:active{transform:translateY(1px)}
-@media (max-width:480px){#kraftLinje{gap:5px}#kraftLinje button{padding:7px 10px;font-size:11px;letter-spacing:.04em;gap:5px}#kraftLinje button .pris{font-size:10px}}
-body.lys #kraftLinje button{color:#fff7e6}
+#kraftLinje button .pris,#shKraftLinje button .pris{font-family:var(--tall);font-weight:500;font-size:11px;color:#ffd27a;letter-spacing:0}
+#kraftLinje button.aktiv,#shKraftLinje button.aktiv{border-color:#7fe8ff;box-shadow:0 0 16px rgba(127,232,255,.7),inset 0 1px 0 rgba(255,255,255,.25)}
+#kraftLinje button.lommebok,#shKraftLinje button.lommebok{background:linear-gradient(180deg,#5a3f10,#2f2008);border-color:rgba(255,210,122,.8)}
+#kraftLinje button:active,#shKraftLinje button:active{transform:translateY(1px)}
+@media (max-width:480px){#kraftLinje,#shKraftLinje{gap:5px}#kraftLinje button,#shKraftLinje button{padding:7px 10px;font-size:11px;letter-spacing:.04em;gap:5px}#kraftLinje button .pris,#shKraftLinje button .pris{font-size:10px}}
+body.lys #kraftLinje button,body.lys #shKraftLinje button{color:#fff7e6}
 .butikk{position:fixed;inset:0;z-index:6000;display:grid;place-items:center;background:rgba(10,8,6,.55)}
 .butikk[hidden]{display:none}
 .butikk .boks{max-width:340px;margin:16px;padding:20px 22px;border-radius:12px;background:#1d1812;color:#f3e9d8;border:1px solid rgba(255,190,90,.45);font-size:14px;line-height:1.45;box-shadow:0 10px 40px rgba(0,0,0,.5)}
@@ -341,7 +341,7 @@ body:has(.resultat.vis) #spill .linje{opacity:0;pointer-events:none;transition:o
   <div class="regel"><b>The race:</b> Your best score on each of the ten boards in a collection is added up. Finish #1 overall and you get the next collection for free. Anyone who takes first place later gets it too. Points: Easy (25 pieces) gives 10,000, Medium (49) 15,000, Hard (100) 20,000 and Chaos (144) 25,000 at normal speed. Be fast and you get up to double.</div>
   <div class="sammen" id="sammen"><p class="liten">Loading standings …</p></div>
   <p class="kreditt">© 2001–2026 Tarjei Krogh. All photography, music and art. <a href="https://kroghx.com" target="_blank" rel="noopener">kroghx.com</a></p>
-  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 0.74<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
+  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 0.75<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
 </section>
 
 <div class="ark" id="tidUtArk" hidden style="z-index:200001">
@@ -395,6 +395,12 @@ body:has(.resultat.vis) #spill .linje{opacity:0;pointer-events:none;transition:o
     <button class="kraft" id="kraftMagnet">MAGNET <span class="pris">◆ 3</span></button>
     <button class="kraft" id="kraftHint">HINT <span class="pris">◆ 1</span></button>
     <button class="lommebok" id="lommebok">◆ <span id="creditTall">10</span> +</button>
+  </div>
+  <div id="shKraftLinje" hidden>
+    <button class="kraft" id="shKraftTilt">TILT <span class="pris">◆ 2</span></button>
+    <button class="kraft" id="shKraftOrm">WORM <span class="pris">◆ 3</span></button>
+    <button class="kraft" id="shKraftMagnet">VACUMA <span class="pris">◆ 3</span></button>
+    <button class="lommebok" id="shLommebok">◆ <span id="shCreditTall">10</span> +</button>
   </div>
   <div class="butikk" id="butikk" hidden><div class="boks">
     <h3>CREDITS</h3>
@@ -1856,9 +1862,9 @@ const KRAFT = { tilt: { pris: 2, trekk: .06 }, magnet: { pris: 3, trekk: .10 }, 
 const BAR = 58;
 function credits() { try { const v = localStorage.getItem("sm-credits"); return v == null ? 10 : Math.max(0, +v || 0); } catch { return 10; } }
 function settCredits(n) { try { localStorage.setItem("sm-credits", String(Math.max(0, n))); } catch {} visCredits(); }
-function visCredits() { const el = $("creditTall"); if (el) el.textContent = credits(); }
+function visCredits() { for (const id of ["creditTall", "shCreditTall"]) { const el = $(id); if (el) el.textContent = credits(); } }
 function visKraftLinje() {
-  const el = $("kraftLinje"), vis = !!spill && !spill.slutt && !$("spill").hidden && !!geo;
+  const el = $("kraftLinje"), vis = !!spill && !spill.slutt && !$("spill").hidden && $("shatter").hidden && modus !== "scrub" && !!geo;
   el.hidden = !vis; if (!vis) return;
   const H = innerHeight, w = el.offsetWidth || 300; el.style.left = Math.min(innerWidth - w / 2 - 8, Math.max(w / 2 + 8, geo.x0 + geo.bredde / 2)) + "px";
   el.style.top = (geo.staaende ? H - BAR + 8 : Math.min(H - BAR + 8, geo.y0 + geo.hoyde + 12)) + "px";
@@ -1893,8 +1899,8 @@ function brukKraft(type) {
 $("kraftTilt").onclick = () => brukKraft("tilt");
 $("kraftMagnet").onclick = () => brukKraft("magnet");
 $("kraftHint").onclick = () => brukKraft("hint");
-for (const id of ["kraftLinje", "butikk"]) document.body.appendChild($(id));
-for (const id of ["kraftLinje", "butikk"]) $(id).addEventListener("pointerdown", e => e.stopPropagation());
+for (const id of ["kraftLinje", "shKraftLinje", "butikk"]) document.body.appendChild($(id));
+for (const id of ["kraftLinje", "shKraftLinje", "butikk"]) $(id).addEventListener("pointerdown", e => e.stopPropagation());
 function tikk() {
   visKraftLinje();
   const s = sekunder(), frist = spill ? tidsfrist(spill.brett, spill.n) : 0, igjen = Math.max(0, frist - s);
@@ -2886,6 +2892,7 @@ function shBalanser(tykk) {
   if (midt < 1.9) for (let j = 6 * SH_KOL; j < (SH_RAD - 8) * SH_KOL; j++) if (tykk[j] > 0 && Math.random() < (1.9 - midt) / 1.4) tykk[j] = Math.min(5, tykk[j] + 1);
 }
 async function shatterStart(i, poeng = 0, liv = 3) {
+  if (BETA) settCredits(Math.max(credits(), 16));
   // Vanskeligere for hvert brett, og for hver samling.
   // Vanskeligheten øker bare litt for hvert brett og hver samling: 0,1 per brett, 1 per samling.
   const niva = (i + aktiv * 10) * .1;
@@ -3705,7 +3712,7 @@ function shSabotSteg(dt) {
   if (!s.galaga && !(s.sopp > 0) && s.tilstand === "spill") {
     s.sabotT -= dt;
     const vasket = 1 - s.igjen / s.klosser.length;
-    if (s.sabotT <= 0 && s.sabot.length < 2 && vasket > .12 && vasket < .93) {
+    if (s.sabotT <= 0 && s.sabot.length < 2 && vasket > .12 && vasket < .8) {
       s.sabotT = 16 + Math.random() * 14;
       const side = Math.random() < .5 ? -1 : 1, e = { figur: (Math.random() * 9) | 0, x: side < 0 ? -.1 : 1.1, y: .04 + Math.random() * .08, tilstand: "inn", t: 0, fase: Math.random() * 6, gave: Math.random() < .3 };
       if (shSabotMål(e)) { s.sabot.push(e); shLyd("spawn"); s.tekster.push({ txt: "SABOTEUR!", x: e.x < .5 ? .2 : .8, y: .1, liv: 1, farge: "#ff7ad9", liten: true }); }
@@ -3721,10 +3728,12 @@ function shSabotSteg(dt) {
       e.x = e.mx + Math.sin(e.t * 2.5 + e.fase) * .02; e.y = e.my + Math.sin(e.t * 3.1) * .008;
       e.leggT -= dt;
       if (e.leggT <= 0) {
-        e.leggT = .8;
+        e.leggT = .65;
         // Størkner: et nytt lag hvert andre sekund den får henge der, opptil fem.
         const tak = Math.min(5, 1 + Math.floor(e.t / 2));
-        shNyGjorme(e.mx, e.my + .035, .04, tak);
+        shNyGjorme(e.mx, e.my + .035, .055, tak);
+        // Av og til en hard flekk et sted høyt oppe.
+        if (Math.random() < .12) { const hx = .1 + Math.random() * .8, hy = SH_TOPP + .04 + Math.random() * .28; shNyGjorme(hx, hy, .028, 6, true); shNyGjorme(hx, hy, .022, 6, true); shNyGjorme(hx, hy, .018, 6); }
         if (e.gave) { const k = shKlossVed(e.mx, e.my + .035); if (k) { k.gave = "K"; e.gave = false; } }
         shDrypp(e.x, e.y + .02);
       }
@@ -3747,6 +3756,9 @@ function shSabotSteg(dt) {
       for (const b of s.baller) {
         if (b.fast || b.parkert || b.fanget || Math.hypot(b.x - e.x, b.y - e.y) > shRad(b) + .045) continue;
         const v = Math.hypot(b.vx, b.vy) || 1;
+        // Første treff: den rister og flytter seg litt. Andre treff: slått ut.
+        if (e.hp == null) e.hp = 2;
+        if (--e.hp > 0) { b.vy = -Math.abs(b.vy) * (b.y > e.y ? -1 : 1) || b.vy; e.mx = shClamp(e.mx + (Math.random() < .5 ? -1 : 1) * .12, .1, .9); e.blink = 1; shLyd("bossTreff"); shStov(e.x, e.y, 10, "255,122,217", .15); break; }
         e.tilstand = "kastet"; e.vx = b.vx / v * .7 + (e.x - b.x) * 4; e.vy = b.vy / v * .5 - .3; e.spinn = (Math.random() < .5 ? -1 : 1) * 14;
         b.vy = -Math.abs(b.vy) * (b.y > e.y ? -1 : 1) || b.vy;
         s.poeng += 500; shHud(); shLyd("pop"); shLyd("bossTreff"); shStov(e.x, e.y, 18, "255,122,217", .25);
@@ -3900,6 +3912,71 @@ function shByttetTegn(x, f, s) {
 // SNAKE: flipperen skyter opp en selvlysende slange. Den slynger seg mot gjørma og spiser den lag for lag,
 // blir lengre og tykkere, og når den er mett, krøller den seg til en tung, lysende klump som faller ned.
 // Tar du klumpen med flipperne, skytes den opp en siste gang og sprekker i syre der den treffer.
+const SH_KRAFT = { tilt: { pris: 2, trekk: .06 }, orm: { pris: 3, trekk: .1 }, magnet: { pris: 3, trekk: .08 } };
+function visShKraft() {
+  const el = $("shKraftLinje"), s = sh, vis = !!s && !$("shatter").hidden && (s.tilstand === "spill" || s.tilstand === "klar") && !s.bytte && typeof shG !== "undefined" && shG;
+  el.hidden = !vis; if (!vis) return;
+  const w = el.offsetWidth || 300, bunn = Math.min(innerHeight, shG.fy + SH_H * shG.fw);
+  el.style.left = Math.min(innerWidth - w / 2 - 8, Math.max(w / 2 + 8, shG.fx + shG.fw / 2)) + "px"; el.style.top = (bunn - 46) + "px";
+  visCredits();
+}
+setInterval(visShKraft, 400);
+function shBrukKraft(type) {
+  const s = sh; if (!s || (s.tilstand !== "spill" && s.tilstand !== "klar") || s.bytte) return;
+  const k = SH_KRAFT[type], har = credits();
+  if (har < k.pris) { åpneButikk(k.pris); return; }
+  if (type === "orm" && (s.ormer?.length || !s.baller.length)) return;
+  settCredits(har - k.pris); s.trekk = (s.trekk || 0) + k.trekk;
+  if (s.tilstand === "klar") s.tilstand = "spill";
+  s.tekster = s.tekster.filter(tk => !tk.kapsel); const før = s.tekster.length;
+  if (type === "tilt") shTilt();
+  if (type === "orm") shOrmFraBaller();
+  if (type === "magnet") { const b = s.baller.find(b => !b.fanget) || s.baller[0]; if (b) { b.magnet = 6; b.masse = b.masse || 0; } s.tekster.push({ txt: "VACUMA!", x: .5, y: SH_TOPP + .52, liv: 3.2, fade: 1.4, farge: "#7fe8ff", stor: true }, { txt: "IT PULLS IN THE MUD · THEN BURSTS ON THE FLIPPERS", x: .5, y: SH_TOPP + .58, liv: 3.2, fade: 1.4, farge: "#ffffff", liten: true }); shLyd("power"); }
+  for (const tk of s.tekster.slice(før)) if (tk.stor || tk.liten) tk.kapsel = true;
+  visShKraft();
+}
+$("shKraftTilt").onclick = () => shBrukKraft("tilt");
+$("shKraftOrm").onclick = () => shBrukKraft("orm");
+$("shKraftMagnet").onclick = () => shBrukKraft("magnet");
+$("shLommebok").onclick = () => åpneButikk(0);
+// TILT: hele brettet ristes. Løs gjørme faller av, og sabotører og monstre blir slått ut.
+function shTilt() {
+  const s = sh; s.rist = .7; shLyd("bossTreff");
+  let n = 0;
+  for (const k of s.klosser) if (k.liv > 0 && Math.random() < .2) { shTreff(k, 1, "syre"); if (++n % 6 === 0) shKlatt(k.x + k.w / 2, k.y + k.h, .004 + Math.random() * .005, .12); }
+  for (const e of s.sabot) if (e.tilstand === "inn" || e.tilstand === "legg" || e.tilstand === "ut") { e.tilstand = "kastet"; e.vx = (Math.random() - .5) * 1.4; e.vy = -.4 - Math.random() * .3; e.spinn = (Math.random() < .5 ? -1 : 1) * 14; }
+  if (s.galaga) { s.galaga.bomber = []; for (const e of s.galaga.fiender) { e.blink = 1; e.bombeT += 3; } }
+  s.tekster.push({ txt: "TILT!", x: .5, y: SH_TOPP + .52, liv: 2.6, fade: 1.2, farge: "#ffd23a", stor: true });
+}
+// WORM: hver boble blir en orm som spiser gjørma i ni sekunder, og så en boble igjen. Med flere bobler: flere ormer.
+function shOrmFraBaller() {
+  const s = sh; s.ormFase = true;
+  s.ormer = s.baller.filter(b => !b.fanget).map(b => ({ x: b.x, y: Math.min(b.y, SH_TOPP + .98), a: Math.atan2(b.vy, b.vx) || -Math.PI / 2, v: .36, kropp: [{ x: b.x, y: b.y }], spist: 0, t: 0, bitT: 0, målT: 0, mål: null, tilstand: "spis", hue: 175 + Math.random() * 40, tygg: 0, type: "ball" }));
+  s.baller = [];
+  s.tekster.push({ txt: s.ormer.length > 1 ? s.ormer.length + " WORMS!" : "WORM!", x: .5, y: SH_TOPP + .52, liv: 3, fade: 1.4, farge: "#7dffea", stor: true }, { txt: "THE BUBBLE EATS THE MUD", x: .5, y: SH_TOPP + .58, liv: 3, fade: 1.4, farge: "#ffffff", liten: true });
+  shLyd("power");
+}
+// MAGNET BUBBLE: boblen suger til seg gjørme rundt seg, blir tung og faller. Når den treffer flipperne,
+// sprekker den i mange små, lyse bobler som vasker en gang hver, og selv blir den liten og vokser seg stor igjen.
+function shMagnetSteg(b, dt) {
+  const s = sh; if (!(b.magnet > 0) && !(b.masse > 0)) return;
+  if (b.magnet > 0) {
+    b.magnet = Math.max(0, b.magnet - dt); b.sugT = (b.sugT || 0) - dt;
+    if (b.sugT <= 0) {
+      b.sugT = .1; let n = 0;
+      for (const k of s.klosser) { if (k.liv <= 0) continue; const d = Math.hypot(k.x + k.w / 2 - b.x, k.y + k.h / 2 - b.y); if (d < .075) { shTreff(k, 1, "syre"); n++; } }
+      b.masse = Math.min(1, (b.masse || 0) + n * .012);
+    }
+  }
+  b.vy += (b.masse || 0) * 1.6 * dt;
+}
+function shMagnetSprekk(b) {
+  const s = sh, n = Math.round(8 + b.masse * 12);
+  for (let j = 0; j < n; j++) { const a = -Math.PI / 2 + (j / (n - 1) - .5) * 2.2 + (Math.random() - .5) * .2, v = .7 + Math.random() * .45; s.skudd.push({ x: b.x, y: SH_PY - .03, vx: Math.cos(a) * v, vy: Math.sin(a) * v, r: .008 + Math.random() * .007, budsjett: 2, fase: Math.random() * 6 }); }
+  for (let j = 0; j < 8; j++) shKlatt(b.x + (Math.random() - .5) * .05, SH_PY - .02, .004 + Math.random() * .005, -.2 - Math.random() * .2);
+  s.tekster.push({ txt: "MUD BURST!", x: b.x, y: SH_PY - .08, liv: 2, fade: 1, farge: "#ffd27a" });
+  shLyd("sprekk", 2); b.masse = 0; b.magnet = 0; b.vokse = 0; b.liten = true;
+}
 function shOrmStart() {
   sh.ormSett = true;
   const s = sh, x0 = s.sopp > 0 ? .5 : s.padX, y0 = SH_PY - .03, a = -Math.PI / 2 + (Math.random() - .5) * .9;
@@ -3907,7 +3984,12 @@ function shOrmStart() {
   shLyd("power"); shStov(x0, y0, 40, "125,255,106", .3);
 }
 function shOrmSteg(dt) {
-  const s = sh, O = s.orm; if (!O) return;
+  const s = sh;
+  if (s.orm && !shOrmEn(s.orm, dt)) s.orm = null;
+  if (s.ormer?.length) { s.ormer = s.ormer.filter(O => shOrmEn(O, dt)); if (!s.ormer.length) s.ormFase = false; }
+}
+function shOrmEn(O, dt) {
+  const s = sh;
   O.t += dt; O.tygg = Math.max(0, O.tygg - dt * 4);
   const mett = Math.min(1, O.spist / 140);
   O.tykk = .017 + .022 * mett; O.lengde = .2 + .55 * mett;
@@ -3926,7 +4008,8 @@ function shOrmSteg(dt) {
     let da = ((ønsket - O.a + Math.PI * 3) % (Math.PI * 2)) - Math.PI;
     // Slangen slynger seg: en rolig bølge i retningen.
     O.a += shClamp(da, -2.6 * dt, 2.6 * dt) + Math.sin(O.t * 6.5) * 1.6 * dt;
-    O.x += Math.cos(O.a) * O.v * dt; O.y += Math.sin(O.a) * O.v * dt;
+    const kh = shKlossVed(O.x, O.y), hard = !!kh && kh.liv >= 3;
+    O.x += Math.cos(O.a) * O.v * dt * (hard ? .12 : 1); O.y += Math.sin(O.a) * O.v * dt * (hard ? .12 : 1);
     // Holder seg inne i bildet.
     const y0 = SH_TOPP + .02, y1 = SH_TOPP + .98;
     if (O.x < .03 || O.x > .97) { O.x = shClamp(O.x, .03, .97); O.a = Math.PI - O.a; }
@@ -3935,10 +4018,15 @@ function shOrmSteg(dt) {
     // Spiser: ett lag om gangen der hodet er.
     O.bitT -= dt;
     if (O.bitT <= 0 && O.y < SH_TOPP + 1) {
-      O.bitT = .08;
+      O.bitT = hard ? .045 : .08;
       const c = Math.floor(O.x * SH_KOL), r = Math.floor((O.y - SH_TOPP) * SH_RAD), k = c >= 0 && c < SH_KOL && r >= 0 && r < SH_RAD ? s.klosser[r * SH_KOL + c] : null;
       if (k && k.liv > 0) { O.spist++; O.tygg = 1; if (O.spist % 6 === 0) shLyd("moekk", 1); }
       shVask(O.x, O.y, O.tykk * 1.15, 1, "orm");
+    }
+    if (O.type === "ball" && (O.t > 9 || O.spist >= 90)) {
+      // WORM: blir en boble igjen og faller rolig ned mot flipperne.
+      const nb = shBall(O.x, O.y, (Math.random() - .5) * s.fart * .3, s.fart * .85, false); nb.vokse = .4; s.baller.push(nb);
+      shStov(O.x, O.y, 24, "125,255,234", .25); return false;
     }
     if (O.spist >= 140 || O.t > 17) { O.tilstand = "mett"; O.mt = 0; O.vx = 0; O.vy = 0; s.tekster.push({ txt: "FULL!", x: O.x, y: O.y - .05, liv: 1.6, farge: "#7dff6a" }); shLyd("glimt"); }
   } else if (O.tilstand === "mett") {
@@ -3958,10 +4046,10 @@ function shOrmSteg(dt) {
         shSprekk({ x: O.x, y: O.y, str: 2.6, vokse: 0, kraft: 1, kraftN: 0, d: [], dv: [] });
         shVask(O.x, O.y, .14, 3, "syre");
         s.tekster.push({ txt: "ACID BURST!", x: O.x, y: O.y - .04, liv: 2, fade: 1.2, farge: "#d6ff3a" });
-        s.orm = null; return;
+        return false;
       }
     }
-    if (O.y > SH_H + .05) { shStov(O.x, SH_H - .02, 30, "125,255,106", .25); s.orm = null; return; }
+    if (O.y > SH_H + .05) { shStov(O.x, SH_H - .02, 30, "125,255,106", .25); return false; }
   }
   // Kroppen følger hodet.
   if (O.tilstand === "spis" || O.tilstand === "mett") {
@@ -3970,9 +4058,13 @@ function shOrmSteg(dt) {
     let L = 0; for (let i = 1; i < O.kropp.length; i++) { L += Math.hypot(O.kropp[i].x - O.kropp[i - 1].x, O.kropp[i].y - O.kropp[i - 1].y); if (L > O.lengde) { O.kropp.length = i + 1; break; } }
     if (O.tilstand === "mett") for (const p of O.kropp) { p.x += (O.x - p.x) * Math.min(1, dt * 5); p.y += (O.y - p.y) * Math.min(1, dt * 5); }
   }
+  return true;
 }
 function shOrmTegn(x, f, s) {
-  const O = s.orm; if (!O) return;
+  if (s.orm) shOrmTegnEn(x, f, s, s.orm);
+  for (const O of s.ormer || []) shOrmTegnEn(x, f, s, O);
+}
+function shOrmTegnEn(x, f, s, O) {
   x.save(); x.globalCompositeOperation = "lighter";
   if (O.tilstand === "spis" || O.tilstand === "mett") {
     const n = O.kropp.length, R = O.tykk * f;
@@ -4049,12 +4141,14 @@ function shRacketTreff(b, R) {
   s.fart = Math.min(s.maksFart, s.fart * 1.008);
   s.kombo = 0; s.glod = 1;
   shStot(b, 0, -1, .45); b.uro = Math.max(b.uro || 0, .85);
+  b.saape = 3;
+  if (b.masse > .12) shMagnetSprekk(b);
   {
     const fl = s.flip[b.x < s.padX ? 0 : 1];
     a = t * 1.1 + (Math.random() - .5) * .35;
     if (fl.t < .1) {
       b.kraft = 3; b.kraftN = 6; b.boost = 1.5; shLyd("power"); s.glod = 1;
-      if (!s.galaga && s.tid > s.galagaPause && s.igjen < s.klosser.length * .65 && s.igjen > s.klosser.length * .15) { s.lamper++; shLyd("lampe", s.lamper); if (s.lamper >= 6) shGalagaStart(); }
+      if (!s.galaga && s.tid > s.galagaPause && s.igjen < s.klosser.length * .65 && s.igjen > s.klosser.length * .35) { s.lamper++; shLyd("lampe", s.lamper); if (s.lamper >= 6) shGalagaStart(); }
       // Flipperne er alltid der, så teksten kommer bare av og til.
       if (s.tid - (s.powerT ?? -9) > 6) { s.powerT = s.tid; s.tekster.push({ txt: "POWER!", x: b.x, y: SH_PY - .05, liv: 1, farge: "#ff7ac8" }); }
     } else if (fl.t < .22) b.boost = 1.2;
@@ -4104,8 +4198,10 @@ function shBevegBall(b, dt) {
     for (const q of alle) if (s.tid - q.sist > .1) { q.sist = s.tid; shTreff(q, 2); }
     return;
   }
-  const lag = b.kraftN > 0 ? b.kraft : 1;
+  let lag = b.kraftN > 0 ? b.kraft : 1;
   if (b.kraftN > 0 && --b.kraftN === 0) b.kraft = 1;
+  // Såpen fra flipperne: de neste treffene i hard gjørme tar et lag ekstra.
+  if (b.saape > 0 && alle.some(q => q.liv >= 2)) { lag += 1; b.saape--; }
   // Hvert treff vasker det boblen berører. Den graver seg inn, som i Arkanoid.
   // Bare slaps eller nesten vasket der den traff: den glir videre uten å sprette.
   const bare = alle.every(q => q.myk || q.liv <= 1 || (q.liv < q.maks && q.liv <= Math.ceil(q.maks * .4)));
@@ -4136,7 +4232,9 @@ function shOppdater(dt) {
   s.padX = shClamp(s.padX, s.padW / 2, 1 - s.padW / 2);
   // Hvor fort flipperne flyttes: boble-slangen sikter den veien.
   s.padV = (s.padV || 0) * .8 + (s.padX - (s.padXFør ?? s.padX)) / Math.max(dt, 1e-3) * .2; s.padXFør = s.padX;
+  if (s.rist > 0) s.rist = Math.max(0, s.rist - dt);
   for (const b of s.baller) {
+    shMagnetSteg(b, dt);
     // Når den dypblå staven er borte, krymper boblene rolig tilbake.
     if (s.eff.B <= 0 && b.str > 1) b.str = Math.max(1, b.str - dt * .6);
     b.boost = 1 + (b.boost - 1) * Math.exp(-dt / 1.2);
@@ -4186,7 +4284,7 @@ function shOppdater(dt) {
   }
   if (s.tilstand !== "spill") return;
   s.baller = s.baller.filter(b => !b.borte);
-  if (!s.baller.length) { shMistetLiv(); return; }
+  if (!s.baller.length && !s.ormer?.length) { shMistetLiv(); return; }
   s.flip.forEach((fl, side) => {
     fl.t += dt;
     if (fl.t < .45) return;
@@ -4250,7 +4348,7 @@ function shOppdater(dt) {
   shGalagaSteg(dt); if (!s.bytte) shSabotSteg(dt); shOrmSteg(dt);
   if (s.bytte) shByttetSteg(dt);
   else if (s.byttePlan && !s.galaga && !(s.sopp > 0) && s.tid > 60 && s.igjen <= s.klosser.length * .35 && s.igjen > s.klosser.length * .12) shByttetStart();
-  if (!s.bytte && !(s.sopp > 0) && !s.galaga && !s.galagaKommet && s.tid >= 50 && s.igjen <= s.klosser.length * .22 && s.igjen > 12) shGalagaStart(Math.random() < (s.niva >= 2 ? .5 : .3));
+  if (!s.bytte && !(s.sopp > 0) && !s.galaga && !s.galagaKommet && s.tid >= 40 && s.igjen <= s.klosser.length * .65 && s.igjen >= s.klosser.length * .35) shGalagaStart(Math.random() < (s.niva >= 2 ? .5 : .3));
   for (const q of s.skudd) {
     q.x += q.vx * dt; q.y += q.vy * dt;
     if (q.x < .01 || q.x > .99) q.vx = -q.vx;
@@ -4259,6 +4357,7 @@ function shOppdater(dt) {
     }
     {
       const e = s.sabot.find(e => (e.tilstand === "inn" || e.tilstand === "legg" || e.tilstand === "ut") && Math.hypot(e.x - q.x, e.y - q.y) < .045);
+      if (e && (e.hp ?? 2) > 1) { e.hp = (e.hp ?? 2) - 1; e.blink = 1; q.borte = true; shLyd("bossTreff"); continue; }
       if (e) { e.tilstand = "boble"; e.bt = 0; s.poeng += 300; shHud(); shLyd("innkapsle"); s.tekster.push({ txt: "+300", x: e.x, y: e.y - .04, liv: .8, farge: "#7fe8ff", liten: true }); q.borte = true; continue; }
     }
     if (s.galaga) {
@@ -4308,7 +4407,7 @@ function shPartikler(dt) {
   }
   s.glod = Math.max(0, s.glod - dt * 3);
   s.spor.unshift(s.padX); if (s.spor.length > 6) s.spor.length = 6;
-  for (const b of s.baller) if (b.vokse < 1) b.vokse = Math.min(1, b.vokse + dt * 2.5);
+  for (const b of s.baller) if (b.vokse < 1) { b.vokse = Math.min(1, b.vokse + dt * (b.liten ? .3 : 2.5)); if (b.vokse >= 1) b.liten = false; }
   for (const q of s.skum) { q.y -= .012 * dt; q.x += Math.sin(s.tid * 3 + q.y * 90) * .004 * dt; q.liv -= dt * q.fart; }
   s.skum = s.skum.filter(q => q.liv > 0);
   for (const d of s.drypp) {
@@ -4401,8 +4500,9 @@ function shFerdig() {
   // Vasket flipperen alt mens du var bossen, vant den.
   if (sh.bytte) { shBossTap(false); return; }
   const s = sh; s.tilstand = "ferdig"; s.ferdigT = performance.now();
-  const bonus = (s.liv - 1) * 500, tidBonus = Math.max(0, Math.round((150 - s.tid) * 40 / 10) * 10); s.poeng += bonus + tidBonus; shHud();
-  s.baller = []; s.kapsler = []; s.smaa = []; s.skudd = []; s.galaga = null; s.sabot = []; s.orm = null; s.skumFlekk = [];
+  const bonus = (s.liv - 1) * 500, tidBonus = Math.max(0, Math.round((150 - s.tid) * 40 / 10) * 10); s.poeng += bonus + tidBonus;
+  const trekk = Math.min(.6, s.trekk || 0); if (trekk) s.poeng = Math.round(s.poeng * (1 - trekk)); shHud();
+  s.baller = []; s.kapsler = []; s.smaa = []; s.skudd = []; s.galaga = null; s.sabot = []; s.orm = null; s.ormer = []; s.ormFase = false; s.skumFlekk = [];
   for (const k of s.klosser) k.glans = 0;
   magiStart(s.kunst || s.img, { x: shG.fx, y: shG.fy + SH_TOPP * shG.fw, w: shG.fw, h: shG.fw }, 3.4);
   levendeStart(s.img, { x: shG.fx, y: shG.fy + SH_TOPP * shG.fw, w: shG.fw, h: shG.fw }, BRETT[s.i].id, 3.2);
@@ -4418,7 +4518,7 @@ function shFerdig() {
   ark = { tema: "scrub", img: s.img, fra: { x: shG.fx, y: shG.fy + SH_TOPP * shG.fw, w: shG.fw }, poeng: s.poeng, sluttT: performance.now(), gyldig: () => sh === s && s.tilstand === "ferdig",
     neste: () => { if (sh !== s) return; if (nesteI >= 0) shatterStart(nesteI, s.poeng, s.liv); else shAvslutt(); }, meny: shAvslutt };
   $("resTittel").textContent = BRETT[s.i].navn; $("resPoeng").textContent = "0 points";
-  $("resInfo").textContent = kode(s.i) + " · SCRUB IT · time " + fmt(Math.round(s.tid)) + (tidBonus ? " · time bonus +" + tidBonus.toLocaleString("en") : "") + (bonus ? " · +" + bonus.toLocaleString("en") + " for spare bubbles" : "");
+  $("resInfo").textContent = kode(s.i) + " · SCRUB IT · time " + fmt(Math.round(s.tid)) + (tidBonus ? " · time bonus +" + tidBonus.toLocaleString("en") : "") + (bonus ? " · +" + bonus.toLocaleString("en") + " for spare bubbles" : "") + (trekk ? " · power-ups −" + Math.round(trekk * 100) + " %" : "");
   $("resRekord").textContent = nesteI >= 0 ? "All clean!" : "All clean! Every board in this collection is clean.";
   $("nesteKnapp").textContent = nesteI >= 0 ? "Next: " + BRETT[nesteI].navn + " →" : "Menu"; $("nesteKnapp").disabled = false;
   shLagreRekord(s.poeng).then(() => shArkListe(s.poeng));
@@ -4547,7 +4647,20 @@ function shKurve(x, pts) {
   x.closePath();
 }
 // Såpeboblen: gjennomsiktig med regnbuehinne. Formen følger fjærene, så den klemmes og dirrer.
+function shBobleEkstra(x, b, f, s) {
+  const R = shRad(b) * f, cx = b.x * f, cy = b.y * f;
+  if (b.magnet > 0) {
+    x.save(); x.globalCompositeOperation = "lighter";
+    for (let j = 0; j < 3; j++) { const a = s.tid * 3 + j * 2.1; x.strokeStyle = `rgba(127,232,255,${.5 * Math.min(1, b.magnet)})`; x.lineWidth = 1.5; x.beginPath(); x.arc(cx, cy, R * (1.6 + .25 * j), a, a + 1.4); x.stroke(); }
+    x.restore();
+  }
+  if (b.masse > 0) {
+    const n = 4 + Math.round(b.masse * 14);
+    for (let j = 0; j < n; j++) { const a = j * 2.399 + s.tid * (.6 + (j % 3) * .2), d = R * (1.05 + .15 * Math.sin(j * 1.3)); shKlattTegn(x, cx + Math.cos(a) * d, cy + Math.sin(a) * d, R * (.22 + .2 * b.masse) * (.7 + .3 * ((j * 7) % 5) / 5), 1, s.jord, j, s.tid); }
+  }
+}
 function shBobleTegn(x, b, f, s) {
+  shBobleEkstra(x, b, f, s);
   const R = shRad(b) * f * (b.skala ?? 1), cx = b.x * f, cy = b.y * f, pts = [];
   for (let i = 0; i < SH_N; i++) { const a = i / SH_N * Math.PI * 2, r = R * (1 + b.d[i]); pts.push([cx + Math.cos(a) * r, cy + Math.sin(a) * r]); }
   // Neon-glorie, så boblen synes også over mørke bilder.
@@ -4702,6 +4815,7 @@ function shTegn(t) {
   const c = $("shCanvas"), x = c.getContext("2d"), g = shG, s = sh, f = g.fw, iy = SH_TOPP * f;
   x.setTransform(g.dpr, 0, 0, g.dpr, 0, 0); x.clearRect(0, 0, innerWidth, innerHeight);
   x.save(); x.translate(g.fx, g.fy);
+  if (s.rist > 0) x.translate((Math.random() - .5) * s.rist * f * .03, (Math.random() - .5) * s.rist * f * .03);
   x.fillStyle = "#0d0c0b"; x.fillRect(0, 0, f, SH_H * f);
   x.beginPath(); x.rect(0, 0, f, SH_H * f); x.clip();
   // Kunsten under møkka, ferdig skalert til feltet (lages på nytt bare når størrelsen endres).
@@ -4977,6 +5091,14 @@ function shTegn(t) {
       const skitt = side => s.stavSkitt.filter(q => side ? q.u >= 0 : q.u < 0).map(q => ({ x: (s.padX + q.u * s.padW / 2) * f, r: q.r * f, a: q.a, fase: q.fase }));
       shStav(x, s.padX * f - w / 2 + halv / 2, cy, halv, h * 1.15, vl, s.padX * f - w / 2, s, 1, skitt(0));
       shStav(x, s.padX * f + w / 2 - halv / 2, cy, halv, h * 1.15, -vr, s.padX * f + w / 2, s, 1, skitt(1));
+      // Et lag såpeskum på toppen av flipperne.
+      x.save();
+      for (let j = 0; j < 18; j++) {
+        const u = (j + .5) / 18, bx = s.padX * f - w / 2 + u * w, by = cy - h * .55 - Math.abs(Math.sin(j * 2.3)) * h * .25 + Math.sin(s.tid * 3 + j) * h * .08, br = h * (.16 + .12 * Math.abs(Math.sin(j * 1.7 + s.tid * .7)));
+        x.fillStyle = "rgba(245,250,255,.32)"; x.beginPath(); x.arc(bx, by, br, 0, 7); x.fill();
+        x.strokeStyle = `hsla(${(s.tid * 60 + j * 30) % 360},80%,85%,.55)`; x.lineWidth = .8; x.stroke();
+      }
+      x.restore();
     }
   }
   for (const b of s.baller) shBobleTegn(x, b, f, s);
@@ -5016,7 +5138,7 @@ function shTegn(t) {
     for (let j = 0; j <= 4; j++) pg.addColorStop(j / 4, `hsla(${(s.tid * 80 + j * 90) % 360},95%,55%,${styrke})`);
     x.fillStyle = pg; x.fillRect(0, 0, f, SH_H * f); x.restore();
   }
-  if (s.orm) shOrmTegn(x, f, s);
+  if (s.orm || s.ormer?.length) shOrmTegn(x, f, s);
   if (s.bytte) shByttetTegn(x, f, s);
   x.strokeStyle = "#3a3633"; x.lineWidth = 1; x.strokeRect(0.5, 0.5, f - 1, SH_H * f - 1);
   x.restore();
