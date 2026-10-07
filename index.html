@@ -181,6 +181,7 @@ h1 .signatur{font-size:.55em;letter-spacing:.06em;white-space:nowrap}
 #kraftLinje button:active,#shKraftLinje button:active{transform:translateY(1px)}
 @media (max-width:480px){#kraftLinje,#shKraftLinje{gap:4px}#kraftLinje button,#shKraftLinje button{padding:7px 8px;font-size:11px;letter-spacing:.04em;gap:5px}#kraftLinje button .pris,#shKraftLinje button .pris{font-size:10px}}
 body.lys #kraftLinje button,body.lys #shKraftLinje button{color:#fff7e6}
+@media (max-width:480px){#kraftLinje{display:grid;grid-template-columns:repeat(3,auto);gap:7px 6px;justify-content:center}#kraftLinje button{justify-content:center;padding:8px 12px}}
 .butikk{position:fixed;inset:0;z-index:6000;display:grid;place-items:center;background:rgba(10,8,6,.55)}
 .butikk[hidden]{display:none}
 .butikk .boks{max-width:340px;margin:16px;padding:20px 22px;border-radius:12px;background:#1d1812;color:#f3e9d8;border:1px solid rgba(255,190,90,.45);font-size:14px;line-height:1.45;box-shadow:0 10px 40px rgba(0,0,0,.5)}
@@ -341,7 +342,7 @@ body:has(.resultat.vis) #spill .linje{opacity:0;pointer-events:none;transition:o
   <div class="regel"><b>The race:</b> Your best score on each of the ten boards in a collection is added up. Finish #1 overall and you get the next collection for free. Anyone who takes first place later gets it too. Points: Easy (25 pieces) gives 10,000, Medium (49) 15,000, Hard (100) 20,000 and Chaos (144) 25,000 at normal speed. Be fast and you get up to double.</div>
   <div class="sammen" id="sammen"><p class="liten">Loading standings …</p></div>
   <p class="kreditt">© 2001–2026 Tarjei Krogh. All photography, music and art. <a href="https://kroghx.com" target="_blank" rel="noopener">kroghx.com</a></p>
-  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 0.80<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
+  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 0.81<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
 </section>
 
 <div class="ark" id="tidUtArk" hidden style="z-index:200001">
@@ -395,6 +396,7 @@ body:has(.resultat.vis) #spill .linje{opacity:0;pointer-events:none;transition:o
     <button class="kraft" id="kraftMagnet">MAGNET <span class="pris">◆ 3</span></button>
     <button class="kraft" id="kraftHint">HINT <span class="pris">◆ 1</span></button>
     <button class="kraft" id="kraftLim">GLUE <span class="pris">◆ 3</span></button>
+    <button class="kraft" id="kraftFamilie">FAMILY <span class="pris">◆ 4</span></button>
     <button class="lommebok" id="lommebok">◆ <span id="creditTall">10</span> +</button>
   </div>
   <div id="shKraftLinje" hidden>
@@ -1279,7 +1281,7 @@ async function startSpill(i, n, gjenoppta) {
   spill.hint = HINT_ANTALL; visHintKnapp();
   spill.tilt = 2; visTilt();
   // Beta: Krogh skal alltid kunne prøve TILT, MAGNET og HINT to ganger hver (2×2 + 2×3 + 2×1 = 12). Ved lansering: fjernes.
-  if (BETA) settCredits(Math.max(credits(), 14)); spill.hendelser = gjestekort(o.n); spill.brann = null;
+  if (BETA) settCredits(Math.max(credits(), 22)); spill.hendelser = gjestekort(o.n); spill.brann = null;
   spill.liste = husListe(i, o.n);
   hentListe(i, o.n).then(l => { if (spill && spill.brett === i && spill.n === o.n) spill.liste = l; });
   oppsett();
@@ -1457,6 +1459,7 @@ let geo = null; // brettets plass på skjermen
 function oppsett() {
   if (!spill) return;
   const W = innerWidth, H = innerHeight, marg = 12;
+  BAR = W <= 480 ? 104 : 58;
   const panel = document.querySelector(".linje").getBoundingClientRect();
   const sv = getComputedStyle(document.documentElement);
   const venstre = parseFloat(sv.getPropertyValue("--sv")) || 0;
@@ -1667,6 +1670,18 @@ function gnistSteg() {
   x.globalCompositeOperation = "lighter";
   for (const g of gnister) {
     g.t += dt; const u = g.t / g.liv, a = Math.max(0, 1 - u);
+    if (g.familieRing) {
+      if (!geo) continue;
+      const { x0, y0, bw, bh } = geo, pad = Math.min(bw, bh) * .18, X = x0 + g.c * bw - pad, Y = y0 + g.r * bh - pad, Wd = bw * 2 + pad * 2, Hd = bh * 2 + pad * 2;
+      const al = u < .2 ? u / .2 : Math.max(0, 1 - (u - .2) / .8), puls = 1 + .04 * Math.sin(g.t * 10);
+      x.save(); x.globalCompositeOperation = "lighter"; x.lineJoin = "round";
+      x.translate(X + Wd / 2, Y + Hd / 2); x.scale(puls, puls); x.translate(-(X + Wd / 2), -(Y + Hd / 2));
+      for (const [lw, farge, a] of [[14, "255,190,120", .18], [6, "255,220,170", .45], [2, "255,250,235", .95]]) {
+        x.strokeStyle = `rgba(${farge},${(a * al).toFixed(3)})`; x.lineWidth = lw; x.beginPath();
+        if (x.roundRect) x.roundRect(X, Y, Wd, Hd, pad * 1.4); else x.rect(X, Y, Wd, Hd); x.stroke();
+      }
+      x.restore(); continue;
+    }
     if (g.halo) {
       if (!spill || !geo) continue;
       const { x0, y0, bw, bh } = geo;
@@ -1897,8 +1912,8 @@ function tidsfrist(brettNr, n) { const perBrikke = n <= 25 ? 8.5 : n <= 49 ? 10 
 // ---------- credits og power-ups ----------
 // Credits tjenes bare ved å klare et brett uten power-ups: +2 første gang, +1 for ny personlig rekord.
 // Hver power-up koster credits og trekker poeng, så ingen kan kjøpe seg til en bedre plass på lista.
-const KRAFT = { tilt: { pris: 1, trekk: .05 }, magnet: { pris: 3, trekk: .10 }, hint: { pris: 1, trekk: .05 }, lim: { pris: 3, trekk: .08 } };
-const BAR = 58;
+const KRAFT = { tilt: { pris: 1, trekk: .05 }, magnet: { pris: 3, trekk: .10 }, hint: { pris: 1, trekk: .05 }, lim: { pris: 3, trekk: .08 }, familie: { pris: 4, trekk: .12 } };
+let BAR = 58;
 function credits() { try { const v = localStorage.getItem("sm-credits"); return v == null ? 10 : Math.max(0, +v || 0); } catch { return 10; } }
 function settCredits(n) { try { localStorage.setItem("sm-credits", String(Math.max(0, n))); } catch {} visCredits(); }
 function visCredits() { for (const id of ["creditTall", "shCreditTall"]) { const el = $(id); if (el) el.textContent = credits(); } }
@@ -1906,7 +1921,7 @@ function visKraftLinje() {
   const el = $("kraftLinje"), vis = !!spill && !spill.slutt && !$("spill").hidden && $("shatter").hidden && modus !== "scrub" && !!geo;
   el.hidden = !vis; if (!vis) return;
   const H = innerHeight, w = el.offsetWidth || 300; el.style.left = Math.min(innerWidth - w / 2 - 8, Math.max(w / 2 + 8, geo.x0 + geo.bredde / 2)) + "px";
-  el.style.top = (geo.staaende ? H - BAR + 8 : Math.min(H - BAR + 8, geo.y0 + geo.hoyde + 12)) + "px";
+  el.style.top = (geo.staaende ? H - BAR + 6 : Math.min(H - BAR + 8, geo.y0 + geo.hoyde + 12)) + "px";
   $("kraftMagnet").classList.toggle("aktiv", (spill.magnetTil || 0) > performance.now());
   $("kraftLim").classList.toggle("aktiv", !!spill.limBrukt); $("kraftLim").disabled = !!spill.limBrukt;
   visCredits();
@@ -1919,6 +1934,52 @@ $("butikkLukk").onclick = () => { $("butikk").hidden = true; };
 $("lommebok").onclick = () => åpneButikk(0);
 // GLUE: én gang per spill limes alle brikkene som ligger på plass. De er trygge for dinosauren,
 // prison break og brikker som vokser. Brann kan de fortsatt få.
+// Finn en 2 x 2-firkant der én brikke ligger på plass (mor) og de tre andre mangler. Tilfeldig blant dem som finnes.
+function familieSted() {
+  const sp = spill, k = sp.k, R = sp.r, kan = b => !b.ferdig && !b.lander && !(b.vekst > 1.04) && !b.el.classList.contains("drar"), steder = [], reserve = [];
+  for (let r = 0; r < R - 1; r++) for (let c = 0; c < k - 1; c++) {
+    const fire = [[c, r], [c + 1, r], [c, r + 1], [c + 1, r + 1]].map(([cc, rr]) => sp.biter[rr * k + cc]);
+    const lagt = fire.filter(b => b.ferdig && !b.lander), løse = fire.filter(kan);
+    if (lagt.length === 1 && løse.length === 3) steder.push({ mor: lagt[0], resten: løse, fire });
+    else if (lagt.length === 0 && løse.length === 4) reserve.push({ mor: null, resten: løse, fire });
+  }
+  const liste = steder.length ? steder : reserve; return liste.length ? liste[(Math.random() * liste.length) | 0] : null;
+}
+function familie() {
+  const sp = spill, sted = familieSted(); if (!sted) return;
+  sp.familieGaar = true;
+  const roller = [["MOTHER", "#ff9ad5"], ["FATHER", "#7fd1ff"], ["SISTER", "#ffd27a"], ["BROTHER", "#9cff7a"]];
+  const ferd = sted.mor ? [sted.mor, ...sted.resten] : sted.resten;
+  banner("FAMILY!", "THEY FIND EACH OTHER", "#ff9ad5", 2600);
+  ferd.forEach((b, j) => setTimeout(() => {
+    if (spill !== sp) return;
+    const [rolle, farge] = roller[j];
+    if (b.ferdig) { brikkeTekst(b, rolle, farge); if (lydPa) tone(523, 0, .3, .04, "sine", .7, .8); return; }
+    // Flyr fra der den ligger (også fra bunken) til plassen sin, og legger seg på plass.
+    const i = sp.bunke.indexOf(b); if (i >= 0) { sp.bunke.splice(i, 1); leggBunke(); }
+    b.iBunke = false; if (b.bak) { b.bak = false; tegnBit(b); } b.z = ++sp.ztopp; løftes.delete(b);
+    const fx = b.x, fy = b.y, mx = slotC(b) / sp.k, my = slotR(b) / sp.r, r0 = b.rot || 0, t0 = performance.now(), D = 650;
+    if (lydPa) tone([523, 659, 784, 1047][j], 0, .35, .04, "sine", .7, .9);
+    const steg = t => {
+      if (spill !== sp || b.ferdig) return;
+      const u = Math.min(1, (t - t0) / D), e = u * u * (3 - 2 * u);
+      b.x = fx + (mx - fx) * e; b.y = fy + (my - fy) * e - Math.sin(Math.PI * u) * .08; b.loft = Math.sin(Math.PI * u) * 1.2; b.rot = r0 * (1 - e); plasser(b);
+      if (u < 1) { requestAnimationFrame(steg); return; }
+      b.loft = 0; b.rot = 0; b.x = mx; b.y = my;
+      if (!b.provSmett()) plasser(b);
+      brikkeTekst(b, rolle, farge);
+    };
+    requestAnimationFrame(steg);
+  }, 250 + j * 600));
+  // Til slutt: en ring av lys rundt hele familien.
+  setTimeout(() => {
+    if (spill !== sp) return; sp.familieGaar = false;
+    const c0 = Math.min(...sted.fire.map(slotC)), r0 = Math.min(...sted.fire.map(slotR));
+    gnister.push({ familieRing: true, t: 0, liv: 1.6, c: c0, r: r0 }); if (!gnistRAF) gnistRAF = requestAnimationFrame(gnistSteg);
+    banner("UNITED!", "A FAMILY IN PLACE", "#ffd27a", 2400);
+    if (lydPa) [0, 4, 7, 12].forEach((st, j) => tone(523 * Math.pow(2, st / 12), j * .08, .5, .03, "sine", .6, 1.1));
+  }, 250 + ferd.length * 600 + 500);
+}
 function limBrikker() {
   const sp = spill; sp.limBrukt = true; let n = 0;
   for (const b of sp.biter) if (b.ferdig && !b.lander) { b.limt = true; n++; }
@@ -1933,11 +1994,13 @@ function brukKraft(type) {
   if (har < k.pris) { åpneButikk(k.pris); return false; }
   if (type === "hint" && !nesteHint()) return false;
   if (type === "lim" && (spill.limBrukt || !spill.biter.some(b => b.ferdig))) return false;
+  if (type === "familie" && (spill.familieGaar || !familieSted())) return false;
   settCredits(har - k.pris); spill.trekk = (spill.trekk || 0) + k.trekk; spill.brukteKraft = true;
   if (!spill.start) spill.start = Date.now();
   if (lydPa) { tone(660, 0, .12, .04, "sine", .7, .6); tone(990, .06, .14, .03, "sine", .7, .6); }
   if (type === "tilt") { tilt(false); spill.tiltMagnetTil = performance.now() + 8000; }
   if (type === "lim") limBrikker();
+  if (type === "familie") familie();
   if (type === "magnet") {
     const på = (spill.magnetTil || 0) > performance.now();
     spill.magnetNiva = på ? Math.min(3, (spill.magnetNiva || 1) + 1) : 1; spill.magnetTil = performance.now() + 20000;
@@ -1956,6 +2019,7 @@ $("kraftTilt").onclick = () => brukKraft("tilt");
 $("kraftMagnet").onclick = () => brukKraft("magnet");
 $("kraftHint").onclick = () => brukKraft("hint");
 $("kraftLim").onclick = () => brukKraft("lim");
+$("kraftFamilie").onclick = () => brukKraft("familie");
 for (const id of ["kraftLinje", "shKraftLinje", "butikk"]) document.body.appendChild($(id));
 for (const id of ["kraftLinje", "shKraftLinje", "butikk"]) $(id).addEventListener("pointerdown", e => e.stopPropagation());
 function tikk() {
