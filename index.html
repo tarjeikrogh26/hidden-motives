@@ -283,7 +283,7 @@ body:has(.resultat.vis) #spill .linje{opacity:0;pointer-events:none;transition:o
   <div class="regel"><b>The race:</b> Your best score on each of the ten boards in a collection is added up. Finish #1 overall and you get the next collection for free. Anyone who takes first place later gets it too. Points: Easy (25 pieces) gives 10,000, Medium (49) 15,000, Hard (100) 20,000 and Chaos (144) 25,000 at normal speed. Be fast and you get up to double.</div>
   <div class="sammen" id="sammen"><p class="liten">Loading standings …</p></div>
   <p class="kreditt">© 2001–2026 Tarjei Krogh. All photography, music and art. <a href="https://kroghx.com" target="_blank" rel="noopener">kroghx.com</a></p>
-  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 0.47<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
+  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 0.48<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
 </section>
 
 <div class="ark" id="tidUtArk" hidden style="z-index:200001">
@@ -2001,6 +2001,14 @@ function shLevTegn(x, f, s) {
     }
   }
 }
+// Toppen skal ikke være den tyngste delen, og midten skal ikke forsvinne av seg selv.
+function shBalanser(tykk) {
+  const snitt = (r0, r1) => { let a = 0, n = 0; for (let r = r0; r < r1; r++) for (let c = 0; c < SH_KOL; c++) { a += Math.abs(tykk[r * SH_KOL + c]); n++; } return a / n; };
+  const topp = snitt(0, 6);
+  if (topp > 1.5) for (let j = 0; j < 6 * SH_KOL; j++) { const h = Math.abs(tykk[j]), ny = Math.max(1, Math.round(h * 1.5 / topp)); tykk[j] = tykk[j] < 0 ? -ny : ny; }
+  const midt = snitt(6, SH_RAD - 8);
+  if (midt < 1.9) for (let j = 6 * SH_KOL; j < (SH_RAD - 8) * SH_KOL; j++) if (tykk[j] > 0 && Math.random() < (1.9 - midt) / 1.4) tykk[j] = Math.min(5, tykk[j] + 1);
+}
 async function shatterStart(i, poeng = 0, liv = 3) {
   // Vanskeligere for hvert brett, og for hver samling.
   const niva = i + aktiv * 2;
@@ -2008,7 +2016,7 @@ async function shatterStart(i, poeng = 0, liv = 3) {
   document.querySelectorAll(".bit").forEach(e => e.remove());
   $("meny").hidden = true; $("spill").hidden = true; $("shatter").hidden = false;
   const img = await hentBilde(BRETT[i].src);
-  const tykk = shMoekk(niva);
+  const tykk = shMoekk(niva); shBalanser(tykk);
   const klosser = [], j1 = Math.floor(Math.random() * SH_JORD.length), j2 = (j1 + 1 + Math.floor(Math.random() * (SH_JORD.length - 1))) % SH_JORD.length;
   for (let r = 0; r < SH_RAD; r++) for (let c = 0; c < SH_KOL; c++) {
     // Negativ tykkelse betyr bløt slaps i en åre: boblen pløyer gjennom den.
@@ -2016,9 +2024,9 @@ async function shatterStart(i, poeng = 0, liv = 3) {
     klosser.push({ r, c, x: c / SH_KOL, y: SH_TOPP + r / SH_RAD, w: 1 / SH_KOL, h: 1 / SH_RAD, liv: h, maks: h, vis: myk ? .42 : 1, glans: 0, sist: -9, myk });
   }
   // Rolig start, så farten øker litt for hvert nivå og litt underveis.
-  const fart = 0.56 + Math.min(niva, 14) * 0.035;
-  sh = { niva, i, img, klosser, igjen: klosser.length, poeng, liv, fart, grunnfart: fart, maksFart: Math.min(1.6, fart + 0.6),
-    padX: 0.5, padW: 0.26, baller: [], kapsler: [], tekster: [], smaa: [], stov: [], stavSkitt: [], skudd: [], skuddT: 0, lamper: 0, galaga: null, galagaPause: 20, wingmen: [], galagaKommet: false, padMål: null, drypp: [], skum: [], stjerner: [], ringer: [],
+  const fart = 0.64 + Math.min(niva, 14) * 0.035;
+  sh = { niva, i, img, klosser, igjen: klosser.length, poeng, liv, fart, grunnfart: fart, maksFart: Math.min(1.7, fart + 0.7),
+    padX: 0.5, padW: 0.26, baller: [], kapsler: [], tekster: [], smaa: [], stov: [], stavSkitt: [], skudd: [], skuddT: 0, lamper: 0, galaga: null, galagaPause: 20, wingmen: [], galagaKommet: false, padMål: null, sabot: [], sabotT: 14 + Math.random() * 10, drypp: [], skum: [], stjerner: [], ringer: [],
     eff: { W: 0, B: 0, G: 0, A: 0, F: 0, K: 0 }, tilstand: "klar", kombo: 0, ferdigT: 0, tid: 0, lydSist: {},
     jord: SH_JORD[j1], jord2: SH_JORD[j2], skitten: new Set(), milepael: 0, glimt: -9, sprekkT: 0,
     klatter: [], splatter: [], sigT: 0, flomT: 14, dryppT: 1, flomIgjen: Math.round(klosser.reduce((a, k) => a + k.liv, 0) * .05),
@@ -2503,12 +2511,14 @@ function shTreff(k, lag = 1, kilde = null) {
   s.igjen--; s.kombo++;
   s.poeng += (20 + 10 * k.maks) * Math.min(1 + Math.floor(s.kombo / 8), 5);
   k.glans = 1;
+  if (k.gave) { if (!s.kapsler.length) s.kapsler.push({ x: mx, y: my, t: k.gave, r: .044, vy: .04, fase: Math.random() * 6 }); k.gave = null; }
   shLyd("ren"); shHud();
   if (Math.random() < .3) shDrypp(mx, k.y + k.h * .8);
   if (Math.random() < .45) shKlatt(mx, my, .004 + Math.random() * .006, .1);
   if (Math.random() < .3) shStjerne(k.x + Math.random() * k.w, k.y + Math.random() * k.h, .7);
   if (kilde !== "syre" && s.smaa.length < 5 && Math.random() < .04) shSmaaNy(mx, my);
   // Edelsteiner er sjeldne, og bare én faller om gangen.
+  if (kilde !== "syre" && !s.kapsler.length && s.sabot.length && Math.random() < .02) s.kapsler.push({ x: mx, y: my, t: "K", r: .044, vy: .04, fase: Math.random() * 6 });
   if (kilde !== "syre" && !s.kapsler.length && Math.random() < .009) {
     const sum = KAPSLER.reduce((a, q) => a + q.vekt, 0); let r = Math.random() * sum, valgt = KAPSLER[0];
     for (const q of KAPSLER) { if (r < q.vekt) { valgt = q; break; } r -= q.vekt; }
@@ -2700,6 +2710,7 @@ function shGalagaSteg(dt) {
   g.fiender = g.fiender.filter(e => e.tilstand !== "borte" || g.fiender.length < 40);
   shBossSteg(g, dt, levende);
   for (const q of g.bomber) {
+    if (!q.drypp && q.mål > SH_TOPP + .5) q.mål = SH_TOPP + .08 + Math.random() * .4;
     q.vy = Math.min(.5, q.vy + .3 * dt); q.y += q.vy * dt;
     if (q.y >= q.mål) {
       q.borte = true;
@@ -2707,7 +2718,7 @@ function shGalagaSteg(dt) {
         // Gjørme som drypper ned på flipperne gjør dem tunge og trege.
         if (Math.abs(q.x - s.padX) < s.padW / 2 + .04) { shSkitt(q.x, .03); shSkitt(q.x + (Math.random() - .5) * .05, .025); s.splatter.push({ x: q.x, y: SH_PY, r: .035, t: 0, paa: true }); shLyd("plopp"); }
         else s.splatter.push({ x: q.x, y: SH_PY + .01, r: .03, t: 0 });
-      } else shNyGjorme(q.x, q.y, q.stor ? .075 : .035, q.stor ? 3 : 2);
+      } else shNyGjorme(q.x, q.y, q.stor ? .075 : .035, 1);
     }
   }
   g.bomber = g.bomber.filter(q => !q.borte);
@@ -2747,6 +2758,71 @@ function shBossTreff(q) {
     for (let n = 0; n < 3; n++) s.smaa.push(shSmaaNy(B.x + (Math.random() - .5) * .1, B.y, true));
   }
   return true;
+}
+// Sabotører: kommer inn fra siden, svever over noe du har vasket, og legger gjørme.
+// Jo lenger de får holde på, jo tykkere blir den, som sement. Ballen slår dem ut, boblene fanger dem.
+function shSabotSteg(dt) {
+  const s = sh;
+  if (!s.galaga && s.tilstand === "spill") {
+    s.sabotT -= dt;
+    const vasket = 1 - s.igjen / s.klosser.length;
+    if (s.sabotT <= 0 && s.sabot.length < 2 && vasket > .12 && vasket < .93) {
+      s.sabotT = 16 + Math.random() * 14;
+      const side = Math.random() < .5 ? -1 : 1, e = { figur: (Math.random() * 9) | 0, x: side < 0 ? -.1 : 1.1, y: .04 + Math.random() * .08, tilstand: "inn", t: 0, fase: Math.random() * 6, gave: Math.random() < .3 };
+      if (shSabotMål(e)) { s.sabot.push(e); shLyd("spawn"); s.tekster.push({ txt: "SABOTEUR!", x: e.x < .5 ? .2 : .8, y: .1, liv: 1, farge: "#ff7ad9", liten: true }); }
+    }
+  }
+  for (const e of s.sabot) {
+    e.t += dt;
+    if (e.tilstand === "inn") {
+      const u = Math.min(1, e.t / 1.6), k = u * u * (3 - 2 * u);
+      e.x = e.fx + (e.mx - e.fx) * k; e.y = e.fy + (e.my - e.fy) * k - Math.sin(Math.PI * u) * .06;
+      if (u >= 1) { e.tilstand = "legg"; e.t = 0; e.leggT = 0; e.varighet = 5 + Math.random() * 5; }
+    } else if (e.tilstand === "legg") {
+      e.x = e.mx + Math.sin(e.t * 2.5 + e.fase) * .02; e.y = e.my + Math.sin(e.t * 3.1) * .008;
+      e.leggT -= dt;
+      if (e.leggT <= 0) {
+        e.leggT = .8;
+        // Størkner: et nytt lag hvert andre sekund den får henge der, opptil fem.
+        const tak = Math.min(5, 1 + Math.floor(e.t / 2));
+        shNyGjorme(e.mx, e.my + .035, .04, tak);
+        if (e.gave) { const k = shKlossVed(e.mx, e.my + .035); if (k) { k.gave = "K"; e.gave = false; } }
+        shDrypp(e.x, e.y + .02);
+      }
+      if (e.t > e.varighet) {
+        if (Math.random() < .45 && shSabotMål(e)) { e.tilstand = "inn"; e.t = 0; }
+        else { e.tilstand = "ut"; e.t = 0; e.fx = e.x; e.fy = e.y; e.ux = e.x < .5 ? -.15 : 1.15; }
+      }
+    } else if (e.tilstand === "ut") {
+      const u = Math.min(1, e.t / 1.4); e.x = e.fx + (e.ux - e.fx) * u * u; e.y = e.fy - Math.sin(Math.PI * u) * .05;
+      if (u >= 1) e.tilstand = "borte";
+    } else if (e.tilstand === "kastet") {
+      e.vy += .9 * dt; e.x += e.vx * dt; e.y += e.vy * dt; e.rot = (e.rot || 0) + e.spinn * dt;
+      if (e.x < -.15 || e.x > 1.15 || e.y > SH_H + .1) e.tilstand = "borte";
+    } else if (e.tilstand === "boble") {
+      e.bt += dt; e.y -= (.12 + e.bt * .25) * dt; e.x += Math.sin(e.bt * 4 + e.fase) * .05 * dt;
+      if (e.y < -.08) e.tilstand = "borte";
+    }
+    // Ballen slår den ut av spillet.
+    if (e.tilstand === "inn" || e.tilstand === "legg" || e.tilstand === "ut")
+      for (const b of s.baller) {
+        if (b.fast || b.parkert || b.fanget || Math.hypot(b.x - e.x, b.y - e.y) > shRad(b) + .045) continue;
+        const v = Math.hypot(b.vx, b.vy) || 1;
+        e.tilstand = "kastet"; e.vx = b.vx / v * .7 + (e.x - b.x) * 4; e.vy = b.vy / v * .5 - .3; e.spinn = (Math.random() < .5 ? -1 : 1) * 14;
+        b.vy = -Math.abs(b.vy) * (b.y > e.y ? -1 : 1) || b.vy;
+        s.poeng += 500; shHud(); shLyd("pop"); shLyd("bossTreff"); shStov(e.x, e.y, 18, "255,122,217", .25);
+        s.tekster.push({ txt: "KNOCKED OUT! +500", x: e.x, y: e.y - .05, liv: 1.1, farge: "#ff7ad9", liten: true });
+        break;
+      }
+  }
+  s.sabot = s.sabot.filter(e => e.tilstand !== "borte");
+}
+// Finn et sted å sabotere: noe du har vasket rent i øvre halvdel.
+function shSabotMål(e) {
+  const s = sh, rene = s.klosser.filter(k => k.liv === 0 && k.r < SH_RAD * .5 && k.r > 1);
+  if (!rene.length) return false;
+  const k = rene[(Math.random() * rene.length) | 0];
+  e.fx = e.x; e.fy = e.y; e.mx = k.x + k.w / 2; e.my = k.y - .02; return true;
 }
 function shKapsel(t) {
   const s = sh, q = KAPSLER.find(k => k.t === t);
@@ -2796,6 +2872,7 @@ function shRacketTreff(b, R) {
     } else if (fl.t < .22) b.boost = 1.2;
     else shLyd("racket");
   }
+  b.boost = Math.max(b.boost, 1.15);
   shSkittRens(b.x);
   // Dypblå stav: boblen vokser for hvert treff.
   if (s.eff.B > 0 && b.str < 2.6) { b.str = Math.min(2.6, b.str * 1.2); shLyd("voks", b.str); }
@@ -2843,7 +2920,7 @@ function shBevegBall(b, dt) {
 function shOppdater(dt) {
   const s = sh;
   for (const k in s.eff) if (s.eff[k] > 0) s.eff[k] = Math.max(0, s.eff[k] - dt);
-  if (s.tilstand === "spill") s.fart = Math.min(s.maksFart, s.fart + dt * 0.004);
+  if (s.tilstand === "spill") s.fart = Math.min(s.maksFart, s.fart + dt * 0.006);
   // Alltid flippere. WIDE gjør flipperne lengre.
   s.padW += ((s.eff.W > 0 ? 0.36 : 0.26) - s.padW) * Math.min(1, dt * 8);
   s.treg = Math.min(.65, s.stavSkitt.reduce((a, q) => a + Math.min(1, q.a), 0) * .1);
@@ -2934,13 +3011,19 @@ function shOppdater(dt) {
     }
     if (s.skuddT < -.1) s.skuddT = 0;
   }
-  shGalagaSteg(dt);
+  shGalagaSteg(dt); shSabotSteg(dt);
   if (!s.galaga && !s.galagaKommet && s.igjen <= s.klosser.length * .3 && s.igjen > 12) shGalagaStart(Math.random() < (s.niva >= 2 ? .5 : .3));
   for (const q of s.skudd) {
     q.x += q.vx * dt; q.y += q.vy * dt;
     if (q.x < .01 || q.x > .99) q.vx = -q.vx;
     if (s.galaga) {
       if (shBossTreff(q)) { q.borte = true; continue; }
+    }
+    {
+      const e = s.sabot.find(e => (e.tilstand === "inn" || e.tilstand === "legg" || e.tilstand === "ut") && Math.hypot(e.x - q.x, e.y - q.y) < .045);
+      if (e) { e.tilstand = "boble"; e.bt = 0; s.poeng += 300; shHud(); shLyd("innkapsle"); s.tekster.push({ txt: "+300", x: e.x, y: e.y - .04, liv: .8, farge: "#7fe8ff", liten: true }); q.borte = true; continue; }
+    }
+    if (s.galaga) {
       const e = s.galaga.fiender.find(e => shFangbar(e) && Math.hypot(e.x - q.x, e.y - q.y) < .045);
       if (e) { shInnkaps(e); q.borte = true; continue; }
       if (s.skudd.length > 170) { q.borte = true; continue; }
@@ -3052,7 +3135,7 @@ function shMistetLiv() {
   s.eff = { W: 0, B: 0, G: 0, A: 0, F: 0, K: 0 }; s.kapsler = []; s.smaa = []; s.skudd = []; s.fart = s.grunnfart;
   // Gjengen blir værende selv om du mister en boble.
   if (!s.galaga) s.lamper = 0;
-  s.wingmen = [];
+  s.wingmen = []; s.sabot = [];
   if (s.liv <= 0) {
     s.tilstand = "over";
     const forrige = shLagret()["best" + aktiv] || 0, ny = s.poeng > forrige;
@@ -3066,7 +3149,7 @@ function shMistetLiv() {
 function shFerdig() {
   const s = sh; s.tilstand = "ferdig"; s.ferdigT = performance.now();
   const bonus = (s.liv - 1) * 500; s.poeng += bonus; shHud();
-  s.baller = []; s.kapsler = []; s.smaa = []; s.skudd = []; s.galaga = null;
+  s.baller = []; s.kapsler = []; s.smaa = []; s.skudd = []; s.galaga = null; s.sabot = [];
   ferdigLyd(); dempMusikk(); s.glimt = s.tid; s.drypp = []; s.skum = []; s.klatter = [];
   for (const h of s.levende || []) { h.bule = 1; h.blink = 1; h.holder = null; }
   for (let n = 0; n < 40; n++) shStjerne(Math.random(), SH_TOPP + Math.random(), .6 + Math.random() * .5, Math.random() * 1.6);
@@ -3417,6 +3500,13 @@ function shTegn(t) {
       x.fillStyle = "rgba(255,255,255,.85)"; x.beginPath(); x.ellipse(X - BR * .38, Y - BR * .42, BR * .26, BR * .12, -.7, 0, 7); x.fill();
     };
     const mon = n => fig.m.length ? fig.m[n % fig.m.length] : null;
+    for (const e of s.sabot) {
+      const X = e.x * f, Y = e.y * f, R = .045 * f;
+      tegnFigur(mon(e.figur), X, Y, R, e.rot, e.tilstand !== "boble", true, Math.sin(s.tid * (e.tilstand === "kastet" ? 30 : 14) + e.fase) * .35);
+      if (e.tilstand === "boble") boble(X, Y, R * 1.45, e.fase);
+      // Mens den legger gjørme, henger det en brun stråle under den.
+      if (e.tilstand === "legg") { const [m1, m2, m3] = s.jord.mork; x.fillStyle = `rgba(${m1},${m2},${m3},.55)`; x.beginPath(); x.ellipse(X, Y + R * 1.3, R * .25, R * .55, 0, 0, 7); x.fill(); }
+    }
     for (const w of s.wingmen) if (w.klar && s.tilstand !== "ferdig")
       tegnFigur(mon(w.figur), (s.padX + w.side * (s.padW / 2 + .05)) * f, (SH_PY - .012) * f, .03 * f, 0, true, w.side > 0, Math.sin(s.tid * 14 + w.fase) * .3);
     if (s.galaga) {
