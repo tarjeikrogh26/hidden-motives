@@ -128,6 +128,8 @@ h1 .signatur{font-size:.55em;letter-spacing:.06em;white-space:nowrap}
 .bit.drar{cursor:grabbing}
 #gnistLag{position:absolute;left:0;top:0;pointer-events:none;z-index:100000}
 #omriss{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.spor{display:block;font-size:11px;color:var(--demp);letter-spacing:.02em;margin-top:2px}
+.spor a{color:var(--demp);text-decoration:underline;text-decoration-color:rgba(255,255,255,.25)}
 .bit.ferdig{filter:none;pointer-events:none}
 #mal-plass{position:absolute;border:2px solid var(--signal);border-radius:3px;box-shadow:0 0 18px rgba(255,176,0,.7),inset 0 0 18px rgba(255,176,0,.35);pointer-events:none;z-index:35;opacity:0}
 #mal-plass.blink{animation:blink 3s ease-in-out}
@@ -221,7 +223,7 @@ h1 .signatur{font-size:.55em;letter-spacing:.06em;white-space:nowrap}
   <div class="samlingsnavn" id="sammenTittel"></div>
   <div class="regel"><b>The race:</b> Your best score on each of the ten boards in a collection is added up. Finish #1 overall and you get the next collection for free. Anyone who takes first place later gets it too. Points: Easy (25 pieces) gives 10,000, Medium (49) 15,000, Hard (100) 20,000 and Chaos (144) 25,000 at normal speed. Be fast and you get up to double.</div>
   <div class="sammen" id="sammen"><p class="liten">Loading standings …</p></div>
-  <p class="liten" id="versjon" style="margin-top:28px;opacity:.5">Version 0.33</p>
+  <p class="liten" id="versjon" style="margin-top:28px;opacity:.5">Version 0.34</p>
 </section>
 
 <div class="ark" id="tidUtArk" hidden style="z-index:200001">
@@ -251,7 +253,7 @@ h1 .signatur{font-size:.55em;letter-spacing:.06em;white-space:nowrap}
 
 <section id="spill" class="skjerm" hidden aria-label="Puzzle">
   <div class="linje">
-    <div class="hud-brett"><span id="hudKode">/01/01</span><b id="hudNavn"></b></div>
+    <div class="hud-brett"><span id="hudKode">/01/01</span><b id="hudNavn"></b><span class="spor" id="hudSpor"></span></div>
     <span class="tid" id="tid">0:00</span>
     <span class="teller" id="teller">0 / 25</span>
     <span class="mal" id="mal" aria-live="off"></span>
@@ -284,7 +286,7 @@ h1 .signatur{font-size:.55em;letter-spacing:.06em;white-space:nowrap}
 </section>
 <section id="shatter" class="skjerm" hidden aria-label="Scrub">
   <div class="sh-hud" id="shHud">
-    <div class="sh-venstre"><b>SCRUB</b><span id="shNiva"></span></div>
+    <div class="sh-venstre"><b>SCRUB</b><span id="shNiva"></span><span class="spor" id="shSpor"></span></div>
     <div class="sh-hoyre"><span class="sh-liv" id="shLiv" aria-label="Spare balls"></span><span class="sh-poeng" id="shPoeng">0</span><button class="sh-ut" id="shUt">Menu</button></div>
   </div>
   <canvas id="shCanvas"></canvas>
@@ -694,8 +696,57 @@ function myntTikk(andel) {
   tone(f, 0, 0.05, 0.035, "triangle", 0.6, 0.9);
   tone(f * 1.5, 0.018, 0.07, 0.025, "sine", 0.6, 0.9);
 }
+// ---------- musikk: én loop per brett, av Krogh ----------
+// takt: hvor lang loopen er fra første lyd (sekunder). Skjøten settes der musikken gjentar seg, så den går sømløst.
+const MUSIKK = {
+  b1: { fil: "musikk/poetrigger.m4a", tittel: "Poetrigger", takt: 44.3077, spotify: "" },
+};
+let musikk = null, musikkØnske = null;
+const musikkBuf = {};
+async function spillMusikk(id) {
+  stoppMusikk(.6); musikkØnske = id; visSpor(id);
+  const m = MUSIKK[id]; if (!m || !lydPa) return;
+  const c = ctx(); if (!c) return;
+  try {
+    if (!musikkBuf[m.fil]) musikkBuf[m.fil] = fetch(m.fil).then(r => r.arrayBuffer()).then(a => new Promise((ok, feil) => { const p = c.decodeAudioData(a, ok, feil); if (p && p.catch) p.catch(() => {}); }));
+    const buf = await musikkBuf[m.fil];
+    if (musikkØnske !== id || !lydPa) return;
+    // Hopp over stillheten helt i starten av fila.
+    const d = buf.getChannelData(0); let st = 0; while (st < d.length && Math.abs(d[st]) < 1e-3) st++;
+    const kilde = c.createBufferSource(), g = c.createGain();
+    // Glatt skjøt: de første 50 ms blandes fra det som naturlig følger etter loopens slutt, så hoppet ikke høres.
+    const L = Math.round(m.takt * buf.sampleRate), N = Math.round(.05 * buf.sampleRate);
+    if (!buf.sømløs && st + L + N < buf.length) {
+      for (let ch = 0; ch < buf.numberOfChannels; ch++) { const k = buf.getChannelData(ch); for (let i = 0; i < N; i++) { const w = i / N; k[st + i] = k[st + L + i] * (1 - w) + k[st + i] * w; } }
+      buf.sømløs = true;
+    }
+    kilde.buffer = buf; kilde.loop = true;
+    kilde.loopStart = st / buf.sampleRate; kilde.loopEnd = Math.min(buf.duration, (st + L) / buf.sampleRate);
+    g.gain.setValueAtTime(0, c.currentTime); g.gain.linearRampToValueAtTime(.32, c.currentTime + 1.5);
+    kilde.connect(g).connect(c.destination); kilde.start(0, kilde.loopStart);
+    musikk = { kilde, g, id };
+  } catch {}
+}
+function stoppMusikk(fade = .8) {
+  musikkØnske = null;
+  if (!musikk || !lydCtx) return;
+  const { kilde, g } = musikk, t = lydCtx.currentTime; musikk = null;
+  try { g.gain.cancelScheduledValues(t); g.gain.setValueAtTime(g.gain.value, t); g.gain.linearRampToValueAtTime(0, t + fade); kilde.stop(t + fade + .05); } catch {}
+}
+// Musikken trekker seg litt tilbake når brettet er ferdig, så avslutningen høres.
+function dempMusikk(nivaa = .12) { if (musikk && lydCtx) { const t = lydCtx.currentTime; musikk.g.gain.cancelScheduledValues(t); musikk.g.gain.setValueAtTime(musikk.g.gain.value, t); musikk.g.gain.linearRampToValueAtTime(nivaa, t + 1.2); } }
+// Navnet på låten vises i spillet, med lenke til Spotify når den finnes.
+function visSpor(id) {
+  const m = MUSIKK[id];
+  for (const el of [$("hudSpor"), $("shSpor")]) {
+    if (!el) continue; el.replaceChildren();
+    if (!m) continue;
+    if (m.spotify) { const a = document.createElement("a"); a.href = m.spotify; a.target = "_blank"; a.rel = "noopener"; a.textContent = "♪ " + m.tittel; el.appendChild(a); }
+    else el.textContent = "♪ " + m.tittel;
+  }
+}
 function visLydKnapp() { const k = $("lydKnapp"); k.textContent = lydPa ? "Sound on" : "Sound off"; k.setAttribute("aria-pressed", String(lydPa)); }
-$("lydKnapp").onclick = () => { lydPa = !lydPa; try { localStorage.setItem("sm-lyd", lydPa ? "på" : "av"); } catch {} visLydKnapp(); if (lydPa) { plingLyd(0); if (spill?.slutt) startPad(); } else stoppPad(); };
+$("lydKnapp").onclick = () => { lydPa = !lydPa; try { localStorage.setItem("sm-lyd", lydPa ? "på" : "av"); } catch {} visLydKnapp(); if (lydPa) { plingLyd(0); if (spill?.slutt) startPad(); if (spill) spillMusikk(BRETT[spill.brett].id); } else { stoppPad(); stoppMusikk(.3); } };
 visLydKnapp();
 
 // ---------- puslebiter ----------
@@ -749,6 +800,7 @@ async function startSpill(i, n, gjenoppta) {
   }
   spill = { brett: i, n: o.n, k: o.k, r: o.r, img, biter, start: gjenoppta?.start ? Date.now() - gjenoppta.start : 0, slutt: 0, lagt: biter.filter(b => b.ferdig).length, ztopp: biter.length, straff: gjenoppta?.straff || 0 };
   $("hudKode").textContent = kode(i); $("hudNavn").textContent = BRETT[i].navn;
+  if (!gjenoppta || musikkØnske !== BRETT[i].id) spillMusikk(BRETT[i].id);
   spill.hint = HINT_ANTALL; visHintKnapp();
   spill.liste = husListe(i, o.n);
   hentListe(i, o.n).then(l => { if (spill && spill.brett === i && spill.n === o.n) spill.liste = l; });
@@ -1144,7 +1196,7 @@ function visMal(s) {
 function regnPoeng(n, s) { return Math.round((GRUNN[n] || n * 300) * 2 * (n * 5) / (s + n * 5)); }
 
 async function ferdig() {
-  spill.slutt = Date.now(); clearInterval(timer); tikk();
+  spill.slutt = Date.now(); clearInterval(timer); tikk(); dempMusikk();
   const s = sekunder(), p = regnPoeng(spill.n, s), b = BRETT[spill.brett];
   setTimeout(() => $("avslor").classList.add("vis"), 350);
   $("avslor").classList.add("bolge"); $("ramme").classList.add("neon");
@@ -1314,7 +1366,7 @@ function nesteUlost(fra) {
   return -1;
 }
 function tilMeny() {
-  stoppFest();
+  stoppFest(); stoppMusikk();
   clearInterval(timer); spill = null;
   document.querySelectorAll(".bit").forEach(e => e.remove());
   $("spill").hidden = true; $("meny").hidden = false;
@@ -1540,6 +1592,7 @@ async function shatterStart(i, poeng = 0, liv = 3) {
   sh.levende = shLagLevende(i, img); sh.boelger = []; sh.levT = 0;
   shNyBall();
   $("shNiva").textContent = kode(i) + " · " + BRETT[i].navn;
+  if (!musikk || musikk.id !== BRETT[i].id) spillMusikk(BRETT[i].id); else if (lydCtx) musikk.g.gain.linearRampToValueAtTime(.32, lydCtx.currentTime + 1);
   shMelding("Tap to launch", "Drag anywhere to move the light, or hold the left or right side. Wash off the mud, and catch what falls out of it.");
   shOppsett(); shLagMoekk(); shHud();
   cancelAnimationFrame(shRAF); shSist = performance.now(); shRAF = requestAnimationFrame(shSteg);
@@ -2286,7 +2339,7 @@ function shFerdig() {
   const s = sh; s.tilstand = "ferdig"; s.ferdigT = performance.now();
   const bonus = (s.liv - 1) * 500; s.poeng += bonus; shHud();
   s.baller = []; s.kapsler = [];
-  ferdigLyd(); s.glimt = s.tid; s.drypp = []; s.skum = []; s.klatter = [];
+  ferdigLyd(); dempMusikk(); s.glimt = s.tid; s.drypp = []; s.skum = []; s.klatter = [];
   for (const h of s.levende || []) { h.bule = 1; h.blink = 1; h.holder = null; }
   for (let n = 0; n < 40; n++) shStjerne(Math.random(), SH_TOPP + Math.random(), .6 + Math.random() * .5, Math.random() * 1.6);
   // Et vasket brett teller som løst, så neste brett åpnes.
