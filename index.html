@@ -227,7 +227,7 @@ h1 .signatur{font-size:.55em;letter-spacing:.06em;white-space:nowrap}
   <div class="regel"><b>The race:</b> Your best score on each of the ten boards in a collection is added up. Finish #1 overall and you get the next collection for free. Anyone who takes first place later gets it too. Points: Easy (25 pieces) gives 10,000, Medium (49) 15,000, Hard (100) 20,000 and Chaos (144) 25,000 at normal speed. Be fast and you get up to double.</div>
   <div class="sammen" id="sammen"><p class="liten">Loading standings …</p></div>
   <p class="kreditt">© 2001–2026 Tarjei Krogh. All photography, music and art. <a href="https://kroghx.com" target="_blank" rel="noopener">kroghx.com</a></p>
-  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 0.38<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
+  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 0.39<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
 </section>
 
 <div class="ark" id="tidUtArk" hidden style="z-index:200001">
@@ -730,12 +730,26 @@ const MUSIKK = {
   b1: { fil: "musikk/poetrigger.mp4", tittel: "Poetrigger", takt: 32 * 240 / 130, spotify: "https://open.spotify.com/track/34PGffFCkwW0vsxZ48rzD5" },
   b2: { fil: "musikk/the-light.mp4", tittel: "The Light", takt: 32 * 240 / 140, spotify: "https://open.spotify.com/track/5KuO7xGRZ94LRDvHF6lZvA" },
   b3: { fil: "musikk/blume.mp4", tittel: "Blume", takt: 16 * 240 / 95, spotify: "https://open.spotify.com/track/4pNfudlyzaRlv5eN5t2WyB" },
+  b4: { fil: "musikk/piranha.mp4", tittel: "Piranha", takt: 32 * 240 / 83, spotify: "https://open.spotify.com/track/5hFuIO5ukC1Ls1vM1vWaiz" },
 };
+// Inntil Krogh har sendt en låt per brett, går de låtene som finnes på rundgang over alle brett.
+const LÅTER = ["b1", "b2", "b3", "b4"].map(k => MUSIKK[k]);
+function musikkFor(id) {
+  if (aktiv === 0 && MUSIKK[id]) return MUSIKK[id];
+  const i = BRETT.findIndex(b => b.id === id); return i < 0 ? null : LÅTER[(i + aktiv) % LÅTER.length];
+}
 let musikk = null, musikkØnske = null;
 const musikkBuf = {};
 async function spillMusikk(id) {
+  const m = musikkFor(id);
+  // Samme låt på neste brett: den spiller videre uten å starte på nytt.
+  if (m && musikk && musikk.fil === m.fil && lydPa && lydCtx) {
+    musikkØnske = id; musikk.id = id; visSpor(id);
+    const t = lydCtx.currentTime; musikk.g.gain.cancelScheduledValues(t); musikk.g.gain.setValueAtTime(musikk.g.gain.value, t); musikk.g.gain.linearRampToValueAtTime(.32, t + 1);
+    return;
+  }
   stoppMusikk(.6); musikkØnske = id; visSpor(id);
-  const m = MUSIKK[id]; if (!m || !lydPa) return;
+  if (!m || !lydPa) return;
   const c = ctx(); if (!c) return;
   try {
     if (!musikkBuf[m.fil]) musikkBuf[m.fil] = fetch(m.fil).then(r => r.arrayBuffer()).then(a => new Promise((ok, feil) => { const p = c.decodeAudioData(a, ok, feil); if (p && p.catch) p.catch(() => {}); }));
@@ -759,7 +773,7 @@ async function spillMusikk(id) {
     kilde.loopStart = st / buf.sampleRate; kilde.loopEnd = Math.min(buf.duration, (st + L) / buf.sampleRate);
     g.gain.setValueAtTime(0, c.currentTime); g.gain.linearRampToValueAtTime(.32, c.currentTime + 1.5);
     kilde.connect(g).connect(c.destination); kilde.start(0, kilde.loopStart);
-    musikk = { kilde, g, id };
+    musikk = { kilde, g, id, fil: m.fil };
   } catch {}
 }
 function stoppMusikk(fade = .8) {
@@ -772,7 +786,7 @@ function stoppMusikk(fade = .8) {
 function dempMusikk(nivaa = .12) { if (musikk && lydCtx) { const t = lydCtx.currentTime; musikk.g.gain.cancelScheduledValues(t); musikk.g.gain.setValueAtTime(musikk.g.gain.value, t); musikk.g.gain.linearRampToValueAtTime(nivaa, t + 1.2); } }
 // Navnet på låten vises i spillet, med lenke til Spotify når den finnes.
 function visSpor(id) {
-  const m = MUSIKK[id];
+  const m = musikkFor(id);
   for (const el of [$("hudSpor"), $("shSpor")]) {
     if (!el) continue; el.replaceChildren();
     if (!m) continue;
@@ -1629,7 +1643,7 @@ async function shatterStart(i, poeng = 0, liv = 3) {
   sh.levende = shLagLevende(i, img); sh.boelger = []; sh.levT = 0;
   shNyBall();
   $("shNiva").textContent = kode(i) + " · " + BRETT[i].navn;
-  if (!musikk || musikk.id !== BRETT[i].id) spillMusikk(BRETT[i].id); else if (lydCtx) musikk.g.gain.linearRampToValueAtTime(.32, lydCtx.currentTime + 1);
+  spillMusikk(BRETT[i].id);
   shMelding("Tap to launch", "Drag anywhere to move the light, or hold the left or right side. Wash off the mud, and catch what falls out of it.");
   shOppsett(); shLagMoekk(); shHud();
   cancelAnimationFrame(shRAF); shSist = performance.now(); shRAF = requestAnimationFrame(shSteg);
