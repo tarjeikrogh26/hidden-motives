@@ -697,10 +697,11 @@ function myntTikk(andel) {
   tone(f * 1.5, 0.018, 0.07, 0.025, "sine", 0.6, 0.9);
 }
 // ---------- musikk: én loop per brett, av Krogh ----------
-// takt: hvor lang loopen er fra første lyd (sekunder). Skjøten settes der musikken gjentar seg, så den går sømløst.
+// Krogh looper selv i Ableton: hele fila spilles. takt = lengden i sekunder (helt antall takter), så fyllet
+// AAC legger til helt i starten og slutten av fila ikke kommer med i loopen.
 const MUSIKK = {
-  b1: { fil: "musikk/poetrigger.mp4", tittel: "Poetrigger", takt: 44.3077, spotify: "https://open.spotify.com/track/34PGffFCkwW0vsxZ48rzD5" },
-  b3: { fil: "musikk/blume.mp4", tittel: "Blume", takt: 40.4211, spotify: "https://open.spotify.com/track/4pNfudlyzaRlv5eN5t2WyB" },
+  b1: { fil: "musikk/poetrigger.mp4", tittel: "Poetrigger", takt: 32 * 240 / 130, spotify: "https://open.spotify.com/track/34PGffFCkwW0vsxZ48rzD5" },
+  b3: { fil: "musikk/blume.mp4", tittel: "Blume", takt: 16 * 240 / 95, spotify: "https://open.spotify.com/track/4pNfudlyzaRlv5eN5t2WyB" },
 };
 let musikk = null, musikkØnske = null;
 const musikkBuf = {};
