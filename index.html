@@ -118,7 +118,7 @@ h1 .signatur{font-size:.55em;letter-spacing:.06em;white-space:nowrap}
 @media (orientation:portrait){
   .linje{top:0;left:0;right:0;bottom:auto;width:auto;height:auto;border-left:0;border-bottom:1px solid var(--strek);
     padding:max(8px,env(safe-area-inset-top,0px)) 12px 8px;
-    display:grid;grid-template-columns:1fr auto;grid-template-areas:"brett tid" "mal knapper";gap:6px 12px;text-align:left;align-items:center}
+    display:grid;grid-template-columns:1fr auto;grid-template-areas:"brett tid" "mal mal" "knapper knapper";gap:4px 12px;text-align:left;align-items:center}
   .hud-brett{grid-area:brett;border:0;padding:0;flex-direction:row;align-items:baseline;gap:8px;min-width:0}
   .hud-brett b{font-size:13px;line-height:1.15}
   .linje .tid{grid-area:tid;font-size:24px;text-align:right}
@@ -126,7 +126,7 @@ h1 .signatur{font-size:.55em;letter-spacing:.06em;white-space:nowrap}
   .mal{grid-area:mal;border:0;padding:0;flex-direction:row;flex-wrap:wrap;align-items:baseline;gap:0 6px;font-size:12px}
   .mal b{font-size:13px}
   .hud-knapper{grid-area:knapper;margin:0;flex-direction:row;gap:6px}
-  .hud-knapper button{padding:6px 9px}
+  .hud-knapper button{padding:5px 8px;flex:1;white-space:nowrap}
   .hud-knapper .hint{flex-direction:row;gap:5px}
 }
 #bord{position:absolute;inset:0;transform-origin:0 0}
@@ -140,6 +140,14 @@ h1 .signatur{font-size:.55em;letter-spacing:.06em;white-space:nowrap}
 .lynblink{position:fixed;inset:0;z-index:264;pointer-events:none;background:#fff;animation:lynblink .45s ease-out forwards}
 @keyframes lynblink{0%{opacity:.95}15%{opacity:.2}30%{opacity:.8}100%{opacity:0}}
 .hud-knapper .tilt{border-color:rgba(255,90,106,.5);color:#ff5a6a}
+@media (orientation:portrait){.hud-knapper .tilt{flex-direction:row;gap:5px}}
+/* Lav liggende skjerm (mobil i Safari): tettere panel, så alle knappene får plass. */
+@media (orientation:landscape) and (max-height:430px){
+  .linje{gap:4px;padding-top:max(6px,env(safe-area-inset-top,0px));padding-bottom:max(6px,env(safe-area-inset-bottom,0px));overflow-y:auto}
+  .hud-brett{padding-bottom:4px}.hud-brett b{font-size:11px}.hud-brett .spor{display:none}
+  .linje .tid{font-size:20px}.mal{padding-top:4px;font-size:10.5px}.mal b{font-size:13px}
+  .hud-knapper{gap:4px}.hud-knapper button{padding:4px 3px;font-size:11px}.hud-knapper .hint span{font-size:10px}
+}
 .flaks{position:fixed;z-index:265;pointer-events:none;font-family:var(--display);font-weight:800;font-size:18px;letter-spacing:.08em;color:#ffd23a;text-shadow:0 0 10px rgba(255,190,40,.9);transform:translate(-50%,-50%);animation:flaks 1.2s ease-out forwards}
 @keyframes flaks{0%{opacity:0;transform:translate(-50%,-30%) scale(.6)}15%{opacity:1;transform:translate(-50%,-60%) scale(1.15)}100%{opacity:0;transform:translate(-50%,-160%) scale(1)}}
 .bunke-tall{position:fixed;z-index:260;pointer-events:none;font-family:var(--tall);font-size:12px;letter-spacing:.06em;color:var(--signal);background:rgba(20,19,18,.88);border:1px solid rgba(255,176,0,.5);border-radius:999px;padding:3px 10px;transform:translate(-50%,-100%);white-space:nowrap;box-shadow:0 2px 10px rgba(0,0,0,.5)}
@@ -293,7 +301,7 @@ body:has(.resultat.vis) #spill .linje{opacity:0;pointer-events:none;transition:o
   <div class="regel"><b>The race:</b> Your best score on each of the ten boards in a collection is added up. Finish #1 overall and you get the next collection for free. Anyone who takes first place later gets it too. Points: Easy (25 pieces) gives 10,000, Medium (49) 15,000, Hard (100) 20,000 and Chaos (144) 25,000 at normal speed. Be fast and you get up to double.</div>
   <div class="sammen" id="sammen"><p class="liten">Loading standings …</p></div>
   <p class="kreditt">© 2001–2026 Tarjei Krogh. All photography, music and art. <a href="https://kroghx.com" target="_blank" rel="noopener">kroghx.com</a></p>
-  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 0.50<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
+  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 0.51<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
 </section>
 
 <div class="ark" id="tidUtArk" hidden style="z-index:200001">
@@ -1927,6 +1935,8 @@ $("utKnapp").onclick = tilMeny;
 $("tilbakeKnapp").onclick = () => (ark?.meny || tilMeny)();
 $("nesteKnapp").onclick = () => ark?.neste?.();
 addEventListener("resize", () => { if (spill) oppsett(); });
+// Panelet kan vokse etter at brettet er lagt ut (for eksempel når topplista er lastet). Da flyttes brettet.
+{ let sistH = 0, sistB = 0; new ResizeObserver(([e]) => { const r = e.target.getBoundingClientRect(); if (Math.abs(r.height - sistH) < 2 && Math.abs(r.width - sistB) < 2) return; sistH = r.height; sistB = r.width; if (spill && !spill.slutt && !$("spill").hidden) oppsett(); }).observe(document.querySelector(".linje")); }
 
 // ---------- SCRUB: såpebobler vasker møkka av kunstverket ----------
 // Bildet ligger under et lag med møkk. 864 små felt teller treffene, men møkka tegnes som ett sammenhengende lag.
@@ -2214,8 +2224,8 @@ async function shatterStart(i, poeng = 0, liv = 3) {
     klosser.push({ r, c, x: c / SH_KOL, y: SH_TOPP + r / SH_RAD, w: 1 / SH_KOL, h: 1 / SH_RAD, liv: h, maks: h, vis: myk ? .42 : 1, glans: 0, sist: -9, myk });
   }
   // Rolig start, så farten øker litt for hvert nivå og litt underveis.
-  const fart = 0.64 + Math.min(niva, 14) * 0.035;
-  sh = { niva, i, img, klosser, igjen: klosser.length, poeng, liv, fart, grunnfart: fart, maksFart: Math.min(1.7, fart + 0.7),
+  const fart = 0.5 + Math.min(niva, 14) * 0.03;
+  sh = { niva, i, img, klosser, igjen: klosser.length, poeng, liv, fart, grunnfart: fart, maksFart: Math.min(1.7, fart + 0.85),
     padX: 0.5, padW: 0.26, baller: [], kapsler: [], tekster: [], smaa: [], stov: [], stavSkitt: [], skudd: [], skuddT: 0, lamper: 0, galaga: null, galagaPause: 20, wingmen: [], galagaKommet: false, padMål: null, sopp: 0, soppSide: -1, padY: .7, bytte: null, byttePlan: Math.random() < .22, sabot: [], sabotT: 14 + Math.random() * 10, drypp: [], skum: [], stjerner: [], ringer: [],
     eff: { W: 0, B: 0, G: 0, A: 0, F: 0, K: 0 }, tilstand: "klar", kombo: 0, ferdigT: 0, tid: 0, lydSist: {},
     jord: SH_JORD[j1], jord2: SH_JORD[j2], skitten: new Set(), milepael: 0, glimt: -9, sprekkT: 0,
@@ -2264,7 +2274,7 @@ function shMoekk(niva) {
     for (const [, j] of tykke) { if (over <= 0) break; over -= ut[j] - 1; ut[j] = 1; }
   }
   // Nederst er gjørma tynn, så boblen alltid kommer i gang og kan pløye seg oppover.
-  for (let r = SH_RAD - 8; r < SH_RAD; r++) for (let c = 0; c < SH_KOL; c++) { const j = r * SH_KOL + c; ut[j] = Math.min(ut[j], 1 + Math.floor((SH_RAD - 1 - r) / 3)); }
+  for (let r = SH_RAD - 8; r < SH_RAD; r++) for (let c = 0; c < SH_KOL; c++) { const j = r * SH_KOL + c; ut[j] = Math.min(ut[j], 1); }
   // Svake årer: slingrende striper med tynn gjørme fra bunnen og helt opp. Der kan boblen bryte gjennom
   // og bli fanget i gangen over bildet, som i Arkanoid.
   const årer = 2 + (Math.random() < .5 ? 1 : 0);
@@ -3183,7 +3193,7 @@ function shBevegBall(b, dt) {
 function shOppdater(dt) {
   const s = sh;
   for (const k in s.eff) if (s.eff[k] > 0) s.eff[k] = Math.max(0, s.eff[k] - dt);
-  if (s.tilstand === "spill") s.fart = Math.min(s.maksFart, s.fart + dt * 0.006);
+  if (s.tilstand === "spill") s.fart = Math.min(s.maksFart, s.fart + dt * 0.009);
   // Alltid flippere. WIDE gjør flipperne lengre.
   s.padW += ((s.eff.W > 0 ? 0.36 : 0.26) - s.padW) * Math.min(1, dt * 8);
   s.treg = Math.min(.65, s.stavSkitt.reduce((a, q) => a + Math.min(1, q.a), 0) * .1);
