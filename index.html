@@ -40,12 +40,12 @@ button:focus-visible{outline:2px solid var(--signal);outline-offset:2px}
 h1{font-family:var(--display);font-weight:800;font-size:clamp(30px,5.4vw,58px);line-height:.95;letter-spacing:-.01em;margin:0;text-wrap:balance}
 h1 .tittel span{color:var(--signal)}
 .moduser{display:flex;flex-wrap:nowrap;gap:.45em;align-items:center}
-.modus{font:inherit;color:var(--tekst);background:none;border:0;padding:.08em .12em .1em;cursor:pointer;opacity:.7;border-bottom:3px solid transparent;border-radius:6px;text-align:left;
+.modus{font:inherit;color:var(--tekst);background:none;border:0;padding:.08em .12em .1em;cursor:pointer;opacity:.85;border-bottom:2px solid transparent;border-radius:6px;text-align:left;
   transition:opacity .25s,transform .12s,text-shadow .25s,background .25s;-webkit-tap-highlight-color:transparent}
-.modus:hover{opacity:.9}
+.modus:hover{opacity:1}
 /* Lyser opp når du holder fingeren på den, og velges når du slipper. */
 .modus:active{opacity:1;transform:scale(.96);text-shadow:0 0 18px rgba(255,176,0,.75);background:rgba(255,176,0,.08)}
-.modus[aria-selected="true"]{opacity:1;border-bottom-color:var(--signal);text-shadow:0 0 14px rgba(255,176,0,.75),0 0 34px rgba(255,176,0,.45);background:radial-gradient(ellipse at 50% 60%,rgba(255,176,0,.16),rgba(255,176,0,0) 70%)}
+.modus[aria-selected="true"]{opacity:1;border-bottom-color:rgba(255,176,0,.22);text-shadow:0 0 10px rgba(255,190,40,.95),0 0 26px rgba(255,176,0,.75),0 0 52px rgba(255,150,0,.5);background:radial-gradient(ellipse at 50% 60%,rgba(255,176,0,.16),rgba(255,176,0,0) 70%)}
 #modusScrub .tittel{color:var(--signal);font-size:1.25em;letter-spacing:.12em;line-height:1;white-space:nowrap}
 @media (max-width:560px){.moduser{font-size:.95em;gap:.3em}#modusScrub .tittel{font-size:1.06em;letter-spacing:.05em}}
 .eller{font-family:var(--brod);font-weight:400;font-size:max(12px,.3em);color:var(--demp);letter-spacing:.08em;text-transform:lowercase}
@@ -305,7 +305,7 @@ body:has(.resultat.vis) #spill .linje{opacity:0;pointer-events:none;transition:o
   <div class="regel"><b>The race:</b> Your best score on each of the ten boards in a collection is added up. Finish #1 overall and you get the next collection for free. Anyone who takes first place later gets it too. Points: Easy (25 pieces) gives 10,000, Medium (49) 15,000, Hard (100) 20,000 and Chaos (144) 25,000 at normal speed. Be fast and you get up to double.</div>
   <div class="sammen" id="sammen"><p class="liten">Loading standings …</p></div>
   <p class="kreditt">© 2001–2026 Tarjei Krogh. All photography, music and art. <a href="https://kroghx.com" target="_blank" rel="noopener">kroghx.com</a></p>
-  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 0.53<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
+  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 0.54<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
 </section>
 
 <div class="ark" id="tidUtArk" hidden style="z-index:200001">
