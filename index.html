@@ -226,8 +226,8 @@ h1 .signatur{font-size:.55em;letter-spacing:.06em;white-space:nowrap}
   <div class="samlingsnavn" id="sammenTittel"></div>
   <div class="regel"><b>The race:</b> Your best score on each of the ten boards in a collection is added up. Finish #1 overall and you get the next collection for free. Anyone who takes first place later gets it too. Points: Easy (25 pieces) gives 10,000, Medium (49) 15,000, Hard (100) 20,000 and Chaos (144) 25,000 at normal speed. Be fast and you get up to double.</div>
   <div class="sammen" id="sammen"><p class="liten">Loading standings …</p></div>
-  <p class="kreditt">All photography, music and art by Tarjei Krogh, made since 2001. <a href="https://kroghx.com" target="_blank" rel="noopener">kroghx.com</a></p>
-  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 0.36</p>
+  <p class="kreditt">© 2001–2026 Tarjei Krogh. All photography, music and art. <a href="https://kroghx.com" target="_blank" rel="noopener">kroghx.com</a></p>
+  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 0.37</p>
 </section>
 
 <div class="ark" id="tidUtArk" hidden style="z-index:200001">
@@ -1953,7 +1953,7 @@ function shBoing(f, styrke) {
 function shLyd(type, verdi) {
   if (!lydPa || !sh) return;
   // Ikke for mange like lyder samtidig.
-  const min = { moekk: .045, ren: .04, vegg: .03, plopp: .06 }[type] || 0;
+  const min = { moekk: .12, ren: .04, vegg: .05, plopp: .06 }[type] || 0;
   if (sh.tid - (sh.lydSist[type] ?? -9) < min) return;
   sh.lydSist[type] = sh.tid;
   if (type === "vegg") shBoing(620, .016);
@@ -1961,10 +1961,13 @@ function shLyd(type, verdi) {
   else if (type === "flom") { shSus(.7, "lowpass", 260, .07, 2, .8, .4); shGlid(150, 60, .6, .04, "sine", .8, .4); }
   else if (type === "plopp") { shGlid(240, 90, .12, .035, "sine", .8, .3); shSus(.07, "lowpass", 900, .04, 1, .8, .2); }
   else if (type === "fang") { [0, 7, 12, 16].forEach((s, j) => tone(1046.5 * Math.pow(2, s / 12), j * .05, .3, .03, "sine", .4, 1.4)); shSus(.3, "highpass", 7000, .02, .7, .4, .8); }
-  else if (type === "moekk") { const tyk = verdi || 1; shSus(.08, "lowpass", 380 + 900 / (1 + tyk * .3), .05, 1.5, .8, .2); shGlid(200, 95, .08, .025, "sine", .8, .2); }
+  // Gjørmetreff: en lav, myk bobleswoosh i bakgrunnen, ikke et klask.
+  else if (type === "moekk") { shSus(.22, "lowpass", 230, .016, .7, .7, .25); shGlid(150, 85, .2, .009, "sine", .7, .25); }
+  // Rent felt: bare et lite pling for hvert sjette på rad, så vasken ikke maser.
+  else if (type === "ren" && (sh.kombo % 6 !== 0 || sh.kombo === 0)) return;
   else if (type === "ren") {
     const f = 587.33 * Math.pow(2, SH_PENTA[Math.min(sh.kombo, SH_PENTA.length - 1)] / 12);
-    tone(f, 0, .22, .03, "sine", .45, 1.4); tone(f * 2, 0, .1, .008, "sine", .4, 1.2); shSus(.05, "highpass", 6000, .012, .7, .5, .6);
+    tone(f, 0, .22, .02, "sine", .45, 1.4); tone(f * 2, 0, .1, .006, "sine", .4, 1.2);
   }
   else if (type === "kapsel") [0, 4, 7].forEach((s, j) => tone(784 * Math.pow(2, s / 12), j * 0.05, 0.12, 0.05, "triangle", 0.6, 1.2));
   else if (type === "tap") { tone(220, 0, 0.3, 0.06, "sawtooth", 0.6, 0.6); tone(147, 0.12, 0.4, 0.06, "sawtooth", 0.6, 0.6); }
