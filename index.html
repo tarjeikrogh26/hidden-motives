@@ -323,7 +323,7 @@ body:has(.resultat.vis) #spill .linje{opacity:0;pointer-events:none;transition:o
   <div class="regel"><b>The race:</b> Your best score on each of the ten boards in a collection is added up. Finish #1 overall and you get the next collection for free. Anyone who takes first place later gets it too. Points: Easy (25 pieces) gives 10,000, Medium (49) 15,000, Hard (100) 20,000 and Chaos (144) 25,000 at normal speed. Be fast and you get up to double.</div>
   <div class="sammen" id="sammen"><p class="liten">Loading standings …</p></div>
   <p class="kreditt">© 2001–2026 Tarjei Krogh. All photography, music and art. <a href="https://kroghx.com" target="_blank" rel="noopener">kroghx.com</a></p>
-  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 0.68<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
+  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 0.69<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
 </section>
 
 <div class="ark" id="tidUtArk" hidden style="z-index:200001">
@@ -1408,10 +1408,11 @@ function tegnBit(b) {
     const iw = img.naturalWidth || img.width, ih = img.naturalHeight || img.height, sk = Math.min(bw / iw, bh / ih) * .86;
     ctx.drawImage(img, t + (bw - iw * sk) / 2, t + (bh - ih * sk) / 2, iw * sk, ih * sk);
     // Logoen, svakt trykt, så det er tydelig at dette er baksiden.
-    ctx.globalCompositeOperation = "source-over"; ctx.globalAlpha = .42; ctx.fillStyle = "#8a5a2a"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.globalCompositeOperation = "source-over"; ctx.globalAlpha = .7; ctx.fillStyle = "#6a3f14"; ctx.strokeStyle = "rgba(255,240,215,.75)"; ctx.lineJoin = "round"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
     const fs = Math.max(6, Math.min(bw, bh) * .15); ctx.font = `800 ${fs}px "Syne", sans-serif`;
     ctx.save(); ctx.translate(t + bw / 2, t + bh / 2); ctx.rotate(-.12);
-    ctx.font = `800 ${fs * 1.25}px "Syne", sans-serif`; ctx.fillText("PIECE", 0, -fs * .6); ctx.fillText("IT", 0, fs * .7); ctx.restore();
+    ctx.font = `800 ${fs * 1.25}px "Syne", sans-serif`; ctx.lineWidth = Math.max(1.5, fs * .22);
+    for (const [ord, y] of [["PIECE", -fs * .6], ["IT", fs * .7]]) { ctx.strokeText(ord, 0, y); ctx.fillText(ord, 0, y); } ctx.restore();
     ctx.globalCompositeOperation = "source-over"; ctx.globalAlpha = 1;
   } else ctx.drawImage(img, t - b.c * bw, t - b.r * bh, bredde, hoyde);
   if (b.svidd > 0) sviBit(ctx, t, bw, bh, b.svidd, b.id);
