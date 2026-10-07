@@ -63,7 +63,8 @@ h1 .tittel span{color:var(--signal)}
 @media (max-width:560px){.moduser{font-size:.95em;gap:.3em}#modusScrub .tittel{font-size:1.06em;letter-spacing:.05em}}
 /* Logoen: stor HIDDEN MOTIVES, liten «by KROGHX» ved siden av (en lenke, men ikke i veien). */
 .hm-logo{font-size:40px;letter-spacing:.04em;line-height:1;display:flex;flex-wrap:nowrap;align-items:center;gap:14px;max-width:100%}
-.hm-navn{white-space:nowrap}
+.hm-navn{display:flex;flex-direction:column;white-space:nowrap;line-height:.92;gap:.04em}
+.hm-navn span{display:block;width:max-content}
 .hm-av{display:flex;flex-direction:column;align-items:flex-start;justify-content:center;font-family:var(--brod);font-weight:400;font-size:11px;line-height:1.25;letter-spacing:.08em;color:var(--demp);text-decoration:none;opacity:.8;white-space:nowrap;flex:none}
 .hm-av b{font-family:var(--display);font-weight:800;letter-spacing:.1em;font-size:11px}
 .hm-av:hover{opacity:1}
@@ -172,7 +173,7 @@ h1 .signatur{font-size:.55em;letter-spacing:.06em;white-space:nowrap}
 #brannLag{position:fixed;inset:0;pointer-events:none;z-index:255}
 :root{--kontur:2px 0 0 #120b04,-2px 0 0 #120b04,0 2px 0 #120b04,0 -2px 0 #120b04,1.5px 1.5px 0 #120b04,-1.5px 1.5px 0 #120b04,1.5px -1.5px 0 #120b04,-1.5px -1.5px 0 #120b04}
 .hendelse{position:fixed;left:50%;top:40%;z-index:266;pointer-events:none;text-align:center;transform:translate(-50%,-50%);font-family:var(--display);font-weight:800;
-  font-size:clamp(20px,6.4vw,42px);letter-spacing:.04em;line-height:1;color:#ff5a6a;text-shadow:0 0 18px rgba(255,90,106,.75),0 3px 0 rgba(0,0,0,.6);animation:hendelse 2.2s ease-out forwards;white-space:nowrap}
+  font-size:clamp(17px,5vw,34px);letter-spacing:.04em;line-height:1;color:#ff5a6a;text-shadow:0 0 18px rgba(255,90,106,.75),0 3px 0 rgba(0,0,0,.6);animation:hendelse 2.2s ease-out forwards;white-space:nowrap}
 .hendelse small{display:block;font-family:var(--brod);font-weight:600;font-size:15px;line-height:1.4;letter-spacing:.07em;color:#fff;margin:.6em auto 0;max-width:min(80vw,520px);white-space:normal;
   padding:.35em .8em;border-radius:12px;background:rgba(12,8,4,.55);text-shadow:var(--kontur)}
 @keyframes hendelse{0%{opacity:0;transform:translate(-50%,-50%) scale(.5)}12%{opacity:1;transform:translate(-50%,-50%) scale(1.12)}22%{transform:translate(-50%,-50%) scale(1)}80%{opacity:1}100%{opacity:0;transform:translate(-50%,-62%) scale(1)}}
@@ -187,7 +188,7 @@ h1 .signatur{font-size:.55em;letter-spacing:.06em;white-space:nowrap}
   .linje .tid{font-size:20px}.mal{padding-top:4px;font-size:10.5px}.mal b{font-size:13px}
   .hud-knapper{gap:4px}.hud-knapper button{padding:4px 3px;font-size:11px}.hud-knapper .hint span{font-size:10px}
 }
-.flaks.lang{font-family:var(--brod);font-weight:700;font-size:12.5px;letter-spacing:.12em;animation:flaksLang 3s ease-out forwards}
+.flaks.lang{font-family:var(--brod);font-weight:500;font-size:12.5px;letter-spacing:.16em;animation:flaksLang 3s ease-out forwards}
 @keyframes flaksLang{0%{opacity:0;transform:translate(-50%,-30%) scale(.7)}8%{opacity:1;transform:translate(-50%,-55%) scale(1.08)}16%{transform:translate(-50%,-60%) scale(1)}45%{opacity:1}100%{opacity:0;transform:translate(-50%,-130%) scale(1)}}
 .flaks{position:fixed;z-index:265;pointer-events:none;font-family:var(--display);font-weight:800;font-size:18px;letter-spacing:.08em;color:#ffd23a;text-shadow:0 0 10px rgba(255,190,40,.9);transform:translate(-50%,-50%);animation:flaks 1.2s ease-out forwards}
 @keyframes flaks{0%{opacity:0;transform:translate(-50%,-30%) scale(.6)}15%{opacity:1;transform:translate(-50%,-60%) scale(1.15)}100%{opacity:0;transform:translate(-50%,-160%) scale(1)}}
@@ -353,7 +354,7 @@ body:has(.resultat.vis) #spill .linje{opacity:0;pointer-events:none;transition:o
 <section id="meny" class="skjerm" aria-label="Collections">
   <div class="topp">
     <div>
-      <h1 class="hm-logo"><span class="hm-navn">HIDDEN MOTIVES</span><a class="hm-av" href="https://kroghx.com" target="_blank" rel="noopener"><span>by</span><b>KROGHX</b></a></h1>
+      <h1 class="hm-logo"><span class="hm-navn"><span class="hm-l1">HIDDEN</span><span class="hm-l2">MOTIVES</span></span><a class="hm-av" href="https://kroghx.com" target="_blank" rel="noopener"><span>by</span><b>KROGHX</b></a></h1>
       <div class="moduser" role="tablist" aria-label="Choose a game">
         <button class="modus" id="modusPuslespill" role="tab"><span class="tittel">PIECE&nbsp;IT</span></button>
         <button class="modus" id="modusScrub" role="tab"><span class="tittel">SCRUB&nbsp;IT</span></button>
@@ -370,7 +371,7 @@ body:has(.resultat.vis) #spill .linje{opacity:0;pointer-events:none;transition:o
   <div class="regel"><b>The race:</b> Your best score on each of the ten boards in a collection is added up. Finish #1 overall and you get the next collection for free. Anyone who takes first place later gets it too. Points: Easy (25 pieces) gives 10,000, Medium (49) 15,000, Hard (100) 20,000 and Chaos (144) 25,000 at normal speed. Be fast and you get up to double.</div>
   <div class="sammen" id="sammen"><p class="liten">Loading standings …</p></div>
   <p class="kreditt">© 2001–2026 Tarjei Krogh. All photography, music and art. <a href="https://kroghx.com" target="_blank" rel="noopener">kroghx.com</a></p>
-  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 0.87<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
+  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 0.88<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
 </section>
 
 <div class="ark" id="tidUtArk" hidden style="z-index:200001">
@@ -556,7 +557,9 @@ function tilpassLogo() {
   const cs = getComputedStyle(meny), bredde = meny.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
   const pass = (el, maks, ekstra) => { el.style.fontSize = maks + "px"; const w = el.scrollWidth + ekstra; if (w > bredde) el.style.fontSize = Math.max(12, Math.floor(maks * bredde / w * 0.98)) + "px"; };
   const navn = document.querySelector(".hm-navn"), av = document.querySelector(".hm-av");
-  if (navn) { const l = document.querySelector(".hm-logo"); l.style.fontSize = "60px"; const w = navn.scrollWidth + av.offsetWidth + 14; l.style.fontSize = Math.min(60, Math.floor(60 * (bredde - av.offsetWidth - 14) / (w - av.offsetWidth - 14) * 0.98)) + "px"; }
+  // HIDDEN og MOTIVES får hver sin størrelse, så begge linjene blir like brede (HIDDEN får litt større skrift).
+  if (navn) { const mål = Math.min(bredde - av.offsetWidth - 16, 420);
+    for (const l of navn.children) { l.style.fontSize = "100px"; l.style.fontSize = Math.floor(100 * mål / l.offsetWidth * 10) / 10 + "px"; } }
   const m = document.querySelector(".moduser"); if (m) pass(m, 34, 0);
 }
 addEventListener("resize", tilpassLogo); document.fonts?.ready.then(tilpassLogo); setTimeout(tilpassLogo, 50);
@@ -1415,7 +1418,9 @@ function rett(b) {
   requestAnimationFrame(steg);
 }
 function brikkeTekst(b, txt, farge) {
-  const el = document.createElement("div"); el.className = "flaks lang"; b = { x: b.x, y: b.y + .5 / spill.r }; el.textContent = txt; el.style.textShadow = `var(--kontur),0 0 12px ${farge || "rgba(255,190,40,.9)"}`; if (farge) el.style.color = farge;
+  const el = document.createElement("div"); el.className = "flaks lang"; b = { x: b.x, y: b.y + .5 / spill.r }; el.textContent = txt; const fg = farge || "rgba(255,190,40,.9)";
+  // Tynn skrift som lyser: tynn mørk kant så den kan leses, og glød i sin egen farge.
+  el.style.textShadow = `0 0 1px #120b04,0 0 2px #120b04,0 0 8px ${fg},0 0 16px ${fg}`; el.style.color = "#fff";
   const [px, py] = skjermPkt(geo.x0 + (b.x + .5 / spill.k) * geo.bredde, geo.y0 + b.y * geo.hoyde);
   Object.assign(el.style, { left: px + "px", top: py + "px" });
   document.body.appendChild(el); setTimeout(() => el.remove(), 2800);
@@ -1991,7 +1996,7 @@ function familie() {
   sp.familieGaar = true;
   const roller = [["MOTHER", "#ff9ad5"], ["FATHER", "#7fd1ff"], ["SISTER", "#ffd27a"], ["BROTHER", "#9cff7a"]];
   const ferd = sted.mor ? [sted.mor, ...sted.resten] : sted.resten;
-  banner("FAMILY!", "THEY FIND EACH OTHER", "#ff9ad5", 1800);
+  banner("FAMILY!", "THEY FIND EACH OTHER", "#ff9ad5", 1500);
   ferd.forEach((b, j) => setTimeout(() => {
     if (spill !== sp) return;
     const [rolle, farge] = roller[j];
@@ -1999,7 +2004,7 @@ function familie() {
     // Flyr fra der den ligger (også fra bunken) til plassen sin, og legger seg på plass.
     const i = sp.bunke.indexOf(b); if (i >= 0) { sp.bunke.splice(i, 1); leggBunke(); }
     b.iBunke = false; if (b.bak) { b.bak = false; tegnBit(b); } b.z = ++sp.ztopp; løftes.delete(b);
-    const fx = b.x, fy = b.y, mx = slotC(b) / sp.k, my = slotR(b) / sp.r, r0 = b.rot || 0, t0 = performance.now(), D = 560;
+    const fx = b.x, fy = b.y, mx = slotC(b) / sp.k, my = slotR(b) / sp.r, r0 = b.rot || 0, t0 = performance.now(), D = 400;
     if (lydPa) tone([523, 659, 784, 1047][j], 0, .35, .04, "sine", .7, .9);
     const steg = t => {
       if (spill !== sp || b.ferdig) return;
@@ -2011,7 +2016,7 @@ function familie() {
       brikkeTekst(b, rolle, farge);
     };
     requestAnimationFrame(steg);
-  }, 120 + j * 480));
+  }, 60 + j * 260));
   // Til slutt: en ring av lys rundt hele familien.
   setTimeout(() => {
     if (spill !== sp) return; sp.familieGaar = false;
@@ -2019,7 +2024,7 @@ function familie() {
     gnister.push({ familieRing: true, t: 0, liv: 1.6, c: c0, r: r0 }); if (!gnistRAF) gnistRAF = requestAnimationFrame(gnistSteg);
     banner("FAMILY UNITED!", null, "#ffd27a", 2400);
     if (lydPa) [0, 4, 7, 12].forEach((st, j) => tone(523 * Math.pow(2, st / 12), j * .08, .5, .03, "sine", .6, 1.1));
-  }, 120 + ferd.length * 480 + 650);
+  }, 60 + ferd.length * 260 + 450);
 }
 function limBrikker() {
   const sp = spill; sp.limBrukt = true; let n = 0;
@@ -2175,7 +2180,7 @@ function banner(tittel, under, farge, ms = 2300, paaBrett = false) {
   // Krymp tittelen til den får plass i 90 % av bredden (undertittelen brytes selv over flere linjer).
   // Måles uten animasjonen (den starter i halv størrelse).
   el.style.animationName = "none"; el.style.transform = "none";
-  const maks = innerWidth * .9, r = document.createRange(); r.selectNodeContents(el.firstChild); const b = r.getBoundingClientRect().width;
+  const maks = Math.min(innerWidth * .72, 560), r = document.createRange(); r.selectNodeContents(el.firstChild); const b = r.getBoundingClientRect().width;
   if (b > maks) el.style.fontSize = parseFloat(getComputedStyle(el).fontSize) * maks / b + "px";
   el.style.transform = ""; void el.offsetWidth; el.style.animationName = "";
 }
@@ -5646,7 +5651,7 @@ function shSteg(t) {
 }
 addEventListener("resize", () => { if (sh) shOppsett(); });
 // Bare for automatisk testing lokalt (?autotest).
-if (location.search.includes("autotest")) { window.__sh = () => sh; window.__shOppdater = dt => { shOppdater(dt); if (sh) { sh.tid += dt; shPartikler(dt); } }; window.__shTreff = shTreff; window.__shGalaga = shGalagaStart; window.__shSopp = shSopp; window.__shBytte = shByttetStart; window.__shOrm = shOrmStart; window.__levende = levendeStart; window.__gn = () => ({ gnister, raf: gnistRAF }); window.__hendelse = t => t === "tilt" ? tilt(true) : t === "vokse" ? vokseBrikke() : t === "break" ? puzzleBreak() : t === "speilX" ? speilStart("x") : t === "speilY" ? speilStart("y") : lynnedslag(); window.__shSprekk = shSprekk; window.__shTegn = () => { shRens(); shTegn(performance.now()); }; window.__spill = () => spill; window.__geo = () => geo; window.__plasser = plasser; window.__skjermPkt = skjermPkt; }
+if (location.search.includes("autotest")) { window.__sh = () => sh; window.__shOppdater = dt => { shOppdater(dt); if (sh) { sh.tid += dt; shPartikler(dt); } }; window.__shTreff = shTreff; window.__shGalaga = shGalagaStart; window.__shSopp = shSopp; window.__shBytte = shByttetStart; window.__shOrm = shOrmStart; window.__levende = levendeStart; window.__gn = () => ({ gnister, raf: gnistRAF }); window.__hendelse = t => t === "tilt" ? tilt(true) : t === "vokse" ? vokseBrikke() : t === "break" ? puzzleBreak() : t === "speilX" ? speilStart("x") : t === "speilY" ? speilStart("y") : lynnedslag(); window.__shSprekk = shSprekk; window.__shTegn = () => { shRens(); shTegn(performance.now()); }; window.__spill = () => spill; window.__banner = banner; window.__geo = () => geo; window.__plasser = plasser; window.__skjermPkt = skjermPkt; }
 
 
 
