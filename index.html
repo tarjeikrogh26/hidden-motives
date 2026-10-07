@@ -124,6 +124,9 @@ h1 .signatur{font-size:.55em;letter-spacing:.06em;white-space:nowrap}
   .hud-knapper .hint{flex-direction:row;gap:5px}
 }
 #bord{position:absolute;inset:0;transform-origin:0 0}
+.flaks{position:fixed;z-index:265;pointer-events:none;font-family:var(--display);font-weight:800;font-size:18px;letter-spacing:.08em;color:#ffd23a;text-shadow:0 0 10px rgba(255,190,40,.9);transform:translate(-50%,-50%);animation:flaks 1.2s ease-out forwards}
+@keyframes flaks{0%{opacity:0;transform:translate(-50%,-30%) scale(.6)}15%{opacity:1;transform:translate(-50%,-60%) scale(1.15)}100%{opacity:0;transform:translate(-50%,-160%) scale(1)}}
+.bunke-tall{position:fixed;z-index:260;pointer-events:none;font-family:var(--tall);font-size:12px;letter-spacing:.06em;color:var(--signal);background:rgba(20,19,18,.88);border:1px solid rgba(255,176,0,.5);border-radius:999px;padding:3px 10px;transform:translate(-50%,-100%);white-space:nowrap;box-shadow:0 2px 10px rgba(0,0,0,.5)}
 #bord.vik{transition:transform .6s cubic-bezier(.3,.7,.3,1) 2.6s}
 #ramme{position:absolute;border:1px solid var(--strek);background:
   linear-gradient(var(--flate),var(--flate));box-shadow:inset 0 0 40px rgba(0,0,0,.45);border-radius:2px}
@@ -260,7 +263,7 @@ h1 .signatur{font-size:.55em;letter-spacing:.06em;white-space:nowrap}
   <div class="regel"><b>The race:</b> Your best score on each of the ten boards in a collection is added up. Finish #1 overall and you get the next collection for free. Anyone who takes first place later gets it too. Points: Easy (25 pieces) gives 10,000, Medium (49) 15,000, Hard (100) 20,000 and Chaos (144) 25,000 at normal speed. Be fast and you get up to double.</div>
   <div class="sammen" id="sammen"><p class="liten">Loading standings …</p></div>
   <p class="kreditt">© 2001–2026 Tarjei Krogh. All photography, music and art. <a href="https://kroghx.com" target="_blank" rel="noopener">kroghx.com</a></p>
-  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 0.42<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
+  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 0.43<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
 </section>
 
 <div class="ark" id="tidUtArk" hidden style="z-index:200001">
@@ -307,6 +310,7 @@ h1 .signatur{font-size:.55em;letter-spacing:.06em;white-space:nowrap}
     <div id="mal-plass"></div>
   </div>
   <canvas id="fest"></canvas>
+  <div class="bunke-tall" id="bunkeTall" hidden></div>
   <canvas id="mynter"></canvas>
   <aside class="resultat" id="resultat" aria-live="polite">
     <div class="ark-venstre">
@@ -1007,7 +1011,9 @@ async function startSpill(i, n, gjenoppta) {
   spill.liste = husListe(i, o.n);
   hentListe(i, o.n).then(l => { if (spill && spill.brett === i && spill.n === o.n) spill.liste = l; });
   oppsett();
-  if (!gjenoppta?.biter) { strø(biter); biter.forEach(plasser); }
+  // Alle løse brikker ligger i én bunke ved siden av brettet. Trykk kaster en opp på brettet, hold kaster flere.
+  if (!gjenoppta?.biter) { spill.bunke = biter.slice().sort(() => Math.random() - .5); spill.bunke.forEach((b, j) => { b.iBunke = true; b.z = j + 1; b.bj = [(Math.random() - .5) * 12, (Math.random() - .5) * 8]; }); leggBunke(); }
+  else { spill.bunke = []; visBunkeTall(); }
   biter.forEach(koble);
   oppdaterTeller();
   clearInterval(timer); timer = setInterval(tikk, 250); tikk();
@@ -1032,6 +1038,68 @@ function lagStokking(n) {
 
 // Strø bitene der det faktisk er plass: først i rommet til høyre for brettet,
 // resten spredt jevnt utover brettet (de har tydelig kant, så de synes).
+// Bunken: midt i det ledige rommet ved siden av brettet. Øverste brikke ligger øverst, de under litt forskjøvet.
+const HELDIG = .16;
+function bunkePlass() {
+  const g = geo, friX = g.maxX - 1.02, friY = g.maxY - 1.02;
+  if (friX > 0.12) return { x: 1.02 + friX / 2 - .5 / spill.k, y: .5 - .5 / spill.r };
+  if (friY > 0.12) return { x: .5 - .5 / spill.k, y: 1.02 + friY / 2 - .5 / spill.r };
+  return { x: g.maxX, y: g.maxY };
+}
+function leggBunke() {
+  if (!spill || !spill.bunke) return;
+  const p = bunkePlass(), n = spill.bunke.length;
+  spill.bunke.forEach((b, j) => {
+    const d = Math.min(n - 1 - j, 9), bj = b.bj || [0, 0];
+    b.x = p.x + (bj[0] * Math.min(1, d / 2) - d * 1.4) / geo.bredde; b.y = p.y + (bj[1] * Math.min(1, d / 2) + d * 1.8) / geo.hoyde;
+    b.z = j + 1; plasser(b);
+  });
+  visBunkeTall();
+}
+function visBunkeTall() {
+  const el = $("bunkeTall"), n = spill?.bunke?.length || 0;
+  if (!spill || !n || spill.slutt) { el.hidden = true; return; }
+  const p = bunkePlass();
+  el.hidden = false; el.textContent = n + " · TAP OR HOLD";
+  el.style.left = geo.x0 + (p.x + .5 / spill.k) * geo.bredde + "px"; el.style.top = geo.y0 + p.y * geo.hoyde - 6 + "px";
+}
+// Kast en brikke opp på brettet. Den lander på en ledig plass, eller med flaks rett på sin egen.
+function kast(b, heldig) {
+  const sp = spill; if (!sp || sp.tapt || sp.slutt) return;
+  const i = sp.bunke.indexOf(b); if (i >= 0) sp.bunke.splice(i, 1);
+  b.iBunke = false; leggBunke();
+  if (!sp.start) sp.start = Date.now();
+  let mx, my;
+  if (heldig) { mx = b.c / sp.k; my = b.r / sp.r; }
+  else {
+    const opptatt = new Set(sp.biter.filter(q => !q.iBunke && !q.ferdig && q !== b).map(q => Math.round(q.y * sp.r) * sp.k + Math.round(q.x * sp.k)));
+    const ledige = sp.biter.filter(q => !q.ferdig && q.id !== b.id && !opptatt.has(q.id));
+    const m = ledige.length ? ledige[(Math.random() * ledige.length) | 0] : sp.biter[(Math.random() * sp.biter.length) | 0];
+    mx = (m.c + (Math.random() - .5) * .22) / sp.k; my = (m.r + (Math.random() - .5) * .22) / sp.r;
+  }
+  løftes.delete(b); b.z = ++sp.ztopp;
+  const fx = b.x, fy = b.y, t0 = performance.now(), varighet = 380 + Math.hypot((mx - fx) * geo.bredde, (my - fy) * geo.hoyde) * .25;
+  if (lydPa) { tone(420, 0, .07, .012, "triangle", .6, .4); tone(840, .02, .05, .006, "sine", .6, .4); }
+  const steg = t => {
+    if (spill !== sp || !b.el.isConnected) return;
+    const u = Math.min(1, (t - t0) / varighet), e = 1 - Math.pow(1 - u, 3);
+    b.x = fx + (mx - fx) * e; b.y = fy + (my - fy) * e - Math.sin(Math.PI * u) * .06; b.loft = Math.sin(Math.PI * u) * 1.1;
+    if (u < 1) { plasser(b); requestAnimationFrame(steg); return; }
+    b.x = mx; b.y = my; b.loft = 0;
+    if (heldig && b.provSmett && b.provSmett()) { gnistKast(b); return; }
+    if (lydPa) tone(170, 0, .06, .03, "sine", .9, .2);
+    const t1 = performance.now();
+    const dunk = t2 => { if (spill !== sp) return; const v = Math.min(1, (t2 - t1) / 140); b.dunk = Math.sin(Math.PI * v) * .6; plasser(b); if (v < 1) requestAnimationFrame(dunk); else { b.dunk = 0; plasser(b); } };
+    requestAnimationFrame(dunk);
+  };
+  requestAnimationFrame(steg);
+}
+// Flaks: et lite gyllent glimt når en kastet brikke lander rett på plass.
+function gnistKast(b) {
+  const el = document.createElement("div"); el.className = "flaks"; el.textContent = "LUCKY!";
+  Object.assign(el.style, { left: geo.x0 + (b.c + .5) * geo.bw + "px", top: geo.y0 + b.r * geo.bh + "px" });
+  document.body.appendChild(el); setTimeout(() => el.remove(), 1200);
+}
 function strø(biter) {
   const g = geo, bland = biter.slice().sort(() => Math.random() - 0.5);
   const friX = g.maxX - 1.02, friY = g.maxY - 1.02;
@@ -1106,6 +1174,7 @@ function oppsett() {
   for (const b of spill.biter) { bitSti(ox, b.c * bw, b.r * bh, bw, bh, b.kanter); ox.stroke(); }
   const gl = $("gnistLag"); gl.width = Math.round(W * dpr); gl.height = Math.round(H * dpr); gl.style.width = W + "px"; gl.style.height = H + "px";
   spill.biter.forEach(b => { tegnBit(b); plasser(b); });
+  if (spill.bunke) leggBunke();
 }
 function tegnBit(b) {
   const { bw, bh, p: t, dpr, bredde, hoyde } = geo, img = spill.img;
@@ -1260,8 +1329,10 @@ function koble(b) {
     else settNed(b, fraX, fraY, () => plingLyd(andel, b));
     return true;
   }
+  b.provSmett = provSmett;
   b.el.addEventListener("pointerdown", e => {
     if (b.ferdig || spill.tapt || !treffer(b, e)) return;
+
     e.preventDefault();
     cancelAnimationFrame(glid); glid = 0;
     if (!spill.start) spill.start = Date.now();
@@ -1270,14 +1341,35 @@ function koble(b) {
     ctx();
     try { b.el.setPointerCapture(e.pointerId); } catch {}
     b.z = ++spill.ztopp; b.el.classList.add("drar");
-    dra = { px: e.clientX, py: e.clientY, x: b.x, y: b.y, spor: [{ t: e.timeStamp, x: b.x, y: b.y }] };
+    dra = { px: e.clientX, py: e.clientY, x: b.x, y: b.y, spor: [{ t: e.timeStamp, x: b.x, y: b.y }], bunke: !!b.iBunke, flyttet: false };
     løft(b, 1); plasser(b);
+    if (dra.bunke) {
+      const pid = e.pointerId;
+      clearTimeout(b.holdT);
+      b.holdT = setTimeout(() => {
+        if (!dra || !dra.bunke || dra.flyttet) return;
+        dra = null; b.el.classList.remove("drar");
+        try { b.el.releasePointerCapture(pid); } catch {}
+        // Holder du på bunken, flyr brikkene opp én etter én.
+        kast(b, Math.random() < HELDIG);
+        const iv = setInterval(() => { const t = spill?.bunke?.[spill.bunke.length - 1]; if (!t) { stopp(); return; } kast(t, Math.random() < HELDIG); }, 190);
+        const stopp = () => { clearInterval(iv); removeEventListener("pointerup", stopp); removeEventListener("pointercancel", stopp); };
+        addEventListener("pointerup", stopp); addEventListener("pointercancel", stopp);
+      }, 320);
+    }
   });
   let flytt = 0, sistE = null;
   b.el.addEventListener("pointermove", e => {
     if (!dra) return;
     sistE = e;
     if (flytt) return;
+    if (dra.bunke && !dra.flyttet) {
+      if (Math.hypot(e.clientX - dra.px, e.clientY - dra.py) < 9) return;
+      // Dratt ut av bunken: nå er den en vanlig brikke.
+      dra.flyttet = true; clearTimeout(b.holdT);
+      const i = spill.bunke.indexOf(b); if (i >= 0) spill.bunke.splice(i, 1);
+      b.iBunke = false; b.z = ++spill.ztopp; leggBunke();
+    }
     flytt = requestAnimationFrame(() => {
       flytt = 0; const e = sistE; if (!dra || !e) return;
       [b.x, b.y] = trekk(dra.x + (e.clientX - dra.px) / geo.bredde, dra.y + (e.clientY - dra.py) / geo.hoyde);
@@ -1290,6 +1382,7 @@ function koble(b) {
     if (!dra) return;
     if (flytt) { cancelAnimationFrame(flytt); flytt = 0; }
     if (sistE && e && e.clientX != null) { [b.x, b.y] = trekk(dra.x + (e.clientX - dra.px) / geo.bredde, dra.y + (e.clientY - dra.py) / geo.hoyde); dra.spor.push({ t: e.timeStamp, x: b.x, y: b.y }); }
+    if (dra.bunke && !dra.flyttet) { clearTimeout(b.holdT); dra = null; b.el.classList.remove("drar"); kast(b, Math.random() < HELDIG); return; }
     const spor = dra.spor; dra = null; b.el.classList.remove("drar");
     if (provSmett()) return;
     løft(b, 0);
@@ -1364,7 +1457,7 @@ $("hintKnapp").onclick = () => {
   const m = $("mal-plass");
   Object.assign(m.style, { left: geo.x0 + b.c * geo.bw + "px", top: geo.y0 + b.r * geo.bh + "px", width: geo.bw + "px", height: geo.bh + "px" });
   m.classList.remove("blink"); void m.offsetWidth; m.classList.add("blink");
-  b.z = ++spill.ztopp; plasser(b);
+  if (b.iBunke) kast(b, false); else { b.z = ++spill.ztopp; plasser(b); }
   b.el.classList.remove("vis"); void b.el.offsetWidth; b.el.classList.add("vis");
   visHintKnapp();
 };
@@ -1415,7 +1508,7 @@ function visMal(s) {
 function regnPoeng(n, s) { return Math.round((GRUNN[n] || n * 300) * 2 * (n * 5) / (s + n * 5)); }
 
 async function ferdig() {
-  spill.slutt = Date.now(); spill.sluttT = performance.now(); clearInterval(timer); tikk(); dempMusikk();
+  spill.slutt = Date.now(); spill.sluttT = performance.now(); $("bunkeTall").hidden = true; clearInterval(timer); tikk(); dempMusikk();
   const s = sekunder(), p = regnPoeng(spill.n, s), b = BRETT[spill.brett];
   setTimeout(() => $("avslor").classList.add("vis"), 350);
   $("avslor").classList.add("bolge"); $("ramme").classList.add("neon");
@@ -1610,7 +1703,7 @@ function nesteUlost(fra) {
   return -1;
 }
 function tilMeny() {
-  stoppFest(); stoppMusikk();
+  stoppFest(); stoppMusikk(); $("bunkeTall").hidden = true;
   clearInterval(timer); spill = null;
   document.querySelectorAll(".bit").forEach(e => e.remove());
   $("spill").hidden = true; $("meny").hidden = false;
