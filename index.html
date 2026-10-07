@@ -263,7 +263,7 @@ h1 .signatur{font-size:.55em;letter-spacing:.06em;white-space:nowrap}
   <div class="regel"><b>The race:</b> Your best score on each of the ten boards in a collection is added up. Finish #1 overall and you get the next collection for free. Anyone who takes first place later gets it too. Points: Easy (25 pieces) gives 10,000, Medium (49) 15,000, Hard (100) 20,000 and Chaos (144) 25,000 at normal speed. Be fast and you get up to double.</div>
   <div class="sammen" id="sammen"><p class="liten">Loading standings …</p></div>
   <p class="kreditt">© 2001–2026 Tarjei Krogh. All photography, music and art. <a href="https://kroghx.com" target="_blank" rel="noopener">kroghx.com</a></p>
-  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 0.43<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
+  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 0.44<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
 </section>
 
 <div class="ark" id="tidUtArk" hidden style="z-index:200001">
@@ -2360,7 +2360,7 @@ function shBoing(f, styrke) {
 function shLyd(type, verdi) {
   if (!lydPa || !sh) return;
   // Ikke for mange like lyder samtidig.
-  const min = { moekk: .12, ren: .04, vegg: .05, plopp: .06, smaa: .05, skudd: .05, innkapsle: .04 }[type] || 0;
+  const min = { moekk: .12, ren: .04, vegg: .05, plopp: .06, smaa: .05, skudd: .07, innkapsle: .04, pop: .05 }[type] || 0;
   if (sh.tid - (sh.lydSist[type] ?? -9) < min) return;
   sh.lydSist[type] = sh.tid;
   if (type === "vegg") shBoing(620, .016);
@@ -2380,6 +2380,7 @@ function shLyd(type, verdi) {
   else if (type === "lampe") { const f = 659.25 * Math.pow(2, [0, 2, 4, 7, 9, 12][Math.min(5, (verdi || 1) - 1)] / 12); tone(f, 0, .14, .03, "square", .5, .8); tone(f * 2, .02, .1, .01, "sine", .5, .8); }
   else if (type === "invasjon") [0, 4, 7, 12, 7, 12, 16, 19].forEach((st, j) => tone(523.25 * Math.pow(2, st / 12), j * .075, .1, .025, "square", .5, .9));
   else if (type === "innkapsle") { shGlid(260, 780, .22, .04, "sine", .6, .8); shSus(.1, "bandpass", 2200, .02, 1.2, .6, .6); }
+  else if (type === "pop") { shSus(.05, "highpass", 2600, .05, .8, .7, .6); shGlid(900, 300, .08, .025, "sine", .7, .6); }
   else if (type === "skudd") shGlid(650 + Math.random() * 300, 1150 + Math.random() * 300, .045, .006, "sine", .6, .5);
   else if (type === "kapsel") [0, 4, 7].forEach((s, j) => tone(784 * Math.pow(2, s / 12), j * 0.05, 0.12, 0.05, "triangle", 0.6, 1.2));
   else if (type === "tap") { tone(220, 0, 0.3, 0.06, "sawtooth", 0.6, 0.6); tone(147, 0.12, 0.4, 0.06, "sawtooth", 0.6, 0.6); }
@@ -2494,7 +2495,7 @@ function shTreff(k, lag = 1, kilde = null) {
   }
   const andel = 1 - s.igjen / s.klosser.length, mål = [.25, .5, .75, .9][s.milepael];
   if (mål && andel >= mål) { s.milepael++; s.glimt = s.tid; shLyd("glimt"); }
-  if (s.igjen <= 0) shFerdig();
+  if (s.igjen <= 0 && !s.galaga) shFerdig();
 }
 function shVask(x, y, rad, lag, kilde) {
   const s = sh, c0 = Math.max(0, Math.floor((x - rad) * SH_KOL)), c1 = Math.min(SH_KOL - 1, Math.floor((x + rad) * SH_KOL));
@@ -2589,7 +2590,7 @@ function shNyGjorme(x, y, rad) {
 }
 function shInnkaps(e) {
   const s = sh, g = s.galaga;
-  e.tilstand = "boble"; e.bt = 0; g.fanget++;
+  e.tilstand = "boble"; e.bt = 0; g.fanget++; e.utgang = Math.random() < .5 ? "opp" : "sprekk"; e.sprekkT = .45 + Math.random() * .5;
   s.poeng += 300; shHud(); shLyd("innkapsle");
   s.tekster.push({ txt: "+300", x: e.x, y: e.y - .04, liv: .8, farge: "#7fe8ff", liten: true });
   shStov(e.x, e.y, 20, "200,240,255", .15);
@@ -2597,6 +2598,7 @@ function shInnkaps(e) {
 }
 function shGalagaSteg(dt) {
   const s = sh, g = s.galaga; if (!g) return;
+  const andel = g.fiender.filter(e => e.tilstand === "inn" || e.tilstand === "form" || e.tilstand === "dykk").length / g.fiender.length;
   g.t += dt; s.eff.K = Math.max(s.eff.K, .2);
   const sving = Math.sin(g.t * .9) * .07;
   g.dykkT -= dt;
@@ -2615,9 +2617,9 @@ function shGalagaSteg(dt) {
       const trussel = s.skudd.find(q => q.y > e.y && q.y - e.y < .25 && Math.abs(q.x - e.x) < .045);
       e.unna = (e.unna || 0) * Math.exp(-dt * 1.5) + (trussel ? Math.sign(e.x - trussel.x || 1) * .35 * dt : 0);
       e.unna = shClamp(e.unna, -.09, .09);
-      if (g.dykkT <= 0 && g.t < 17) { g.dykkT = 2 + Math.random() * 1.5; e.tilstand = "dykk"; e.dt = 0; e.dx0 = e.x; e.dy0 = e.y; e.mx = shClamp(s.padX + (Math.random() - .5) * .3, .1, .9); }
+      if (g.dykkT <= 0) { g.dykkT = (2 + Math.random() * 1.5) * (.45 + .55 * andel); e.tilstand = "dykk"; e.dt = 0; e.dx0 = e.x; e.dy0 = e.y; e.mx = shClamp(s.padX + (Math.random() - .5) * .3, .1, .9); }
       e.bombeT -= dt;
-      if (e.bombeT <= 0 && g.t < 18) { e.bombeT = 1.8 + Math.random() * 2.6; g.bomber.push({ x: e.x, y: e.y + .02, vy: .18, mål: SH_TOPP + .15 + Math.random() * .75 }); }
+      if (e.bombeT <= 0) { e.bombeT = (1.8 + Math.random() * 2.6) * (.4 + .6 * andel); g.bomber.push({ x: e.x, y: e.y + .02, vy: .18, mål: SH_TOPP + .15 + Math.random() * .75 }); }
     } else if (e.tilstand === "dykk") {
       // Stuper ned mot flipperne i en bue og drypper gjørme på veien.
       e.dt += dt; const u = Math.min(1, e.dt / 2.6);
@@ -2628,8 +2630,15 @@ function shGalagaSteg(dt) {
     } else if (e.tilstand === "boble") {
       e.bt += dt; e.y -= (.12 + e.bt * .25) * dt; e.x += Math.sin(e.bt * 4 + e.fase) * .05 * dt;
       if (e.y < -.08) e.tilstand = "borte";
-    } else if (e.tilstand === "flukt") {
-      e.y -= .5 * dt; if (e.y < -.1) e.tilstand = "borte";
+      // Noen bobler sprekker, og figuren kastes ut av balanse og ut av brettet.
+      else if (e.utgang === "sprekk" && e.bt > e.sprekkT) {
+        e.tilstand = "kastet"; e.vx = (e.x < .5 ? -1 : 1) * (Math.random() < .2 ? -1 : 1) * (.45 + Math.random() * .5); e.vy = -.3 - Math.random() * .3; e.spinn = (Math.random() - .5) * 20; e.rot = 0;
+        shLyd("pop"); shStov(e.x, e.y, 14, "200,240,255", .2);
+        for (let n = 0; n < 8; n++) s.skum.push({ x: e.x + (Math.random() - .5) * .05, y: e.y + (Math.random() - .5) * .05, r: .002 + Math.random() * .005, liv: 1, fart: 1.5 });
+      }
+    } else if (e.tilstand === "kastet") {
+      e.vy += .9 * dt; e.x += e.vx * dt; e.y += e.vy * dt; e.rot += e.spinn * dt;
+      if (e.x < -.12 || e.x > 1.12 || e.y > SH_H + .1) e.tilstand = "borte";
     }
     // Boblen selv kapsler også inn.
     if (e.tilstand === "form" || e.tilstand === "dykk" || (e.tilstand === "inn" && e.t > .3))
@@ -2640,11 +2649,11 @@ function shGalagaSteg(dt) {
     if (q.y >= q.mål) { q.borte = true; shNyGjorme(q.x, q.y, .035); }
   }
   g.bomber = g.bomber.filter(q => !q.borte);
-  const igjen = g.fiender.filter(e => e.tilstand !== "borte" && e.tilstand !== "boble" && e.tilstand !== "flukt");
-  if (g.t > 20) igjen.forEach(e => e.tilstand = "flukt");
   if (g.fiender.every(e => e.tilstand === "borte") && !g.bomber.length) {
-    if (g.fanget === g.fiender.length) { s.poeng += 2000; shHud(); s.tekster.push({ txt: "ALL CAUGHT! +2000", x: .5, y: .45, liv: 1.5, farge: "#ffd23a" }); shLyd("glimt"); }
+    s.poeng += 2000; shHud(); s.tekster.push({ txt: "WAVE CLEAR! +2000", x: .5, y: .45, liv: 1.5, farge: "#ffd23a" }); shLyd("glimt");
     s.galaga = null; s.galagaPause = s.tid + 12; s.eff.K = Math.min(s.eff.K, .5);
+    // Brettet blir ikke ferdig mens gjengen er der. Er alt rent nå, er det ferdig.
+    if (s.igjen <= 0 && !s.galaga) shFerdig();
   }
 }
 function shKapsel(t) {
@@ -2747,6 +2756,8 @@ function shOppdater(dt) {
   s.padW += ((s.eff.W > 0 ? 0.36 : 0.26) - s.padW) * Math.min(1, dt * 8);
   if (shPekr && !shPekr.dratt && performance.now() - shPekr.t0 > 140) s.padX += (shPekr.sistX < innerWidth / 2 ? -1 : 1) * 1.05 * dt;
   s.padX = shClamp(s.padX, s.padW / 2, 1 - s.padW / 2);
+  // Hvor fort flipperne flyttes: boble-slangen sikter den veien.
+  s.padV = (s.padV || 0) * .8 + (s.padX - (s.padXFør ?? s.padX)) / Math.max(dt, 1e-3) * .2; s.padXFør = s.padX;
   for (const b of s.baller) {
     // Når den dypblå staven er borte, krymper boblene rolig tilbake.
     if (s.eff.B <= 0 && b.str > 1) b.str = Math.max(1, b.str - dt * .6);
@@ -2811,12 +2822,15 @@ function shOppdater(dt) {
   // BUBBLE GUN: flipperne spruter ut små bobler, tett i tett.
   if (s.eff.K > 0) {
     s.skuddT -= dt;
-    if (s.skuddT <= 0) {
+    // Som en vannslange: en tett stråle av bobler fra midten mellom flipperne. Flytt flipperne for å sikte.
+    for (let n = 0; n < 3 && s.skuddT <= 0; n++) {
       const angrep = !!s.galaga && s.eff.K < .3;
-      s.skuddT = angrep ? .11 : .042; const side = (s.skuddSide = !s.skuddSide) ? -1 : 1;
-      s.skudd.push({ x: s.padX + side * s.padW * .42 + (Math.random() - .5) * .01, y: SH_PY - .02, vx: side * .03 + (Math.random() - .5) * .04, vy: angrep ? -1.25 : -1.5, r: .009 + Math.random() * .004, budsjett: angrep ? 1 : 2, fase: Math.random() * 6 });
+      s.skuddT += angrep ? .05 : .03;
+      const sikte = shClamp(s.padV * .6, -.6, .6) + Math.sin(s.tid * 7) * .05, v = 1.4 + Math.random() * .3;
+      s.skudd.push({ x: s.padX + (Math.random() - .5) * .025, y: SH_PY - .03, vx: Math.sin(sikte) * v + (Math.random() - .5) * .06, vy: -Math.cos(sikte) * v, r: .008 + Math.random() * .006, budsjett: angrep ? 1 : 2, fase: Math.random() * 6 });
       shLyd("skudd");
     }
+    if (s.skuddT < -.1) s.skuddT = 0;
   }
   shGalagaSteg(dt);
   for (const q of s.skudd) {
@@ -2835,7 +2849,7 @@ function shOppdater(dt) {
   s.skudd = s.skudd.filter(q => !q.borte);
   shRenn(dt);
   // Siste skylling: når nesten alt er rent, vaskes restene bort av seg selv.
-  if (s.igjen > 0 && s.igjen <= Math.ceil(s.klosser.length * .08)) {
+  if (!s.galaga && s.igjen > 0 && s.igjen <= Math.ceil(s.klosser.length * .08)) {
     if (!s.skylling) { s.skylling = true; s.tekster.push({ txt: "FINAL RINSE", x: .5, y: .5, liv: 1.4, farge: "#bfe9ff" }); }
     s.skyllT -= dt;
     if (s.skyllT <= 0) {
@@ -2931,7 +2945,8 @@ function shPartikler(dt) {
 function shMistetLiv() {
   const s = sh; s.liv--; shLyd("tap"); shHud();
   s.eff = { W: 0, B: 0, G: 0, A: 0, F: 0, K: 0 }; s.kapsler = []; s.smaa = []; s.skudd = []; s.fart = s.grunnfart;
-  if (s.galaga) { s.galaga = null; s.galagaPause = s.tid + 12; } s.lamper = 0;
+  // Gjengen blir værende selv om du mister en boble.
+  if (!s.galaga) s.lamper = 0;
   if (s.liv <= 0) {
     s.tilstand = "over";
     const forrige = shLagret()["best" + aktiv] || 0, ny = s.poeng > forrige;
@@ -3261,7 +3276,8 @@ function shTegn(t) {
     for (const q of g.bomber) shKlattTegn(x, q.x * f, q.y * f, .008 * f, 1 + Math.min(1, q.vy * 2), s.jord, q.x * 9, s.tid);
     for (const e of g.fiender) {
       if (e.tilstand === "borte" || (e.tilstand === "inn" && e.t < 0)) continue;
-      const X = e.x * f, Y = e.y * f, slag = Math.sin(s.tid * 14 + e.fase) * .35;
+      const X = e.x * f, Y = e.y * f, slag = Math.sin(s.tid * (e.tilstand === "kastet" ? 30 : 14) + e.fase) * .35;
+      x.save(); if (e.rot) { x.translate(X, Y); x.rotate(e.rot); x.translate(-X, -Y); }
       if (e.tilstand !== "boble") {
         x.save(); x.globalCompositeOperation = "lighter"; x.fillStyle = e.nr % 2 ? "rgba(255,90,200,.75)" : "rgba(90,220,255,.75)";
         for (const side of [-1, 1]) { x.beginPath(); x.moveTo(X + side * R * .6, Y - R * .2); x.lineTo(X + side * R * (1.9 + slag * .3), Y - R * (.7 + slag)); x.lineTo(X + side * R * 1.5, Y + R * .5); x.closePath(); x.fill(); }
@@ -3278,7 +3294,13 @@ function shTegn(t) {
         x.strokeStyle = `hsla(${(s.tid * 160 + e.fase * 50) % 360},90%,75%,.9)`; x.lineWidth = Math.max(1.2, BR * .09); x.stroke();
         x.fillStyle = "rgba(255,255,255,.85)"; x.beginPath(); x.ellipse(X - BR * .38, Y - BR * .42, BR * .26, BR * .12, -.7, 0, 7); x.fill();
       }
+      x.restore();
     }
+  }
+  if (s.eff.K > 0 && s.tilstand !== "ferdig") {
+    x.save(); x.globalCompositeOperation = "lighter";
+    const nx = s.padX * f, ny = (SH_PY - .025) * f, nr = .03 * f, ng = x.createRadialGradient(nx, ny, 0, nx, ny, nr);
+    ng.addColorStop(0, "rgba(160,235,255,.75)"); ng.addColorStop(1, "rgba(160,235,255,0)"); x.fillStyle = ng; x.fillRect(nx - nr, ny - nr, nr * 2, nr * 2); x.restore();
   }
   // Bobler fra BUBBLE GUN.
   for (const q of s.skudd) {
