@@ -410,7 +410,7 @@ body:has(.resultat.vis) #spill .linje{opacity:0;pointer-events:none;transition:o
   <div class="regel"><b>The race:</b> Your best score on each of the ten boards in a collection is added up. Finish #1 overall and you get the next collection for free. Anyone who takes first place later gets it too. Points: Easy (25 pieces) gives 10,000, Medium (49) 15,000, Hard (100) 20,000 and Chaos (144) 25,000 at normal speed. Be fast and you get up to double.</div>
   <div class="sammen" id="sammen"><p class="liten">Loading standings …</p></div>
   <p class="kreditt">© 2001–2026 Tarjei Krogh. All photography, music and art. <a href="https://kroghx.com" target="_blank" rel="noopener">kroghx.com</a></p>
-  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 1.02<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
+  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 1.03<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
 </section>
 
 <div class="ark" id="tidUtArk" hidden style="z-index:200001">
@@ -566,7 +566,8 @@ function lesLokal() { try { return JSON.parse(localStorage.getItem("sb-fremdrift
 function skrivLokal(v) { try { localStorage.setItem("sb-fremdrift", JSON.stringify(v)); } catch {} }
 const GRUNN = { 25: 10000, 49: 15000, 100: 20000, 144: 25000 };
 let fremdrift = lesLokal(); // { b1: {24: {poeng, tid}} }
-for (const id in fremdrift) for (const n in fremdrift[id]) { const f = fremdrift[id][n]; if (f && typeof f.tid === "number") f.poeng = regnPoeng(+n, f.tid); }
+// Poeng regnes fra tid (så en endret formel slår likt ut for alle). Peace-rekorder heter «peace_25» osv.
+for (const id in fremdrift) for (const n in fremdrift[id]) { const f = fremdrift[id][n], ant = +String(n).replace("peace_", ""); if (f && typeof f.tid === "number" && ant > 0) f.poeng = regnPoeng(ant, f.tid); }
 
 // ---------- bilder ----------
 const bildeLaster = {};
@@ -584,15 +585,35 @@ let variant = { pusle: "game", scrub: "1p" };
 try { const v = JSON.parse(localStorage.getItem("sm-variant") || "null"); if (v) variant = { ...variant, ...v }; } catch {}
 const iPeace = () => modus === "pusle" && variant.pusle === "peace";
 // BETA: alle brett er åpne for testerne. Sett til false for låsing én og én.
-const BETA = true;
-function erApen(i) { return BETA || i === 0 || erLost(BRETT[i - 1].id); }
+const BETA = !location.search.includes("betaav");
+function erApen(i) {
+  if (BETA || i === 0) return true;
+  const f = fremdrift[BRETT[i - 1].id] || {};
+  if (modus === "scrub") return !!f.scrub; // 1P og 2P: åpnes av 1P.
+  return Object.keys(f).some(k => +k || k.startsWith("peace_"));
+}
+// En sesong er åpen hvis den er den første, er vunnet gratis, eller er kjøpt.
+const sesongVunnet = j => !!fremdrift["samling" + (j + 1)];
+const sesongKjopt = j => { try { return JSON.parse(localStorage.getItem("sm-kjopt") || "[]").includes(j); } catch { return false; } };
+function sesongApen(j) { return BETA || j === 0 || sesongVunnet(j) || sesongKjopt(j); }
+// Alle ti brett spilt i denne sesongen, i en hvilken som helst modus (kravet for å kunne kjøpe neste).
+function sesongSpilt() { return BRETT.every(b => { const f = fremdrift[b.id] || {}; return Object.keys(f).length > 0; }); }
+// Gi neste sesong gratis (#1 på en liste). Lagres lokalt og på serveren.
+async function giGratisSesong() {
+  const flagg = "samling" + (aktiv + 2); if (fremdrift[flagg]) return false;
+  fremdrift[flagg] = true; skrivLokal(fremdrift);
+  if (db && minId) { try { const ref = db.doc("rekorder/" + minId); const sn = await ref.get(); if (sn.exists) await ref.update({ [flagg]: true }); else await ref.set({ [flagg]: true }); } catch {} }
+  return true;
+}
+const gratisTekst = () => " You are #1 and won /" + String(aktiv + 2).padStart(2, "0") + " for free!";
 
 function tegnFaner() {
   const f = $("faner"); f.replaceChildren();
   SAMLINGER.forEach((sm, j) => {
     const b = document.createElement("button"); b.setAttribute("role", "tab"); b.setAttribute("aria-selected", String(j === aktiv));
     b.append("/" + sm.nr); const n = document.createElement("b"); n.textContent = SAMLINGSNAVN[j]; b.append(n);
-    b.onclick = () => { velgSamling(j); tegnMeny(); };
+    if (!sesongApen(j)) { b.classList.add("laast"); b.prepend("🔒 "); }
+    b.onclick = () => { if (!sesongApen(j)) { banner("LOCKED", "BE #1 ON A LIST IN /" + SAMLINGER[j - 1].nr + " · OR BUY IT WHEN ALL 10 BOARDS ARE PLAYED", "#ffd27a", 3000); return; } velgSamling(j); tegnMeny(); };
     f.appendChild(b);
   });
   const t = $("samlingTittel"); t.replaceChildren("/" + SAMLING + " "); const bb = document.createElement("b"); bb.textContent = SAMLINGSNAVN[aktiv]; const an = document.createElement("span"); an.className = "antall"; an.textContent = "10 boards"; t.append(bb, an);
@@ -601,7 +622,9 @@ function tegnFaner() {
   s2.classList.toggle("apen", !!fremdrift["samling" + (aktiv + 2)]);
   s2.firstElementChild.innerHTML = "";
   const nb = document.createElement("b"); nb.textContent = "/" + nr + " " + (SAMLINGSNAVN[aktiv + 1] || "");
-  s2.firstElementChild.append(nb, fremdrift["samling" + (aktiv + 2)] ? "Unlocked for free because you finished #1 overall." : (SAMLINGER[aktiv + 1] ? "Open for beta testers. Later: paid, or free for #1 overall in /" + SAMLING + "." : "Coming. Paid, or free for #1 overall in /" + SAMLING + "."));
+  const regel = "Win it: be #1 on one of the four lists in /" + SAMLING + " (Game, Peace, Scrub 1P or 2P) after all 10 boards. Or buy it when all 10 are played.";
+  s2.firstElementChild.append(nb, fremdrift["samling" + (aktiv + 2)] ? "You won it for free by being #1." : sesongKjopt(aktiv + 1) ? "Yours." : (SAMLINGER[aktiv + 1] ? (BETA ? "Open for beta testers. " : "") + regel : "Coming soon. " + regel));
+  if (!BETA && !sesongApen(aktiv + 1) && SAMLINGER[aktiv + 1]) { const kb = document.createElement("button"); kb.className = "sekundar"; kb.textContent = sesongSpilt() ? "Buy /" + nr + " · coming at launch" : "Play all 10 boards to buy /" + nr; kb.disabled = true; s2.firstElementChild.append(kb); }
 }
 // To måter å spille på: pusle eller vaske. Løser du et brett i ett av dem, åpnes neste.
 let modus = "pusle";
@@ -1103,7 +1126,7 @@ function visArkade() {
   const a = ark, sp = a, res = $("resultat");
   if (!a || !a.gyldig() || res.classList.contains("vis")) return;
   res.classList.toggle("tema-scrub", a.tema === "scrub"); res.classList.toggle("tema-pusle", a.tema !== "scrub"); res.classList.toggle("peace", !!a.peace || !!a.utenListe); res.classList.toggle("peace-look", !!a.peaceLook);
-  $("arkHode").innerHTML = (a.tema === "scrub" ? "SCRUB IT" : a.peaceLook ? "PEACE" : "PIECE IT") + "<span>TOP 100</span>";
+  $("arkHode").innerHTML = (a.tema === "scrub" ? (sh?.toP ? "SCRUB IT 2P" : "SCRUB IT") : a.peaceLook ? "PEACE" : "PIECE IT") + "<span>TOP 100</span>";
   const kanv = $("arkBilde"), plass = $("arkPlass");
   $("magi").style.opacity = 0; setTimeout(magiStopp, 520); $("levende").style.opacity = 0; setTimeout(levendeStopp, 520);
   plass.classList.remove("borte"); kanv.style.opacity = "";
@@ -2936,6 +2959,7 @@ async function ferdig() {
       neste: () => { if (spill !== sp) return; valgtAntall = sp.n; tilMeny(); if (neste >= 0) visStartark(neste); }, meny: tilMeny };
     arkTimere.push(setTimeout(visArkade, 3000));
     await lagreRekord(id + "P", spill.n, pp, sEkte); await visToppliste();
+    if (await sjekkGratis(await hentSammen("P"))) $("resRekord").textContent += gratisTekst();
     return;
   }
   $("resRekord").classList.remove("ny-rekord");
@@ -2965,7 +2989,7 @@ async function ferdig() {
   const plass = sammen.findIndex(erMeg) + 1;
   const ny = await sjekkGratis(sammen);
   $("resRekord").textContent += plass ? " Overall you are #" + plass + "." : "";
-  if (ny) $("resRekord").textContent += " You are #1 overall and got /" + String(aktiv + 2).padStart(2, "0") + " for free!";
+  if (ny) $("resRekord").textContent += gratisTekst();
 }
 
 // ---------- husrekorder: faste navn som i gamle arkadespill, lette å slå ----------
@@ -2979,45 +3003,40 @@ function husListe(brettNr, n) {
 }
 // Sammenlagt: beste poeng per brett (alle bitantall), summert over de ti brettene.
 // Husnavnene teller med sin 48-biters tid, så nr. 1 kan nås på telefon.
-function husSammen() {
+function husSammen(suf = "") {
   return HUS.map((navn, j) => ({ id: "hus-" + navn, hus: true, navn, antall: BRETT.length,
-    sum: BRETT.reduce((s, _, i) => s + husListe(i, 49)[j].p, 0) }));
+    sum: BRETT.reduce((s, _, i) => s + (suf ? regnPoeng(49, Math.round(husListe(i, 49)[j].t * PEACE_TID)) : husListe(i, 49)[j].p), 0) }));
 }
-function sumAv(data) {
+function sumAv(data, suf = "") {
   let sum = 0, antall = 0;
-  BRETT.forEach(b => { let best = 0; VALG.forEach(o => { const t = data["t" + felt(b.id, o.n).slice(1)]; const v = typeof t === "number" ? regnPoeng(o.n, t) : data[felt(b.id, o.n)]; if (v > best) best = v; }); if (best) { sum += best; antall++; } });
+  BRETT.forEach(b => { let best = 0; VALG.forEach(o => { const t = data["t" + felt(b.id + suf, o.n).slice(1)]; const v = typeof t === "number" ? regnPoeng(o.n, t) : data[felt(b.id + suf, o.n)]; if (v > best) best = v; }); if (best) { sum += best; antall++; } });
   return { sum, antall };
 }
-function minLokaleSum() {
-  const data = {}; BRETT.forEach(b => VALG.forEach(o => { const f = fremdrift[b.id]?.[o.n]; if (f) data[felt(b.id, o.n)] = f.poeng; }));
-  return sumAv(data);
+function minLokaleSum(suf = "") {
+  const data = {}; BRETT.forEach(b => VALG.forEach(o => { const f = suf ? fremdrift[b.id]?.["peace_" + o.n] : fremdrift[b.id]?.[o.n]; if (f) data[felt(b.id + suf, o.n)] = f.poeng; }));
+  return sumAv(data, suf);
 }
-async function hentSammen() {
+async function hentSammen(suf = "") {
   let ekte = [];
   if (db) {
     try {
       const snap = await db.collection("rekorder").limit(1000).get();
-      ekte = snap.docs.map(d => ({ id: d.id, navn: d.data().navn, ...sumAv(d.data()) })).filter(r => r.sum > 0);
+      ekte = snap.docs.map(d => ({ id: d.id, navn: d.data().navn, ...sumAv(d.data(), suf) })).filter(r => r.sum > 0);
     } catch {}
   }
-  const lokal = minLokaleSum();
+  const lokal = minLokaleSum(suf);
   if (lokal.sum) {
     const egen = ekte.find(r => minId && r.id === minId);
     if (!egen) ekte.push({ id: minId || "lokal", lokal: true, ...lokal });
     else if (lokal.sum > egen.sum) Object.assign(egen, lokal);
   }
-  return ekte.concat(husSammen()).sort((a, b) => b.sum - a.sum);
+  return ekte.concat(husSammen(suf)).sort((a, b) => b.sum - a.sum);
 }
 function erMeg(r) { return r.lokal || (minId && r.id === minId); }
 async function sjekkGratis(liste) {
   const forst = liste[0];
-  const flagg = "samling" + (aktiv + 2);
-  if (!forst || !erMeg(forst) || forst.antall < BRETT.length || fremdrift[flagg]) return false;
-  fremdrift[flagg] = true; skrivLokal(fremdrift);
-  if (db && minId) {
-    try { const ref = db.doc("rekorder/" + minId); const sn = await ref.get(); if (sn.exists) await ref.update({ [flagg]: true }); else await ref.set({ [flagg]: true }); } catch {}
-  }
-  return true;
+  if (!forst || !erMeg(forst) || forst.antall < BRETT.length) return false;
+  return giGratisSesong();
 }
 async function tegnSammen() {
   const boks = $("sammen");
@@ -5403,17 +5422,19 @@ function shFerdig() {
   $("resInfo").textContent = kode(s.i) + " · SCRUB IT · time " + fmt(Math.round(s.tid)) + " · time left " + fmt(tidIgjen) + (trekk ? " · power-ups −" + Math.round(trekk * 100) + " %" : "");
   $("resRekord").textContent = nesteI >= 0 ? "All clean!" : "All clean! Every board in this collection is clean.";
   $("nesteKnapp").textContent = nesteI >= 0 ? "Next: " + BRETT[nesteI].navn + " →" : "Menu"; $("nesteKnapp").disabled = false;
-  if (s.toP) ark.utenListe = true; else shLagreRekord(s.poeng).then(() => shArkListe(s.poeng));
+  shLagreRekord(s.poeng, s.toP).then(() => shArkListe(s.poeng, s.toP)).then(async liste => {
+    const alleRene = BRETT.every(b => s.toP ? fremdrift[b.id]?.p2 : fremdrift[b.id]?.scrub);
+    if (alleRene && liste?.[0]?.meg && await giGratisSesong()) $("resRekord").textContent += gratisTekst(); });
   arkTimere.push(setTimeout(visArkade, 3500));
 }
 // Toppliste for SCRUB: beste poeng per samling, lagret i eget rekord-dokument.
 const SH_HUS = HUS.map((navn, j) => ({ id: "hus-" + navn, hus: true, navn, p: Math.round(600000 * Math.pow(0.7, j) / 100) * 100 }));
-async function shLagreRekord(p) {
-  const lag = shLagret(), nokkel = "best" + aktiv;
+async function shLagreRekord(p, toP = false) {
+  const lag = shLagret(), nokkel = (toP ? "best2p" : "best") + aktiv;
   if (p > (lag[nokkel] || 0)) { lag[nokkel] = p; shLagre(lag); }
   if (!db || !minId) return;
   try {
-    const ref = db.doc("rekorder/" + minId), sn = await ref.get(), f = "sh_" + aktiv;
+    const ref = db.doc("rekorder/" + minId), sn = await ref.get(), f = (toP ? "sh2_" : "sh_") + aktiv;
     if (!sn.exists) await ref.set({ [f]: p }); else if (!(sn.data()[f] >= p)) await ref.update({ [f]: p });
   } catch {}
 }
@@ -5421,7 +5442,7 @@ async function shVisToppliste(naa) {
   const el = $("shListe"); el.innerHTML = '<p class="liten">Loading leaderboard …</p>';
   let ekte = [];
   if (db) { try { const f = "sh_" + aktiv; const sn = await db.collection("rekorder").where(f, ">", 0).orderBy(f, "desc").limit(100).get(); ekte = sn.docs.map(d => ({ id: d.id, navn: d.data().navn, p: d.data()[f] })); } catch {} }
-  const best = Math.max(naa, shLagret()["best" + aktiv] || 0);
+  const best = Math.max(naa, shLagret()[(toP ? "best2p" : "best") + aktiv] || 0);
   ekte = ekte.filter(r => r.id !== minId);
   const liste = ekte.concat(SH_HUS, [{ id: "meg", meg: true, p: best }]).sort((a, b) => b.p - a.p);
   const ider = ekte.map(r => r.id), prof = bruker && ider.length ? await bruker.profiles(ider) : {};
@@ -5437,11 +5458,11 @@ async function shVisToppliste(naa) {
   });
 }
 // SCRUB IT TOP 100 i arkadelista, med navnefelt på din rad.
-async function shArkListe(naa) {
+async function shArkListe(naa, toP = false) {
   const el = $("liste"); el.innerHTML = '<p class="liten">Loading leaderboard …</p>';
   let ekte = [];
-  if (db) { try { const f = "sh_" + aktiv; const sn = await db.collection("rekorder").where(f, ">", 0).orderBy(f, "desc").limit(100).get(); ekte = sn.docs.map(d => ({ id: d.id, navn: d.data().navn, p: d.data()[f] })); } catch {} }
-  const best = Math.max(naa, shLagret()["best" + aktiv] || 0);
+  if (db) { try { const f = (toP ? "sh2_" : "sh_") + aktiv; const sn = await db.collection("rekorder").where(f, ">", 0).orderBy(f, "desc").limit(100).get(); ekte = sn.docs.map(d => ({ id: d.id, navn: d.data().navn, p: d.data()[f] })); } catch {} }
+  const best = Math.max(naa, shLagret()[(toP ? "best2p" : "best") + aktiv] || 0);
   ekte = ekte.filter(r => r.id !== minId);
   const liste = ekte.concat(SH_HUS, [{ id: "meg", meg: true, p: best }]).sort((a, b) => b.p - a.p);
   const ider = ekte.map(r => r.id), prof = bruker && ider.length ? await bruker.profiles(ider) : {};
@@ -5458,6 +5479,7 @@ async function shArkListe(naa) {
     rad.append(nr, av, n, p, t); el.appendChild(rad);
   }
   if ($("resultat").classList.contains("vis")) rullTilMeg();
+  return liste;
 }
 function shAvslutt() { cancelAnimationFrame(shRAF); sh = null; shMelding(); $("shatter").hidden = true; tilMeny(); }
 $("shUt").onclick = shAvslutt;
@@ -6152,7 +6174,7 @@ function shSteg(t) {
 }
 addEventListener("resize", () => { if (sh) shOppsett(); });
 // Bare for automatisk testing lokalt (?autotest).
-if (location.search.includes("autotest")) { window.__sh = () => sh; window.__shOppdater = dt => { shOppdater(dt); if (sh) { sh.tid += dt; shPartikler(dt); } }; window.__shTreff = shTreff; window.__shGalaga = shGalagaStart; window.__shSopp = shSopp; window.__shBytte = shByttetStart; window.__shOrm = shOrmStart; window.__levende = levendeStart; window.__gn = () => ({ gnister, raf: gnistRAF }); window.__hendelse = t => t === "tilt" ? tilt(true) : t === "vokse" ? vokseBrikke() : t === "break" ? puzzleBreak() : t === "speilX" ? speilStart("x") : t === "speilY" ? speilStart("y") : lynnedslag(); window.__shSprekk = shSprekk; window.__shP2 = () => ({ pad2X: sh.pad2X, P2Y: SH_P2Y, TOPP: SH_TOPP, H: SH_H }); window.__shTegn = () => { shRens(); shTegn(performance.now()); }; window.__spill = () => spill; window.__banner = banner; window.__kast = kast; window.__shKrabbe = () => shKrabbeStart(); window.__shPY = () => SH_PY; window.__shKapsel = shKapsel; window.__lyd = () => { const c = lydCtx; return c ? { musikk: musikkUt(c).gain.value, effekt: effektUt(c).gain.value } : null; }; window.__speilSlutt = speilSlutt; window.__geo = () => geo; window.__plasser = plasser; window.__skjermPkt = skjermPkt; }
+if (location.search.includes("autotest")) { window.__sh = () => sh; window.__shOppdater = dt => { shOppdater(dt); if (sh) { sh.tid += dt; shPartikler(dt); } }; window.__shTreff = shTreff; window.__shGalaga = shGalagaStart; window.__shSopp = shSopp; window.__shBytte = shByttetStart; window.__shOrm = shOrmStart; window.__levende = levendeStart; window.__gn = () => ({ gnister, raf: gnistRAF }); window.__hendelse = t => t === "tilt" ? tilt(true) : t === "vokse" ? vokseBrikke() : t === "break" ? puzzleBreak() : t === "speilX" ? speilStart("x") : t === "speilY" ? speilStart("y") : lynnedslag(); window.__shSprekk = shSprekk; window.__shP2 = () => ({ pad2X: sh.pad2X, P2Y: SH_P2Y, TOPP: SH_TOPP, H: SH_H }); window.__shTegn = () => { shRens(); shTegn(performance.now()); }; window.__spill = () => spill; window.__banner = banner; window.__kast = kast; window.__gratisPeace = async () => sjekkGratis(await hentSammen("P")); window.__fremdrift = () => fremdrift; window.__sammenP = async () => ({ lok: minLokaleSum("P"), f: fremdrift.b1, liste: (await hentSammen("P")).slice(0, 2) }); window.__shKrabbe = () => shKrabbeStart(); window.__shPY = () => SH_PY; window.__shKapsel = shKapsel; window.__lyd = () => { const c = lydCtx; return c ? { musikk: musikkUt(c).gain.value, effekt: effektUt(c).gain.value } : null; }; window.__speilSlutt = speilSlutt; window.__geo = () => geo; window.__plasser = plasser; window.__skjermPkt = skjermPkt; }
 
 
 
