@@ -227,7 +227,7 @@ h1 .signatur{font-size:.55em;letter-spacing:.06em;white-space:nowrap}
   <div class="regel"><b>The race:</b> Your best score on each of the ten boards in a collection is added up. Finish #1 overall and you get the next collection for free. Anyone who takes first place later gets it too. Points: Easy (25 pieces) gives 10,000, Medium (49) 15,000, Hard (100) 20,000 and Chaos (144) 25,000 at normal speed. Be fast and you get up to double.</div>
   <div class="sammen" id="sammen"><p class="liten">Loading standings …</p></div>
   <p class="kreditt">© 2001–2026 Tarjei Krogh. All photography, music and art. <a href="https://kroghx.com" target="_blank" rel="noopener">kroghx.com</a></p>
-  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 0.37</p>
+  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 0.38<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
 </section>
 
 <div class="ark" id="tidUtArk" hidden style="z-index:200001">
@@ -454,12 +454,35 @@ function ctx() {
   return lydCtx;
 }
 // iPhone låser lyden til den startes i et trykk. Spill et stille klipp ved første trykk, og prøv igjen til den kjører.
+// En stille lydfil (0,5 s, laget her) som går i bakgrunnen. På iPad og iPhone gjør den at spillets lyd
+// spilles som vanlig lyd, også når enheten står på lydløs.
+let stilleLyd = null;
+function stilleWav() {
+  const n = 4000, b = new Uint8Array(44 + n), v = new DataView(b.buffer), str = (o, t) => [...t].forEach((c, i) => b[o + i] = c.charCodeAt(0));
+  str(0, "RIFF"); v.setUint32(4, 36 + n, true); str(8, "WAVEfmt "); v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
+  v.setUint32(24, 8000, true); v.setUint32(28, 8000, true); v.setUint16(32, 1, true); v.setUint16(34, 8, true); str(36, "data"); v.setUint32(40, n, true);
+  b.fill(128, 44);
+  let bin = ""; b.forEach(x => bin += String.fromCharCode(x)); return "data:audio/wav;base64," + btoa(bin);
+}
 function låsOppLyd() {
+  if (!lydPa) return;
   const c = ctx(); if (!c) return;
   try { const b = c.createBuffer(1, 1, 22050), s = c.createBufferSource(); s.buffer = b; s.connect(c.destination); s.start(0); } catch {}
-  if (c.state === "running") ["touchend", "click", "keydown"].forEach(t => document.removeEventListener(t, låsOppLyd, true));
+  try {
+    if (!stilleLyd) { stilleLyd = new Audio(stilleWav()); stilleLyd.loop = true; stilleLyd.setAttribute("playsinline", ""); }
+    if (stilleLyd.paused) { const p = stilleLyd.play(); if (p && p.catch) p.catch(() => {}); }
+  } catch {}
+  visLydStatus();
 }
-["touchend", "click", "keydown"].forEach(t => document.addEventListener(t, låsOppLyd, true));
+// Ved hvert trykk: start lyden igjen hvis iPad eller iPhone har stoppet den.
+["touchend", "click", "keydown"].forEach(t => document.addEventListener(t, () => { if (lydPa && (!lydCtx || lydCtx.state !== "running" || !stilleLyd || stilleLyd.paused)) låsOppLyd(); }, true));
+document.addEventListener("visibilitychange", () => { if (!document.hidden && lydCtx && lydPa) { try { lydCtx.resume(); } catch {} } });
+// Lydstatus nederst i menyen, så vi ser hva som skjer på en enhet uten lyd.
+function visLydStatus() {
+  const el = document.getElementById("lydStatus"); if (!el) return;
+  el.textContent = " · Sound: " + (!lydPa ? "off" : !lydCtx ? "tap anywhere to start" : lydCtx.state === "running" ? "on" : lydCtx.state);
+}
+setInterval(visLydStatus, 1000);
 // Liten hall: etterklang på ca. 1,8 s, med et lite opphold før den starter.
 let rom = null;
 function romInn() {
@@ -758,7 +781,9 @@ function visSpor(id) {
   }
 }
 function visLydKnapp() { const k = $("lydKnapp"); k.textContent = lydPa ? "Sound on" : "Sound off"; k.setAttribute("aria-pressed", String(lydPa)); }
-$("lydKnapp").onclick = () => { lydPa = !lydPa; try { localStorage.setItem("sm-lyd", lydPa ? "på" : "av"); } catch {} visLydKnapp(); if (lydPa) { plingLyd(0); if (spill?.slutt) startPad(); if (spill) spillMusikk(BRETT[spill.brett].id); } else { stoppPad(); stoppMusikk(.3); } };
+$("lydKnapp").onclick = () => { lydPa = !lydPa; try { localStorage.setItem("sm-lyd", lydPa ? "på" : "av"); } catch {} visLydKnapp(); if (lydPa) { plingLyd(0); if (spill?.slutt) startPad(); if (spill) spillMusikk(BRETT[spill.brett].id); låsOppLyd(); } else { stoppPad(); stoppMusikk(.3); if (stilleLyd) stilleLyd.pause(); } visLydStatus(); };
+// Trykk på lydstatusen i menyen for å slå lyden av og på.
+$("lydStatus").onclick = () => $("lydKnapp").click();
 visLydKnapp();
 
 // ---------- puslebiter ----------
