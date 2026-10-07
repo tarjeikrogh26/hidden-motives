@@ -62,12 +62,13 @@ h1 .tittel span{color:var(--signal)}
 #modusScrub .tittel{color:var(--signal);font-size:1.25em;letter-spacing:.12em;line-height:1;white-space:nowrap}
 @media (max-width:560px){.moduser{font-size:.95em;gap:.3em}#modusScrub .tittel{font-size:1.06em;letter-spacing:.05em}}
 /* Logoen: stor HIDDEN MOTIVES, liten «by KROGHX» ved siden av (en lenke, men ikke i veien). */
-.hm-logo{font-size:clamp(30px,8.4vw,60px);letter-spacing:.05em;line-height:1;display:flex;flex-wrap:wrap;align-items:baseline;gap:.15em .55em}
-.hm-av{font-family:var(--brod);font-weight:400;font-size:12px;letter-spacing:.08em;color:var(--demp);text-decoration:none;opacity:.75;white-space:nowrap}
-.hm-av b{font-family:var(--display);font-weight:800;letter-spacing:.1em}
+.hm-logo{font-size:40px;letter-spacing:.04em;line-height:1;display:flex;flex-wrap:nowrap;align-items:center;gap:14px;max-width:100%}
+.hm-navn{white-space:nowrap}
+.hm-av{display:flex;flex-direction:column;align-items:flex-start;justify-content:center;font-family:var(--brod);font-weight:400;font-size:11px;line-height:1.25;letter-spacing:.08em;color:var(--demp);text-decoration:none;opacity:.8;white-space:nowrap;flex:none}
+.hm-av b{font-family:var(--display);font-weight:800;letter-spacing:.1em;font-size:11px}
 .hm-av:hover{opacity:1}
 /* Spillene under logoen: PIECE IT rosa, SCRUB IT oransje. Det som ikke er valgt, er svakt og gjennomsiktig. */
-.moduser{font-family:var(--display);font-weight:800;font-size:clamp(22px,6vw,34px);margin-top:16px;gap:.9em!important}
+.moduser{font-family:var(--display);font-weight:800;font-size:30px;margin-top:16px;gap:.8em!important;max-width:100%}
 #modusPuslespill,#modusScrub{--farge:#ff5fa2;--glod:255,95,162}
 #modusScrub{--farge:#ffa21a;--glod:255,162,26}
 body.lys #modusPuslespill{--farge:#e23d84;--glod:226,61,132}
@@ -203,7 +204,11 @@ body.lys #kraftLinje button,body.lys #shKraftLinje button{color:#fff7e6}
 #shKraftLinje{touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 #shKraftLinje button{background:linear-gradient(180deg,rgba(58,47,34,.62),rgba(31,25,18,.62));text-shadow:0 1px 2px rgba(0,0,0,.9);touch-action:none}
 #shKraftLinje button.trykket{transform:scale(.93);border-color:#7fe8ff}
-@media (max-width:480px){#kraftLinje{display:grid;grid-template-columns:repeat(3,auto);gap:7px 6px;justify-content:center}#kraftLinje button{justify-content:center;padding:8px 12px}}
+@media (max-width:480px){#kraftLinje{display:grid;grid-template-columns:repeat(3,auto);gap:5px 5px;justify-content:center}#kraftLinje button{justify-content:center;padding:6px 10px}}
+/* Lettere skrift i PIECE IT-linja: tynnere, litt mindre, mer luft mellom bokstavene. */
+#kraftLinje button{font-family:var(--brod);font-weight:600;font-size:11px;letter-spacing:.1em;padding:6px 12px;gap:6px}
+#kraftLinje button .pris{font-size:10px}
+@media (max-width:480px){#kraftLinje button{font-size:10.5px;letter-spacing:.08em;padding:6px 10px}}
 .butikk{position:fixed;inset:0;z-index:6000;display:grid;place-items:center;background:rgba(10,8,6,.55)}
 .butikk[hidden]{display:none}
 .butikk .boks{max-width:340px;margin:16px;padding:20px 22px;border-radius:12px;background:#1d1812;color:#f3e9d8;border:1px solid rgba(255,190,90,.45);font-size:14px;line-height:1.45;box-shadow:0 10px 40px rgba(0,0,0,.5)}
@@ -328,6 +333,7 @@ body:has(.resultat.vis) #spill .linje{opacity:0;pointer-events:none;transition:o
 .faner button{border:1px solid var(--strek);border-radius:999px;padding:8px 14px;font-size:13px;color:var(--demp);text-align:left}
 .faner button b{font-family:var(--display);color:var(--tekst);margin-left:6px}
 .faner button[aria-selected="true"]{border-color:var(--signal);color:var(--signal);background:rgba(255,176,0,.08)}
+.samling-tittel .antall{display:block;margin-top:5px}
 .samling-tittel b{font-family:var(--display);font-weight:800;letter-spacing:.02em;color:var(--tekst);font-size:15px;text-transform:none;margin:0 .3em}
 #mynter{position:fixed;inset:0;pointer-events:none;z-index:280}
 .liten{color:var(--demp);font-size:13px}
@@ -346,7 +352,7 @@ body:has(.resultat.vis) #spill .linje{opacity:0;pointer-events:none;transition:o
 <section id="meny" class="skjerm" aria-label="Collections">
   <div class="topp">
     <div>
-      <h1 class="hm-logo">HIDDEN MOTIVES <a class="hm-av" href="https://kroghx.com" target="_blank" rel="noopener">by <b>KROGHX</b></a></h1>
+      <h1 class="hm-logo"><span class="hm-navn">HIDDEN MOTIVES</span><a class="hm-av" href="https://kroghx.com" target="_blank" rel="noopener"><span>by</span><b>KROGHX</b></a></h1>
       <div class="moduser" role="tablist" aria-label="Choose a game">
         <button class="modus" id="modusPuslespill" role="tab"><span class="tittel">PIECE&nbsp;IT</span></button>
         <button class="modus" id="modusScrub" role="tab"><span class="tittel">SCRUB&nbsp;IT</span></button>
@@ -363,7 +369,7 @@ body:has(.resultat.vis) #spill .linje{opacity:0;pointer-events:none;transition:o
   <div class="regel"><b>The race:</b> Your best score on each of the ten boards in a collection is added up. Finish #1 overall and you get the next collection for free. Anyone who takes first place later gets it too. Points: Easy (25 pieces) gives 10,000, Medium (49) 15,000, Hard (100) 20,000 and Chaos (144) 25,000 at normal speed. Be fast and you get up to double.</div>
   <div class="sammen" id="sammen"><p class="liten">Loading standings …</p></div>
   <p class="kreditt">© 2001–2026 Tarjei Krogh. All photography, music and art. <a href="https://kroghx.com" target="_blank" rel="noopener">kroghx.com</a></p>
-  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 0.85<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
+  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 0.86<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
 </section>
 
 <div class="ark" id="tidUtArk" hidden style="z-index:200001">
@@ -532,7 +538,7 @@ function tegnFaner() {
     b.onclick = () => { velgSamling(j); tegnMeny(); };
     f.appendChild(b);
   });
-  const t = $("samlingTittel"); t.replaceChildren("/" + SAMLING + " "); const bb = document.createElement("b"); bb.textContent = SAMLINGSNAVN[aktiv]; t.append(bb, " · 10 boards");
+  const t = $("samlingTittel"); t.replaceChildren("/" + SAMLING + " "); const bb = document.createElement("b"); bb.textContent = SAMLINGSNAVN[aktiv]; const an = document.createElement("span"); an.className = "antall"; an.textContent = "10 boards"; t.append(bb, an);
   $("sammenTittel").textContent = "Overall · /" + SAMLING;
   const nr = String(aktiv + 2).padStart(2, "0"), s2 = $("samling2");
   s2.classList.toggle("apen", !!fremdrift["samling" + (aktiv + 2)]);
@@ -544,6 +550,15 @@ function tegnFaner() {
 let modus = "pusle";
 try { if (localStorage.getItem("sm-modus") === "scrub") modus = "scrub"; } catch {}
 function velgModus(m) { modus = m; try { localStorage.setItem("sm-modus", m); } catch {} tegnMeny(); }
+function tilpassLogo() {
+  const meny = $("meny"); if (!meny || meny.hidden) return;
+  const cs = getComputedStyle(meny), bredde = meny.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+  const pass = (el, maks, ekstra) => { el.style.fontSize = maks + "px"; const w = el.scrollWidth + ekstra; if (w > bredde) el.style.fontSize = Math.max(12, Math.floor(maks * bredde / w * 0.98)) + "px"; };
+  const navn = document.querySelector(".hm-navn"), av = document.querySelector(".hm-av");
+  if (navn) { const l = document.querySelector(".hm-logo"); l.style.fontSize = "60px"; const w = navn.scrollWidth + av.offsetWidth + 14; l.style.fontSize = Math.min(60, Math.floor(60 * (bredde - av.offsetWidth - 14) / (w - av.offsetWidth - 14) * 0.98)) + "px"; }
+  const m = document.querySelector(".moduser"); if (m) pass(m, 34, 0);
+}
+addEventListener("resize", tilpassLogo); document.fonts?.ready.then(tilpassLogo); setTimeout(tilpassLogo, 50);
 $("modusPuslespill").onclick = () => velgModus("pusle");
 $("modusScrub").onclick = () => { ctx(); velgModus("scrub"); };
 // Lys vegg i HIDDEN MOTIVES (menyen og brettet), mørk i SCRUB IT.
@@ -557,6 +572,7 @@ function tegnModus() {
   oppdaterTema();
 }
 async function tegnMeny() {
+  requestAnimationFrame(tilpassLogo);
   tegnModus();
   tegnFaner();
   tegnSammen().catch(() => { $("sammen").innerHTML = '<p class="liten">Could not load the standings.</p>'; });
@@ -1337,6 +1353,8 @@ function lagStokking(n) {
 const HELDIG = .16;
 function bunkePlass() {
   const g = geo, friX = g.maxX - 1.02, friY = g.maxY - 1.02;
+  // Stående: rett under brettet, midt på. Over bunken står teksten, med litt luft opp til brettet.
+  if (g.staaende) return { x: .5 - .5 / spill.k, y: Math.min(g.maxY, 1 + (40 + g.t) / g.hoyde) };
   if (friX > 0.12) return { x: 1.02 + friX / 2 - .5 / spill.k, y: .5 - .5 / spill.r };
   if (friY > 0.12) return { x: .5 - .5 / spill.k, y: 1.02 + friY / 2 - .5 / spill.r };
   return { x: g.maxX, y: g.maxY };
@@ -1356,7 +1374,7 @@ function visBunkeTall() {
   if (!spill || !n || spill.slutt) { el.hidden = true; return; }
   const p = bunkePlass();
   el.hidden = false; el.textContent = n + " · TAP OR HOLD";
-  el.style.left = geo.x0 + (p.x + .5 / spill.k) * geo.bredde + "px"; el.style.top = geo.y0 + p.y * geo.hoyde - 6 + "px";
+  el.style.left = geo.x0 + (p.x + .5 / spill.k) * geo.bredde + "px"; el.style.top = geo.y0 + p.y * geo.hoyde - (geo.staaende ? geo.t + 5 : 6) + "px";
 }
 // Kast en brikke opp på brettet. Den lander på en ledig plass, eller med flaks rett på sin egen.
 // Snu en brikke som ligger på magen: den løfter seg, vender seg rundt i lufta og legger seg med bildet opp.
@@ -1480,7 +1498,7 @@ let geo = null; // brettets plass på skjermen
 function oppsett() {
   if (!spill) return;
   const W = innerWidth, H = innerHeight, marg = 12;
-  BAR = W <= 480 ? 104 : 58;
+  BAR = W <= 480 ? 84 : 52;
   const panel = document.querySelector(".linje").getBoundingClientRect();
   const sv = getComputedStyle(document.documentElement);
   const venstre = parseFloat(sv.getPropertyValue("--sv")) || 0;
@@ -1490,7 +1508,8 @@ function oppsett() {
   if (staaende) {
     // Stående: stripe øverst, brettet i full bredde under, bitene i rommet nederst.
     toppKant = panel.height ? panel.bottom : 0; hoyreKant = W;
-    bredde = Math.min(W - 2 * marg, (H - toppKant) * 0.62 * forhold);
+    const plassBunke = (H - BAR - toppKant - marg - 58) / (1 + 1.6 / spill.r);
+    bredde = Math.min(W - 2 * marg, (H - toppKant) * 0.62 * forhold, plassBunke * forhold);
     hoyde = bredde / forhold;
     x0 = (W - bredde) / 2; y0 = toppKant + marg;
   } else {
