@@ -384,7 +384,7 @@ body:has(.resultat.vis) #spill .linje{opacity:0;pointer-events:none;transition:o
   <div class="regel"><b>The race:</b> Your best score on each of the ten boards in a collection is added up. Finish #1 overall and you get the next collection for free. Anyone who takes first place later gets it too. Points: Easy (25 pieces) gives 10,000, Medium (49) 15,000, Hard (100) 20,000 and Chaos (144) 25,000 at normal speed. Be fast and you get up to double.</div>
   <div class="sammen" id="sammen"><p class="liten">Loading standings …</p></div>
   <p class="kreditt">© 2001–2026 Tarjei Krogh. All photography, music and art. <a href="https://kroghx.com" target="_blank" rel="noopener">kroghx.com</a></p>
-  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 0.94<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
+  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 0.95<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
 </section>
 
 <div class="ark" id="tidUtArk" hidden style="z-index:200001">
@@ -2960,6 +2960,7 @@ const KAPSLER = [
   { t: "K", navn: "BUBBLE GUN", hva: "STEER WITH THE FLIPPERS", farge: "#a8f0ff", vekt: 3, edel: "solv" },
   { t: "+", navn: "EXTRA BUBBLE", hva: "ONE MORE LIFE", farge: "#ff8ad8", vekt: 1, edel: "solv" },
   { t: "T", navn: "TRIP", hva: "THE MUD FLIES AT YOU · NEON CATCHES THE SHIPS", farge: "#ff7ae0", vekt: 3, edel: "solv" },
+  { t: "O", navn: "BOMBS", hva: "THE BUBBLE DROPS BOMBS · THEY BLOW AWAY THE MUD", farge: "#ffae3c", vekt: 3, edel: "gull" },
   { t: "Z", navn: "SNAKE!", hva: "IT EATS THE MUD · CATCH IT WHEN IT'S FULL", farge: "#7dff6a", vekt: 4, edel: "solv" },
 ];
 // Våt gjørme: lys og mørk tone. Hvert spill blander to tilfeldige typer.
@@ -4645,6 +4646,7 @@ function shKapsel(t) {
   if (t === "+") s.liv++;
   if (t === "Z") shOrmStart();
   if (t === "T") { s.eff.T = SH_TRIP; s.tripPulsT = 2; }
+  if (t === "O") s.eff.O = 12;
   if (t === "M") {
     const nye = [];
     for (const b of s.baller) {
@@ -4734,6 +4736,8 @@ function shBevegBall(b, dt) {
   // Bare slaps eller nesten vasket der den traff: den glir videre uten å sprette.
   const bare = alle.every(q => q.myk || q.liv <= 1 || (q.liv < q.maks && q.liv <= Math.ceil(q.maks * .4)));
   if (!(s.bytte && Math.random() < .5)) shVask(b.x, b.y, R * (s.eff.T > 0 ? 2.3 : 1.6), lag);
+  // BOMBS: der boblen treffer gjørma, blir det liggende en bombe som tikker.
+  if (s.eff.O > 0 && (b.bombeT ?? 0) <= 0 && (s.smaaBomber || []).length < 14) { b.bombeT = .45; (s.smaaBomber = s.smaaBomber || []).push({ x: shClamp(b.x, .03, .97), y: shClamp(b.y, SH_TOPP + .02, SH_TOPP + .98), t: 0, lunte: 1.3 + Math.random() * .4 }); shLyd("plopp"); }
   if (bare) return;
   const fraSiden = px + R <= k.x || px - R >= k.x + k.w;
   if (fraSiden) { b.vx = -b.vx; b.x = px; shStot(b, Math.sign(b.vx), 0, .5); } else { b.vy = -b.vy; b.y = py; shStot(b, 0, Math.sign(b.vy), .5); }
@@ -4761,6 +4765,11 @@ function shOppdater(dt) {
   // Hvor fort flipperne flyttes: boble-slangen sikter den veien.
   s.padV = (s.padV || 0) * .8 + (s.padX - (s.padXFør ?? s.padX)) / Math.max(dt, 1e-3) * .2; s.padXFør = s.padX;
   if (s.rist > 0) s.rist = Math.max(0, s.rist - dt);
+  if (s.smaaBomber?.length || s.smell?.length) {
+    for (const q of s.smaaBomber || []) { q.t += dt; if (q.t >= q.lunte) { q.borte = true; shVask(q.x, q.y, .085, 3); shStov(q.x, q.y, 40, "255,170,60", .35); s.rist = Math.max(s.rist || 0, .3); shLyd("sprekk", 1.6); (s.smell = s.smell || []).push({ x: q.x, y: q.y, t: 0 }); } }
+    s.smaaBomber = (s.smaaBomber || []).filter(q => !q.borte);
+    for (const q of s.smell || []) q.t += dt; s.smell = (s.smell || []).filter(q => q.t < .4);
+  }
   if (s.syre?.length) {
     for (const q of s.syre) {
       q.t += dt; const brems = Math.max(0, 1 - dt * 2.2); q.vx *= brems; q.vy *= brems; q.x += q.vx * dt; q.y += q.vy * dt;
@@ -4787,6 +4796,7 @@ function shOppdater(dt) {
   if (s.tripS) { for (const q of s.tripS) q.liv -= dt / 3; s.tripS = s.tripS.filter(q => q.liv > 0); if (s.tripS.length > 260) s.tripS.splice(0, s.tripS.length - 260); }
   for (const b of s.baller) {
     shMagnetSteg(b, dt);
+    if (s.eff.O > 0 && !b.fanget) b.bombeT = (b.bombeT ?? 0) - dt;
     if (s.eff.T > 0) {
       if (!b.fanget) b.skala = 1 + .14 * Math.sin(s.tid * 5 + b.fase) * Math.min(1, s.eff.T);
       s.tripB = s.tripB || []; s.tripS = s.tripS || [];
@@ -5060,7 +5070,7 @@ function shFerdig() {
   const s = sh; s.tilstand = "ferdig"; s.ferdigT = performance.now();
   const bonus = (s.liv - 1) * 500, tidBonus = Math.max(0, Math.round((150 - s.tid) * 40 / 10) * 10); s.poeng += bonus + tidBonus;
   const trekk = Math.min(.6, s.trekk || 0); if (trekk) s.poeng = Math.round(s.poeng * (1 - trekk)); shHud();
-  s.baller = []; s.kapsler = []; s.smaa = []; s.skudd = []; s.galaga = null; s.sabot = []; s.orm = null; s.ormer = []; s.ormFase = false; s.skumFlekk = []; s.tripB = []; s.tripS = []; s.sug = []; s.syre = []; s.tripP = [];
+  s.baller = []; s.kapsler = []; s.smaa = []; s.skudd = []; s.galaga = null; s.sabot = []; s.orm = null; s.ormer = []; s.ormFase = false; s.skumFlekk = []; s.tripB = []; s.tripS = []; s.sug = []; s.syre = []; s.tripP = []; s.smaaBomber = []; s.smell = [];
   for (const k of s.klosser) k.glans = 0;
   magiStart(s.kunst || s.img, { x: shG.fx, y: shG.fy + SH_TOPP * shG.fw, w: shG.fw, h: shG.fw }, 3.4);
   feiringStart(s.img, { x: shG.fx, y: shG.fy + SH_TOPP * shG.fw, w: shG.fw, h: shG.fw }, BRETT[s.i].id, 3.2);
@@ -5732,6 +5742,14 @@ function shTegn(t) {
       x.restore();
     }
   }
+  // Bombene: små, mørke kuler med en lunte som gnistrer fortere og fortere, og et smell når de går av.
+  for (const q of s.smaaBomber || []) { const X = q.x * f, Y = q.y * f, r = .011 * f, u = q.t / q.lunte, blink = Math.sin(q.t * (10 + u * 40)) > 0;
+    x.fillStyle = "#1b1612"; x.beginPath(); x.arc(X, Y, r * (1 + .15 * u), 0, 7); x.fill();
+    x.fillStyle = "rgba(255,255,255,.35)"; x.beginPath(); x.arc(X - r * .35, Y - r * .35, r * .3, 0, 7); x.fill();
+    x.strokeStyle = "#8a6a3a"; x.lineWidth = Math.max(1, r * .2); x.beginPath(); x.moveTo(X + r * .5, Y - r * .7); x.quadraticCurveTo(X + r, Y - r * 1.4, X + r * 1.3, Y - r * 1.3); x.stroke();
+    if (blink) { x.fillStyle = u > .7 ? "#ff4a2a" : "#ffd23a"; x.beginPath(); x.arc(X + r * 1.3, Y - r * 1.3, r * .35, 0, 7); x.fill(); } }
+  for (const q of s.smell || []) { const u = q.t / .4, R = (.03 + u * .09) * f, g = x.createRadialGradient(q.x * f, q.y * f, 0, q.x * f, q.y * f, R);
+    g.addColorStop(0, `rgba(255,240,200,${.9 * (1 - u)})`); g.addColorStop(.4, `rgba(255,150,40,${.6 * (1 - u)})`); g.addColorStop(1, "rgba(255,80,0,0)"); x.fillStyle = g; x.fillRect(q.x * f - R, q.y * f - R, R * 2, R * 2); }
   // Syresprut fra ormklumpen: lysende grønne dråper med glød.
   if (s.syre?.length) { x.save(); x.globalCompositeOperation = "lighter";
     for (const q of s.syre) { const a = 1 - q.t / q.liv, r = q.r * f * (1 + q.t), g = x.createRadialGradient(q.x * f, q.y * f, 0, q.x * f, q.y * f, r * 2.5);
@@ -5835,7 +5853,7 @@ function shSteg(t) {
 }
 addEventListener("resize", () => { if (sh) shOppsett(); });
 // Bare for automatisk testing lokalt (?autotest).
-if (location.search.includes("autotest")) { window.__sh = () => sh; window.__shOppdater = dt => { shOppdater(dt); if (sh) { sh.tid += dt; shPartikler(dt); } }; window.__shTreff = shTreff; window.__shGalaga = shGalagaStart; window.__shSopp = shSopp; window.__shBytte = shByttetStart; window.__shOrm = shOrmStart; window.__levende = levendeStart; window.__gn = () => ({ gnister, raf: gnistRAF }); window.__hendelse = t => t === "tilt" ? tilt(true) : t === "vokse" ? vokseBrikke() : t === "break" ? puzzleBreak() : t === "speilX" ? speilStart("x") : t === "speilY" ? speilStart("y") : lynnedslag(); window.__shSprekk = shSprekk; window.__shTegn = () => { shRens(); shTegn(performance.now()); }; window.__spill = () => spill; window.__banner = banner; window.__kast = kast; window.__lyd = () => { const c = lydCtx; return c ? { musikk: musikkUt(c).gain.value, effekt: effektUt(c).gain.value } : null; }; window.__speilSlutt = speilSlutt; window.__geo = () => geo; window.__plasser = plasser; window.__skjermPkt = skjermPkt; }
+if (location.search.includes("autotest")) { window.__sh = () => sh; window.__shOppdater = dt => { shOppdater(dt); if (sh) { sh.tid += dt; shPartikler(dt); } }; window.__shTreff = shTreff; window.__shGalaga = shGalagaStart; window.__shSopp = shSopp; window.__shBytte = shByttetStart; window.__shOrm = shOrmStart; window.__levende = levendeStart; window.__gn = () => ({ gnister, raf: gnistRAF }); window.__hendelse = t => t === "tilt" ? tilt(true) : t === "vokse" ? vokseBrikke() : t === "break" ? puzzleBreak() : t === "speilX" ? speilStart("x") : t === "speilY" ? speilStart("y") : lynnedslag(); window.__shSprekk = shSprekk; window.__shTegn = () => { shRens(); shTegn(performance.now()); }; window.__spill = () => spill; window.__banner = banner; window.__kast = kast; window.__shKapsel = shKapsel; window.__lyd = () => { const c = lydCtx; return c ? { musikk: musikkUt(c).gain.value, effekt: effektUt(c).gain.value } : null; }; window.__speilSlutt = speilSlutt; window.__geo = () => geo; window.__plasser = plasser; window.__skjermPkt = skjermPkt; }
 
 
 
