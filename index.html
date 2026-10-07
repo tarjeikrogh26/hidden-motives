@@ -318,7 +318,7 @@ body:has(.resultat.vis) #spill .linje{opacity:0;pointer-events:none;transition:o
   <div class="regel"><b>The race:</b> Your best score on each of the ten boards in a collection is added up. Finish #1 overall and you get the next collection for free. Anyone who takes first place later gets it too. Points: Easy (25 pieces) gives 10,000, Medium (49) 15,000, Hard (100) 20,000 and Chaos (144) 25,000 at normal speed. Be fast and you get up to double.</div>
   <div class="sammen" id="sammen"><p class="liten">Loading standings …</p></div>
   <p class="kreditt">© 2001–2026 Tarjei Krogh. All photography, music and art. <a href="https://kroghx.com" target="_blank" rel="noopener">kroghx.com</a></p>
-  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 0.60<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
+  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 0.61<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
 </section>
 
 <div class="ark" id="tidUtArk" hidden style="z-index:200001">
@@ -2895,7 +2895,7 @@ function shFigurer() {
 const SH_FORMER = ["rader", "v", "sirkel", "sverm"];
 function shHjem(e, g) {
   const t = g.t, n = g.antall, i = e.nr % n;
-  if (g.form === "rader") { const rad = i < 5 ? 0 : 1, kol = i % 5; return [.2 + kol * .15 + (rad ? .0375 : 0) + Math.sin(t * .9) * .07, .07 + rad * .09]; }
+  if (g.form === "rader") { const rad = Math.floor(i / 5), kol = i % 5; return [.2 + kol * .15 + (rad % 2 ? .0375 : 0) + Math.sin(t * .9 + rad) * .07, .07 + rad * .085]; }
   if (g.form === "v") { const k = i - (n - 1) / 2; return [.5 + k * .085 + Math.sin(t * .8) * .05, .06 + Math.abs(k) * .035]; }
   if (g.form === "sirkel") { const a = t * .7 + i / n * Math.PI * 2; return [.5 + Math.cos(a) * .3, .2 + Math.sin(a) * .1]; }
   return [.5 + Math.sin(t * .6 + i * 1.3) * .36, .14 + Math.sin(t * 1.05 + i * 2.1) * .09];
@@ -2903,14 +2903,14 @@ function shHjem(e, g) {
 const shFangbar = e => e.tilstand === "form" || e.tilstand === "dykk" || e.tilstand === "stup" || (e.tilstand === "inn" && e.t > .3);
 function shNyFiende(n, nr, fra) {
   const side = n % 2 ? 1.15 : -.15;
-  return { nr, figur: nr, x: fra ? fra[0] : side, y: fra ? fra[1] : -.1, fx: fra ? fra[0] : side, fy: fra ? fra[1] : -.1, t: fra ? 0 : -n * .14, tilstand: "inn", fase: Math.random() * 6, bombeT: 1.5 + Math.random() * 3 };
+  return { nr, figur: nr, x: fra ? fra[0] : side, y: fra ? fra[1] : -.1, fx: fra ? fra[0] : side, fy: fra ? fra[1] : -.1, t: fra ? 0 : -n * .14, tilstand: "inn", fase: Math.random() * 6, bombeT: 1.5 + Math.random() * 3, hp: 3, blink: 0 };
 }
 function shGalagaStart(boss = false) {
   const s = sh; if (s.galaga || s.bytte || s.sopp > 0) return;
   s.lamper = 0; s.galagaKommet = true;
-  const form = SH_FORMER[(Math.random() * SH_FORMER.length) | 0], N = boss ? 4 : form === "v" ? 9 : form === "sirkel" ? 8 : 10;
+  const form = SH_FORMER[(Math.random() * SH_FORMER.length) | 0], N = boss ? 4 : form === "v" ? 11 : form === "sirkel" ? 10 : 13;
   const fiender = []; for (let n = 0; n < N; n++) fiender.push(shNyFiende(n, n));
-  s.galaga = { t: 0, fiender, bomber: [], dykkT: 2.5, fanget: 0, antall: boss ? 10 : N, form: boss ? "sverm" : form, nesteNr: N,
+  s.galaga = { t: 0, fiender, bomber: [], dykkT: 2.5, fanget: 0, antall: boss ? 13 : N, form: boss ? "sverm" : form, nesteNr: N,
     boss: boss ? { x: .5, y: -.3, hp: 45, maks: 45, figur: (Math.random() * 9) | 0, tilstand: "inn", t: 0, blink: 0, spawnT: 4, bombeT: 2.5, dryppT: 3.5, rot: 0 } : null };
   s.tekster.push({ txt: boss ? "BOSS!" : "INVASION!", x: .5, y: .45, liv: 1.8, farge: boss ? "#ff5a6a" : "#7fe8ff" });
   shLyd(boss ? "boss" : "invasjon");
@@ -2932,7 +2932,7 @@ function shInnkaps(e) {
   const s = sh, g = s.galaga;
   e.tilstand = "boble"; e.bt = 0; g.fanget++; e.utgang = Math.random() < .5 ? "opp" : "sprekk"; e.sprekkT = .45 + Math.random() * .5;
   // Hvert tredje fangede monster flyter ned og fester seg ved flipperne, som det doble romskipet i Galaga.
-  if (g.fanget % 3 === 0 && s.wingmen.length < 2) { e.tilstand = "tilWing"; e.wt = 0; e.side = s.wingmen.some(w => w.side < 0) ? 1 : -1; s.wingmen.push({ figur: e.figur, side: e.side, klar: false, fase: e.fase }); s.tekster.push({ txt: "WINGMAN!", x: e.x, y: e.y - .05, liv: 1.2, farge: "#6dff8a" }); }
+  if (g.fanget % 4 === 0 && s.wingmen.length < 2) { e.tilstand = "tilWing"; e.wt = 0; e.side = s.wingmen.some(w => w.side < 0) ? 1 : -1; s.wingmen.push({ figur: e.figur, side: e.side, klar: false, fase: e.fase }); s.tekster.push({ txt: "WINGMAN!", x: e.x, y: e.y - .05, liv: 1.2, farge: "#6dff8a" }); }
   s.poeng += 300; shHud(); shLyd("innkapsle");
   s.tekster.push({ txt: "+300", x: e.x, y: e.y - .04, liv: .8, farge: "#7fe8ff", liten: true });
   shStov(e.x, e.y, 20, "200,240,255", .15);
@@ -2942,6 +2942,7 @@ function shGalagaSteg(dt) {
   const s = sh, g = s.galaga; if (!g) return;
   const levende = g.fiender.filter(shFangbar).length, andel = Math.min(1, levende / 10);
   g.t += dt; s.eff.K = Math.max(s.eff.K, .2);
+  for (const e of g.fiender) if (e.blink > 0) e.blink = Math.max(0, e.blink - dt * 3);
   g.dykkT -= dt;
   for (const e of g.fiender) {
     e.t += dt;
@@ -3405,7 +3406,7 @@ function shOppdater(dt) {
     // Som en vannslange: en tett stråle av bobler fra midten mellom flipperne. Flytt flipperne for å sikte.
     for (let n = 0; n < 3 && s.skuddT <= 0; n++) {
       const angrep = !!s.galaga && s.eff.K < .3;
-      s.skuddT += angrep ? .05 : .03;
+      s.skuddT += angrep ? .075 : .03;
       const sikte = shClamp(s.padV * .6, -.6, .6) + Math.sin(s.tid * 7) * .05, v = 1.4 + Math.random() * .3;
       const kilder = [s.padX].concat(s.wingmen.filter(w => w.klar).map(w => s.padX + w.side * (s.padW / 2 + .05)));
       for (const kx of kilder) s.skudd.push({ x: kx + (Math.random() - .5) * .025, y: SH_PY - .03, vx: Math.sin(sikte) * v + (Math.random() - .5) * .06, vy: -Math.cos(sikte) * v, r: .008 + Math.random() * .006, budsjett: 2, fase: Math.random() * 6 });
@@ -3429,7 +3430,12 @@ function shOppdater(dt) {
     }
     if (s.galaga) {
       const e = s.galaga.fiender.find(e => shFangbar(e) && Math.hypot(e.x - q.x, e.y - q.y) < .045);
-      if (e) { shInnkaps(e); q.borte = true; continue; }
+      if (e) {
+        q.borte = true;
+        // Første treff: monsteret blinker og rister. Andre treff: det blir kapslet inn.
+        if (--e.hp > 0) { e.blink = 1; e.unna = (e.unna || 0) + (Math.random() < .5 ? -1 : 1) * .05; shLyd("bossTreff"); shStov(e.x, e.y, 8, "200,240,255", .12); continue; }
+        shInnkaps(e); continue;
+      }
       if (s.skudd.length > 170) { q.borte = true; continue; }
       const bo = s.galaga.bomber.find(o => Math.hypot(o.x - q.x, o.y - q.y) < .02);
       if (bo) { bo.borte = true; q.borte = true; shStov(bo.x, bo.y, 6, "180,140,90", .08); continue; }
@@ -3507,6 +3513,10 @@ function shPartikler(dt) {
   s.splatter = s.splatter.filter(q => q.t < (q.paa ? .35 : 1.6));
   for (const st of s.stjerner) st.t += dt;
   for (const q of s.stavSkitt) q.a -= dt * .018;
+  if (s.kantDrypp && s.tilstand === "spill") for (let c = 0; c < SH_KOL; c++) {
+    const d = s.kantDrypp[c], før = d.t % 6; d.t += dt * d.fart * 4;
+    if (d.t % 6 < før) { const k = s.klosser[(SH_RAD - 1) * SH_KOL + c]; if (k.liv > 0 && Math.random() < .12) shKlatt((c + .5) / SH_KOL, SH_TOPP + 1 + .02, .003 + Math.random() * .004, .05); }
+  }
   s.stavSkitt = s.stavSkitt.filter(q => q.a > .05);
   s.stjerner = s.stjerner.filter(st => st.t < st.varighet);
   // Når bildet begynner å bli rent, blinker det her og der.
@@ -3778,6 +3788,32 @@ function shKlattTegn(x, X, Y, r, st, jord, fase, tid) {
   shKurve(x, pts); x.fillStyle = gr; x.fill();
   x.fillStyle = "rgba(255,255,255,.55)"; x.beginPath(); x.ellipse(X - r * .32, Y - r * .35, r * .22, r * .14, -.6, 0, 7); x.fill();
 }
+// Underkanten av gjørma: ikke en rett strek, men gjørme som har sigt over kanten, henger i dråper og drypper.
+function shKantTegn(x, f, s, y0) {
+  const [m1, m2, m3] = s.jord.mork, [l1, l2, l3] = s.jord.lys, cw = f / SH_KOL;
+  const bunn = c => s.klosser[(SH_RAD - 1) * SH_KOL + c], vis = c => c < 0 || c >= SH_KOL ? 0 : Math.min(1, bunn(c).vis || 0);
+  // En bølgete leppe av gjørme langs kanten.
+  x.beginPath(); x.moveTo(0, y0 - 1);
+  for (let i = 0; i <= SH_KOL * 3; i++) {
+    const u = i / (SH_KOL * 3), c = Math.min(SH_KOL - 1, Math.floor(u * SH_KOL)), v = vis(c);
+    const h = v * f * (.012 + .012 * (1 + Math.sin(i * 1.7 + c * 2.3)) + .005 * Math.sin(s.tid * .8 + i));
+    x.lineTo(u * f, y0 + h);
+  }
+  x.lineTo(f, y0 - 1); x.closePath();
+  const lg = x.createLinearGradient(0, y0 - 2, 0, y0 + f * .02); lg.addColorStop(0, `rgb(${l1},${l2},${l3})`); lg.addColorStop(1, `rgb(${m1},${m2},${m3})`);
+  x.fillStyle = lg; x.fill();
+  // Hengende dråper under kolonner med gjørme. De vokser sakte, slipper en klump og begynner på nytt.
+  s.kantDrypp = s.kantDrypp || Array.from({ length: SH_KOL }, (_, c) => ({ t: Math.random() * 6, fart: .12 + Math.random() * .2, bredde: .45 + Math.random() * .4 }));
+  for (let c = 0; c < SH_KOL; c++) {
+    const v = vis(c), d = s.kantDrypp[c]; if (v < .15 || (c % 3 === 1 && v < .5)) continue;
+    const vekst = (d.t % 6) / 6, L = f * (.02 + .07 * vekst * d.fart * 4) * Math.max(.5, v), X = (c + .5) * cw + Math.sin(c * 3.1) * cw * .2, w = cw * (d.bredde + .25) * Math.max(.6, v);
+    x.beginPath(); x.moveTo(X - w / 2, y0); x.bezierCurveTo(X - w / 2, y0 + L * .5, X - w * .18, y0 + L * .7, X - w * .22, y0 + L);
+    x.arc(X, y0 + L, w * .22 + 1, Math.PI, 0, true); x.bezierCurveTo(X + w * .18, y0 + L * .7, X + w / 2, y0 + L * .5, X + w / 2, y0); x.closePath();
+    const dg = x.createLinearGradient(X - w / 2, 0, X + w / 2, 0); dg.addColorStop(0, `rgb(${m1},${m2},${m3})`); dg.addColorStop(.35, `rgb(${l1},${l2},${l3})`); dg.addColorStop(1, `rgb(${m1 * .8 | 0},${m2 * .8 | 0},${m3 * .8 | 0})`);
+    x.fillStyle = dg; x.fill();
+    x.fillStyle = "rgba(255,255,255,.35)"; x.beginPath(); x.ellipse(X - w * .08, y0 + L - w * .08, w * .06 + .5, w * .1 + .5, 0, 0, 7); x.fill();
+  }
+}
 function shTegn(t) {
   const c = $("shCanvas"), x = c.getContext("2d"), g = shG, s = sh, f = g.fw, iy = SH_TOPP * f;
   x.setTransform(g.dpr, 0, 0, g.dpr, 0, 0); x.clearRect(0, 0, innerWidth, innerHeight);
@@ -3812,7 +3848,7 @@ function shTegn(t) {
   }
   x.globalCompositeOperation = "source-over";
   if (s.levende) shLevTegn(x, f, s);
-  if (s.moekk) { x.imageSmoothingEnabled = true; x.imageSmoothingQuality = "low"; x.drawImage(s.moekk.cv, 0, iy, f, f); }
+  if (s.moekk) { x.imageSmoothingEnabled = true; x.imageSmoothingQuality = "low"; x.drawImage(s.moekk.cv, 0, iy, f, f); shKantTegn(x, f, s, iy + f); }
   // Skittent vann renner nedover, såpesyre gløder.
   const [mr, mg, mb] = s.jord.mork;
   x.lineCap = "round";
@@ -3946,7 +3982,8 @@ function shTegn(t) {
       for (const e of g.fiender) {
         if (e.tilstand === "borte" || (e.tilstand === "inn" && e.t < 0)) continue;
         const X = e.x * f, Y = e.y * f, slag = Math.sin(s.tid * (e.tilstand === "kastet" ? 30 : 14) + e.fase) * .35;
-        tegnFigur(mon(e.figur), X, Y, e.tilstand === "tilWing" ? R * (1 - Math.min(.4, e.wt * .4)) : R, e.rot, e.tilstand !== "boble" && e.tilstand !== "tilWing", e.nr % 2, slag);
+        tegnFigur(mon(e.figur), X + (e.blink > 0 ? Math.sin(s.tid * 60) * e.blink * R * .15 : 0), Y, e.tilstand === "tilWing" ? R * (1 - Math.min(.4, e.wt * .4)) : R, e.rot, e.tilstand !== "boble" && e.tilstand !== "tilWing", e.nr % 2, slag);
+        if (e.blink > 0) { x.save(); x.globalCompositeOperation = "lighter"; x.globalAlpha = e.blink * .7; tegnFigur(mon(e.figur), X, Y, R, e.rot, false, e.nr % 2, 0); x.restore(); x.globalAlpha = 1; }
         if (e.tilstand === "boble" || e.tilstand === "tilWing") boble(X, Y, R * 1.45, e.fase);
       }
       const B = g.boss;
