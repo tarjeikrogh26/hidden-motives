@@ -346,7 +346,7 @@ body:has(.resultat.vis) #spill .linje{opacity:0;pointer-events:none;transition:o
   <div class="regel"><b>The race:</b> Your best score on each of the ten boards in a collection is added up. Finish #1 overall and you get the next collection for free. Anyone who takes first place later gets it too. Points: Easy (25 pieces) gives 10,000, Medium (49) 15,000, Hard (100) 20,000 and Chaos (144) 25,000 at normal speed. Be fast and you get up to double.</div>
   <div class="sammen" id="sammen"><p class="liten">Loading standings …</p></div>
   <p class="kreditt">© 2001–2026 Tarjei Krogh. All photography, music and art. <a href="https://kroghx.com" target="_blank" rel="noopener">kroghx.com</a></p>
-  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 0.83<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
+  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 0.84<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
 </section>
 
 <div class="ark" id="tidUtArk" hidden style="z-index:200001">
@@ -3188,7 +3188,138 @@ function shLagMoekk() {
     rL: new Float32Array(n), rW: new Float32Array(n), L: new Float32Array(n), W: new Float32Array(n) };
   for (let j = 0; j < n; j++) shCelle(j, true);
   for (let j = 0; j < n; j++) shGlattCelle(j);
-  shMal(0, 0, MR, MR);
+  s.moekk.gl = shGLInit(s.moekk);
+  if (!s.moekk.gl) shMal(0, 0, MR, MR);
+}
+const SH_GL_VS = "attribute vec2 p;void main(){gl_Position=vec4(p,0.,1.);}";
+const SH_GL_FS = `precision highp float;
+uniform sampler2D tS,tH,tG,tK;uniform vec2 uRes;uniform float uMR,uRamme,uMetall,uKunst;
+uniform vec3 uJ1m,uJ1l,uJ2m,uJ2l,uRm,uRl;
+const vec2 GR=vec2(24.,36.);
+float h12(vec2 p){vec3 q=fract(vec3(p.xyx)*.1031);q+=dot(q,q.yzx+33.33);return fract((q.x+q.y)*q.z);}
+float vn(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);return mix(mix(h12(i),h12(i+vec2(1.,0.)),f.x),mix(h12(i+vec2(0.,1.)),h12(i+vec2(1.,1.)),f.x),f.y);}
+vec4 grid(vec2 uv){vec2 g=uv*GR-.5,c=floor(g),f=fract(g);f=f*f*(3.-2.*f);return texture2D(tG,(c+f+.5)/GR);}
+float randB(vec2 p){return min(min(p.x,p.y),min(1.-p.x,1.-p.y));}
+// Gjørmas høyde og hvor mye som dekker (a), tykkelse (L), væte (W).
+void mud(vec2 p,out float H,out float A,out float W,out float F,out float L){
+  vec4 st=texture2D(tS,p);vec2 hm=texture2D(tH,p).rg;
+  float kant=st.g,bl=st.b,sl=st.a;
+  vec2 q=vec2(p.x+(kant-.5)*5./GR.x,p.y+(bl-.5)*1.6/GR.y+(sl-.5)*1.6/GR.y);
+  vec4 g=grid(q);F=g.r;L=g.g;W=g.b;
+  float dl=hm.g*.06;if(dl>.003)F=max(F,grid(q-vec2(0.,dl)).r*.9);
+  // Smuldrete kant: fin støy i grensen der gjørma slutter.
+  float er=F*1.15-sl*.5+(kant-.5)*.45+(vn(p*240.)-.5)*.16+(vn(p*600.)-.5)*.08;
+  float ee=smoothstep(0.,.25,er);
+  A=ee*(.5+.5*min(1.,F*1.5));
+  float db=randB(p),list=db<.058?sin(3.14159*min(1.,db/.058))*.45:0.;
+  // Jordklumper og småstein oppå de store formene.
+  // Noen partier er glatte og våte, andre smuldrete.
+  float maske=smoothstep(.3,.75,vn(p*4.5+2.));vec2 pr=mat2(.8,-.6,.6,.8)*p;
+  float kl=((vn(pr*40.+3.)-.5)*.12+(vn(pr*110.+8.)-.5)*.07+max(0.,vn(pr*95.+21.)*.6+vn(pr*170.+4.)*.4-.7)*.6)*(.25+1.1*maske);
+  H=A*(.2+.25*L+hm.r*1.1*(.7+.3*L)*(1.-list*.7)+list+kl*(1.-list))*(.4+.6*F);
+}
+// Fint korn: små korn, grus og noen smuler som stikker opp.
+float korn(vec2 q){vec2 p=mat2(.6,-.8,.8,.6)*q;return (vn(p*900.)-.5)*.45+(vn(p*380.+17.)-.5)*.4+max(0.,vn(p*150.+41.)-.66)*1.9;}
+void main(){
+  vec2 p=vec2(gl_FragCoord.x,uRes.y-gl_FragCoord.y)/uRes;
+  float H,A,W,F,L,Hx,Hy,a2,w2,f2,l2;
+  mud(p,H,A,W,F,L);
+  float e=1.2/uMR;
+  mud(p+vec2(e,0.),Hx,a2,w2,f2,l2);mud(p+vec2(0.,e),Hy,a2,w2,f2,l2);
+  float db=randB(p),wR=uRamme*(db<.035?1.:db<.07?(.07-db)/.035:0.)*.85,smul=db<.075?1.-db/.075:0.;
+  // Kornet: sterkt i rammen, svakt i resten av gjørma.
+  float ek=1./uRes.x,ka=A*(.022+smul*.2),k0=korn(p);
+  float kx=(korn(p+vec2(ek,0.))-k0)/ek*ka,ky=(korn(p+vec2(0.,ek))-k0)/ek*ka;
+  float lx=-(Hx-H)/e*.0444,lyy=-(Hy-H)/e*.0444,gx=-kx*.0444,gy=-ky*.0444;
+  // Lyset bruker kornet fullt; glansen bare litt, så våt jord ikke blir til folie.
+  vec3 n=normalize(vec3(lx+gx,lyy+gy,1.)),nS=normalize(vec3(lx+gx*.3,lyy+gy*.3,1.));
+  vec3 Ld=normalize(vec3(-.45,-.6,.66)),Hv=normalize(Ld+vec3(0.,0.,1.));
+  float dif=max(0.,dot(n,Ld)),sp=max(0.,dot(nS,Hv));
+  vec4 st=texture2D(tS,p);float hump=texture2D(tH,p).r*1.4;
+  float bl=st.b,tt=clamp(st.r*.45+hump*.45+k0*.12,0.,1.);
+  vec3 mo=mix(uJ1m,uJ2m,bl),ly=mix(uJ1l,uJ2l,bl),col=mix(mo,ly,tt);
+  if(wR>0.){float hk=h12(floor(p*uRes)),hk2=vn(p*330.);float tr=clamp(tt*.55+.25+(hk2-.5)*.5+k0*.3,0.,1.),fl=.8+hk*.3;col+=(mix(uRm,uRl,tr)*fl-col)*wR*.8;}
+  // Mørkt i sprekkene mellom klumpene, lysere småstein.
+  vec2 pr=mat2(.8,-.6,.6,.8)*p;float hul=vn(pr*70.+11.),stein=smoothstep(.72,.8,vn(pr*95.+21.)*.6+vn(pr*170.+4.)*.4);
+  col*=(.9+.18*hul);col=mix(col,col*1.3+10.,stein*.4*(1.-wR));
+  float gr=(col.r+col.g+col.b)/3.;col=(vec3(gr)+(col-gr)*(1.+.5*W))*((1.-.3*W)*(.18+1.05*dif));
+  float s8=pow(sp,8.),s32=s8*s8*s8*s8;
+  float blank=(.5+.5*W)*(s32*160.+s8*30.)*(1.-wR*.55+(uMetall>.5?wR*.35:0.))/255.;
+  col=col/255.+blank;
+  float aa=A*(1.-.22*W*W);
+  // Skygge på kunsten under gjørma.
+  float sa=clamp((grid(p-vec2(.006,.009)).r-.3)/.5,0.,1.)*.5;
+  // Vått papir der rammen er vasket bort: mørkt, flekkete og ujevnt, med jordkorn. Tørker sakte.
+  float wet=grid(p+vec2(vn(p*30.)-.5,vn(p*30.+9.)-.5)*.03).a;
+  float mot=vn(p*26.)*.55+vn(p*70.+3.)*.3+vn(p*180.)*.15;
+  float wa=clamp(wet*(.6+.4*mot)*1.15,0.,1.);
+  vec3 art=texture2D(tK,p).rgb,wArt=pow(art,vec3(1.85))*.78;
+  float lu=dot(wArt,vec3(.3,.59,.11));wArt=max(vec3(0.),mix(vec3(lu),wArt,1.35))*vec3(1.,.94,.84);
+  wArt=mix(wArt,wArt*vec3(.78,.6,.4),.45*mot*wet);
+  if(uKunst<.5){wArt=vec3(.12,.08,.04);wa*=.5;}
+  // Jordkorn som ligger igjen der rammen var, og våte glimt på papiret.
+  float spek=wet*smul*smoothstep(.7,.9,vn(p*210.+5.))*.8;
+  wArt=mix(wArt,vec3(.08,.05,.025),spek);
+  float glN=vn(p*120.+33.),gl=wet*smoothstep(.78,.95,glN)*.4+wet*smoothstep(.55,.75,vn(p*14.+7.))*.09;
+  float wa2=max(wa,spek);
+  float ua=1.-(1.-wa2)*(1.-sa);vec3 uc=wArt*wa2*(1.-sa)+vec3(gl)*wa2;
+  gl_FragColor=vec4(col*aa+uc*(1.-aa),aa+ua*(1.-aa));
+}`;
+function shGLInit(m) {
+  try {
+    const cv = document.createElement("canvas"), gl = cv.getContext("webgl", { premultipliedAlpha: true, preserveDrawingBuffer: true, antialias: false, alpha: true });
+    if (!gl || location.search.includes("ingengl")) return null;
+    const sk = (t, src) => { const s = gl.createShader(t); gl.shaderSource(s, src); gl.compileShader(s); if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s)); return s; };
+    const pr = gl.createProgram(); gl.attachShader(pr, sk(gl.VERTEX_SHADER, SH_GL_VS)); gl.attachShader(pr, sk(gl.FRAGMENT_SHADER, SH_GL_FS)); gl.linkProgram(pr);
+    if (!gl.getProgramParameter(pr, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(pr));
+    gl.useProgram(pr);
+    const buf = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, buf); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
+    const ap = gl.getAttribLocation(pr, "p"); gl.enableVertexAttribArray(ap); gl.vertexAttribPointer(ap, 2, gl.FLOAT, false, 0, 0);
+    const MR = m.MR, N = MR * MR, til8 = v => Math.max(0, Math.min(255, Math.round(v * 255)));
+    const st = new Uint8Array(N * 4), hu = new Uint8Array(N * 4);
+    for (let k = 0; k < N; k++) {
+      st[k * 4] = til8(m.tekstur[k]); st[k * 4 + 1] = til8(m.kant[k]); st[k * 4 + 2] = til8(m.blanding[k]); st[k * 4 + 3] = til8(m.slit[k]);
+      hu[k * 4] = til8(m.hump[k] / 1.4); hu[k * 4 + 1] = til8(m.drypp[k % MR] / .06); hu[k * 4 + 3] = 255;
+    }
+    const tekst = (enhet, w, h, data, navn) => {
+      const t = gl.createTexture(); gl.activeTexture(gl.TEXTURE0 + enhet); gl.bindTexture(gl.TEXTURE_2D, t);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, w, h, 0, gl.RGBA, gl.UNSIGNED_BYTE, data); gl.uniform1i(gl.getUniformLocation(pr, navn), enhet); return t;
+    };
+    tekst(0, MR, MR, st, "tS"); tekst(1, MR, MR, hu, "tH");
+    // Selve kunstbildet, så GPU-en kan tegne det vått der det nettopp er vasket.
+    let harKunst = 0;
+    try { const t = gl.createTexture(); gl.activeTexture(gl.TEXTURE3); gl.bindTexture(gl.TEXTURE_2D, t);
+      for (const [a, b] of [[gl.TEXTURE_MIN_FILTER, gl.LINEAR], [gl.TEXTURE_MAG_FILTER, gl.LINEAR], [gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE], [gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE]]) gl.texParameteri(gl.TEXTURE_2D, a, b);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, sh.img); harKunst = gl.getError() === gl.NO_ERROR ? 1 : 0; } catch { harKunst = 0; }
+    gl.uniform1i(gl.getUniformLocation(pr, "tK"), 3); gl.uniform1f(gl.getUniformLocation(pr, "uKunst"), harKunst);
+    const gridData = new Uint8Array(SH_KOL * SH_RAD * 4), tG = tekst(2, SH_KOL, SH_RAD, gridData, "tG");
+    const U = n => gl.getUniformLocation(pr, n), s = sh, c3 = (n, v) => gl.uniform3f(U(n), v[0], v[1], v[2]);
+    c3("uJ1m", s.jord.mork); c3("uJ1l", s.jord.lys); c3("uJ2m", s.jord2.mork); c3("uJ2l", s.jord2.lys);
+    const R = s.ramme || { mork: [0, 0, 0], lys: [0, 0, 0] }; c3("uRm", R.mork); c3("uRl", R.lys);
+    gl.uniform1f(U("uRamme"), s.ramme ? 1 : 0); gl.uniform1f(U("uMetall"), s.ramme?.metall ? 1 : 0); gl.uniform1f(U("uMR"), MR);
+    const G = { cv, gl, pr, tG, gridData, uRes: U("uRes"), tapt: false };
+    cv.addEventListener("webglcontextlost", e => { e.preventDefault(); G.tapt = true; });
+    return G;
+  } catch (e) { console.warn("WebGL av:", e.message); return null; }
+}
+// Tegn gjørma med GPU-en. Rutenettet (24 x 36 felt) lastes opp hvert bilde; det er lite.
+function shGLTegn(s) {
+  const m = s.moekk, G = m.gl, gl = G.gl, dp = Math.min(shG.dpr || 1, 3), N = Math.max(64, Math.round(shG.fw * dp));
+  const nå = performance.now();
+  if (G.cv.width !== N) { G.cv.width = G.cv.height = N; G.skitten = true; }
+  if (!G.skitten && nå - (G.sist || 0) < 125) return;
+  G.skitten = false; G.sist = nå;
+  const d = G.gridData, ferdig = s.tilstand === "ferdig" && s.ferdigT ? Math.max(0, 1 - (performance.now() - s.ferdigT) / 2500) : 1;
+  for (let j = 0; j < SH_KOL * SH_RAD; j++) {
+    const k = s.klosser[j]; let wet = 0;
+    if (k.liv <= 0 && k.vaatT != null) wet = (k.ramme ? 1 : .55) * Math.max(0, 1 - Math.pow(Math.max(0, s.tid - k.vaatT) / (k.ramme ? 40 : 14), 1.5)) * ferdig;
+    d[j * 4] = Math.round(Math.min(1, m.F[j]) * 255); d[j * 4 + 1] = Math.round(Math.min(1, m.L[j]) * 255); d[j * 4 + 2] = Math.round(Math.min(1, m.W[j]) * 255); d[j * 4 + 3] = Math.round(wet * 255);
+  }
+  gl.activeTexture(gl.TEXTURE2); gl.bindTexture(gl.TEXTURE_2D, G.tG); gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, SH_KOL, SH_RAD, gl.RGBA, gl.UNSIGNED_BYTE, d);
+  gl.viewport(0, 0, N, N); gl.uniform2f(G.uRes, N, N);
+  gl.clearColor(0, 0, 0, 0); gl.clear(gl.COLOR_BUFFER_BIT); gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
 }
 function shCelle(j, bare) {
   const k = sh.klosser[j], m = sh.moekk;
@@ -3291,6 +3422,8 @@ function shMal(x0, y0, x1, y1) {
 // Tegn om gjørma der noe er endret. Delt i fliser på 4 x 4 felt, og bare så mye per bilde at mobilen holder følge.
 function shRens() {
   const s = sh; if (!s.moekk) return;
+  if (s.moekk.gl?.tapt) { s.moekk.gl = null; shMal(0, 0, s.moekk.MR, s.moekk.MR); }
+  if (s.moekk.gl) { if (s.skitten.size) s.moekk.gl.skitten = true; s.skitten.clear(); return; }
   const m = s.moekk, fk = SH_KOL / 4, fr = SH_RAD / 4;
   for (const j of s.skitten) {
     const c = j % SH_KOL, r = (j / SH_KOL) | 0;
@@ -3602,7 +3735,7 @@ function shTreff(k, lag = 1, kilde = null) {
     return;
   }
   s.igjen--; s.kombo++;
-  if (k.ramme) k.vaatT = s.tid;
+  k.vaatT = s.tid;
   if (!s.bytte) s.poeng += (20 + 10 * k.maks) * Math.min(1 + Math.floor(s.kombo / 8), 5);
   k.glans = 1;
   if (k.gave) { if (!s.kapsler.length && !s.bytte) s.kapsler.push({ x: mx, y: my, t: k.gave, r: .044, vy: .04, fase: Math.random() * 6 }); k.gave = null; }
@@ -5070,6 +5203,7 @@ function shPapirKant(x, f, s, iy) {
   x.stroke(); x.restore();
   // Der rammen nettopp er vasket bort: vått, flekkete papir og jordsmuler som sakte tørker bort (ca. 8 sek).
   for (const k of s.klosser) {
+    if (s.moekk?.gl) break;
     if (!k.ramme || k.liv > 0 || k.vaatT == null) continue;
     const u = (s.tid - k.vaatT) / 8; if (u >= 1) { k.vaatT = null; continue; }
     const a = 1 - u * u, cx = (k.x + k.w / 2) * f, cy = (k.y + k.h / 2) * f, cw = k.w * f, ch = k.h * f, frø = k.r * 31 + k.c * 17;
@@ -5127,7 +5261,8 @@ function shTegn(t) {
   }
   x.globalCompositeOperation = "source-over";
   if (s.levende) shLevTegn(x, f, s);
-  if (s.moekk) { x.imageSmoothingEnabled = true; x.imageSmoothingQuality = "low"; x.drawImage(s.moekk.cv, 0, iy, f, f); shKantTegn(x, f, s, iy + f); }
+  if (s.moekk?.gl) { shGLTegn(s); x.drawImage(s.moekk.gl.cv, 0, iy, f, f); shKantTegn(x, f, s, iy + f); }
+  else if (s.moekk) { x.imageSmoothingEnabled = true; x.imageSmoothingQuality = "low"; x.drawImage(s.moekk.cv, 0, iy, f, f); shKantTegn(x, f, s, iy + f); }
   // Skittent vann renner nedover, såpesyre gløder.
   const [mr, mg, mb] = s.jord.mork;
   x.lineCap = "round";
