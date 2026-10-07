@@ -156,8 +156,8 @@ h1 .signatur{font-size:.55em;letter-spacing:.06em;white-space:nowrap}
   font-size:clamp(26px,5.5vw,52px);letter-spacing:.06em;line-height:1;color:#ff5a6a;text-shadow:0 0 18px rgba(255,90,106,.75),0 3px 0 rgba(0,0,0,.6);animation:hendelse 2.2s ease-out forwards;white-space:nowrap}
 .hendelse small{display:block;font-family:var(--tall);font-weight:500;font-size:.34em;letter-spacing:.14em;color:#fff;margin-top:.5em;text-shadow:0 0 8px rgba(0,0,0,.8)}
 @keyframes hendelse{0%{opacity:0;transform:translate(-50%,-50%) scale(.5)}12%{opacity:1;transform:translate(-50%,-50%) scale(1.12)}22%{transform:translate(-50%,-50%) scale(1)}80%{opacity:1}100%{opacity:0;transform:translate(-50%,-62%) scale(1)}}
-.lynblink{position:fixed;inset:0;z-index:264;pointer-events:none;background:#fff;animation:lynblink .45s ease-out forwards}
-@keyframes lynblink{0%{opacity:.95}15%{opacity:.2}30%{opacity:.8}100%{opacity:0}}
+.lynblink{position:fixed;inset:0;z-index:250;pointer-events:none;background:#fff;animation:lynblink .6s ease-out forwards}
+@keyframes lynblink{0%{opacity:.75;background:#0b1030}10%{opacity:.9;background:#fff}20%{opacity:.35;background:#0b1030}32%{opacity:.75;background:#eef4ff}100%{opacity:0;background:#fff}}
 .hud-knapper .tilt{border-color:rgba(255,90,106,.5);color:#ff5a6a}
 @media (orientation:portrait){.hud-knapper .tilt{flex-direction:row;gap:5px}}
 /* Lav liggende skjerm (mobil i Safari): tettere panel, så alle knappene får plass. */
@@ -194,6 +194,8 @@ h1 .signatur{font-size:.55em;letter-spacing:.06em;white-space:nowrap}
 @keyframes neon{0%{box-shadow:0 0 0 rgba(255,176,0,0)}20%{box-shadow:0 0 28px 6px rgba(255,200,60,.95),0 0 80px 20px rgba(255,120,0,.45)}45%{box-shadow:0 0 30px 6px rgba(255,60,200,.85),0 0 90px 24px rgba(120,60,255,.4)}70%{box-shadow:0 0 30px 6px rgba(60,220,255,.85),0 0 90px 24px rgba(0,160,255,.35)}100%{box-shadow:0 0 22px 3px rgba(255,190,60,.55),0 0 60px 12px rgba(255,140,0,.2)}}
 #fest{position:fixed;inset:0;pointer-events:none;z-index:240}
 #avslor.vis{opacity:1}
+#avslor.magisk{filter:saturate(1.3) contrast(1.06)}
+#avslor{transition:opacity 1.4s ease,filter .8s ease}
 .snu{position:fixed;inset:0;display:none;place-items:center;text-align:center;background:var(--rom);z-index:60;padding-inline:16px;color:var(--demp)}
 .snu b{display:block;font-family:var(--display);font-size:22px;color:var(--tekst);margin-bottom:6px}
 
@@ -237,6 +239,7 @@ h1 .signatur{font-size:.55em;letter-spacing:.06em;white-space:nowrap}
 .resultat .rad input::placeholder{color:rgba(255,176,0,.6)}
 .resultat .rad.meg .n{cursor:text}
 #stovLag{position:fixed;inset:0;pointer-events:none;z-index:285}
+#magi{position:fixed;left:0;top:0;pointer-events:none;z-index:250;mix-blend-mode:screen;transition:opacity .5s ease}
 @media (max-height:520px){.resultat h2{font-size:18px}.resultat .poeng{font-size:26px}.ark-hode{font-size:15px}}
 .resultat h2{font-family:var(--display);margin:0;font-size:clamp(19px,2.6vw,26px);line-height:1.1;text-wrap:balance}
 body:has(.resultat.vis) #spill .linje{opacity:0;pointer-events:none;transition:opacity .4s ease}
@@ -320,7 +323,7 @@ body:has(.resultat.vis) #spill .linje{opacity:0;pointer-events:none;transition:o
   <div class="regel"><b>The race:</b> Your best score on each of the ten boards in a collection is added up. Finish #1 overall and you get the next collection for free. Anyone who takes first place later gets it too. Points: Easy (25 pieces) gives 10,000, Medium (49) 15,000, Hard (100) 20,000 and Chaos (144) 25,000 at normal speed. Be fast and you get up to double.</div>
   <div class="sammen" id="sammen"><p class="liten">Loading standings …</p></div>
   <p class="kreditt">© 2001–2026 Tarjei Krogh. All photography, music and art. <a href="https://kroghx.com" target="_blank" rel="noopener">kroghx.com</a></p>
-  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 0.63<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
+  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 0.64<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
 </section>
 
 <div class="ark" id="tidUtArk" hidden style="z-index:200001">
@@ -389,6 +392,7 @@ body:has(.resultat.vis) #spill .linje{opacity:0;pointer-events:none;transition:o
     </div>
   </aside>
   <canvas id="stovLag"></canvas>
+  <canvas id="magi"></canvas>
 </section>
 <section id="shatter" class="skjerm" hidden aria-label="Scrub">
   <div class="sh-hud" id="shHud">
@@ -633,6 +637,17 @@ function tone(frekv, start, varighet, styrke, type, tørr = 1, våt = 1) {
   o.start(t); o.stop(t + varighet + 0.02);
 }
 // Metallisk «tsjing»: et kort støyglimt i diskanten, som mynter som treffer hverandre.
+// Torden: lav, rullende støy som buldrer ut i et par sekunder.
+function torden(start, varighet) {
+  const c = ctx(); if (!c) return;
+  const len = Math.floor(c.sampleRate * varighet), buf = c.createBuffer(1, len, c.sampleRate), d = buf.getChannelData(0); let sist = 0;
+  for (let i = 0; i < len; i++) { const u = i / len; sist = (sist + .04 * (Math.random() * 2 - 1)) / 1.02; d[i] = sist * 4 * Math.pow(1 - u, 1.5) * (.55 + .45 * Math.sin(u * 19 + Math.sin(u * 7) * 3)); }
+  const src = c.createBufferSource(); src.buffer = buf;
+  const lp = c.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = 420;
+  const g = c.createGain(); g.gain.value = .9; src.connect(lp).connect(g); g.connect(c.destination);
+  const r = romInn(); if (r) { const gv = c.createGain(); gv.gain.value = .6; g.connect(gv).connect(r); }
+  src.start(c.currentTime + start);
+}
 function tsjing(start, styrke, tørr = 1, våt = 1, frekv = 7500) {
   const c = ctx(); if (!c) return;
   const len = Math.floor(c.sampleRate * 0.12), buf = c.createBuffer(1, len, c.sampleRate), d = buf.getChannelData(0);
@@ -709,8 +724,73 @@ function vikForPanel() {
   bord.style.transform = `translate(${nyX - geo.x0 * s}px, ${nyY - geo.y0 * s}px) scale(${s})`;
 }
 function nullstillBord() { const b = $("bord"); speilAv(spill); b.classList.remove("vik"); b.style.transform = ""; b.style.transformOrigin = ""; b.style.transition = ""; }
+// Bildet er ferdig: det gløder i sine egne farger, en regnbueglans går over, og stjernestøv glitrer.
+// Lerretet ligger oppå med «screen», så alt som tegnes, lyser opp bildet under.
+let magiRAF = 0;
+function magiStart(img, R, varighet) {
+  if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  const c = $("magi"), dpr = Math.min(devicePixelRatio || 1, 2), W = innerWidth, H = innerHeight;
+  if (c.parentNode !== document.body) document.body.appendChild(c);
+  c.width = Math.round(W * dpr); c.height = Math.round(H * dpr); c.style.width = W + "px"; c.style.height = H + "px"; c.style.opacity = 1;
+  const x = c.getContext("2d");
+  // Glød: en liten versjon av bildet skalert opp blir et mykt lys i bildets egne farger.
+  const ut0 = Math.max(R.w, R.h) * .08, sm = document.createElement("canvas"); sm.width = 48; sm.height = Math.max(8, Math.round(48 * (R.h + 2 * ut0) / (R.w + 2 * ut0)));
+  { const sx = sm.getContext("2d"); sx.drawImage(img, 0, 0, sm.width, sm.height);
+    // Myke kanter: auraen tones ut mot kanten i stedet for å slutte i en firkant.
+    sx.globalCompositeOperation = "destination-in";
+    const e = ut0 / (R.w + 2 * ut0), hg = sx.createLinearGradient(0, 0, sm.width, 0); hg.addColorStop(0, "rgba(0,0,0,0)"); hg.addColorStop(e * 1.6, "#000"); hg.addColorStop(1 - e * 1.6, "#000"); hg.addColorStop(1, "rgba(0,0,0,0)");
+    sx.fillStyle = hg; sx.fillRect(0, 0, sm.width, sm.height);
+    const vg = sx.createLinearGradient(0, 0, 0, sm.height); vg.addColorStop(0, "rgba(0,0,0,0)"); vg.addColorStop(e * 1.6, "#000"); vg.addColorStop(1 - e * 1.6, "#000"); vg.addColorStop(1, "rgba(0,0,0,0)");
+    sx.fillStyle = vg; sx.fillRect(0, 0, sm.width, sm.height); }
+  const FARGER = ["255,236,170", "255,190,235", "185,240,255", "255,255,255", "255,214,106", "210,190,255"];
+  const stov = Array.from({ length: 300 }, () => { const u = Math.random(), v = Math.random(); return { u, v, r: .5 + Math.random() * 1.6, fase: Math.random() * 7, t0: (u + v) * .45 + Math.random() * .5, fart: 5 + Math.random() * 20, farge: FARGER[(Math.random() * FARGER.length) | 0] }; });
+  const stjerner = Array.from({ length: 22 }, () => ({ u: Math.random(), v: Math.random(), t0: .2 + Math.random() * (varighet - 1), d: .5 + Math.random() * .6, r: 5 + Math.random() * 10 }));
+  const t0 = performance.now(), ut = ut0;
+  let nesteKling = .3;
+  cancelAnimationFrame(magiRAF);
+  const steg = t => {
+    const tt = (t - t0) / 1000;
+    x.setTransform(dpr, 0, 0, dpr, 0, 0); x.clearRect(0, 0, W, H);
+    if (tt >= varighet) { magiRAF = 0; return; }
+    const env = Math.min(1, tt / .45) * Math.min(1, (varighet - tt) / .7);
+    // 1. Glød i bildets farger, også litt utenfor kanten.
+    x.imageSmoothingEnabled = true; x.imageSmoothingQuality = "high";
+    x.globalAlpha = env * (.15 + .06 * Math.sin(tt * 2.6));
+    x.drawImage(sm, R.x - ut, R.y - ut, R.w + 2 * ut, R.h + 2 * ut);
+    // 2. Regnbueglans som stryker skrått over bildet.
+    const gu = (tt - .25) / 1.5;
+    if (gu > 0 && gu < 1) {
+      const bx = R.x - R.w * .6 + gu * R.w * 2.2, gr = x.createLinearGradient(bx - R.w * .35, R.y, bx + R.w * .35, R.y + R.h * .5);
+      gr.addColorStop(0, "rgba(255,120,200,0)"); gr.addColorStop(.3, "rgba(255,150,210,.13)"); gr.addColorStop(.5, "rgba(255,245,215,.24)"); gr.addColorStop(.7, "rgba(140,220,255,.13)"); gr.addColorStop(1, "rgba(140,220,255,0)");
+      x.globalAlpha = Math.sin(Math.PI * gu); x.fillStyle = gr; x.fillRect(R.x, R.y, R.w, R.h);
+    }
+    // 3. Stjernestøv: tusenvis av små glimt som tennes etter glansen og stiger sakte.
+    for (const p of stov) {
+      const a = tt - p.t0; if (a < 0) continue;
+      const blink = .55 + .45 * Math.sin(tt * 9 + p.fase), alfa = Math.min(1, a / .25) * blink * env;
+      const px = R.x + p.u * R.w + Math.sin(tt * 1.3 + p.fase) * 3, py = R.y + p.v * R.h - a * p.fart;
+      const r = p.r * 3.2, g = x.createRadialGradient(px, py, 0, px, py, r);
+      g.addColorStop(0, `rgba(${p.farge},.95)`); g.addColorStop(.3, `rgba(${p.farge},.35)`); g.addColorStop(1, `rgba(${p.farge},0)`);
+      x.globalAlpha = alfa; x.fillStyle = g; x.fillRect(px - r, py - r, 2 * r, 2 * r);
+    }
+    // 4. Større stjerner som blinker opp her og der.
+    x.fillStyle = "#fffaf0";
+    for (const st of stjerner) {
+      const u = (tt - st.t0) / st.d; if (u < 0 || u > 1) continue;
+      const a = Math.sin(Math.PI * u), cx = R.x + st.u * R.w, cy = R.y + st.v * R.h, r = st.r * (.4 + .6 * a);
+      x.globalAlpha = a * env;
+      x.beginPath(); x.moveTo(cx, cy - r); x.quadraticCurveTo(cx, cy, cx + r * .7, cy); x.quadraticCurveTo(cx, cy, cx, cy + r); x.quadraticCurveTo(cx, cy, cx - r * .7, cy); x.quadraticCurveTo(cx, cy, cx, cy - r); x.fill();
+    }
+    x.globalAlpha = 1;
+    // Små klokkespill-lyder mens støvet glitrer.
+    if (lydPa && tt > nesteKling && tt < varighet - .8) { nesteKling = tt + .12 + Math.random() * .25; tone(1760 * Math.pow(2, [0, 3, 5, 7, 10, 12][(Math.random() * 6) | 0] / 12), 0, .5, .008, "sine", .3, 1.2); }
+    magiRAF = requestAnimationFrame(steg);
+  };
+  magiRAF = requestAnimationFrame(steg);
+}
+function magiStopp() { cancelAnimationFrame(magiRAF); magiRAF = 0; const c = $("magi"); c.getContext("2d").clearRect(0, 0, c.width, c.height); }
 function stoppFest() {
-  nullstillBord(); ark = null; $("resultat").classList.remove("vis");
+  magiStopp(); nullstillBord(); ark = null; $("resultat").classList.remove("vis");
   arkTimere.forEach(clearTimeout); arkTimere = []; cancelAnimationFrame(stovRAF); stovRAF = 0; cancelAnimationFrame(rullRAF); rullRAF = 0;
   cancelAnimationFrame(brannRAF); brannRAF = 0; { const bl = $("brannLag"); bl.getContext("2d").clearRect(0, 0, bl.width, bl.height); }
   const sl = $("stovLag"); sl.getContext("2d").clearRect(0, 0, sl.width, sl.height);
@@ -731,6 +811,7 @@ function visArkade() {
   res.classList.toggle("tema-scrub", a.tema === "scrub"); res.classList.toggle("tema-pusle", a.tema !== "scrub");
   $("arkHode").innerHTML = (a.tema === "scrub" ? "SCRUB IT" : "HIDDEN") + "<span>TOP 100</span>";
   const kanv = $("arkBilde"), plass = $("arkPlass");
+  $("magi").style.opacity = 0; setTimeout(magiStopp, 520);
   plass.classList.remove("borte"); kanv.style.opacity = "";
   res.classList.add("vis"); rullet = false; $("liste").scrollTop = 0;
   // Bildet flyr fra brettet opp til plassen sin øverst.
@@ -1140,6 +1221,21 @@ function visBunkeTall() {
 }
 // Kast en brikke opp på brettet. Den lander på en ledig plass, eller med flaks rett på sin egen.
 // Snu en brikke som ligger på magen: den løfter seg, vender seg rundt i lufta og legger seg med bildet opp.
+// Dratt ut av bunken med fingeren: samme fysikk som et kast. Den snurrer, legger seg litt skjevt, og av og til på magen.
+function skjevLanding(b) {
+  const sp = spill, r0 = b.rot || 0, rMål = (Math.random() - .5) * 24, spinn = (Math.random() < .5 ? -1 : 1) * (70 + Math.random() * 140);
+  const snu = !b.bak && Math.random() < .18, t0 = performance.now(), D = 560;
+  const steg = t => {
+    if (spill !== sp) return;
+    if (b.ferdig || b.el.classList.contains("drar")) { b.sx = 1; b.loft = 0; plasser(b); return; }
+    const u = Math.min(1, (t - t0) / D), e = 1 - Math.pow(1 - u, 3);
+    b.rot = rMål + (r0 + spinn - rMål) * (1 - e);
+    if (snu) { b.sx = Math.max(.02, Math.abs(Math.cos(Math.PI * u))); b.loft = Math.sin(Math.PI * u) * .7; if (u >= .5 && !b.bak) { b.bak = true; tegnBit(b); } }
+    plasser(b);
+    if (u < 1) requestAnimationFrame(steg); else { b.sx = 1; b.loft = 0; b.rot = rMål; plasser(b); }
+  };
+  requestAnimationFrame(steg);
+}
 function vend(b) {
   const sp = spill; if (!sp || b.vender) return;
   b.vender = true; const t0 = performance.now(), r0 = b.rot || 0;
@@ -1309,6 +1405,11 @@ function tegnBit(b) {
     ctx.globalCompositeOperation = "multiply"; ctx.globalAlpha = .2;
     const iw = img.naturalWidth || img.width, ih = img.naturalHeight || img.height, sk = Math.min(bw / iw, bh / ih) * .86;
     ctx.drawImage(img, t + (bw - iw * sk) / 2, t + (bh - ih * sk) / 2, iw * sk, ih * sk);
+    // Logoen, svakt trykt, så det er tydelig at dette er baksiden.
+    ctx.globalCompositeOperation = "source-over"; ctx.globalAlpha = .42; ctx.fillStyle = "#8a5a2a"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    const fs = Math.max(6, Math.min(bw, bh) * .15); ctx.font = `800 ${fs}px "Syne", sans-serif`;
+    ctx.save(); ctx.translate(t + bw / 2, t + bh / 2); ctx.rotate(-.12);
+    ctx.fillText("HIDDEN", 0, -fs * .55); ctx.fillText("MOTIVES", 0, fs * .55); ctx.restore();
     ctx.globalCompositeOperation = "source-over"; ctx.globalAlpha = 1;
   } else ctx.drawImage(img, t - b.c * bw, t - b.r * bh, bredde, hoyde);
   if (b.svidd > 0) sviBit(ctx, t, bw, bh, b.svidd, b.id);
@@ -1366,7 +1467,9 @@ function skyvBort(b) {
   const over = sp.biter.filter(q => q !== b && !q.ferdig && !q.iBunke && !q.lander && !q.el.classList.contains("drar") && Math.abs(q.x - mx) < .8 / k && Math.abs(q.y - my) < .8 / sp.r);
   over.forEach((q, j) => {
     const opptatt = new Set(sp.biter.filter(o => !o.iBunke && !o.ferdig && o !== q).map(o => Math.round(o.y * sp.r) * k + Math.round(o.x * k)));
-    const ledige = sp.biter.filter(c => !c.ferdig && !opptatt.has(c.id));
+    // Når det er under fem brikker igjen, havner de løse brikkene oppå bildet, ikke i hullene der de siste skal.
+    const fåIgjen = sp.biter.length - sp.lagt < 5;
+    const ledige = sp.biter.filter(c => (fåIgjen ? c.ferdig && c !== b : !c.ferdig) && !opptatt.has(c.id));
     let tx, ty;
     if (ledige.length) {
       const m = ledige.reduce((a, c) => { const d = Math.hypot(c.c / k - q.x, c.r / sp.r - q.y); return !a || d < a.d ? { c, d } : a; }, null).c;
@@ -1530,10 +1633,11 @@ function koble(b) {
     if (flytt) { cancelAnimationFrame(flytt); flytt = 0; }
     if (sistE && e && e.clientX != null) { [b.x, b.y] = trekk(dra.x + (e.clientX - dra.px) / geo.bredde * speilX(), dra.y + (e.clientY - dra.py) / geo.hoyde * speilY()); dra.spor.push({ t: e.timeStamp, x: b.x, y: b.y }); }
     if (dra.bunke && !dra.flyttet) { clearTimeout(b.holdT); dra = null; b.el.classList.remove("drar"); kast(b, Math.random() < HELDIG); return; }
-    const spor = dra.spor, start = dra.spor[0]; dra = null; b.el.classList.remove("drar");
+    const spor = dra.spor, start = dra.spor[0], fraBunke = dra.bunke && dra.flyttet; dra = null; b.el.classList.remove("drar");
     if (b.bak && e && Math.hypot((b.x - start.x) * geo.bredde, (b.y - start.y) * geo.hoyde) < 8) { løft(b, 0); vend(b); return; }
     if (provSmett(true)) return;
     løft(b, 0);
+    if (fraBunke) skjevLanding(b);
     // Curling: biten glir videre i farten du slapp den med, og bremser mykt.
     const na = e?.timeStamp ?? performance.now();
     const gml = spor.find(p => na - p.t < 90) || spor[spor.length - 1];
@@ -1750,15 +1854,33 @@ function puzzleBreak() {
 }
 // LIGHTNING STRIKE: lynet slår ned, bildet begynner å brenne. Dra fingeren over bålet for å spyle med vannslangen.
 let brannRAF = 0;
+function lagLyn(x0, y0, x1, y1, ru) {
+  let p = [[x0, y0], [x1, y1]];
+  for (let n = 0; n < 7; n++) {
+    const ny = [p[0]];
+    for (let i = 1; i < p.length; i++) {
+      const [ax, ay] = p[i - 1], [bx, by] = p[i], l = Math.hypot(bx - ax, by - ay);
+      ny.push([(ax + bx) / 2 + (Math.random() - .5) * l * ru, (ay + by) / 2 + (Math.random() - .5) * l * ru * .3], [bx, by]);
+    }
+    p = ny;
+  }
+  return p;
+}
 function lynnedslag() {
   const sp = spill, lagte = sp.biter.filter(b => b.ferdig && !b.lander);
   if (!lagte.length) return;
   const mål = lagte[(Math.random() * lagte.length) | 0];
-  const blink = document.createElement("div"); blink.className = "lynblink"; document.body.appendChild(blink); setTimeout(() => blink.remove(), 500);
+  const blink = document.createElement("div"); blink.className = "lynblink"; document.body.appendChild(blink); setTimeout(() => blink.remove(), 650);
   banner("LIGHTNING STRIKE!", "TAP THE FIRE TO SPLASH WATER ON IT", "#bfe9ff");
-  if (lydPa) { tsjing(0, .14, .8, 1.4, 4200); tone(55, .05, .9, .14, "sawtooth", .7, .9); tone(40, .1, 1.2, .1, "sine", .8, .8); }
+  // Smellet: et skarpt knekk, et nytt knekk når lynet slår ned igjen, et dypt drønn og torden som ruller.
+  if (lydPa) { tsjing(0, .55, 1, .5, 6500); tsjing(.01, .45, 1, .4, 2200); tsjing(.12, .38, 1, .6, 5000); tone(52, .01, 1.4, .24, "sine", .9, .8); tone(34, .04, 2, .16, "sine", .9, .9); tone(70, 0, .25, .12, "sawtooth", .8, .5); torden(.18, 2.6); }
+  { const bord = $("bord"); bord.classList.remove("rist"); void bord.offsetWidth; bord.classList.add("rist"); setTimeout(() => bord.classList.remove("rist"), 800); }
   sp.lynAntall = (sp.lynAntall || 0) + 1;
-  sp.brann = { ild: new Map([[mål.id, .55]]), lyn: { x: geo.x0 + (mål.c + .5) * geo.bw, y: geo.y0 + (mål.r + .5) * geo.bh, t: 0 }, partikler: [], plask: [], damp: [], sist: performance.now(), tegnT: 0, slange: null };
+  const lx = geo.x0 + (mål.c + .5) * geo.bw, ly = geo.y0 + (mål.r + .5) * geo.bh, topp = lx + (Math.random() - .5) * innerWidth * .35;
+  const hoved = lagLyn(topp, -10, lx, ly, .55), greiner = [];
+  for (let n = 0; n < 4; n++) { const i = 20 + ((Math.random() * (hoved.length - 50)) | 0), [gx, gy] = hoved[i], l = (ly - gy) * (.25 + Math.random() * .35); greiner.push(lagLyn(gx, gy, gx + (Math.random() < .5 ? -1 : 1) * l * (.4 + Math.random() * .5), gy + l, .6).slice(0, 60 + ((Math.random() * 60) | 0))); }
+  const gnister = Array.from({ length: 46 }, () => { const a = -Math.PI * Math.random(), v = 150 + Math.random() * 420; return { x: lx, y: ly, vx: Math.cos(a) * v, vy: Math.sin(a) * v, liv: .5 + Math.random() * .6 }; });
+  sp.brann = { ild: new Map([[mål.id, .8]]), lyn: { x: lx, y: ly, t: 0, hoved, greiner, gnister }, partikler: [], plask: [], damp: [], sist: performance.now(), tegnT: 0, slange: null };
   const c = $("brannLag"), dpr = Math.min(devicePixelRatio || 1, 2); c.width = innerWidth * dpr; c.height = innerHeight * dpr; c.style.width = innerWidth + "px"; c.style.height = innerHeight + "px";
   cancelAnimationFrame(brannRAF); brannRAF = requestAnimationFrame(brannSteg);
 }
@@ -1768,21 +1890,26 @@ function brannSteg(t) {
   const k = sp.k, bitAv = id => sp.biter[id];
   // Brannen vokser og sprer seg til naboer som ligger på plass. Vannet slukker der du drar.
   for (const [id, v] of [...B.ild]) {
-    const b = bitAv(id); if (!b.ferdig) { B.ild.delete(id); continue; }
-    let ny = Math.min(1, v + .34 * dt);
-    if (B.slange) { const cx = geo.x0 + (b.c + .5) * geo.bw, cy = geo.y0 + (b.r + .5) * geo.bh; if (Math.hypot(cx - B.slange.x, cy - B.slange.y) < Math.max(geo.bw, geo.bh) * 1.25) ny -= 2.6 * dt; }
+    const b = bitAv(id); if (b.iBunke || b.lander) { B.ild.delete(id); continue; }
+    let ny = Math.min(1, v + .6 * dt);
+    if (B.slange) { const [cx, cy] = brannPos(b); if (Math.hypot(cx - B.slange.x, cy - B.slange.y) < Math.max(geo.bw, geo.bh) * 1.25) ny -= 2.6 * dt; }
     if (ny <= 0) { B.ild.delete(id); tegnBit(b); plasser(b); continue; }
     B.ild.set(id, ny); b.svidd = Math.min(1, (b.svidd || 0) + ny * dt * .17);
-    if (ny > .55) for (const [dc, dr] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
-      const c = b.c + dc, r = b.r + dr; if (c < 0 || r < 0 || c >= k || r >= sp.r) continue;
-      const n = bitAv(r * k + c); if (n.ferdig && !n.lander && !B.ild.has(n.id) && Math.random() < .24 * dt) B.ild.set(n.id, .3);
+    if (ny > .45) {
+      const [bx, by] = brannPos(b), nær = Math.max(geo.bw, geo.bh) * 1.05;
+      for (const n of sp.biter) {
+        if (n === b || n.iBunke || n.lander || B.ild.has(n.id) || !(n.ferdig || n.el.isConnected)) continue;
+        const [nx, ny2] = brannPos(n), d = Math.hypot(nx - bx, ny2 - by);
+        // Rett over eller under: tar fyr fort. Inntil: litt saktere.
+        if (d < nær && Math.random() < (d < nær * .55 ? .9 : .35) * dt) B.ild.set(n.id, .45);
+      }
     }
   }
   // Brennende brikker blir gradvis svidde.
   B.tegnT -= dt; if (B.tegnT <= 0) { B.tegnT = .4; for (const id of B.ild.keys()) { tegnBit(bitAv(id)); plasser(bitAv(id)); } }
   const tapt = sp.biter.reduce((a, b) => a + (b.svidd || 0), 0) / sp.biter.length;
   tegnBrann(B, dt, t);
-  if (tapt > .33) { B.ild.clear(); sp.brann = null; brannRAF = 0; tegnBrann({ ild: new Map(), partikler: [], plask: [], damp: [] }, 0, t); tidUt("Burned", "Too much of the picture went up in flames. It can't be approved."); return; }
+  if (tapt > .4) { B.ild.clear(); sp.brann = null; brannRAF = 0; tegnBrann({ ild: new Map(), partikler: [], plask: [], damp: [] }, 0, t); tidUt("Burned", "Too much of the picture went up in flames. It can't be approved."); return; }
   if (!B.ild.size) {
     if (!B.ute) {
       B.ute = true;
@@ -1798,15 +1925,20 @@ function brannSteg(t) {
   if (lydPa && Math.random() < dt * 6) tsjing(0, .012 + Math.random() * .01, .7, .5, 2500 + Math.random() * 2000);
   brannRAF = requestAnimationFrame(brannSteg);
 }
+// Hvor en brikke brenner på skjermen: på plassen sin, eller der den ligger løs.
+function brannPos(b) {
+  if (b.ferdig) return [geo.x0 + (b.c + .5) * geo.bw, geo.y0 + (b.r + .5) * geo.bh];
+  return [geo.x0 + (b.x + .5 / spill.k) * geo.bredde, geo.y0 + (b.y + .5 / spill.r) * geo.hoyde];
+}
 function plask(px, py) {
   const B = spill?.brann; if (!B) return;
   const drops = Array.from({ length: 26 }, () => { const a = Math.random() * Math.PI * 2, v = 60 + Math.random() * 220; return { x: px, y: py, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 80, r: 1.5 + Math.random() * 3.5 }; });
   B.plask.push({ x: px, y: py, t: 0, drops });
   let traff = 0;
   for (const [id, v] of B.ild) {
-    const b = spill.biter[id], cx = geo.x0 + (b.c + .5) * geo.bw, cy = geo.y0 + (b.r + .5) * geo.bh;
-    if (Math.hypot(cx - px, cy - py) > Math.max(geo.bw, geo.bh) * 1.4) continue;
-    traff++; const ny = v - .6;
+    const b = spill.biter[id], [cx, cy] = brannPos(b);
+    if (Math.hypot(cx - px, cy - py) > Math.max(geo.bw, geo.bh) * 1.6) continue;
+    traff++; const ny = v - .85;
     for (let n = 0; n < 4; n++) B.damp.push({ x: cx + (Math.random() - .5) * geo.bw * .7, y: cy + (Math.random() - .5) * geo.bh * .4, r: 8 + Math.random() * 10, liv: 1, vy: -(25 + Math.random() * 30) });
     if (ny <= 0) { B.ild.delete(id); tegnBit(b); plasser(b); } else B.ild.set(id, ny);
   }
@@ -1816,16 +1948,35 @@ function tegnBrann(B, dt, t) {
   const c = $("brannLag"), x = c.getContext("2d"), dpr = c.width / innerWidth;
   x.setTransform(dpr, 0, 0, dpr, 0, 0); x.clearRect(0, 0, innerWidth, innerHeight);
   // Lynet: en takket stråle fra toppen de første tidelene.
-  if (B.lyn && B.lyn.t < .35) {
-    B.lyn.t += dt; x.save(); x.globalCompositeOperation = "lighter"; x.strokeStyle = `rgba(220,240,255,${1 - B.lyn.t / .35})`; x.lineWidth = 3; x.shadowColor = "#bfe9ff"; x.shadowBlur = 18;
-    x.beginPath(); let px = B.lyn.x + (Math.random() - .5) * 80, py = 0; x.moveTo(px, py);
-    while (py < B.lyn.y) { py = Math.min(B.lyn.y, py + 20 + Math.random() * 30); px += (Math.random() - .5) * 40 + (B.lyn.x - px) * .25; x.lineTo(py >= B.lyn.y ? B.lyn.x : px, py); }
-    x.stroke(); x.restore();
+  if (B.lyn && B.lyn.t < .9) {
+    const Ly = B.lyn; Ly.t += dt; const t2 = Ly.t;
+    // To nedslag: et blendende første, et kort mørkt øyeblikk, et nytt slag, så falmer det.
+    const a = t2 < .07 ? 1 : t2 < .11 ? .25 : t2 < .2 ? .95 : Math.max(0, 1 - (t2 - .2) / .35);
+    const strek = (p, l) => { x.beginPath(); x.moveTo(p[0][0], p[0][1]); for (let i = 1; i < p.length; i++) x.lineTo(p[i][0] + (t2 > .11 && t2 < .2 ? (Math.random() - .5) * 2 : 0), p[i][1]); x.stroke(); };
+    x.save(); x.lineCap = "round"; x.lineJoin = "round";
+    if (a > 0) for (const [b, farge, al] of [[24, "70,100,230", .14], [12, "90,130,255", .3], [6, "40,70,200", .85], [3, "255,255,255", 1]]) {
+      x.lineWidth = b; x.strokeStyle = `rgba(${farge},${al * a})`; strek(Ly.hoved);
+      x.lineWidth = b * .5; x.strokeStyle = `rgba(${farge},${al * a * .7})`; for (const g of Ly.greiner) strek(g);
+    }
+    x.globalCompositeOperation = "lighter";
+    // Der lynet slår ned: et hvitt glødepunkt, en trykkbølge og gnister.
+    if (t2 < .5) {
+      const fr = 30 + 160 * Math.min(1, t2 * 4), fg = x.createRadialGradient(Ly.x, Ly.y, 0, Ly.x, Ly.y, fr);
+      fg.addColorStop(0, `rgba(255,255,255,${.95 * a})`); fg.addColorStop(.25, `rgba(190,220,255,${.5 * a})`); fg.addColorStop(1, "rgba(120,160,255,0)");
+      x.fillStyle = fg; x.fillRect(Ly.x - fr, Ly.y - fr, fr * 2, fr * 2);
+      const rr = 20 + 300 * t2; x.strokeStyle = `rgba(220,235,255,${.7 * (1 - t2 * 2)})`; x.lineWidth = 4 * (1 - t2 * 2) + 1; x.beginPath(); x.ellipse(Ly.x, Ly.y, rr, rr * .75, 0, 0, 7); x.stroke();
+    }
+    for (const g of Ly.gnister) {
+      g.liv -= dt; if (g.liv <= 0) continue; const px = g.x, py = g.y;
+      g.vy += 900 * dt; g.x += g.vx * dt; g.y += g.vy * dt;
+      x.strokeStyle = `rgba(255,${200 + 55 * Math.min(1, g.liv) | 0},150,${Math.min(1, g.liv * 2)})`; x.lineWidth = 2; x.beginPath(); x.moveTo(px, py); x.lineTo(g.x, g.y); x.stroke();
+    }
+    x.restore();
   }
   // Flammer: varme partikler som stiger fra brennende brikker.
   for (const [id, v] of B.ild) {
-    const b = spill.biter[id], cx = geo.x0 + (b.c + .5) * geo.bw, cy = geo.y0 + (b.r + .5) * geo.bh;
-    for (let n = 0; n < 5; n++) if (Math.random() < v) B.partikler.push({ x: cx + (Math.random() - .5) * geo.bw * .9, y: cy + (Math.random() - .1) * geo.bh * .45, vy: -(40 + Math.random() * 70), liv: 1, r: 7 + Math.random() * 14 * v });
+    const b = spill.biter[id], [cx, cy] = brannPos(b);
+    for (let n = 0; n < 8; n++) if (Math.random() < v) B.partikler.push({ x: cx + (Math.random() - .5) * geo.bw * .9, y: cy + (Math.random() - .1) * geo.bh * .45, vy: -(50 + Math.random() * 90), liv: 1, r: 8 + Math.random() * 17 * v });
   }
   x.save(); x.globalCompositeOperation = "lighter";
   for (const p of B.partikler) {
@@ -1856,7 +2007,11 @@ function tegnBrann(B, dt, t) {
 // Vannslangen: dra på brettet mens det brenner (ikke på løse brikker).
 const slangePos = e => { const B = spill?.brann; if (B && B.slangeId === e.pointerId) B.slange = { x: e.clientX, y: e.clientY }; };
 document.addEventListener("pointerdown", e => {
-  const B = spill?.brann; if (!B || e.target.closest?.("button") || (e.target.classList?.contains("bit") && !e.target.classList.contains("ferdig"))) return;
+  const B = spill?.brann; if (!B || e.target.closest?.("button")) return;
+  if (e.target.classList?.contains("bit") && !e.target.classList.contains("ferdig")) {
+    const nær = Math.max(geo.bw, geo.bh) * 1.6;
+    if (![...B.ild.keys()].some(id => { const [cx, cy] = brannPos(spill.biter[id]); return Math.hypot(cx - e.clientX, cy - e.clientY) < nær; })) return;
+  }
   plask(e.clientX, e.clientY);
 });
 document.addEventListener("pointermove", slangePos);
@@ -1923,6 +2078,7 @@ async function ferdig() {
   const s = sekunder(), p = regnPoeng(spill.n, s), b = BRETT[spill.brett];
   setTimeout(() => $("avslor").classList.add("vis"), 350);
   $("avslor").classList.add("bolge"); $("ramme").classList.add("neon");
+  { const sp = spill; setTimeout(() => { if (spill === sp && !$("resultat").classList.contains("vis")) { magiStart(sp.img, { x: geo.x0, y: geo.y0, w: geo.bredde, h: geo.hoyde }, 2.6); $("avslor").classList.add("magisk"); setTimeout(() => $("avslor").classList.remove("magisk"), 2300); } }, 250); }
   startFest();
   const gammel = fremdrift[b.id]?.[spill.n];
   fremdrift[b.id] = fremdrift[b.id] || {};
@@ -2417,7 +2573,7 @@ async function shatterStart(i, poeng = 0, liv = 3) {
   // Rolig start, så farten øker litt for hvert nivå og litt underveis.
   const fart = (0.5 + Math.min(niva, 14) * 0.03) * .98;
   sh = { niva, i, img, klosser, igjen: klosser.length, poeng, liv, fart, grunnfart: fart, maksFart: Math.min(1.45, fart + 0.68),
-    padX: 0.5, padW: 0.26, baller: [], kapsler: [], tekster: [], smaa: [], stov: [], stavSkitt: [], skudd: [], skuddT: 0, lamper: 0, galaga: null, galagaPause: 20, wingmen: [], galagaKommet: false, padMål: null, sopp: 0, soppSide: -1, padY: .7, soppOverg: 1, soppTilbake: 1, bytte: null, byttePlan: Math.random() < .22, sabot: [], sabotT: 14 + Math.random() * 10, drypp: [], skum: [], stjerner: [], ringer: [],
+    padX: 0.5, padW: 0.26, baller: [], kapsler: [], tekster: [], smaa: [], stov: [], stavSkitt: [], skudd: [], skuddT: 0, lamper: 0, galaga: null, galagaPause: 45, wingmen: [], galagaKommet: false, padMål: null, sopp: 0, soppSide: -1, padY: .7, soppOverg: 1, soppTilbake: 1, bytte: null, byttePlan: Math.random() < .22, sabot: [], sabotT: 14 + Math.random() * 10, drypp: [], skum: [], stjerner: [], ringer: [],
     eff: { W: 0, B: 0, G: 0, A: 0, F: 0, K: 0 }, tilstand: "klar", kombo: 0, ferdigT: 0, tid: 0, lydSist: {},
     jord: SH_JORD[j1], jord2: SH_JORD[j2], skitten: new Set(), milepael: 0, glimt: -9, sprekkT: 0,
     klatter: [], splatter: [], sigT: 0, flomT: 14, dryppT: 1, flomIgjen: Math.round(klosser.reduce((a, k) => a + k.liv, 0) * .05),
@@ -2699,7 +2855,8 @@ function shJelly(b, dt, tid) {
       // Uro: rett etter slaget vrir den seg i to og tre buler, og roer seg mens den stiger.
       const th = i / SH_N * Math.PI * 2;
       const a = -520 * d[i] - 4.5 * v[i] + 220 * (d[(i + SH_N - 1) % SH_N] + d[(i + 1) % SH_N] - 2 * d[i])
-        + uro * (62 * Math.sin(2 * th + 6 * tid + b.fase) + 44 * Math.sin(3 * th - 8 * tid) + 18 * Math.sin(4 * th + 10 * tid));
+        + uro * (62 * Math.sin(2 * th + 6 * tid + b.fase) + 44 * Math.sin(3 * th - 8 * tid) + 18 * Math.sin(4 * th + 10 * tid))
+        + 22 * Math.sin(2 * th + 1.5 * tid + b.fase) + 13 * Math.sin(3 * th - 1.1 * tid + b.fase * 2);
       v[i] += a * h;
     }
     for (let i = 0; i < SH_N; i++) { d[i] = shClamp(d[i] + v[i] * h, -.55, .6); snitt += d[i]; }
@@ -2964,6 +3121,8 @@ function shSmaaNy(x, y, stille = false) {
   const s = sh, sum = SH_SMAA.reduce((a, q) => a + q.vekt, 0); let r = Math.random() * sum, valgt = SH_SMAA[0];
   for (const q of SH_SMAA) { if (r < q.vekt) { valgt = q; break; } r -= q.vekt; }
   if (valgt.sopp && (s.galaga || s.sopp > 0 || s.bytte)) valgt = SH_SMAA.find(q => q.stov);
+  // Soppen kommer minst én gang per brett, når litt er vasket.
+  else if (!stille && !s.soppKommet && !s.galaga && !(s.sopp > 0) && !s.bytte && s.igjen < s.klosser.length * .72 && Math.random() < .3) valgt = SH_SMAA.find(q => q.sopp);
   const g = { x, y, vx: (Math.random() - .5) * .04, vy: .03, type: valgt, r: valgt.stov ? .022 : .017 + Math.random() * .005, vinkel: Math.random() * 6, spinn: (Math.random() - .5) * 3, farge: shRgb(valgt.e[1]).join(",") };
   if (!stille) { s.smaa.push(g); for (let n = 0; n < 2; n++) shKlatt(x + (Math.random() - .5) * .02, y + Math.random() * .01, .003 + Math.random() * .003, .03); }
   return g;
@@ -2985,12 +3144,36 @@ const SH_FIGURER = [
 ];
 // Hver figur får en neonkant én gang, så den synes over alle bilder uten å koste noe per bilde.
 function shFigurKant(img, farge) {
-  const m = 12, w = img.naturalWidth, h = img.naturalHeight, cv = document.createElement("canvas");
-  cv.width = w + 2 * m; cv.height = h + 2 * m;
-  const x = cv.getContext("2d");
-  x.shadowColor = farge; x.shadowBlur = 9; x.drawImage(img, m, m); x.drawImage(img, m, m);
-  x.shadowBlur = 0; x.drawImage(img, m, m);
+  const m = 12, w = img.naturalWidth, h = img.naturalHeight, W = w + 2 * m, H = h + 2 * m, L = Math.max(w, h);
+  const lag = () => { const c = document.createElement("canvas"); c.width = W; c.height = H; return c; };
+  // Selve figuren, med lys ovenfra til venstre og skygge nede til høyre, som om den er rund.
+  const fig = lag(), fx = fig.getContext("2d"); fx.drawImage(img, m, m);
+  fx.globalCompositeOperation = "source-atop";
+  const lg = fx.createRadialGradient(m + w * .32, m + h * .22, 0, m + w * .32, m + h * .22, L * .95);
+  lg.addColorStop(0, "rgba(255,248,230,.3)"); lg.addColorStop(.4, "rgba(255,248,230,0)"); lg.addColorStop(.75, "rgba(0,0,0,.12)"); lg.addColorStop(1, "rgba(0,0,0,.45)");
+  fx.fillStyle = lg; fx.fillRect(0, 0, W, H);
+  // Relieff i kanten: mørkt innover nede til høyre, lyst innover oppe til venstre.
+  const hull = lag(), hx = hull.getContext("2d"); hx.fillStyle = "#000"; hx.fillRect(0, 0, W, H); hx.globalCompositeOperation = "destination-out"; hx.drawImage(img, m, m);
+  const b = Math.max(2, L * .03);
+  fx.save(); fx.shadowColor = "rgba(0,0,0,.8)"; fx.shadowBlur = b * 1.8; fx.shadowOffsetX = -b; fx.shadowOffsetY = -b; fx.drawImage(hull, 0, 0); fx.restore();
+  fx.save(); fx.shadowColor = "rgba(255,255,255,.6)"; fx.shadowBlur = b * 1.4; fx.shadowOffsetX = b * .7; fx.shadowOffsetY = b * .7; fx.drawImage(hull, 0, 0); fx.restore();
+  // En tynn, farget kantglød rundt, så den skiller seg fra bildet.
+  const cv = lag(), x = cv.getContext("2d");
+  x.shadowColor = farge; x.shadowBlur = 6; x.drawImage(fig, 0, 0);
+  x.shadowBlur = 0; x.drawImage(fig, 0, 0);
   return cv;
+}
+// Figurene lever: de puster (strekker og trykker seg litt) og kroppen bølger svakt, og de kaster skygge på bildet.
+function shSprite(x, sp, X, Y, R, tid, fase, skygge = true) {
+  const sk = 2.3 * R / Math.max(sp.width, sp.height), w = sp.width * sk, h = sp.height * sk;
+  const pust = Math.sin(tid * 2.4 + fase), sy = 1 + .05 * pust, sx = 1 - .04 * pust;
+  const Wd = w * sx, Hd = h * sy, x0 = X - Wd / 2, y0 = Y - Hd / 2 - (sy - 1) * h * .25;
+  if (skygge) { const a = x.globalAlpha; x.globalAlpha = a * .28; x.fillStyle = "#000"; x.beginPath(); x.ellipse(X + R * .25, Y + h * .5 + R * .3, Wd * .3, R * .13, 0, 0, 7); x.fill(); x.globalAlpha = a; }
+  const N = R > 25 ? 14 : 8, sh = sp.height / N;
+  for (let i = 0; i < N; i++) {
+    const v = i / N, off = Math.sin(tid * 3.1 + fase + v * 4.2) * R * .045 * (.35 + v * .65);
+    x.drawImage(sp, 0, i * sh, sp.width, sh, x0 + off, y0 + v * Hd, Wd, Hd / N + .6);
+  }
 }
 function shFigurer() {
   const sett = SH_FIGURER[aktiv] || SH_FIGURER[0];
@@ -3230,7 +3413,7 @@ function shSabotMål(e) {
   e.fx = e.x; e.fy = e.y; e.mx = k.x + k.w / 2; e.my = k.y - .02; return true;
 }
 function shSopp() {
-  const s = sh; s.sopp = 24; s.soppSide = Math.random() < .5 ? -1 : 1; s.padY = SH_TOPP + .55; s.padYMål = null; s.soppOverg = 0; s.soppTilbake = 1;
+  const s = sh; s.soppKommet = true; s.sopp = 24; s.soppSide = Math.random() < .5 ? -1 : 1; s.padY = SH_TOPP + .55; s.padYMål = null; s.soppOverg = 0; s.soppTilbake = 1;
   s.tekster.push({ txt: "MAGIC MUSHROOM!", x: .5, y: .45, liv: 1.8, farge: "#d68cff" });
   shLyd("sopp"); shStov(s.padX, SH_PY - .02, 60, "214,140,255", .35);
 }
@@ -3310,7 +3493,7 @@ function shByttetTegn(x, f, s) {
   x.save(); x.globalCompositeOperation = "lighter";
   const gl = x.createRadialGradient(X, Y, R * .2, X, Y, R * 1.5); gl.addColorStop(0, "rgba(90,255,140,.35)"); gl.addColorStop(1, "rgba(90,255,140,0)");
   x.fillStyle = gl; x.fillRect(X - R * 1.5, Y - R * 1.5, R * 3, R * 3); x.restore();
-  if (sp) { const sk = 2.3 * R / Math.max(sp.width, sp.height); x.drawImage(sp, X - sp.width * sk / 2, Y - sp.height * sk / 2, sp.width * sk, sp.height * sk); }
+  if (sp) shSprite(x, sp, X, Y, R, s.tid, 0);
   // Under bossen: selvlysende tekst som står en stund og så blekner, og en tynn dekkmåler.
   const dekket = s.igjen / s.klosser.length, tx = shClamp(X, f * .33, f * .67), ty = Y + R * 1.35;
   const alfa = Math.max(.22, 1 - Math.max(0, B.tekstT - 5) / 6);
@@ -3329,7 +3512,7 @@ function shKapsel(t) {
   s.poeng += 100; shLyd("fang"); shHud();
   shStov(s.padX, SH_PY - .015, 90, shRgb(SH_EDEL[q.edel][1]).join(","), .3); s.glod = 1;
   s.splatter.push({ x: s.padX + (Math.random() - .5) * s.padW * .5, y: SH_PY, r: .02, t: 0, paa: true });
-  s.tekster.push({ txt: q.navn, x: s.padX, y: SH_PY - 0.06, liv: 2.4, farge: q.farge });
+  s.tekster.push({ txt: q.navn, x: s.padX, y: SH_PY - 0.06, liv: 3.6, fade: 1.6, farge: q.farge });
   if (t === "W") s.eff.W = 15;
   if (t === "S") s.fart = Math.max(s.grunnfart * 0.75, s.fart * 0.7);
   if (t === "B") s.eff.B = 16;
@@ -3366,7 +3549,7 @@ function shRacketTreff(b, R) {
     a = t * 1.1 + (Math.random() - .5) * .35;
     if (fl.t < .1) {
       b.kraft = 3; b.kraftN = 6; b.boost = 1.5; shLyd("power"); s.glod = 1;
-      if (!s.galaga && s.tid > s.galagaPause && s.igjen > s.klosser.length * .15) { s.lamper++; shLyd("lampe", s.lamper); if (s.lamper >= 6) shGalagaStart(); }
+      if (!s.galaga && s.tid > s.galagaPause && s.igjen < s.klosser.length * .65 && s.igjen > s.klosser.length * .15) { s.lamper++; shLyd("lampe", s.lamper); if (s.lamper >= 6) shGalagaStart(); }
       // Flipperne er alltid der, så teksten kommer bare av og til.
       if (s.tid - (s.powerT ?? -9) > 6) { s.powerT = s.tid; s.tekster.push({ txt: "POWER!", x: b.x, y: SH_PY - .05, liv: 1, farge: "#ff7ac8" }); }
     } else if (fl.t < .22) b.boost = 1.2;
@@ -3557,7 +3740,7 @@ function shOppdater(dt) {
   shGalagaSteg(dt); if (!s.bytte) shSabotSteg(dt);
   if (s.bytte) shByttetSteg(dt);
   else if (s.byttePlan && !s.galaga && !(s.sopp > 0) && s.igjen <= s.klosser.length * .45 && s.igjen > s.klosser.length * .2) shByttetStart();
-  if (!s.bytte && !(s.sopp > 0) && !s.galaga && !s.galagaKommet && s.igjen <= s.klosser.length * .3 && s.igjen > 12) shGalagaStart(Math.random() < (s.niva >= 2 ? .5 : .3));
+  if (!s.bytte && !(s.sopp > 0) && !s.galaga && !s.galagaKommet && s.tid >= 50 && s.igjen <= s.klosser.length * .22 && s.igjen > 12) shGalagaStart(Math.random() < (s.niva >= 2 ? .5 : .3));
   for (const q of s.skudd) {
     q.x += q.vx * dt; q.y += q.vy * dt;
     if (q.x < .01 || q.x > .99) q.vx = -q.vx;
@@ -3703,6 +3886,8 @@ function shFerdig() {
   const s = sh; s.tilstand = "ferdig"; s.ferdigT = performance.now();
   const bonus = (s.liv - 1) * 500, tidBonus = Math.max(0, Math.round((150 - s.tid) * 40 / 10) * 10); s.poeng += bonus + tidBonus; shHud();
   s.baller = []; s.kapsler = []; s.smaa = []; s.skudd = []; s.galaga = null; s.sabot = [];
+  for (const k of s.klosser) k.glans = 0;
+  magiStart(s.kunst || s.img, { x: shG.fx, y: shG.fy + SH_TOPP * shG.fw, w: shG.fw, h: shG.fw }, 3.4);
   ferdigLyd(); dempMusikk(); s.glimt = s.tid; s.drypp = []; s.skum = []; s.klatter = []; s.kantFall = [];
   for (const h of s.levende || []) { h.bule = 1; h.blink = 1; h.holder = null; }
   for (let n = 0; n < 40; n++) shStjerne(Math.random(), SH_TOPP + Math.random(), .6 + Math.random() * .5, Math.random() * 1.6);
@@ -3928,7 +4113,7 @@ function shKlattTegn(x, X, Y, r, st, jord, fase, tid) {
 // Underkanten av gjørma: ikke en rett strek, men gjørme som har sigt over kanten, henger i dråper og drypper.
 function shKantInit(s) {
   if (!s.kantDrypp || s.kantDrypp.length !== SH_KOL || s.kantDrypp[0].L === undefined)
-    s.kantDrypp = Array.from({ length: SH_KOL }, (_, c) => ({ L: Math.random() * .05, Lv: 0, fart: .2 + Math.random() * .5, mal: .05 + Math.random() * .07, bredde: .7 + Math.random() * .8, av: Math.random() < .3, x: (c + .5 + Math.sin(c * 3.1) * .2) / SH_KOL, vel: 0, slipp: 9 }));
+    s.kantDrypp = Array.from({ length: SH_KOL }, (_, c) => ({ L: Math.random() * .06, Lv: 0, fart: .2 + Math.random() * .5, mal: .06 + Math.random() * .1, bredde: Math.random() < .35 ? 1.6 + Math.random() * 1.6 : .6 + Math.random() * .9, av: Math.random() < .25, x: (c + .5 + Math.sin(c * 3.1) * .2) / SH_KOL, vel: 0, slipp: 9 }));
   s.kantFall = s.kantFall || [];
 }
 function shKantSteg(s, dt) {
@@ -3941,16 +4126,18 @@ function shKantSteg(s, dt) {
       // Renner fortere jo tyngre dråpen blir.
       d.L += dt * d.fart * (.004 + d.L * .3) * Math.max(.5, v);
       if (d.L >= d.mal) {
-        const r = (d.bredde + .25) * .3 / SH_KOL, y = SH_TOPP + 1 + d.L - r;
+        const r = (d.bredde + .25) * .36 / SH_KOL, y = SH_TOPP + 1 + d.L - r;
         if (Math.random() < .12) shKlatt(d.x, y, .003 + Math.random() * .004, .08);
-        else s.kantFall.push({ x: d.x, y, vy: .06, r, fase: Math.random() * 6, t: 0, fra: SH_TOPP + 1 + d.L * .3 });
-        d.L *= .35 + Math.random() * .2; d.slipp = 0; d.mal = .05 + Math.random() * .07; d.fart = .2 + Math.random() * .5;
+        else s.kantFall.push({ x: d.x + (Math.random() - .5) * .01, y, vy: .04, r: r * (.8 + Math.random() * .5), fase: Math.random() * 6, t: 0, fra: SH_TOPP + 1 + d.L * .3 });
+        // Store klumper drar med seg en mindre en rett etter.
+        if (d.bredde > 1.5 && Math.random() < .6) s.kantFall.push({ x: d.x + (Math.random() - .5) * .02, y: y - r * 1.5, vy: .01, r: r * .5, fase: Math.random() * 6, t: -.12, fra: SH_TOPP + 1 });
+        d.L *= .35 + Math.random() * .25; d.slipp = 0; d.mal = .06 + Math.random() * .1 + (d.bredde > 1.5 ? .03 : 0); d.fart = .2 + Math.random() * .5;
       }
     }
     // Det synlige følger med en fjær, så resten spretter tilbake og dirrer når dråpen slipper.
     d.vel += ((d.L - d.Lv) * 320 - d.vel * 11) * dt; d.Lv = Math.max(0, d.Lv + d.vel * dt);
   }
-  for (const q of s.kantFall) { q.t += dt; q.vy = Math.min(1.4, q.vy + 1.6 * dt); q.y += q.vy * dt; if (q.y > SH_H + .02) q.borte = true; }
+  for (const q of s.kantFall) { q.t += dt; if (q.t < 0) continue; q.vy = Math.min(1.4, q.vy + 1.6 * dt); q.y += q.vy * dt; if (q.y > SH_H - .004) { q.borte = true; s.splatter.push({ x: q.x, y: SH_H - .003, r: q.r * 1.6, t: 0 }); } }
   s.kantFall = s.kantFall.filter(q => !q.borte);
 }
 function shKantTegn(x, f, s, y0) {
@@ -3961,11 +4148,12 @@ function shKantTegn(x, f, s, y0) {
   let fx = 0, fy = y0 - 1;
   for (let i = 0; i <= SH_KOL * 3; i++) {
     const u = i / (SH_KOL * 3), c = Math.min(SH_KOL - 1, Math.floor(u * SH_KOL)), v = (vis(c) * 2 + vis(c - 1) * (u * SH_KOL % 1 < .5) + vis(c + 1) * (u * SH_KOL % 1 >= .5)) / 3;
-    const h = v * f * (.014 + .008 * (1 + Math.sin(u * 23 + Math.sin(u * 7) * 2)) + .003 * Math.sin(s.tid * .8 + u * 30)) + (s.kantDrypp?.[c]?.Lv || 0) * f * .1 * v;
+    const klump = Math.max(0, Math.sin(u * 17 + Math.sin(u * 5) * 3)) ** 3 * .022 + Math.max(0, Math.sin(u * 41 + 1.3)) ** 4 * .01;
+    const h = v * f * (.016 + .007 * (1 + Math.sin(u * 23 + Math.sin(u * 7) * 2)) + klump + .003 * Math.sin(s.tid * .8 + u * 30)) + (s.kantDrypp?.[c]?.Lv || 0) * f * .14 * v;
     const nx = u * f, ny = y0 + h; x.quadraticCurveTo(fx, fy, (fx + nx) / 2, (fy + ny) / 2); fx = nx; fy = ny;
   }
   x.lineTo(f, y0 - 1); x.closePath();
-  const lg = x.createLinearGradient(0, y0 - 2, 0, y0 + f * .02); lg.addColorStop(0, `rgb(${l1},${l2},${l3})`); lg.addColorStop(1, `rgb(${m1},${m2},${m3})`);
+  const lg = x.createLinearGradient(0, y0 - 2, 0, y0 + f * .02); lg.addColorStop(0, `rgb(${(l1 * .62 + m1 * .38) | 0},${(l2 * .62 + m2 * .38) | 0},${(l3 * .62 + m3 * .38) | 0})`); lg.addColorStop(1, `rgb(${m1},${m2},${m3})`);
   x.fillStyle = lg; x.fill();
   // Dråper som renner over kanten: bred rot, en hals som blir tynnere, og en tung, blank dråpe nederst.
   shKantInit(s);
@@ -3976,10 +4164,10 @@ function shKantTegn(x, f, s, y0) {
     x.beginPath(); x.moveTo(X - w / 2, y0);
     x.bezierCurveTo(X - w * .4, y0 + hy * .35, X - wn / 2, ny - hy * .35, X - wn / 2, ny);
     x.bezierCurveTo(X - wn / 2, ny + rb * .3, X - rb, by - rb * .55, X - rb, by);
-    x.arc(X, by, rb, Math.PI, 0, true);
+    x.ellipse(X + (c % 3 - 1) * rb * .12, by, rb * (1 + (c % 4) * .06), rb * (1 + p * .22), (c % 5 - 2) * .08, Math.PI, 0, true);
     x.bezierCurveTo(X + rb, by - rb * .55, X + wn / 2, ny + rb * .3, X + wn / 2, ny);
     x.bezierCurveTo(X + wn / 2, ny - hy * .35, X + w * .4, y0 + hy * .35, X + w / 2, y0); x.closePath();
-    const dg = x.createLinearGradient(X - w / 2, 0, X + w / 2, 0); dg.addColorStop(0, `rgb(${m1},${m2},${m3})`); dg.addColorStop(.38, `rgb(${l1},${l2},${l3})`); dg.addColorStop(1, `rgb(${m1 * .75 | 0},${m2 * .75 | 0},${m3 * .75 | 0})`);
+    const dg = x.createLinearGradient(X - w / 2, 0, X + w / 2, 0); dg.addColorStop(0, `rgb(${m1},${m2},${m3})`); dg.addColorStop(.38, `rgb(${(l1 * .62 + m1 * .38) | 0},${(l2 * .62 + m2 * .38) | 0},${(l3 * .62 + m3 * .38) | 0})`); dg.addColorStop(1, `rgb(${m1 * .7 | 0},${m2 * .7 | 0},${m3 * .7 | 0})`);
     x.fillStyle = dg; x.fill();
     // Våt glans: en lys stripe nedover halsen og et blankt punkt på dråpen.
     x.strokeStyle = "rgba(255,255,255,.22)"; x.lineWidth = Math.max(.6, wn * .14); x.beginPath(); x.moveTo(X - w * .16, y0 + 1); x.quadraticCurveTo(X - wn * .2, ny, X - rb * .45, by - rb * .2); x.stroke();
@@ -4008,6 +4196,8 @@ function shTegn(t) {
     const u = Math.min(1, (t - s.ferdigT) / 900);
     x.save(); x.shadowColor = "rgba(255,210,140," + (0.8 * (1 - u * 0.5)) + ")"; x.shadowBlur = 36 * (1 - u * 0.4);
     x.drawImage(s.kunst, 0, iy, f, f); x.restore();
+    const v = Math.min(1, (t - s.ferdigT) / 600) * Math.max(0, Math.min(1, (3600 - (t - s.ferdigT)) / 700));
+    if (v > 0) { x.save(); x.globalCompositeOperation = "soft-light"; x.globalAlpha = .55 * v; x.drawImage(s.kunst, 0, iy, f, f); x.restore(); }
   } else x.drawImage(s.kunst, 0, iy, f, f);
   // Nyvasket kunst er våt og blank en liten stund.
   x.globalCompositeOperation = "lighter";
@@ -4135,7 +4325,7 @@ function shTegn(t) {
         const fl = x.createRadialGradient(X, Y + R * 1.05, 0, X, Y + R * 1.05, R * .6); fl.addColorStop(0, "rgba(255,230,150,.85)"); fl.addColorStop(1, "rgba(255,120,40,0)");
         x.fillStyle = fl; x.fillRect(X - R, Y + R * .45, R * 2, R * 1.2); x.restore();
       }
-      if (sp) { const sk = 2.3 * R / Math.max(sp.width, sp.height); x.drawImage(sp, X - sp.width * sk / 2, Y - sp.height * sk / 2, sp.width * sk, sp.height * sk); }
+      if (sp) shSprite(x, sp, X, Y, R, s.tid, (X + Y) * .013 + (rosa ? 1.7 : 0), !!vinger || R > 25);
       else { x.fillStyle = rosa ? "#ff7ad9" : "#4fe3ff"; x.beginPath(); x.arc(X, Y, R * .8, 0, 7); x.fill(); }
       x.restore();
     };
@@ -4262,7 +4452,7 @@ function shTegn(t) {
   }
   for (const b of s.baller) shBobleTegn(x, b, f, s);
   for (const tk of s.tekster) {
-    tk.y -= tk.liv > 1 ? 0.0012 : 0.004; tk.liv -= 0.02; x.globalAlpha = Math.max(0, Math.min(1, tk.liv));
+    tk.y -= tk.liv > 1 ? 0.0012 : 0.004; tk.liv -= 0.02; x.globalAlpha = Math.max(0, Math.min(1, tk.liv / (tk.fade || 1)));
     x.fillStyle = tk.farge; x.font = `800 ${(tk.liten ? .028 : .04) * f}px "Syne", sans-serif`; x.textAlign = "center"; x.fillText(tk.txt, tk.x * f, tk.y * f);
   }
   s.tekster = s.tekster.filter(tk => tk.liv > 0); x.globalAlpha = 1;
