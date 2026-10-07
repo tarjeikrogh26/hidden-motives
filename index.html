@@ -223,7 +223,7 @@ h1 .signatur{font-size:.55em;letter-spacing:.06em;white-space:nowrap}
   <div class="samlingsnavn" id="sammenTittel"></div>
   <div class="regel"><b>The race:</b> Your best score on each of the ten boards in a collection is added up. Finish #1 overall and you get the next collection for free. Anyone who takes first place later gets it too. Points: Easy (25 pieces) gives 10,000, Medium (49) 15,000, Hard (100) 20,000 and Chaos (144) 25,000 at normal speed. Be fast and you get up to double.</div>
   <div class="sammen" id="sammen"><p class="liten">Loading standings …</p></div>
-  <p class="liten" id="versjon" style="margin-top:28px;opacity:.5">Version 0.34</p>
+  <p class="liten" id="versjon" style="margin-top:28px;opacity:.5">Version 0.35</p>
 </section>
 
 <div class="ark" id="tidUtArk" hidden style="z-index:200001">
@@ -1500,9 +1500,9 @@ function shLevTreff(h, b, nx, ny) {
   if (h.t === "bumper") { h.blink = 1; pluss(100, "#ffe7a0"); shLyd("bumper"); b.boost = Math.max(b.boost, 1.3); return; }
   if (h.t === "oye" || h.t === "brille") {
     h.bule = 1; h.treff++; pluss(300, "#bfe6ff");
-    const tårer = h.t === "brille" && h.treff === 3 ? 5 : 2;
+    const tårer = 2;
     for (let j = 0; j < tårer; j++) s.drypp.push({ x: h.x + (Math.random() - .5) * h.r, y: h.fy + h.r * .6, liv: 1, renn: true, budsjett: 7, t: 0, hale: [], tåre: true });
-    if (h.t === "brille" && h.treff <= 3) {
+    if (false) {
       // Sprekker fra der boblen traff, ut over glasset.
       const sx = h.x + nx * h.r * .85, sy = h.fy + ny * h.r * .85, linjer = [];
       for (let j = 0; j < 5; j++) {
@@ -1637,6 +1637,8 @@ function shMoekk(niva) {
     let over = sum - mål;
     for (const [, j] of tykke) { if (over <= 0) break; over -= ut[j] - 1; ut[j] = 1; }
   }
+  // Nederst er gjørma tynn, så boblen alltid kommer i gang og kan pløye seg oppover.
+  for (let r = SH_RAD - 8; r < SH_RAD; r++) for (let c = 0; c < SH_KOL; c++) { const j = r * SH_KOL + c; ut[j] = Math.min(ut[j], 1 + Math.floor((SH_RAD - 1 - r) / 3)); }
   // Svake årer: slingrende striper med tynn gjørme fra bunnen og helt opp. Der kan boblen bryte gjennom
   // og bli fanget i gangen over bildet, som i Arkanoid.
   const årer = 2 + (Math.random() < .5 ? 1 : 0);
@@ -1816,6 +1818,7 @@ function shRenn(dt) {
       const j = Math.floor(Math.random() * SH_KOL * (SH_RAD - 1)), k = s.klosser[j];
       if (k.liv < 2) continue;
       const ned = s.klosser[j + SH_KOL];
+      if (ned.r >= SH_RAD - 7) continue;
       if ((ned.liv === 0 && k.liv >= 3 && Math.random() < .25) || (ned.liv > 0 && ned.liv <= k.liv - 5 && Math.random() < .1)) {
         const tom = ned.liv === 0;
         shSett(k, k.liv - 1); shSett(ned, ned.liv + 1); flytt++;
@@ -2064,7 +2067,7 @@ function shTreff(k, lag = 1, kilde = null) {
   if (kilde !== "syre" && !s.kapsler.length && Math.random() < .009) {
     const sum = KAPSLER.reduce((a, q) => a + q.vekt, 0); let r = Math.random() * sum, valgt = KAPSLER[0];
     for (const q of KAPSLER) { if (r < q.vekt) { valgt = q; break; } r -= q.vekt; }
-    s.kapsler.push({ x: mx, y: my, t: valgt.t, r: .032, vy: .04, fase: Math.random() * 6 });
+    s.kapsler.push({ x: mx, y: my, t: valgt.t, r: .044, vy: .04, fase: Math.random() * 6 });
   }
   const andel = 1 - s.igjen / s.klosser.length, mål = [.25, .5, .75, .9][s.milepael];
   if (mål && andel >= mål) { s.milepael++; s.glimt = s.tid; shLyd("glimt"); }
@@ -2181,7 +2184,7 @@ function shBevegBall(b, dt) {
   if (b.kraftN > 0 && --b.kraftN === 0) b.kraft = 1;
   // Hvert treff vasker det boblen berører. Den graver seg inn, som i Arkanoid.
   // Bare slaps eller nesten vasket der den traff: den glir videre uten å sprette.
-  const bare = alle.every(q => q.myk || (q.liv < q.maks && q.liv <= Math.max(1, Math.floor(q.maks * .3))));
+  const bare = alle.every(q => q.myk || q.liv <= 1 || (q.liv < q.maks && q.liv <= Math.ceil(q.maks * .4)));
   shVask(b.x, b.y, R * 1.6, lag);
   if (bare) return;
   const fraSiden = px + R <= k.x || px - R >= k.x + k.w;
@@ -2473,6 +2476,49 @@ function shBobleTegn(x, b, f, s) {
   x.restore();
 }
 // En gjørmeklatt: myk og våt, strekker seg når den faller.
+// En slipt edelsten sett ovenfra: åttekantet bord, fasetter som fanger lyset ulikt, glimt og glød.
+const shRgb = h => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
+function shBland(a, b, t) { return `rgb(${a.map((v, i) => Math.round(v + (b[i] - v) * t)).join(",")})`; }
+function shEdelsten(x, cx, cy, g, e, vinkel, tid) {
+  const [lys, midt, mork] = e.map(shRgb), N = 8, bord = .52;
+  // Myk glød rundt steinen.
+  x.save(); x.globalCompositeOperation = "lighter";
+  const gl = x.createRadialGradient(cx, cy, g * .2, cx, cy, g * 2.1);
+  gl.addColorStop(0, `rgba(${midt.join(",")},.55)`); gl.addColorStop(1, `rgba(${midt.join(",")},0)`);
+  x.fillStyle = gl; x.fillRect(cx - g * 2.1, cy - g * 2.1, g * 4.2, g * 4.2); x.restore();
+  const ytre = [], indre = [];
+  for (let i = 0; i < N; i++) {
+    const a = vinkel + i / N * Math.PI * 2;
+    ytre.push([cx + Math.cos(a) * g, cy + Math.sin(a) * g]);
+    indre.push([cx + Math.cos(a + Math.PI / N) * g * bord, cy + Math.sin(a + Math.PI / N) * g * bord]);
+  }
+  // Kronefasetter: to trekanter per kant, lyset kommer ovenfra til venstre.
+  for (let i = 0; i < N; i++) {
+    const o1 = ytre[i], o2 = ytre[(i + 1) % N], i1 = indre[(i + N - 1) % N], i2 = indre[i];
+    const am = vinkel + (i + .5) / N * Math.PI * 2, lysT = .5 + .5 * Math.cos(am - (-2.3));
+    x.beginPath(); x.moveTo(o1[0], o1[1]); x.lineTo(i2[0], i2[1]); x.lineTo(i1[0], i1[1]); x.closePath();
+    x.fillStyle = shBland(mork, lys, Math.min(1, lysT * .9 + .1)); x.fill();
+    x.beginPath(); x.moveTo(o1[0], o1[1]); x.lineTo(o2[0], o2[1]); x.lineTo(i2[0], i2[1]); x.closePath();
+    x.fillStyle = shBland(mork, midt, .35 + .65 * (1 - lysT)); x.fill();
+  }
+  // Bordet: klart, med farge som går gjennom steinen.
+  x.beginPath(); indre.forEach(([a, b], i) => i ? x.lineTo(a, b) : x.moveTo(a, b)); x.closePath();
+  const tb = x.createLinearGradient(cx - g * bord, cy - g * bord, cx + g * bord, cy + g * bord);
+  tb.addColorStop(0, shBland(lys, [255, 255, 255], .35)); tb.addColorStop(.5, `rgb(${midt.join(",")})`); tb.addColorStop(1, shBland(mork, midt, .4));
+  x.fillStyle = tb; x.fill();
+  // Fine kanter mellom fasettene.
+  x.strokeStyle = "rgba(255,255,255,.28)"; x.lineWidth = Math.max(.5, g * .03);
+  for (let i = 0; i < N; i++) { x.beginPath(); x.moveTo(ytre[i][0], ytre[i][1]); x.lineTo(indre[i][0], indre[i][1]); x.lineTo(ytre[(i + 1) % N][0], ytre[(i + 1) % N][1]); x.stroke(); }
+  x.beginPath(); ytre.forEach(([a, b], i) => i ? x.lineTo(a, b) : x.moveTo(a, b)); x.closePath();
+  x.strokeStyle = `rgba(${mork.join(",")},.9)`; x.lineWidth = Math.max(.7, g * .05); x.stroke();
+  // Høylys oppe til venstre, og et glimt som vandrer over steinen.
+  x.save(); x.globalCompositeOperation = "lighter";
+  x.fillStyle = "rgba(255,255,255,.85)";
+  x.beginPath(); x.ellipse(cx - g * .3, cy - g * .32, g * .2, g * .08, -.75, 0, 7); x.fill();
+  const v = (Math.sin(tid * 2.2 + vinkel * 3) + 1) / 2;
+  if (v > .55) shStjerneTegn(x, cx + g * (.45 - v * .6), cy - g * (.1 + v * .3), g * (.5 + .7 * (v - .55)), Math.min(1, (v - .55) * 3));
+  x.restore(); x.globalAlpha = 1;
+}
 function shKlattTegn(x, X, Y, r, st, jord, fase, tid) {
   const [r1, g1, b1] = jord.mork, [r2, g2, b2] = jord.lys, pts = [];
   for (let i = 0; i < 10; i++) {
@@ -2574,20 +2620,17 @@ function shTegn(t) {
   // Store klatter med en edelsten inni. Du vet ikke helt hva du får.
   for (const k of s.kapsler) {
     const q = KAPSLER.find(z => z.t === k.t), e = SH_EDEL[q.edel], r = k.r * f, X = k.x * f, Y = k.y * f;
-    x.save(); x.shadowColor = e[1]; x.shadowBlur = 8 + 6 * Math.sin(s.tid * 5 + k.fase);
-    shKlattTegn(x, X, Y, r, 1 + Math.min(.6, k.vy), s.jord, k.fase, s.tid); x.restore();
-    const g = r * .62, gx = X + r * .1, gy = Y - r * .12, rot = Math.sin(s.tid * 2 + k.fase) * .25;
-    x.save(); x.translate(gx, gy); x.rotate(rot);
-    const eg = x.createLinearGradient(-g, -g, g, g); eg.addColorStop(0, e[0]); eg.addColorStop(.5, e[1]); eg.addColorStop(1, e[2]);
-    x.beginPath(); x.moveTo(0, -g); x.lineTo(g * .8, -g * .15); x.lineTo(0, g); x.lineTo(-g * .8, -g * .15); x.closePath(); x.fillStyle = eg; x.fill();
-    x.strokeStyle = "rgba(255,255,255,.7)"; x.lineWidth = Math.max(.6, g * .08);
-    x.beginPath(); x.moveTo(-g * .8, -g * .15); x.lineTo(g * .8, -g * .15); x.moveTo(-g * .3, -g * .15); x.lineTo(0, -g); x.lineTo(g * .3, -g * .15); x.lineTo(0, g); x.stroke();
-    x.restore();
-    // Gjørme over den nederste delen av steinen, så den ser ut til å sitte inni.
-    const [r1, g1, b1] = s.jord.mork;
-    x.fillStyle = `rgba(${r1},${g1},${b1},.92)`;
-    x.beginPath(); x.ellipse(X - r * .1, Y + r * .5, r * .75, r * .38, .2, 0, 7); x.fill();
-    if (Math.sin(s.tid * 3 + k.fase) > .8) { x.globalCompositeOperation = "lighter"; shStjerneTegn(x, gx, gy - g * .6, r * .7, .8); x.globalAlpha = 1; x.globalCompositeOperation = "source-over"; }
+    // Klumpen med gjørme bak steinen, så steinen, så en leppe av gjørme over den nederste delen.
+    shKlattTegn(x, X, Y + r * .3, r * .95, 1 + Math.min(.5, k.vy), s.jord, k.fase, s.tid);
+    shEdelsten(x, X, Y - r * .12, r * .82, e, k.fase + s.tid * .6, s.tid + k.fase);
+    const [m1, m2, m3] = s.jord.mork, [l1, l2, l3] = s.jord.lys;
+    const lp = x.createLinearGradient(0, Y + r * .35, 0, Y + r * 1.1);
+    lp.addColorStop(0, `rgb(${l1},${l2},${l3})`); lp.addColorStop(1, `rgb(${m1},${m2},${m3})`);
+    x.beginPath(); x.moveTo(X - r * .95, Y + r * .55);
+    for (let j = 0; j <= 8; j++) { const a = Math.PI * (1 - j / 8); x.lineTo(X + Math.cos(a) * r * .95, Y + r * .55 - Math.sin(a) * r * (.12 + .08 * Math.sin(j * 1.7 + k.fase + s.tid * 3))); }
+    x.lineTo(X + r * .95, Y + r * .8); x.quadraticCurveTo(X, Y + r * 1.35, X - r * .95, Y + r * .8); x.closePath();
+    x.fillStyle = lp; x.fill();
+    x.fillStyle = "rgba(255,255,255,.45)"; x.beginPath(); x.ellipse(X - r * .4, Y + r * .47, r * .2, r * .045, -.12, 0, 7); x.fill();
   }
   if (s.tilstand !== "ferdig") {
     const w = s.padW * f, h = 0.02 * f, cy = SH_PY * f + h / 2, fa = shStavFarger(s);
