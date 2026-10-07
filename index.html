@@ -155,7 +155,7 @@ h1 .signatur{font-size:.55em;letter-spacing:.06em;white-space:nowrap}
 #brannLag{position:fixed;inset:0;pointer-events:none;z-index:255}
 .hendelse{position:fixed;left:50%;top:40%;z-index:266;pointer-events:none;text-align:center;transform:translate(-50%,-50%);font-family:var(--display);font-weight:800;
   font-size:clamp(26px,5.5vw,52px);letter-spacing:.06em;line-height:1;color:#ff5a6a;text-shadow:0 0 18px rgba(255,90,106,.75),0 3px 0 rgba(0,0,0,.6);animation:hendelse 2.2s ease-out forwards;white-space:nowrap}
-.hendelse small{display:block;font-family:var(--tall);font-weight:500;font-size:.34em;letter-spacing:.14em;color:#fff;margin-top:.5em;text-shadow:0 0 8px rgba(0,0,0,.8)}
+.hendelse small{display:block;font-family:var(--tall);font-weight:600;font-size:max(14px,.42em);line-height:1.3;letter-spacing:.1em;color:#fff;margin:.55em auto 0;max-width:88vw;white-space:normal;text-shadow:0 0 8px rgba(0,0,0,.85),0 1px 2px rgba(0,0,0,.9)}
 @keyframes hendelse{0%{opacity:0;transform:translate(-50%,-50%) scale(.5)}12%{opacity:1;transform:translate(-50%,-50%) scale(1.12)}22%{transform:translate(-50%,-50%) scale(1)}80%{opacity:1}100%{opacity:0;transform:translate(-50%,-62%) scale(1)}}
 .lynblink{position:fixed;inset:0;z-index:250;pointer-events:none;background:#fff;animation:lynblink .6s ease-out forwards}
 @keyframes lynblink{0%{opacity:.75;background:#0b1030}10%{opacity:.9;background:#fff}20%{opacity:.35;background:#0b1030}32%{opacity:.75;background:#eef4ff}100%{opacity:0;background:#fff}}
@@ -341,7 +341,7 @@ body:has(.resultat.vis) #spill .linje{opacity:0;pointer-events:none;transition:o
   <div class="regel"><b>The race:</b> Your best score on each of the ten boards in a collection is added up. Finish #1 overall and you get the next collection for free. Anyone who takes first place later gets it too. Points: Easy (25 pieces) gives 10,000, Medium (49) 15,000, Hard (100) 20,000 and Chaos (144) 25,000 at normal speed. Be fast and you get up to double.</div>
   <div class="sammen" id="sammen"><p class="liten">Loading standings …</p></div>
   <p class="kreditt">© 2001–2026 Tarjei Krogh. All photography, music and art. <a href="https://kroghx.com" target="_blank" rel="noopener">kroghx.com</a></p>
-  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 0.76<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
+  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 0.77<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
 </section>
 
 <div class="ark" id="tidUtArk" hidden style="z-index:200001">
@@ -1389,7 +1389,8 @@ function kast(b, heldig) {
   else {
     const opptatt = new Set(sp.biter.filter(q => !q.iBunke && !q.ferdig && q !== b).map(q => Math.round(q.y * sp.r) * sp.k + Math.round(q.x * sp.k)));
     const ledige = sp.biter.filter(q => !q.ferdig && q.id !== b.id && !opptatt.has(q.id));
-    const m = ledige.length ? ledige[(Math.random() * ledige.length) | 0] : sp.biter[(Math.random() * sp.biter.length) | 0];
+    let m = ledige.length ? ledige[(Math.random() * ledige.length) | 0] : sp.biter[(Math.random() * sp.biter.length) | 0];
+    if (sp.tiltNaer && ledige.length && Math.random() < .5) m = ledige.reduce((a, q) => { const d = Math.hypot(slotC(q) - slotC(b), slotR(q) - slotR(b)); return !a || d < a.d ? { q, d } : a; }, null).q;
     mx = (slotC(m) + (Math.random() - .5) * .22) / sp.k; my = (slotR(m) + (Math.random() - .5) * .22) / sp.r;
   }
   løftes.delete(b); b.z = ++sp.ztopp;
@@ -1406,6 +1407,7 @@ function kast(b, heldig) {
     if (u < 1) { plasser(b); requestAnimationFrame(steg); return; }
     b.x = mx; b.y = my; b.loft = 0; b.rot = rMål; b.sx = 1;
     if (heldig && b.provSmett && b.provSmett()) { gnistKast(b); return; }
+    if (!heldig && b.provSmett && b.provSmett()) return;
     if (lydPa) tone(170, 0, .06, .03, "sine", .9, .2);
     const t1 = performance.now();
     const dunk = t2 => { if (spill !== sp) return; const v = Math.min(1, (t2 - t1) / 140); b.dunk = Math.sin(Math.PI * v) * .6; plasser(b); if (v < 1) requestAnimationFrame(dunk); else { b.dunk = 0; plasser(b); } };
@@ -1594,12 +1596,12 @@ function skyvBort(b) {
       const m = ledige.reduce((a, c) => { const d = Math.hypot(slotC(c) / k - q.x, slotR(c) / sp.r - q.y); return !a || d < a.d ? { c, d } : a; }, null).c;
       tx = (slotC(m) + (Math.random() - .5) * .16) / k; ty = (slotR(m) + (Math.random() - .5) * .16) / sp.r;
     } else { tx = q.x + (q.x >= mx ? 1 : -1) * 1.1 / k; ty = q.y + (q.y >= my ? 1 : -1) * .3 / sp.r; }
-    const fx = q.x, fy = q.y, t0 = performance.now() + j * 40, varighet = 360;
+    const fx = q.x, fy = q.y, t0 = performance.now() + j * 60, varighet = 700;
     q.z = ++sp.ztopp;
     const steg = t => {
       if (spill !== sp || q.ferdig || q.el.classList.contains("drar")) return;
-      const u = Math.max(0, Math.min(1, (t - t0) / varighet)), e = 1 - Math.pow(1 - u, 3);
-      q.x = fx + (tx - fx) * e; q.y = fy + (ty - fy) * e; q.loft = Math.sin(Math.PI * u) * .5; plasser(q);
+      const u = Math.max(0, Math.min(1, (t - t0) / varighet)), e = .5 - .5 * Math.cos(Math.PI * u);
+      q.x = fx + (tx - fx) * e; q.y = fy + (ty - fy) * e; q.loft = Math.sin(Math.PI * u) * .6; plasser(q);
       if (u < 1) requestAnimationFrame(steg); else { q.loft = 0; plasser(q); }
     };
     requestAnimationFrame(steg);
@@ -1614,11 +1616,11 @@ function settNed(b, fraX, fraY, lyd) {
   const steg = t => {
     if (spill !== sp || !b.el.isConnected) return;
     const dt = Math.min(.033, Math.max(.001, (t - sist) / 1000)); sist = t;
-    const K = 140, C = 2 * Math.sqrt(K);
+    const K = 80, C = 2 * Math.sqrt(K);
     vx += (K * (mx - b.x) - C * vx) * dt; vy += (K * (my - b.y) - C * vy) * dt; b.x += vx * dt; b.y += vy * dt;
     const d = Math.hypot((mx - b.x) * geo.bredde, (my - b.y) * geo.hoyde), fart = Math.hypot(vx * geo.bredde, vy * geo.hoyde), e = 1 - Math.min(1, d / d0);
     b.loft = l0 * (1 - e) + .25 * Math.sin(Math.PI * e) * (1 - e);
-    if ((d > .35 || fart > 25) && t - t0 < 1200) { plasser(b); requestAnimationFrame(steg); return; }
+    if ((d > .35 || fart > 25) && t - t0 < 1500) { plasser(b); requestAnimationFrame(steg); return; }
     b.x = mx; b.y = my; b.loft = 0; b.glod = 0;
     const t1 = performance.now();
     const dunk = t2 => {
@@ -1717,12 +1719,17 @@ function gnistSteg() {
 }
 function koble(b) {
   let dra = null, glid = 0;
-  const mag = () => { const v = VALG.find(v => v.n === spill.n); return (spill.magnetTil || 0) > performance.now() ? { ...v, rekk: v.rekk * 1.5, drag: Math.min(.95, v.drag * 1.3), smett: v.smett * 1.35 } : v; };
+  const mag = () => {
+    const v = VALG.find(v => v.n === spill.n), nå = performance.now();
+    const niv = (spill.magnetTil || 0) > nå ? (spill.magnetNiva || 1) : 0, tiltM = (spill.tiltMagnetTil || 0) > nå ? .15 : 0;
+    if (!niv && !tiltM) return v;
+    return { ...v, rekk: v.rekk * (1 + .5 * niv + tiltM), drag: Math.min(.97, v.drag * (1 + .3 * niv + tiltM * .6)), smett: v.smett * (1 + .35 * niv + tiltM * .5) };
+  };
   // Magnet og glød, brukt både mens du drar og mens biten glir.
-  function trekk(x, y) {
+  function trekk(x, y, myk = 1) {
     const mx = slotC(b) / spill.k, my = slotR(b) / spill.r, m = mag();
     const d = Math.hypot((x - mx) * geo.bredde, (y - my) * geo.hoyde), R = Math.min(geo.bw, geo.bh) * m.rekk;
-    if (d < R && !b.bak) { const k = Math.pow(1 - d / R, 2) * m.drag; x += (mx - x) * k; y += (my - y) * k; }
+    if (d < R && !b.bak) { const k = Math.pow(1 - d / R, 2) * m.drag * myk; x += (mx - x) * k; y += (my - y) * k; }
     // Et snev lysere jo nærmere riktig plass.
     b.glod = d < R * 1.3 ? 1 - d / (R * 1.3) : 0;
     return [x, y];
@@ -1815,7 +1822,7 @@ function koble(b) {
       if (!spill || b.ferdig || !b.el.isConnected) { glid = 0; return; }
       vx *= 0.93; vy *= 0.93;
       const fx = b.x + vx, fy = b.y + vy;
-      [b.x, b.y] = trekk(fx, fy);
+      [b.x, b.y] = trekk(fx, fy, .3);
       plasser(b);
       // Sprett mykt av kanten på skjermen.
       if (b.x !== fx && Math.abs(b.x - fx) > 1e-6 && (b.x <= geo.minX || b.x >= geo.maxX)) { vx *= -0.65; if (lydPa && Math.abs(vx) > .002) tone(150, 0, .05, .02, "triangle", .8, .2); }
@@ -1915,8 +1922,12 @@ function brukKraft(type) {
   settCredits(har - k.pris); spill.trekk = (spill.trekk || 0) + k.trekk; spill.brukteKraft = true;
   if (!spill.start) spill.start = Date.now();
   if (lydPa) { tone(660, 0, .12, .04, "sine", .7, .6); tone(990, .06, .14, .03, "sine", .7, .6); }
-  if (type === "tilt") tilt(false);
-  if (type === "magnet") { spill.magnetTil = performance.now() + 20000; banner("MAGNET!", "STRONGER MAGNET · 20 SECONDS", "#7fe8ff", 2600); }
+  if (type === "tilt") { tilt(false); spill.tiltMagnetTil = performance.now() + 8000; }
+  if (type === "magnet") {
+    const på = (spill.magnetTil || 0) > performance.now();
+    spill.magnetNiva = på ? Math.min(3, (spill.magnetNiva || 1) + 1) : 1; spill.magnetTil = performance.now() + 20000;
+    banner(spill.magnetNiva === 3 ? "TRIPLE MAGNET!" : spill.magnetNiva === 2 ? "DOUBLE MAGNET!" : "MAGNET!", "STRONGER MAGNET · 20 SECONDS", "#7fe8ff", 2600);
+  }
   if (type === "hint") {
     const b = nesteHint(), m = $("mal-plass");
     Object.assign(m.style, { left: geo.x0 + slotC(b) * geo.bw + "px", top: geo.y0 + slotR(b) * geo.bh + "px", width: geo.bw + "px", height: geo.bh + "px" });
@@ -2054,7 +2065,7 @@ function tilt(dino) {
   const bord = $("bord"); bord.classList.remove("rist"); void bord.offsetWidth; bord.classList.add("rist"); setTimeout(() => bord.classList.remove("rist"), 800);
   if (lydPa) [0, dino ? .5 : null, dino ? 1 : null].forEach(t => { if (t == null) return; tone(46, t, .45, .14, "sine", .9, .3); tone(92, t, .12, .05, "triangle", .9, .2); });
   const løse = sp.biter.filter(b => !b.ferdig && !b.iBunke && !b.lander && !b.el.classList.contains("drar"));
-  sp.vendKvote = 1 + (Math.random() < .5); setTimeout(() => { if (spill === sp) sp.vendKvote = null; }, (dino ? 450 : 150) + løse.length * 45 + 400);
+  sp.vendKvote = 1 + (Math.random() < .5); sp.tiltNaer = !dino; setTimeout(() => { if (spill === sp) { sp.vendKvote = null; sp.tiltNaer = false; } }, (dino ? 450 : 150) + løse.length * 45 + 400);
   løse.forEach((b, j) => setTimeout(() => { if (spill === sp && !b.ferdig) kast(b, Math.random() < HELDIG * 1.3); }, (dino ? 450 : 150) + j * 45));
 }
 // PUZZLE BREAK: 1–3 brikker som lå på plass, rømmer og hopper ned i bunken.
@@ -2108,6 +2119,7 @@ function vokseBrikke() {
       if (u < 1) { requestAnimationFrame(fly); return; }
       b.loft = 0; b.rot = rMål; b.dunk = 1; plasser(b); setTimeout(() => { b.dunk = 0; plasser(b); }, 120);
       if (lydPa) tone(120, 0, .2, .06, "sine", .9, .4);
+      banner("IT'S ALIVE!", "LET THE FEVER PASS · THEN IT FITS AGAIN", "#9cff7a", 3800);
       krymp();
     };
     requestAnimationFrame(fly);
@@ -2122,7 +2134,7 @@ function vokseBrikke() {
       const a = 1 - e;
       b.vekst = 1 + (v0 - 1) * a; b.pust = a * (.08 * Math.sin(t / 420) + .035 * Math.sin(t / 190 + 1.3)); b.svai = a * 3.5 * Math.sin(t / 610);
       plasser(b); bobleUnder(b, .25 * a); blemme(b, .55 * a);
-      if (u < 1) requestAnimationFrame(steg); else { b.vekst = 1; b.pust = 0; b.svai = 0; b.vokser = false; plasser(b); }
+      if (u < 1) requestAnimationFrame(steg); else { b.vekst = 1; b.pust = 0; b.svai = 0; b.vokser = false; plasser(b); brikkeTekst(b, "CALM AGAIN · READY", "#9cff7a"); }
     };
     requestAnimationFrame(steg);
   };
