@@ -323,7 +323,7 @@ body:has(.resultat.vis) #spill .linje{opacity:0;pointer-events:none;transition:o
   <div class="regel"><b>The race:</b> Your best score on each of the ten boards in a collection is added up. Finish #1 overall and you get the next collection for free. Anyone who takes first place later gets it too. Points: Easy (25 pieces) gives 10,000, Medium (49) 15,000, Hard (100) 20,000 and Chaos (144) 25,000 at normal speed. Be fast and you get up to double.</div>
   <div class="sammen" id="sammen"><p class="liten">Loading standings …</p></div>
   <p class="kreditt">© 2001–2026 Tarjei Krogh. All photography, music and art. <a href="https://kroghx.com" target="_blank" rel="noopener">kroghx.com</a></p>
-  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 0.64<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
+  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 0.65<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
 </section>
 
 <div class="ark" id="tidUtArk" hidden style="z-index:200001">
@@ -1436,16 +1436,16 @@ function plasser(b) {
     b.y = Math.min(Math.max(b.y, geo.minY), geo.maxY);
   }
   // Løftet: biten blir litt større og skyggen lenger. Dunk: den trykkes litt ned når den lander.
-  const l = b.loft || 0, s = 1 + .07 * l - .035 * (b.dunk || 0);
+  const l = b.loft || 0, s = (1 + .07 * l - .035 * (b.dunk || 0)) * (b.vekst || 1);
   const rot = b.ferdig ? 0 : (b.rot || 0), sx = b.sx ?? 1;
-  b.el.style.transform = `translate(${x0 + b.x * bredde - t}px, ${y0 + b.y * hoyde - t}px)` + (rot ? ` rotate(${rot.toFixed(2)}deg)` : "") + (s !== 1 || sx !== 1 ? ` scale(${(s * sx).toFixed(4)},${s.toFixed(4)})` : "");
+  b.el.style.transform = `translate(${x0 + b.x * bredde - t + (b.dirr || 0) * (Math.random() - .5)}px, ${y0 + b.y * hoyde - t + (b.dirr || 0) * (Math.random() - .5)}px)` + (rot ? ` rotate(${rot.toFixed(2)}deg)` : "") + (s !== 1 || sx !== 1 ? ` scale(${(s * sx).toFixed(4)},${s.toFixed(4)})` : "");
   if (!b.ferdig || b.lander) {
     const g = Math.round((b.glod || 0) * 8) / 8, lq = Math.round(l * 10) / 10;
     // I ro ligger skyggen allerede i brikken. Løftet eller glødende: en ekstra, lengre skygge.
     const fil = !g && !lq && !b.lander ? "none" : (g ? `brightness(${(1 + .14 * g).toFixed(3)}) ` : "") + `drop-shadow(${(3 * lq).toFixed(1)}px ${(10 * lq).toFixed(1)}px ${(1 + 10 * lq).toFixed(1)}px rgba(0,0,0,${(.6 * lq).toFixed(2)}))`;
     if (fil !== b.fil) { b.fil = fil; b.el.style.filter = fil; }
   } else if (b.fil) { b.fil = ""; }
-  b.el.style.zIndex = b.ferdig && !b.lander ? 1 : 10 + b.z;
+  b.el.style.zIndex = b.ferdig && !b.lander && !b.vokser ? 1 : 10 + b.z;
   b.el.classList.toggle("ferdig", b.ferdig && !b.lander);
 }
 // Myke løft: biten hever seg når du tar den, og senker seg når du slipper.
@@ -1569,6 +1569,7 @@ function koble(b) {
     if (avstand >= Math.min(geo.bw, geo.bh) * mag().smett) return false;
     // På magen: må snus først. Ved siden av en svidd brikke: for varmt til å legge inntil, til den har fått fargen tilbake.
     if (b.bak) { if (vis) brikkeTekst(b, "FLIP IT FIRST", "#ffd23a"); return false; }
+    if ((b.vekst || 1) > 1.04) { if (vis) brikkeTekst(b, "TOO BIG · LET IT SHRINK", "#7fe8ff"); return false; }
     const varm = [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dc, dr]) => { const c = b.c + dc, r = b.r + dr; if (c < 0 || r < 0 || c >= spill.k || r >= spill.r) return false; const n = spill.biter[r * spill.k + c]; return n.ferdig && (n.svidd > .06 || spill.brann?.ild.has(n.id)); });
     if (varm) { if (vis) brikkeTekst(b, "TOO HOT", "#ff7a3c"); return false; }
     const fraX = b.x, fraY = b.y;
@@ -1668,7 +1669,7 @@ function koble(b) {
 function treffer(b, e) {
   const r = b.el.getBoundingClientRect(), a = -(b.ferdig ? 0 : (b.rot || 0)) * Math.PI / 180, cw = b.el.width / geo.dpr, ch = b.el.height / geo.dpr;
   const dx = (e.clientX - (r.left + r.width / 2)) * speilX(), dy = (e.clientY - (r.top + r.height / 2)) * speilY();
-  const x = Math.round((dx * Math.cos(a) - dy * Math.sin(a) + cw / 2) * geo.dpr), y = Math.round((dx * Math.sin(a) + dy * Math.cos(a) + ch / 2) * geo.dpr);
+  const vk = b.vekst || 1, x = Math.round(((dx * Math.cos(a) - dy * Math.sin(a)) / vk + cw / 2) * geo.dpr), y = Math.round(((dx * Math.sin(a) + dy * Math.cos(a)) / vk + ch / 2) * geo.dpr);
   // Skyggen (under 180 i dekning) teller ikke som brikke.
   try { return b.el.getContext("2d").getImageData(x, y, 1, 1).data[3] > 200; } catch { return true; }
 }
@@ -1748,7 +1749,10 @@ function gjestekort(n) {
   const typer = ["tilt", "break", "lyn"].sort(() => Math.random() - .5);
   while (typer.length < antall) typer.push(["tilt", "break"][(Math.random() * 2) | 0]);
   const liste = typer.slice(0, antall).map((t, j) => ({ t, ved: .18 + (j + Math.random() * .8) * (.62 / antall) }));
-  if (n >= 25) liste.push({ t: Math.random() < .5 ? "speilX" : "speilY", ved: .25 + Math.random() * .45 });
+  // Speilvending i ca. 40 % av spillene, og bare én av typene.
+  if (n >= 25 && Math.random() < .4) liste.push({ t: Math.random() < .5 ? "speilX" : "speilY", ved: .25 + Math.random() * .45 });
+  // Voksende brikke: på hvert brett foreløpig, så Krogh får testet den.
+  if (n >= 16) liste.push({ t: "vokse", ved: .3 + Math.random() * .35 });
   return liste.sort((a, b) => a.ved - b.ved);
 }
 function hendelseSjekk() {
@@ -1760,8 +1764,9 @@ function hendelseSjekk() {
   if (h.t === "tilt" && løse < 3) return;
   if (h.t === "break" && sp.lagt < 4) return;
   if (h.t === "lyn" && sp.lagt < 6) return;
+  if (h.t === "vokse" && sp.lagt < 5) return;
   sp.hendelser.shift(); sp.sistHendelse = performance.now();
-  if (h.t === "tilt") tilt(true); else if (h.t === "break") puzzleBreak(); else if (h.t === "speilX" || h.t === "speilY") speilStart(h.t === "speilX" ? "x" : "y"); else lynnedslag();
+  if (h.t === "tilt") tilt(true); else if (h.t === "break") puzzleBreak(); else if (h.t === "speilX" || h.t === "speilY") speilStart(h.t === "speilX" ? "x" : "y"); else if (h.t === "vokse") vokseBrikke(); else lynnedslag();
 }
 function lynTid(brukt, frist) {
   const sp = spill; if (!sp || sp.n !== 49 || !sp.start || sp.slutt || sp.tapt || sp.brann || sp.speil) return;
@@ -1831,6 +1836,54 @@ function tilt(dino) {
   løse.forEach((b, j) => setTimeout(() => { if (spill === sp && !b.ferdig) kast(b, Math.random() < HELDIG * 1.3); }, (dino ? 450 : 150) + j * 45));
 }
 // PUZZLE BREAK: 1–3 brikker som lå på plass, rømmer og hopper ned i bunken.
+// GROWING PIECE: en brikke på plass begynner å dirre og vokse, til den ikke får plass.
+// Da spretter den ut av bildet, lander ved siden av, og krymper sakte tilbake til vanlig størrelse.
+function vokseBrikke() {
+  const sp = spill, kand = sp.biter.filter(b => b.ferdig && !b.lander && !sp.brann?.ild.has(b.id));
+  if (!kand.length) return;
+  const b = kand[(Math.random() * kand.length) | 0], t0 = performance.now(), VOKS = 1700, MAKS = 1.45;
+  banner("GROWING PIECE!", "IT DOESN'T FIT ANYMORE", "#9cff7a", 3200);
+  b.vokser = true; b.z = ++sp.ztopp;
+  if (lydPa) { tone(140, 0, 1.6, .05, "triangle", .7, .6); tone(210, .4, 1.2, .035, "triangle", .7, .6); }
+  const voks = t => {
+    if (spill !== sp || !b.ferdig) { b.vokser = false; b.dirr = 0; return; }
+    const u = Math.min(1, (t - t0) / VOKS), e = u * u;
+    b.vekst = 1 + (MAKS - 1) * e + Math.sin(t / 45) * .02 * u; b.dirr = 1 + 5 * u; plasser(b);
+    if (u < 1) { requestAnimationFrame(voks); return; }
+    sprett();
+  };
+  // Klemt ut: den spretter opp av bildet og ned ved siden av brettet.
+  const sprett = () => {
+    b.dirr = 0; b.ferdig = false; sp.lagt--; b.z = ++sp.ztopp; tegnBit(b); plasser(b); oppdaterTeller(); visHintKnapp();
+    if (lydPa) { tsjing(0, .25, .9, .5, 1600); tone(520, 0, .12, .05, "sine", .8, .4); tone(780, .05, .18, .04, "sine", .8, .5); }
+    const p = bunkePlass(), mx = Math.min(geo.maxX, Math.max(geo.minX, p.x + (Math.random() - .5) * .35)), my = Math.min(geo.maxY, Math.max(geo.minY, p.y + (Math.random() < .5 ? -1 : 1) * (.18 + Math.random() * .12)));
+    const fx = b.x, fy = b.y, s0 = performance.now(), D = 900, rMål = (Math.random() - .5) * 30, spinn = (Math.random() < .5 ? -1 : 1) * (200 + Math.random() * 200);
+    const fly = t => {
+      if (spill !== sp || b.ferdig) return;
+      if (b.el.classList.contains("drar")) { b.loft = 0; krymp(); return; }
+      const u = Math.min(1, (t - s0) / D), e = 1 - Math.pow(1 - u, 2);
+      b.x = fx + (mx - fx) * e; b.y = fy + (my - fy) * e - Math.sin(Math.PI * u) * .3; b.loft = Math.sin(Math.PI * u) * 1.3;
+      b.rot = rMål + spinn * (1 - e); plasser(b);
+      if (u < 1) { requestAnimationFrame(fly); return; }
+      b.loft = 0; b.rot = rMål; b.dunk = 1; plasser(b); setTimeout(() => { b.dunk = 0; plasser(b); }, 120);
+      if (lydPa) tone(120, 0, .2, .06, "sine", .9, .4);
+      krymp();
+    };
+    requestAnimationFrame(fly);
+  };
+  // Den roer seg: krymper sakte, med en svak puls, som om den tørker inn.
+  const krymp = () => {
+    const k0 = performance.now(), v0 = b.vekst || MAKS, D = 7000;
+    const steg = t => {
+      if (spill !== sp || b.ferdig) { b.vekst = 1; b.vokser = false; return; }
+      const u = Math.min(1, (t - k0) / D), e = u * u * (3 - 2 * u);
+      b.vekst = 1 + (v0 - 1) * (1 - e) + Math.sin(t / 260) * .012 * (1 - u); plasser(b);
+      if (u < 1) requestAnimationFrame(steg); else { b.vekst = 1; b.vokser = false; plasser(b); }
+    };
+    requestAnimationFrame(steg);
+  };
+  requestAnimationFrame(voks);
+}
 function puzzleBreak() {
   const sp = spill, lagte = sp.biter.filter(b => b.ferdig && !b.lander);
   const n = Math.min(lagte.length, 1 + (Math.random() < .55) + (Math.random() < .25));
@@ -4490,7 +4543,7 @@ function shSteg(t) {
 }
 addEventListener("resize", () => { if (sh) shOppsett(); });
 // Bare for automatisk testing lokalt (?autotest).
-if (location.search.includes("autotest")) { window.__sh = () => sh; window.__shOppdater = dt => { shOppdater(dt); if (sh) { sh.tid += dt; shPartikler(dt); } }; window.__shTreff = shTreff; window.__shGalaga = shGalagaStart; window.__shSopp = shSopp; window.__shBytte = shByttetStart; window.__hendelse = t => t === "tilt" ? tilt(true) : t === "break" ? puzzleBreak() : t === "speilX" ? speilStart("x") : t === "speilY" ? speilStart("y") : lynnedslag(); window.__shSprekk = shSprekk; window.__shTegn = () => { shRens(); shTegn(performance.now()); }; window.__spill = () => spill; window.__geo = () => geo; window.__plasser = plasser; window.__skjermPkt = skjermPkt; }
+if (location.search.includes("autotest")) { window.__sh = () => sh; window.__shOppdater = dt => { shOppdater(dt); if (sh) { sh.tid += dt; shPartikler(dt); } }; window.__shTreff = shTreff; window.__shGalaga = shGalagaStart; window.__shSopp = shSopp; window.__shBytte = shByttetStart; window.__hendelse = t => t === "tilt" ? tilt(true) : t === "vokse" ? vokseBrikke() : t === "break" ? puzzleBreak() : t === "speilX" ? speilStart("x") : t === "speilY" ? speilStart("y") : lynnedslag(); window.__shSprekk = shSprekk; window.__shTegn = () => { shRens(); shTegn(performance.now()); }; window.__spill = () => spill; window.__geo = () => geo; window.__plasser = plasser; window.__skjermPkt = skjermPkt; }
 
 
 
