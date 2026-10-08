@@ -521,7 +521,7 @@ body:has(.resultat.vis) #spill .linje{opacity:0;pointer-events:none;transition:o
 #shatter{touch-action:none}
 #unwrap{touch-action:none;background:#14110d}
 #uwCanvas{position:absolute;inset:0;touch-action:none}
-#uwVerktøy{position:absolute;left:50%;transform:translateX(-50%);display:flex;gap:8px;z-index:3}
+#uwVerktøy{display:none!important;position:absolute;left:50%;transform:translateX(-50%);display:flex;gap:8px;z-index:3}
 .uw-v{font:700 11px var(--tall);letter-spacing:.12em;padding:8px 13px;border-radius:999px;border:1px solid rgba(255,255,255,.25);color:#fff;background:rgba(0,0,0,.45);cursor:pointer;white-space:nowrap}
 #uwKnivKnapp{border-color:var(--kf,#e0791c);box-shadow:inset 0 0 0 1px var(--kf,#e0791c)}
 #uwKnekkKnapp{background:linear-gradient(90deg,rgba(200,215,230,.38) var(--skarp,100%),rgba(0,0,0,.45) var(--skarp,100%))}
@@ -704,7 +704,7 @@ body.lys #modusDeal{--farge:#0f8f6c;--glod:15,143,108}
   <div class="regel">Everything counts: Game, Peace, Bubble it 1P and 2P, every board, every level, every collection. Each board list gives up to 100 points (a Bubble it list up to 1,000): #1 gets them all, the rest their share of the top score.</div>
   <div class="sammen" id="spillere"><p class="liten">Loading players …</p></div>
   <p class="kreditt">© 2001–2026 Tarjei Krogh. All photography, music and art. <a href="https://kroghx.com" target="_blank" rel="noopener">kroghx.com</a></p>
-  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 1.75<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
+  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 1.76<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
 </section>
 
 <div class="ark" id="tidUtArk" hidden style="z-index:200001">
@@ -2323,8 +2323,11 @@ function oppsett() {
   const dpr = Math.min(devicePixelRatio || 1, 2);
   // Løse biter skal være innenfor skjermen og utenfor panelet.
   // Hele brikka, med tapper, skal alltid synes og kunne tas: vant rundt hele banen.
-  const minX = (-x0 + t + 6) / bredde, maxX = (hoyreKant - x0 - bw - t - 6) / bredde;
-  const minY = (toppKant + t + 8 - y0) / hoyde, maxY = (H - BAR - y0 - bh - t - 6) / hoyde;
+  let minX = (-x0 + t + 6) / bredde, maxX = (hoyreKant - x0 - bw - t - 6) / bredde;
+  minX = Math.min(minX, 0); maxX = Math.max(maxX, 1 - 1 / spill.k);
+  let minY = (toppKant + t + 8 - y0) / hoyde, maxY = (H - BAR - y0 - bh - t - 6) / hoyde;
+  // Alle plassene på brettet skal kunne nås, også øverste rad og ytterste kolonne (iPad stående stoppet før toppen).
+  minY = Math.min(minY, 0); maxY = Math.max(maxY, 1 - 1 / spill.r);
   // p: luft rundt hver brikke, med plass til skyggen som tegnes inn i den.
   geo = { x0, y0, bredde, hoyde, bw, bh, t, p: t + 10, dpr, minX, maxX, minY, maxY, staaende, RT };
   setTimeout(visKraftLinje, 0);
@@ -8769,12 +8772,12 @@ async function uwStart(i) {
   const støy = new Float32Array(G * G); for (let j = 0; j < G * G; j++) støy[j] = R();
   const bx = .36 + R() * .28, by = .34 + R() * .28, fiender = [];
   // Motstanderne: Kroghs figurer spretter rundt, maur går i rekker på papiret, en møll flyr over alt.
-  const nFig = n < 2 ? 1 : n < 12 ? 2 : 3, fart = .16 + aktiv * .012 + i * .005;
+  const nFig = n < 2 ? 2 : n < 12 ? 3 : 4, fart = (.16 + aktiv * .012 + i * .005) * 1.2;
   for (let k = 0; k < nFig; k++) { const a = R() * 6.283; fiender.push({ type: "figur", x: .25 + R() * .5, y: .25 + R() * .5, vx: Math.cos(a) * fart, vy: Math.sin(a) * fart, r: .033, figur: n * 3 + k, fase: R() * 6 }); }
-  const rekker = n < 1 ? 0 : 1 + (n >= 8) + (n >= 16), iRekke = 4 + Math.min(4, Math.floor(n / 5));
+  const rekker = 0 /* ingen maur (Krogh) */, iRekke = 4 + Math.min(4, Math.floor(n / 5));
   for (let k = 0; k < rekker; k++) { const a = R() * 6.283, x = .5 + Math.cos(a + 3.14) * .25, y = .5 + Math.sin(a + 3.14) * .25; let foran = null;
     for (let m = 0; m < iRekke; m++) { const e = { type: "maur", x: shClamp(x - Math.cos(a) * m * .024, .04, .96), y: shClamp(y - Math.sin(a) * m * .024, .04, .96), a, v: .065 + aktiv * .004, r: .012, foran, fase: R() * 6 }; fiender.push(e); foran = e; } }
-  const møll = n < 3 ? 0 : n < 10 ? 1 : 2;
+  const møll = 0; // ingen møll (Krogh)
   for (let k = 0; k < møll; k++) fiender.push({ type: "møll", x: .2 + R() * .6, y: k ? .8 : .2, a: R() * 6.283, v: .1, r: .03, fase: R() * 6 });
   // Brett 7–9 i hver sesong: gave i gave. Under papiret ligger et papir til, med et annet mønster.
   const toLag = i >= 6, stil2 = toLag ? UW_PAPIR[(n + 4) % UW_PAPIR.length] : null;
@@ -8782,8 +8785,8 @@ async function uwStart(i) {
     liv: 3, poeng: 0, tid: 0, frist: toLag ? 240 : 180, tilstand: "spill", fiender, flak: [], tekster: [], figurer: null, usårbar: 0, krav: .8,
     bånd: { x: bx, y: by }, sløyfe: { x: bx, y: by, r: .085, av: null }, revet: 0, slipp: false, låst: false, sjekkT: 0 };
   uwSkitt(0, 0, G - 1, G - 1); uw.bokstav = uwBokstavStart(uw);
-  uw.knivType = uwKnivValgt(); uw.blad = { skarp: 1, biter: 5 }; uw.paneler = uwLagPaneler(n); uw.form = uwLagForm(n);
-  for (let k = 0; k < (n >= 10 ? 2 : n >= 3 ? 1 : 0); k++) uw.fiender.push({ type: "lim", x: .2 + Math.random() * .6, y: .72 + Math.random() * .18, a: -1.5, r: .02, fase: Math.random() * 6, hvile: 4 });
+  uw.knivType = "hobby"; uw.blad = { skarp: 1, biter: 0 }; uw.paneler = []; uw.form = null;
+  for (let k = 0; k < 0; k++) uw.fiender.push({ type: "lim", x: .2 + Math.random() * .6, y: .72 + Math.random() * .18, a: -1.5, r: .02, fase: Math.random() * 6, hvile: 4 });
   uwVerktøyOppdater(); if (toLag) uwTekst("A GIFT INSIDE A GIFT", .5, .5);
   shFigurer().then(f => { if (uw) uw.figurer = f; }).catch(() => {});
   $("uwNiva").textContent = kode(i) + " · " + b.navn; uwMelding(); uwHud();
@@ -8817,9 +8820,9 @@ function uwPunkt(e) { const L = uwLayout(), løft = e.pointerType === "touch" ? 
 let uwAktive = new Set();
 function uwNed(e) {
   if (!uw || uw.tilstand !== "spill") return; e.preventDefault(); ctx(); uwAktive.add(e.pointerId);
-  if (uwAktive.size >= 2) { uwKnekk(); return; } // To fingre: knekk av en bladbit.
+  
   uwPeker = e.pointerId; const u = uw, p = uwPunkt(e), nå = performance.now();
-  if (u.sistTrykk && nå - u.sistTrykk.t < 320 && Math.hypot(p.x - u.sistTrykk.x, p.y - u.sistTrykk.y) < .06) { u.sistTrykk = null; uwKast(p); return; } // Dobbelttrykk: kast kniven.
+  
   u.sistTrykk = { t: nå, x: p.x, y: p.y }; if (u.kast) return; uwAvbryt(); u.kø = []; u.slipp = false; u.låst = false; u.gc = null; u.kniv = { x: p.x, y: p.y, a: u.kniv?.a ?? -.6 }; uwFlyttKniv(p);
 }
 function uwFlytt(e) {
@@ -8870,7 +8873,7 @@ function uwSkjærCelle(x, y) {
       if (L === 1 && u.celle[j] === 0 && uw === u && u.tilstand === "spill") { uwAvbryt(); uwSkjærCelle(x, y); } } return; }
   if (!u.spor.length) { u.lagNr = L; u.strekStart = u.teller + 1; u.linje = [{ x: u.kniv.x, y: u.kniv.y }]; }
   M[j] = 1; u.orden[j] = ++u.teller; u.spor.push(j);
-  if (u.knivType !== "gull") { const B = u.blad; B.skarp = Math.max(.35, B.skarp - .0011); if (u.teller % 30 === 0) uwVerktøyOppdater(); if (B.skarp < .6 && !B.varslet) { B.varslet = true; uwTekst(B.biter ? "BLADE IS DULL · SNAP IT" : "BLADE IS DULL", .5, .5); } }
+  if (false) { const B = u.blad; B.skarp = Math.max(.35, B.skarp - .0011); if (u.teller % 30 === 0) uwVerktøyOppdater(); if (B.skarp < .6 && !B.varslet) { B.varslet = true; uwTekst(B.biter ? "BLADE IS DULL · SNAP IT" : "BLADE IS DULL", .5, .5); } }
   if (lydPa && u.spor.length % 9 === 0) shSus(.05, "bandpass", 2400 + Math.random() * 1800, .03, 2, .8, .1);
   // Lukker streken seg? Den rører noe som ikke er papir i samme lag, eller en eldre del av seg selv.
   let rører = false;
@@ -8974,7 +8977,7 @@ function uwOppdater(dt) {
   if (u.tid >= u.frist) { u.tilstand = "over"; uwMelding("Time's up", Math.floor(uwSynlig(u) * 100) + " % unwrapped. You need 80 %.", [["Try again", () => uwStart(u.i), true], ["Menu", uwAvslutt]]); return; }
   if (u.kniv) uwKniv(dt);
   if (u.tilstand !== "spill") return;
-  uwLappSteg(dt); uwKastSteg(dt); if (!(u.eff.frys > 0)) uwHageSteg(dt);
+  uwLappSteg(dt); uwKastSteg(dt); // Hagen (edderkopp og muldvarp) er tatt ut (Krogh).
   for (const e of [...u.fiender]) {
     if (u.eff?.frys > 0) continue; // FREEZE: står stille og er ufarlig.
     if (e.type === "figur") {
@@ -9442,7 +9445,7 @@ function uwTegn() {
   x.drawImage(uwLag(SL, 0), x0, y0, f, f);
   // Sløyfen ligger på papiret til den rives løs og flyr.
   const sl = u.sløyfe; if (!sl.av || sl.av.t < 2.5) { const [sx, sy] = P(sl.x, sl.y); x.save(); x.translate(sx, sy); if (sl.av) { x.rotate(sl.av.rot); x.globalAlpha = Math.max(0, 1 - sl.av.t / 2.5); } uwSløyfeTegn(x, sl.r * f, u.stil); x.restore(); }
-  uwHageTegn(x, P, f, nå); uwLappTegn(x, P, f, nå); uwKnivTegn(x, P, f, nå);
+  uwLappTegn(x, P, f, nå);
   { const vt = $("uwVerktøy"), ty = Math.round(y0 + f + 10) + "px"; if (vt && vt.style.top !== ty) vt.style.top = ty; }
   // Streken du skjærer: et tynt, mørkt snitt i papiret med en rosa glød, så du ser at den er sårbar.
   if (u.linje.length) { const pts = [...u.linje, u.kniv]; x.save(); x.lineCap = "round"; x.lineJoin = "round"; x.beginPath(); let [ax, ay] = P(pts[0].x, pts[0].y); x.moveTo(ax, ay);
@@ -9461,11 +9464,8 @@ function uwTegn() {
   if (u.kniv && u.tilstand === "spill" && !u.kast) { const [kx, ky] = P(u.kniv.x, u.kniv.y), Lb = Math.max(14, f * .045), synlig = u.usårbar <= 0 || Math.sin(nå * 50) > 0;
     if (synlig) { x.save(); x.translate(kx, ky); x.globalAlpha = uwPeker != null || u.kø.length ? 1 : .6;
       if (u.spor.length) { const g = x.createRadialGradient(0, 0, 0, 0, 0, Lb); const gc = u.påBånd ? "255,200,60" : u.eff?.saks > 0 ? "120,220,255" : "255,90,140"; g.addColorStop(0, `rgba(${gc},.6)`); g.addColorStop(1, `rgba(${gc},0)`); x.fillStyle = g; x.fillRect(-Lb, -Lb, Lb * 2, Lb * 2); }
-      x.rotate(u.kniv.a + Math.PI); x.shadowColor = "rgba(0,0,0,.45)"; x.shadowBlur = 5; x.shadowOffsetY = 2;
-      const gb = x.createLinearGradient(0, -Lb * .3, 0, Lb * .3); gb.addColorStop(0, "#f4f6f8"); gb.addColorStop(.5, "#b9c0c8"); gb.addColorStop(1, "#7d858e");
-      x.fillStyle = gb; x.beginPath(); x.moveTo(0, 0); x.lineTo(Lb * .55, -Lb * .22); x.lineTo(Lb * .9, -Lb * .22); x.lineTo(Lb * .9, Lb * .12); x.lineTo(Lb * .3, Lb * .12); x.closePath(); x.fill();
-      x.shadowColor = "transparent"; x.fillStyle = uwKnivInfo(u.knivType).farge; x.fillRect(Lb * .9, -Lb * .26, Lb * .9, Lb * .42); x.fillStyle = "rgba(255,255,255,.35)"; x.fillRect(Lb * .9, -Lb * .26, Lb * .9, Lb * .1);
-      x.strokeStyle = "rgba(255,255,255,.8)"; x.lineWidth = 1; x.beginPath(); x.moveTo(Lb * .08, -Lb * .02); x.lineTo(Lb * .55, -Lb * .2); x.stroke(); x.restore(); } }
+      // Bare et lite lyspunkt der du skjærer, ingen tegnet kniv (Krogh).
+      const pr = Math.max(3, f * .008); x.fillStyle = "rgba(255,255,255,.95)"; x.shadowColor = "rgba(255,120,170,.9)"; x.shadowBlur = 10; x.beginPath(); x.arc(0, 0, pr, 0, 7); x.fill(); x.restore(); } }
   // Papirflak som flyr av.
   const fl = u.stil.bunn[0];
   for (const q of u.flak) { const px = x0 + q.x * f, py = y0 + q.y * f, r = q.r * f; x.save(); x.globalAlpha = Math.min(1, q.liv * 1.5); x.translate(px, py); x.rotate(q.rot); x.scale(1, Math.cos(q.rot * 1.7) * .5 + .6);
