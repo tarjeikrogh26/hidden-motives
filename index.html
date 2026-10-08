@@ -704,7 +704,7 @@ body.lys #modusDeal{--farge:#0f8f6c;--glod:15,143,108}
   <div class="regel">Everything counts: Game, Peace, Bubble it 1P and 2P, every board, every level, every collection. Each board list gives up to 100 points (a Bubble it list up to 1,000): #1 gets them all, the rest their share of the top score.</div>
   <div class="sammen" id="spillere"><p class="liten">Loading players …</p></div>
   <p class="kreditt">© 2001–2026 Tarjei Krogh. All photography, music and art. <a href="https://kroghx.com" target="_blank" rel="noopener">kroghx.com</a></p>
-  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 1.76<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
+  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 1.77<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
 </section>
 
 <div class="ark" id="tidUtArk" hidden style="z-index:200001">
@@ -4462,7 +4462,7 @@ const SH_INN = {
   kjøp: { tilt: 0, orm: 2, magnet: 4, trip: 6, bombe: 8, missil: 10, laser: 20, alien: 30, boble: 0, voks: 0 },
   fiende: { levende: 1, galaga: 2, sabot: 3, krabbe: 4, boss: 6, hopper: 7, fugl: 9, snø: 5, mørke: 4, deler: 3 } };
 const SH_NYNAVN = { kjøp: { tilt: "TILT", orm: "WORM", magnet: "VACUMA", trip: "TRIP", bombe: "BOMBS", missil: "MISSILES", laser: "BEAM", alien: "ALIEN", boble: "EXTRA BUBBLE", voks: "MEGA BUBBLE" },
-  fiende: { levende: "THE ART WAKES UP", galaga: "SPACESHIPS", sabot: "SABOTEURS", krabbe: "MUD CRAWLER", boss: "THE BOSS", hopper: "PARATROOPER", fugl: "SEED BIRD", snø: "SNOW", mørke: "BLACKOUT", deler: "PINBALL PARTS" } };
+  fiende: { levende: "THE ART WAKES UP", galaga: "SPACESHIPS", sabot: "SABOTEURS", krabbe: "MUD CRAWLER", boss: "THE BOSS", hopper: "PARATROOPER", fugl: "SEED BIRD", snø: "SNOW", mørke: "STORM", deler: "PINBALL PARTS" } };
 function shHar(type, navn, i = sh?.i ?? 0) { return BETA || aktiv * 9 + i >= (SH_INN[type][navn] ?? 0); }
 // Velger en power-up blant dem som er åpnet (vektet etter hvor vanlige de er, eller helt jevnt).
 function shKapselValg(vektet = true) {
@@ -6715,7 +6715,7 @@ function shLagDeler() {
   return ut;
 }
 function shDelerSteg(dt) {
-  const s = sh; if (s.toP || !shHar("fiende", "deler") || shBordPå(s)) return;
+  const s = sh; return; // Slått av (Krogh): runde flipperdeler oppå bildet passer ikke. Alt på brettet skal komme fra bildene.
   if (!s.deler) s.deler = shLagDeler();
   for (const q of s.deler) {
     q.lys = Math.max(0, q.lys - dt * 2.5);
