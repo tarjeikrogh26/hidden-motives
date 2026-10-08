@@ -628,7 +628,7 @@ body.lys #modusDeal{--farge:#0f8f6c;--glod:15,143,108}
   <div class="regel">Everything counts: Game, Peace, Scrub it 1P and 2P, every board, every level, every collection. Each board list gives up to 100 points (a Scrub it list up to 1,000): #1 gets them all, the rest their share of the top score.</div>
   <div class="sammen" id="spillere"><p class="liten">Loading players …</p></div>
   <p class="kreditt">© 2001–2026 Tarjei Krogh. All photography, music and art. <a href="https://kroghx.com" target="_blank" rel="noopener">kroghx.com</a></p>
-  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 1.41<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
+  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 1.42<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
 </section>
 
 <div class="ark" id="tidUtArk" hidden style="z-index:200001">
@@ -5320,9 +5320,16 @@ function shKlekkTegn(x, X, Y, R, u, jord, frø, tegn) {
   x.save(); x.translate(X + skj, hy); let g;
   // Skygge rundt haugen, så den løfter seg fra bildet.
   { const sg = x.createRadialGradient(hr * .12, hr * .18, hr * .6, hr * .12, hr * .18, hr * 1.35); sg.addColorStop(0, "rgba(0,0,0,.55)"); sg.addColorStop(1, "rgba(0,0,0,0)"); x.fillStyle = sg; x.beginPath(); x.ellipse(hr * .12, hr * .18, hr * 1.35, hr * .9, 0, 0, 7); x.fill(); }
-  if (!åpen) { g = x.createRadialGradient(-hr * .25, -hr * .3, hr * .05, 0, 0, hr); g.addColorStop(0, `rgba(${Math.min(255, l1 + 40)},${Math.min(255, l2 + 34)},${Math.min(255, l3 + 26)},.95)`); g.addColorStop(.55, `rgba(${l1},${l2},${l3},.92)`); g.addColorStop(1, `rgba(${m1},${m2},${m3},0)`); }
-  else { g = x.createRadialGradient(0, 0, hr * .1, 0, 0, hr); g.addColorStop(0, "rgba(6,4,2,.95)"); g.addColorStop(.65, `rgba(${m1},${m2},${m3},.9)`); g.addColorStop(1, `rgba(${m1},${m2},${m3},0)`); }
-  x.fillStyle = g; x.beginPath(); x.ellipse(0, 0, hr, hr * .62, 0, 0, 7); x.fill();
+  if (!åpen) {
+    // Jorda buler seg: mange små, ujevne klumper i lyse og mørke jordtoner, med lys ovenfra.
+    x.fillStyle = `rgba(${m1},${m2},${m3},.75)`; x.beginPath(); x.ellipse(0, hr * .05, hr * .95, hr * .58, 0, 0, 7); x.fill();
+    for (let j = 0; j < 16; j++) { const aa = frø * 5 + j * 2.4, d = Math.sqrt(((j * 7 + frø * 13) % 16) / 16), kx = Math.cos(aa) * hr * .78 * d, ky = Math.sin(aa) * hr * .45 * d - hr * .08 * (1 - d) * bule, kr = hr * (.16 + .14 * ((j * 3) % 5) / 5);
+      const t = ((j * 5) % 7) / 7, R1 = (m1 + (l1 - m1) * t) | 0, G1 = (m2 + (l2 - m2) * t) | 0, B1 = (m3 + (l3 - m3) * t) | 0;
+      x.fillStyle = `rgb(${R1},${G1},${B1})`; x.beginPath(); x.ellipse(kx, ky, kr, kr * .78, aa, 0, 7); x.fill();
+      x.fillStyle = `rgba(${Math.min(255, l1 + 30)},${Math.min(255, l2 + 26)},${Math.min(255, l3 + 20)},.55)`; x.beginPath(); x.ellipse(kx - kr * .25, ky - kr * .3, kr * .45, kr * .25, aa, 0, 7); x.fill();
+      x.fillStyle = `rgba(${m1 >> 1},${m2 >> 1},${m3 >> 1},.45)`; x.beginPath(); x.ellipse(kx + kr * .25, ky + kr * .35, kr * .5, kr * .2, aa, 0, 7); x.fill(); }
+  } else { g = x.createRadialGradient(0, 0, hr * .1, 0, 0, hr); g.addColorStop(0, "rgba(6,4,2,.95)"); g.addColorStop(.65, `rgba(${m1},${m2},${m3},.9)`); g.addColorStop(1, `rgba(${m1},${m2},${m3},0)`);
+    x.fillStyle = g; x.beginPath(); x.ellipse(0, 0, hr, hr * .62, 0, 0, 7); x.fill(); }
   if (u > .25) { const k = Math.min(1, (u - .25) / .4), sti = [];
     for (let j = 0; j < 7; j++) { const a = j / 7 * 6.283 + frø, p = [[0, 0]]; for (let n = 1; n <= 3; n++) { const r = hr * 1.05 * k * n / 3, aa = a + Math.sin(frø * 3 + j * 5 + n * 7) * .35; p.push([Math.cos(aa) * r, Math.sin(aa) * r * .62]); } sti.push(p); }
     const linje = (b, farge) => { x.strokeStyle = farge; x.lineWidth = b; x.lineCap = "round"; x.lineJoin = "round"; for (const p of sti) { x.beginPath(); p.forEach(([px, py], i) => i ? x.lineTo(px, py) : x.moveTo(px, py)); x.stroke(); } };
@@ -5334,43 +5341,25 @@ function shKlekkTegn(x, X, Y, R, u, jord, frø, tegn) {
   if (u <= .55) return;
   const v = Math.min(1, (u - .55) / .45), e = 1 - Math.pow(1 - v, 3);
   // Figuren er klippet ved hullet, så den nederste delen fortsatt er inni bildet.
+  // Den vrir og rister seg opp, som noe som kjemper seg ut av tung jord.
+  const vri = Math.sin(v * 38 + frø) * R * .1 * (1 - e) + Math.sin(v * 13) * R * .05 * (1 - e);
   x.save(); x.beginPath(); x.rect(X - R * 5, Y - R * 5, R * 10, hy - (Y - R * 5) + R * 2.2 * e); x.clip();
-  tegn(Y + R * 1.25 * (1 - e), R * (.7 + .3 * e)); x.restore();
+  tegn(X + vri, Y + R * 1.25 * (1 - e), R * (.7 + .3 * e));
+  // Jord som henger på kroppen og drysser av mens den kommer opp.
+  for (let j = 0; j < 7; j++) { const aa = frø * 3 + j * 1.9, rr = R * (.1 + .06 * (j % 3)) * (1 - e * .8), jx = X + vri + Math.cos(aa) * R * .5, jy = Y + R * 1.25 * (1 - e) + R * (.15 + .35 * ((j * 5) % 7) / 7);
+    x.fillStyle = `rgba(${m1},${m2},${m3},${.85 * (1 - e * .9)})`; x.beginPath(); x.ellipse(jx, jy, rr, rr * .8, aa, 0, 7); x.fill(); }
+  x.restore();
+  // Jordklumper rundt kanten av hullet, foran figuren.
+  for (let j = 0; j < 8; j++) { const aa = Math.PI * (.05 + .9 * j / 7), kr = R * (.12 + .08 * ((j * 3 + frø * 7) % 5) / 5) * (1 - v * .4);
+    const kx = X + Math.cos(aa) * hr * .95, ky = hy + Math.sin(aa) * hr * .55;
+    x.fillStyle = `rgb(${m1},${m2},${m3})`; x.beginPath(); x.ellipse(kx, ky, kr, kr * .75, aa, 0, 7); x.fill();
+    x.fillStyle = `rgba(${l1},${l2},${l3},.8)`; x.beginPath(); x.ellipse(kx - kr * .25, ky - kr * .3, kr * .45, kr * .25, aa, 0, 7); x.fill(); }
   if (v < 1) { x.save(); x.strokeStyle = `rgba(${m1},${m2},${m3},${.9 * (1 - v)})`; x.lineWidth = R * .14; x.beginPath(); x.ellipse(X, hy, hr * .92, hr * .55, 0, .15, Math.PI - .15); x.stroke(); x.restore(); }
 }
 function shKraterTegn(x, X, Y, R, a, jord) {
   const [m1, m2, m3] = jord.mork, g = x.createRadialGradient(X, Y, R * .1, X, Y, R);
   g.addColorStop(0, `rgba(6,4,2,${.75 * a})`); g.addColorStop(.7, `rgba(${m1},${m2},${m3},${.5 * a})`); g.addColorStop(1, `rgba(${m1},${m2},${m3},0)`);
   x.fillStyle = g; x.beginPath(); x.ellipse(X, Y, R, R * .62, 0, 0, 7); x.fill();
-}
-// Klistremerke-utgavene av en boss: mørk form under bildet, lys kant og papiret bak.
-function shBossToner(sp) { return sp._kl || (sp._kl = { mørk: spriteTone(sp, "rgba(14,8,4,.95)"), kant: spriteTone(sp, "#fffaf0"), papir: spriteTone(sp, "#ece4d4"), glød: spriteTone(sp, "rgba(255,50,40,.9)") }); }
-function shHullTegn(x, sp, X, Y, R, a) {
-  // Hullet etter et klistremerke: revet, mørk kant, papir med skygge fra kanten, og litt jord som har falt inn.
-  const T = shBossToner(sp), sk = 2.3 * R / Math.max(sp.width, sp.height), w = sp.width * sk, h = sp.height * sk;
-  x.save(); x.globalAlpha = a;
-  for (let j = 0; j < 6; j++) { const v = j / 6 * 6.283, o = R * .025; x.drawImage(T.mørk, X - w * .52 + Math.cos(v) * o, Y - h * .52 + Math.sin(v) * o, w * 1.04, h * 1.04); }
-  x.globalAlpha = a * .92; x.drawImage(T.papir, X - w / 2, Y - h / 2, w, h);
-  x.globalAlpha = a * .45; x.drawImage(T.mørk, X - w / 2 + R * .06, Y - h / 2 + R * .08, w * .97, h * .97);
-  x.globalAlpha = a * .92; x.drawImage(T.papir, X - w / 2 + R * .1, Y - h / 2 + R * .14, w * .9, h * .9);
-  x.restore();
-}
-function shBossKlekkTegn(x, X, Y, BR, u, sp, tid, tegn) {
-  if (!sp) { if (u > .62) tegn(X, Y - BR * .35 * (u - .62) / .38, BR, 0); return; }
-  const T = shBossToner(sp), sk = 2.3 * BR / Math.max(sp.width, sp.height), w = sp.width * sk, h = sp.height * sk;
-  if (u < .62) {
-    // Bossen ligger under bildet som et klistremerke: en mørk form som buler og dirrer. Så løfter kanten seg.
-    const v = u / .62, s2 = 1 + .05 * Math.sin(tid * 40) * v, jx = Math.sin(tid * 53) * BR * .03 * v;
-    x.save();
-    if (v > .45) { const l = (v - .45) / .55; x.globalAlpha = .9 * l; x.drawImage(T.kant, X - w / 2 + jx - BR * .06 * l, Y - h / 2 - BR * .08 * l, w, h); }
-    // En rød puls rundt kanten: noe er på vei ut. Gløden ligger bak, så bare randen lyser.
-    x.globalAlpha = (.3 + .4 * v) * (.6 + .4 * Math.sin(tid * 9)); x.drawImage(T.glød, X - w * s2 * .53 + jx, Y - h * s2 * .53, w * s2 * 1.06, h * s2 * 1.06);
-    x.globalAlpha = .35 + .6 * v; x.drawImage(T.mørk, X - w * s2 / 2 + jx, Y - h * s2 / 2, w * s2, h * s2); x.restore(); return;
-  }
-  // Den river seg løs: hullet blir igjen, og bossen løfter seg ut av bildet.
-  const v = (u - .62) / .38, e = 1 - Math.pow(1 - v, 3);
-  shHullTegn(x, sp, X, Y, BR, 1);
-  tegn(X, Y - BR * .35 * e, BR * (1 + .12 * Math.sin(v * Math.PI)), Math.sin(v * 9) * .25 * (1 - v));
 }
 function shGalagaStart(boss = false) {
   const s = sh; if (s.galaga || s.bytte || s.sopp > 0) return;
@@ -5379,7 +5368,7 @@ function shGalagaStart(boss = false) {
   const form = SH_FORMER[(Math.random() * SH_FORMER.length) | 0], N = boss ? 2 : 1 + ((Math.random() * 4) | 0);
   const fiender = []; for (let n = 0; n < N; n++) fiender.push(shNyFiende(n, n));
   s.galaga = { t: 0, fiender, bomber: [], dykkT: 2.5, fanget: 0, antall: boss ? 6 : Math.max(4, N), form: boss ? "sverm" : form, nesteNr: N, bolge: 1, bolger: 1,
-    boss: boss ? { x: s.toP ? -.3 : .5, y: s.toP ? SH_TOPP + .5 : SH_TOPP + .34, hp: 45, maks: 45, figur: (Math.random() * 9) | 0, tilstand: s.toP ? "inn" : "klekk", t: 0, blink: 0, spawnT: 4, bombeT: 2.5, dryppT: 3.5, rot: 0 } : null };
+    boss: boss ? { x: s.toP ? -.3 : .5, y: s.toP ? SH_TOPP + .5 : -.3, hp: 45, maks: 45, figur: (Math.random() * 9) | 0, tilstand: "inn", t: 0, blink: 0, spawnT: 4, bombeT: 2.5, dryppT: 3.5, rot: 0 } : null };
   if (boss) { const E = SH_BOSS_EGEN[shBossEgen(s)]; s.galaga.boss.egen = shBossEgen(s); s.tekster.push({ txt: "BOSS!", x: .5, y: .42, liv: 2.2, farge: "#ff5a6a" }, { txt: E.hva, x: .5, y: .49, liv: 2.6, fade: 1.2, farge: "#ffd0d0", liten: true, kapsel: true }); }
   else s.tekster.push({ txt: N === 1 ? "ALIEN!" : N + " ALIENS!", x: .5, y: .45, liv: 1.4, farge: "#7fe8ff" });
   shLyd(boss ? "boss" : "invasjon");
@@ -5425,6 +5414,7 @@ function shGalagaSteg(dt) {
     if (e.tilstand === "klekk") {
       if (e.t < 0) continue;
       if (!e.sprakk && e.t > .95) { e.sprakk = true; shKlekkSprekk(e.x, e.y + .015, 1); }
+      if (e.t > .8 && Math.random() < .5) { s.smuler = s.smuler || []; s.smuler.push({ x: e.x + (Math.random() - .5) * .04, y: e.y - .01, vx: (Math.random() - .5) * .04, vy: Math.random() * .03, r: .0015 + Math.random() * .0025, tone: Math.random(), stor: false, støv: Math.random() < .3, rot: Math.random() * 6, t: 0, skatt: null }); }
       if (e.t >= 1.35) { e.tilstand = "inn"; e.t = 0; e.fx = e.x; e.fy = e.y; (s.kratere = s.kratere || []).push({ x: e.x, y: e.y + .015, t0: s.tid }); }
       continue;
     }
@@ -5523,11 +5513,6 @@ function shBossSteg(g, dt, levende) {
   const s = sh, B = g.boss; if (!B) return;
   B.t += dt; B.blink = Math.max(0, B.blink - dt * 4);
   const ned = s.toP ? 0 : Math.max(0, SH_TOPP - .13); // Under knapperadene når bildet er flyttet ned.
-  if (B.tilstand === "klekk") {
-    if (!B.sprakk && B.t > 1.45) { B.sprakk = true; shKlekkSprekk(B.x, B.y, 2.4); (s.hull = s.hull || []).push({ x: B.x, y: B.y, figur: B.figur, t0: s.tid }); }
-    if (B.t > 2.3) { B.tilstand = "inn"; B.t = 0; }
-    return;
-  }
   if (B.tilstand === "inn") { B.y += ((s.toP ? SH_TOPP + .5 : .18 + ned) - B.y) * Math.min(1, dt * 1.4); if (s.toP) B.x += (.5 - B.x) * Math.min(1, dt * 1.4); if (B.t > 2) B.tilstand = "kamp"; }
   else if (B.tilstand === "kamp") {
     B.vT = (B.vT || 0) - dt;
@@ -7727,12 +7712,11 @@ function shTegn(t) {
     shPlanterTegn(x, f, s);
     if (s.fugl) { const F = s.fugl; tegnFigur(mon(F.figur), F.x * f, F.y * f, .045 * f, Math.sin(s.tid * 3 + F.fase) * .12, true, F.retn > 0, Math.sin(s.tid * 16 + F.fase) * .4); }
     if (s.kratere?.length) { s.kratere = s.kratere.filter(q => s.tid - q.t0 < 2.5); for (const q of s.kratere) shKraterTegn(x, q.x * f, q.y * f, .05 * f, 1 - (s.tid - q.t0) / 2.5, s.jord); }
-    if (s.hull?.length && fig.b.length) { s.hull = s.hull.filter(q => s.tid - q.t0 < 6); for (const q of s.hull) shHullTegn(x, fig.b[q.figur % fig.b.length], q.x * f, q.y * f, .16 * f, Math.min(1, Math.max(0, 1 - (s.tid - q.t0 - 3) / 3))); }
     if (s.galaga) {
       const g = s.galaga, R = .05 * f;
       for (const q of g.bomber) shKlattTegn(x, q.x * f, q.y * f, (q.stor ? .016 : q.drypp ? .012 : .008) * f, 1 + Math.min(1, q.vy * 2), s.jord, q.x * 9, s.tid);
       for (const e of g.fiender) {
-        if (e.tilstand === "klekk") { if (e.t >= 0) shKlekkTegn(x, e.x * f, e.y * f, R, Math.min(1, e.t / 1.35), s.jord, e.fase, (YY, RR) => tegnFigur(mon(e.figur), e.x * f, YY, RR, 0, true, e.nr % 2, Math.sin(s.tid * 14 + e.fase) * .35)); continue; }
+        if (e.tilstand === "klekk") { if (e.t >= 0) shKlekkTegn(x, e.x * f, e.y * f, R, Math.min(1, e.t / 1.35), s.jord, e.fase, (XX, YY, RR) => tegnFigur(mon(e.figur), XX, YY, RR, 0, true, e.nr % 2, Math.sin(s.tid * 14 + e.fase) * .35)); continue; }
         if (e.tilstand === "borte" || (e.tilstand === "inn" && e.t < 0)) continue;
         const X = e.x * f, Y = e.y * f, slag = Math.sin(s.tid * (e.tilstand === "kastet" ? 30 : 14) + e.fase) * .35;
         tegnFigur(mon(e.figur), X + (e.blink > 0 ? Math.sin(s.tid * 60) * e.blink * R * .15 : 0), Y, e.tilstand === "tilWing" ? R * (1 - Math.min(.4, e.wt * .4)) : R, e.rot, e.tilstand !== "boble" && e.tilstand !== "tilWing", e.nr % 2, slag);
@@ -7740,8 +7724,7 @@ function shTegn(t) {
         if (e.tilstand === "boble" || e.tilstand === "tilWing") boble(X, Y, R * 1.45, e.fase);
       }
       const B = g.boss;
-      if (B && B.tilstand === "klekk") { const sp = fig.b.length ? fig.b[B.figur % fig.b.length] : null; shBossKlekkTegn(x, B.x * f, B.y * f, .16 * f, Math.min(1, B.t / 2.3), sp, s.tid, (XX, YY, RR, rr) => { shArmer(x, sp, XX, YY, RR, s.tid, 0, 1, rr, (XX + YY) * .013); tegnFigur(sp, XX, YY, RR, rr, false, false, 0); }); }
-      else if (B) {
+      if (B) {
         const X = B.x * f, Y = B.y * f, BR = .16 * f, sp = fig.b.length ? fig.b[B.figur % fig.b.length] : null;
         // Rød glød bak bossen, og den blinker hvitt når den blir truffet.
         x.save(); x.globalCompositeOperation = "lighter";
