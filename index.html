@@ -156,6 +156,23 @@ h1 .signatur{font-size:.55em;letter-spacing:.06em;white-space:nowrap}
 .valg button{border:1px solid var(--strek);border-radius:999px;padding:9px 16px;font-weight:600}
 .valg button[aria-pressed="true"]{background:var(--signal);color:#1a1300;border-color:var(--signal)}
 .ark.peace{background:rgba(242,241,237,.96);padding-inline:30px}
+/* Game: Start er rosa, stor og puster rolig. Antall biter er små ord nederst, fortsatt lett å bytte. */
+#startark:not(.peace) .ark-boks{gap:16px}
+#startark:not(.peace) #startInfo{order:2}
+#startark:not(.peace) .knapper{order:3;flex-wrap:nowrap;align-items:stretch}
+#startark:not(.peace) .ark-boks>div:not(.knapper){order:4;display:flex;align-items:baseline;gap:14px;flex-wrap:wrap}
+#startark:not(.peace) .ark-boks>div:not(.knapper)>.liten{margin:0!important;font-size:11px;letter-spacing:.16em;text-transform:uppercase}
+#startark:not(.peace) .valg{gap:16px}
+#startark:not(.peace) .valg button{border:0;border-bottom:2px solid transparent;border-radius:0;padding:3px 0;font-weight:500;font-size:13px;letter-spacing:.04em;color:var(--demp);background:none}
+#startark:not(.peace) .valg button[aria-pressed="true"]{color:var(--tekst);background:none;border-bottom-color:#e23d84}
+#startark:not(.peace) .hoved{flex:1;background:linear-gradient(180deg,#ff6fae,#e23d84);color:#fff;font-family:var(--display);font-weight:800;font-size:18px;letter-spacing:.16em;text-transform:uppercase;
+  padding:16px 20px;border-radius:999px;box-shadow:0 6px 22px rgba(226,61,132,.45),inset 0 1px 0 rgba(255,255,255,.35);animation:startPuls 2.6s ease-in-out infinite}
+@keyframes startPuls{50%{box-shadow:0 6px 32px rgba(226,61,132,.75),inset 0 1px 0 rgba(255,255,255,.35)}}
+#startark:not(.peace) .hoved:active{transform:scale(.97)}
+#startark:not(.peace) .sekundar{border-radius:999px;padding:10px 18px;font-size:13px}
+@media (prefers-reduced-motion:reduce){#startark .hoved{animation:none}}
+.ipad-tips{flex-basis:100%;font-size:11.5px;font-style:italic;letter-spacing:.02em;color:var(--demp);opacity:.85}
+.ark.peace .ipad-tips{color:#888}
 .ark.peace .ark-boks{background:#fff;border:0;border-radius:0;color:#111;padding:26px;box-shadow:0 0 0 1px #d6d3cc,0 0 0 2px #2b2927,0 0 0 14px #121110,0 0 0 15px #000,0 14px 30px 10px rgba(0,0,0,.18)}
 .ark.peace .ark-boks h2{font-family:var(--brod);font-weight:300;font-size:22px;letter-spacing:.02em;color:#111}
 .ark.peace .liten{color:#666}
@@ -465,10 +482,10 @@ body:has(.resultat.vis) #spill .linje{opacity:0;pointer-events:none;transition:o
   <div class="samlingsnavn">Next collection</div>
   <div class="rutenett"><div class="neste" id="samling2"><div></div></div></div>
   <div class="samlingsnavn" id="sammenTittel"></div>
-  <div class="regel"><b>The race:</b> Your best score on each of the ten boards in a collection is added up. Finish #1 overall and you get the next collection for free. Anyone who takes first place later gets it too. Points: Easy (25 pieces) gives 10,000, Medium (49) 15,000, Hard (100) 20,000 and Chaos (144) 25,000 at normal speed. Be fast and you get up to double.</div>
+  <div class="regel"><b>The race:</b> Your best score on each of the ten boards in a collection is added up. Finish #1 overall and you get the next collection for free. Anyone who takes first place later gets it too. Points: Normal (25 pieces) gives 10,000, Harder (49) 15,000, Chaos (100) 20,000 and Insane (144) 25,000 at normal speed. Be fast and you get up to double.</div>
   <div class="sammen" id="sammen"><p class="liten">Loading standings …</p></div>
   <p class="kreditt">© 2001–2026 Tarjei Krogh. All photography, music and art. <a href="https://kroghx.com" target="_blank" rel="noopener">kroghx.com</a></p>
-  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 1.09<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
+  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 1.10<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
 </section>
 
 <div class="ark" id="tidUtArk" hidden style="z-index:200001">
@@ -613,10 +630,10 @@ function velgSamling(j) {
 try { velgSamling(Math.min(SAMLINGER.length - 1, +localStorage.getItem("sm-samling") || 0)); } catch { velgSamling(0); }
 const kode = i => "/" + SAMLING + "/" + String(i + 1).padStart(2, "0");
 // Magnet per bitantall: rekkevidde og smett-avstand i andel av bitstørrelsen, drag = hvor hardt den trekker.
-const VALG = [{ n: 25, navn: "Easy", k: 5, r: 5, rekk: 1.0, smett: 0.6, drag: 0.75 },
-              { n: 49, navn: "Medium", k: 7, r: 7, rekk: 1.2, smett: 0.7, drag: 0.8 },
-              { n: 100, navn: "Hard", k: 10, r: 10, rekk: 1.45, smett: 0.8, drag: 0.85 },
-              { n: 144, navn: "Chaos", k: 12, r: 12, rekk: 1.6, smett: 0.85, drag: 0.88 }];
+const VALG = [{ n: 25, navn: "Normal", k: 5, r: 5, rekk: 1.0, smett: 0.6, drag: 0.75 },
+              { n: 49, navn: "Harder", k: 7, r: 7, rekk: 1.2, smett: 0.7, drag: 0.8 },
+              { n: 100, navn: "Chaos", k: 10, r: 10, rekk: 1.45, smett: 0.8, drag: 0.85 },
+              { n: 144, navn: "Insane", k: 12, r: 12, rekk: 1.6, smett: 0.85, drag: 0.88 }];
 // Magneten 10 % svakere (Krogh): kortere rekkevidde, svakere trekk, mindre smett.
 VALG.forEach(v => { v.rekk *= .9; v.drag *= .9; v.smett *= .9; });
 // Medium litt snillere igjen (Krogh): 3 % sterkere magnet.
@@ -782,6 +799,8 @@ function visStartark(i) {
     b.onclick = () => { valgtAntall = o.n; visStartark(i); };
     v.appendChild(b);
   });
+  // iPhone har bare to nivåer. Et lite frampek til de ville nivåene på iPad.
+  if (!storSkjerm()) { const t = document.createElement("span"); t.className = "ipad-tips"; t.textContent = "If you dare, check out wilder levels on iPad."; v.appendChild(t); }
   const pc = iPeace(), f = fremdrift[BRETT[i].id]?.[(pc ? "peace_" : "") + valgtAntall];
   $("startark").classList.toggle("peace", pc);
   $("startInfo").textContent = "You have " + fmt(pc ? Math.round(tidsfrist(i, valgtAntall) * PEACE_TID) : tidsfrist(i, valgtAntall)) + ". The clock starts when you touch the first piece." + (f ? " Your best: " + f.poeng.toLocaleString("en") + " points in " + fmt(f.tid) + "." : "");
