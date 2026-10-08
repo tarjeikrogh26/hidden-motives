@@ -704,7 +704,7 @@ body.lys #modusDeal{--farge:#0f8f6c;--glod:15,143,108}
   <div class="regel">Everything counts: Game, Peace, Bubble it 1P and 2P, every board, every level, every collection. Each board list gives up to 100 points (a Bubble it list up to 1,000): #1 gets them all, the rest their share of the top score.</div>
   <div class="sammen" id="spillere"><p class="liten">Loading players …</p></div>
   <p class="kreditt">© 2001–2026 Tarjei Krogh. All photography, music and art. <a href="https://kroghx.com" target="_blank" rel="noopener">kroghx.com</a></p>
-  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 1.74<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
+  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 1.75<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
 </section>
 
 <div class="ark" id="tidUtArk" hidden style="z-index:200001">
@@ -5479,18 +5479,20 @@ function shStjerne(x, y, str, vent = 0) { if (sh.stjerner.length < 70) sh.stjern
 // Ett treff vasker bort ett eller flere lag. kilde "syre" = sprut og renn fra en sprukket boble.
 // Skum der boblene sprekker: det blir liggende en stund og vasker bort ett lag om gangen rundt seg,
 // så de siste små, harde flekkene forsvinner også.
-function shSkumFlekk(x, y, mengde = 1) {
+function shSkumFlekk(x, y, mengde = 1, spis = false) {
   const s = sh; s.skumFlekk = s.skumFlekk || [];
   const nær = s.skumFlekk.find(q => Math.hypot(q.x - x, q.y - y) < .035);
-  if (nær) { nær.liv = Math.min(1.3, nær.liv + .25 * mengde); nær.r = Math.min(.045, nær.r + .002 * mengde); return; }
+  if (nær) { nær.liv = Math.min(1.3, nær.liv + .25 * mengde); nær.r = Math.min(.045, nær.r + .002 * mengde); if (spis) nær.spis = true; return; }
   if (s.skumFlekk.length >= 40) s.skumFlekk.shift();
-  s.skumFlekk.push({ x, y, r: .03 + .008 * mengde, liv: .7 + .3 * mengde, tikk: .3 + Math.random() * .3, frø: Math.random() * 100 });
+  s.skumFlekk.push({ x, y, r: .03 + .008 * mengde, liv: .7 + .3 * mengde, tikk: .3 + Math.random() * .3, frø: Math.random() * 100, spis });
 }
 function shSkumSteg(dt) {
   const s = sh; if (!s.skumFlekk) return;
   for (const q of s.skumFlekk) {
     q.liv -= dt / 8; q.tikk -= dt;
-    if (q.tikk <= 0 && q.liv > 0) { q.tikk = 1.3; shVask(q.x, q.y, q.r * .85, 1, "syre"); }
+    if (q.tikk <= 0 && q.liv > 0) { q.tikk = q.spis ? .55 : 1.3; shVask(q.x, q.y, q.r * .85, 1, "syre");
+      // Skum fra skuddboblene graver seg oppover i jorda, som såpe i en fontene.
+      if (q.spis && shKlossVed(q.x, q.y - q.r * .6)) { q.y -= .012; q.r = Math.min(.05, q.r + .0015); } }
   }
   s.skumFlekk = s.skumFlekk.filter(q => q.liv > 0);
 }
@@ -5543,7 +5545,7 @@ function shTreff(k, lag = 1, kilde = null) {
   if (kilde !== "syre" && !s.bytte && s.smaa.length < 5 && Math.random() < .03) shSmaaNy(mx, my);
   // Edelsteiner er sjeldne, og bare én faller om gangen.
   if (kilde !== "syre" && !(s.sopp > 0) && !s.kapsler.length && s.sabot.length && shHar("kapsel", "K") && Math.random() < .012 && shKapselLov(s)) { shKapselTatt(s); s.kapsler.push({ x: mx, y: my, t: "K", r: .044, vy: .04, fase: Math.random() * 6 }); }
-  if (kilde !== "syre" && shHar("kapsel", "Z") && !s.ormSett && !s.orm && !(s.sopp > 0) && !s.bytte && !s.galaga && !s.kapsler.length && s.igjen < s.klosser.length * .85 && Math.random() < .02 && shKapselLov(s)) {
+  if (kilde !== "syre" && shHar("kapsel", "Z") && !s.ormSett && !s.orm && !(s.sopp > 0) && !s.bytte && !s.galaga && !s.kapsler.length && s.igjen < s.klosser.length * .3 && (s.ormBrett ??= Math.random() < .35) && Math.random() < .02 && shKapselLov(s)) {
     s.ormSett = true; shKapselTatt(s); s.kapsler.push({ x: mx, y: my, t: "Z", r: .044, vy: .04, fase: Math.random() * 6 });
   } else if (kilde !== "syre" && !(s.sopp > 0) && !s.bytte && !s.kapsler.length && Math.random() < .004 && shKapselLov(s)) {
     const valgt = shKapselValg(); shKapselTatt(s);
@@ -6651,7 +6653,8 @@ function shVaerP(p) { const s = sh; s.vaerP = s.vaerP || []; if (s.vaerP.length 
 function shMørkeStart() {
   const s = sh; s.mørke = { t: 0, varighet: 14, lynT: 2 + Math.random() * 1.5, lyn: [], tordenT: null };
   s.tekster = s.tekster.filter(tk => !tk.kapsel && !tk.vaer);
-  s.tekster.push({ txt: "BLACKOUT!", x: .5, y: SH_TOPP + .42, liv: 2.8, fade: 1.4, farge: "#c9d6ff", vaer: true }, { txt: "ONLY THE BUBBLE GIVES LIGHT", x: .5, y: SH_TOPP + .48, liv: 3.2, fade: 1.4, farge: "#e6ecff", liten: true, kapsel: true });
+  s.tekster.push({ txt: "STORM!", x: .5, y: SH_TOPP + .42, liv: 2.8, fade: 1.4, farge: "#c9d6ff", vaer: true }, { txt: "THE LIGHTNING WASHES THE MUD", x: .5, y: SH_TOPP + .48, liv: 3.2, fade: 1.4, farge: "#e6ecff", liten: true, kapsel: true });
+  shRegnStart(); s.regn.varighet = Math.max(s.regn.varighet, 15);
   if (lydPa) { shGlid(220, 40, .7, .05, "sawtooth", .5, .3); shSus(.5, "lowpass", 400, .04, 1, .6, .3); }
 }
 function shMørkeSteg(dt) {
@@ -6661,7 +6664,10 @@ function shMørkeSteg(dt) {
   const inn = Math.min(1, M.t / 1), ut = M.t < M.varighet ? 1 : Math.max(0, 1 - (M.t - M.varighet) / 1.4), flimmer = M.t > M.varighet && M.t < M.varighet + 1 ? (Math.sin(M.t * 45) > .2 ? .35 : 1) : 1;
   M.I = inn * ut * flimmer;
   M.lynT -= dt;
-  if (M.lynT <= 0 && M.t < M.varighet - 1) { M.lynT = 2.4 + Math.random() * 2.2; M.lyn.push({ t: 0, x: .1 + Math.random() * .8 }); M.tordenT = .35 + Math.random() * .6; }
+  if (M.lynT <= 0 && M.t < M.varighet - 1) { M.lynT = 1.6 + Math.random() * 1.8; const L = { t: 0, x: .1 + Math.random() * .8, ned: [] };
+    // Ett til tre nedslag. Der lynet slår ned, går jorda bort.
+    for (let n = 1 + Math.floor(Math.random() * 3); n > 0; n--) { const px = .08 + Math.random() * .84, py = SH_TOPP + .12 + Math.random() * .7; L.ned.push([px, py]); shVask(px, py, .055, 2, "syre"); shStov(px, py, 26, "220,235,255", .3); }
+    M.lyn.push(L); s.rist = Math.max(s.rist || 0, .35); M.tordenT = .25 + Math.random() * .5; }
   for (const L of M.lyn) L.t += dt; M.lyn = M.lyn.filter(L => L.t < .5);
   if (M.tordenT != null) { M.tordenT -= dt; if (M.tordenT <= 0) { M.tordenT = null; if (lydPa) { shSus(1.8, "lowpass", 160, .14, 1, .8, .7); shGlid(80, 38, 1.6, .06, "sine", .8, .6); } } }
   if (M.t > M.varighet + 1.5) s.mørke = null;
@@ -6673,7 +6679,7 @@ function shMørkeTegn(x, f, s) {
   const I = M.I * (1 - lys * .92); if (I <= .01) { if (lys > 0) { x.fillStyle = `rgba(220,230,255,${.12 * lys})`; x.fillRect(0, 0, f, SH_H * f); } return; }
   const c = x.canvas, oc = s.mørkCv && s.mørkCv.width === c.width && s.mørkCv.height === c.height ? s.mørkCv : (s.mørkCv = Object.assign(document.createElement("canvas"), { width: c.width, height: c.height })), o = oc.getContext("2d");
   o.setTransform(1, 0, 0, 1, 0, 0); o.clearRect(0, 0, oc.width, oc.height); o.setTransform(x.getTransform());
-  o.globalCompositeOperation = "source-over"; o.fillStyle = `rgba(3,5,12,${.95 * I})`; o.fillRect(-2, -2, f + 4, SH_H * f + 4);
+  o.globalCompositeOperation = "source-over"; o.fillStyle = `rgba(3,5,12,${.62 * I})`; o.fillRect(-2, -2, f + 4, SH_H * f + 4);
   // Hull i mørket der det lyser.
   o.globalCompositeOperation = "destination-out";
   const hull = (X, Y, R, a = 1) => { const g = o.createRadialGradient(X, Y, 0, X, Y, R); g.addColorStop(0, `rgba(0,0,0,${a})`); g.addColorStop(.45, `rgba(0,0,0,${a * .75})`); g.addColorStop(1, "rgba(0,0,0,0)"); o.fillStyle = g; o.fillRect(X - R, Y - R, R * 2, R * 2); };
@@ -6685,10 +6691,14 @@ function shMørkeTegn(x, f, s) {
   // Lynet selv: en sikksakk ned fra toppen.
   for (const L of M.lyn) if (L.t < .24 && (L.t < .07 || L.t > .16)) {
     x.save(); x.globalCompositeOperation = "lighter"; x.strokeStyle = "rgba(225,235,255,.9)"; x.lineWidth = Math.max(1.5, f * .004); x.shadowColor = "#bcd0ff"; x.shadowBlur = f * .03;
-    x.beginPath(); let lx = L.x * f, ly = 0; x.moveTo(lx, ly); let r = L.x * 999;
-    while (ly < (SH_TOPP + .5) * f) { r = (r * 9301 + 49297) % 233280; lx += (r / 233280 - .5) * f * .08; ly += f * (.03 + (r % 7) * .006); x.lineTo(lx, ly); }
-    x.stroke(); x.restore(); }
-  if (lys > 0) { x.fillStyle = `rgba(220,230,255,${.1 * lys})`; x.fillRect(0, 0, f, SH_H * f); }
+    let r = L.x * 999; for (const [px, py] of L.ned) { x.beginPath(); let lx = L.x * f, ly = 0; x.moveTo(lx, ly); const mx = px * f, my = py * f;
+      while (ly < my - f * .04) { r = (r * 9301 + 49297) % 233280; const u = Math.min(1, ly / my); lx += (mx - lx) * .25 * u + (r / 233280 - .5) * f * .07; ly += f * (.03 + (r % 7) * .006); x.lineTo(lx, Math.min(ly, my)); }
+      x.lineTo(mx, my); x.stroke(); }
+    x.restore(); }
+  // Hele brettet lyser opp, og sterkest der lynet slår ned.
+  if (lys > 0) { x.save(); x.globalCompositeOperation = "lighter"; x.fillStyle = `rgba(200,215,255,${.2 * lys})`; x.fillRect(0, 0, f, SH_H * f);
+    for (const L of M.lyn) if (L.t < .3) for (const [px, py] of L.ned) { const R = f * .3, g = x.createRadialGradient(px * f, py * f, 0, px * f, py * f, R); g.addColorStop(0, `rgba(235,242,255,${.55 * lys})`); g.addColorStop(1, "rgba(235,242,255,0)"); x.fillStyle = g; x.fillRect(px * f - R, py * f - R, R * 2, R * 2); }
+    x.restore(); }
 }
 // FLIPPERDELER under gjørma: to bumpere, tre lamper og en jackpot-lampe ligger gjemt i bildet.
 // Vaskes de fram, virker de: bumperne sparker boblen, lampene tennes når boblen ruller over,
@@ -8079,7 +8089,7 @@ function shKapsel(t) {
   const fullt = t === "+" && s.liv >= (s.plasser || 3);
   s.tekster.push({ txt: q.navn, x: .5, y: SH_TOPP + .52, liv: 4.2, fade: 1.8, farge: q.farge, stor: true, kapsel: true }, { txt: fullt ? "NO SPACE · USE IT NOW" : q.hva, x: .5, y: SH_TOPP + .58, liv: 4.2, fade: 1.8, farge: "#ffffff", liten: true, kapsel: true });
   if (t === "W") s.eff.W = 15;
-  if (t === "J") { s.eff.J = 12; shLyd("power"); }
+  if (t === "J") { s.eff.J = 25; shLyd("power"); }
   if (t === "R") shRegnStart();
   if (t === "I") { s.eff.I = 10; shLyd("power"); }
   if (SH_VOKS[t]) shVoksStart(t);
@@ -8166,7 +8176,7 @@ function shRacketTreff(b, R) {
   if (Math.abs(b.x - s.padX) < .02 && !s.toP) { s.flip[0].t = 0; s.flip[1].t = 0; a = (Math.random() - .5) * .1; b.kraft = Math.max(b.kraft, 4); b.kraftN = Math.max(b.kraftN, 6); b.boost = Math.max(b.boost, 1.8); b.halo = Math.max(b.halo || 0, s.tid + 1.2); s.glod = 1; shLyd("power");
     if (s.tid - (s.dobbelT ?? -9) > 10) { s.dobbelT = s.tid; s.tekster.push({ txt: "DOUBLE FLIP!", x: shClamp(b.x, .2, .8), y: SH_PY - .07, liv: 1.2, farge: "#ff6fd8" }); } }
   // GIANT FLIPPERS: boblen skytes av med voldsom kraft og en selvlysende hale, og bryter mye sterkere gjennom jorda.
-  if ((s.kjempe || 0) > .4) { b.kraft = Math.max(b.kraft, 4); b.kraftN = Math.max(b.kraftN, 6); b.boost = Math.max(b.boost, 2.5); shKjempeSlag(b.x); b.halo = s.tid + 1.8; s.glod = 1; shLyd("power"); }
+  if ((s.kjempe || 0) > .4) { b.kraft = Math.max(b.kraft, 5); b.kraftN = Math.max(b.kraftN, 9); b.boost = Math.max(b.boost, 3.3); shKjempeSlag(b.x); b.halo = s.tid + 2.4; b.hyper = s.tid + 2.4; s.glod = 1; shLyd("power"); }
   b.boost = Math.max(b.boost, 1.15);
   shSkittRens(b.x);
   // Dypblå stav: boblen vokser for hvert treff.
@@ -8483,8 +8493,8 @@ function shOppdater(dt) {
       if (bo) { bo.borte = true; q.borte = true; shStov(bo.x, bo.y, 6, "180,140,90", .08); continue; }
     }
     const k = shKlossVed(q.x, q.y);
-    if (k) { if (!q.angrep || Math.random() < .15) shTreff(k, 1); if (!q.angrep) shSkumFlekk(q.x, q.y, .6); for (let n = 0; n < 3; n++) if (s.skum.length < 320) s.skum.push({ x: q.x + (Math.random() - .5) * .025, y: q.y + (Math.random() - .5) * .01, r: .002 + Math.random() * .005, liv: 1, fart: 1.2 + Math.random() * .8 }); q.budsjett--; q.vy *= .55;
-      if (q.budsjett <= 0) { q.borte = true; if (!q.angrep) shSkumFlekk(q.x, q.y, 1.2); for (let n = 0; n < 7; n++) if (s.skum.length < 320) s.skum.push({ x: q.x + (Math.random() - .5) * .035, y: q.y + (Math.random() - .5) * .015, r: .002 + Math.random() * .006, liv: 1, fart: 1.3 + Math.random() * .9 }); } }
+    if (k) { if (!q.angrep || Math.random() < .15) shTreff(k, 1); if (!q.angrep) shSkumFlekk(q.x, q.y, .6, true); for (let n = 0; n < 3; n++) if (s.skum.length < 320) s.skum.push({ x: q.x + (Math.random() - .5) * .025, y: q.y + (Math.random() - .5) * .01, r: .002 + Math.random() * .005, liv: 1, fart: 1.2 + Math.random() * .8 }); q.budsjett--; q.vy *= .55;
+      if (q.budsjett <= 0) { q.borte = true; if (!q.angrep) shSkumFlekk(q.x, q.y, 1.2, true); for (let n = 0; n < 7; n++) if (s.skum.length < 320) s.skum.push({ x: q.x + (Math.random() - .5) * .035, y: q.y + (Math.random() - .5) * .015, r: .002 + Math.random() * .006, liv: 1, fart: 1.3 + Math.random() * .9 }); } }
     if (q.y < 0) q.borte = true;
   }
   s.skudd = s.skudd.filter(q => !q.borte);
@@ -10191,14 +10201,14 @@ function shTegn(t) {
   if (s.skudd.length) { x.save();
     for (const q of s.skudd) { const X = q.x * f, Y = q.y * f, r = q.r * f, hue = [175, 300, 95, 55, 200][Math.floor(q.fase * 10) % 5], hue2 = (hue + 120) % 360;
       // Et svakt skjær rundt, så de synes over mørke bilder, men uten å bli lyskuler.
-      x.globalCompositeOperation = "lighter"; x.globalAlpha = .16; x.drawImage(shNeon(hue), X - r * 2, Y - r * 2, r * 4, r * 4);
+      x.globalCompositeOperation = "lighter"; x.globalAlpha = .34; x.drawImage(shNeon(hue), X - r * 2.4, Y - r * 2.4, r * 4.8, r * 4.8);
       const L = Math.min(r * 3, Math.hypot(q.vx, q.vy) * f * .02), a = Math.atan2(q.vy, q.vx); const tx = X - Math.cos(a) * L, ty = Y - Math.sin(a) * L, hg = x.createLinearGradient(X, Y, tx, ty); hg.addColorStop(0, "rgba(235,248,255,.22)"); hg.addColorStop(1, "rgba(235,248,255,0)"); x.globalAlpha = 1; x.strokeStyle = hg; x.lineWidth = r * .4; x.lineCap = "round"; x.beginPath(); x.moveTo(X, Y); x.lineTo(tx, ty); x.stroke();
       x.globalCompositeOperation = "source-over";
       // Nesten klar inni, litt lysere mot kanten.
-      const g = x.createRadialGradient(X, Y, r * .2, X, Y, r); g.addColorStop(0, "rgba(255,255,255,.03)"); g.addColorStop(.75, "rgba(240,250,255,.08)"); g.addColorStop(1, "rgba(255,255,255,.22)"); x.fillStyle = g; x.beginPath(); x.arc(X, Y, r, 0, 7); x.fill();
+      const g = x.createRadialGradient(X, Y, r * .2, X, Y, r); g.addColorStop(0, `hsla(${hue},90%,85%,.08)`); g.addColorStop(.75, `hsla(${hue},90%,88%,.15)`); g.addColorStop(1, "rgba(255,255,255,.3)"); x.fillStyle = g; x.beginPath(); x.arc(X, Y, r, 0, 7); x.fill();
       // Tynn regnbuekant: to svake farger som glir over i hverandre.
-      const kg = x.createLinearGradient(X - r, Y - r, X + r, Y + r); kg.addColorStop(0, `hsla(${hue},80%,82%,.55)`); kg.addColorStop(.5, "rgba(255,255,255,.35)"); kg.addColorStop(1, `hsla(${hue2},80%,82%,.5)`);
-      x.strokeStyle = kg; x.lineWidth = Math.max(.8, r * .13); x.beginPath(); x.arc(X, Y, r, 0, 7); x.stroke();
+      const kg = x.createLinearGradient(X - r, Y - r, X + r, Y + r); kg.addColorStop(0, `hsla(${hue},95%,78%,.9)`); kg.addColorStop(.5, "rgba(255,255,255,.55)"); kg.addColorStop(1, `hsla(${hue2},95%,78%,.85)`);
+      x.strokeStyle = kg; x.lineWidth = Math.max(1, r * .17); x.beginPath(); x.arc(X, Y, r, 0, 7); x.stroke();
       x.fillStyle = "rgba(255,255,255,.85)"; x.beginPath(); x.ellipse(X - r * .38, Y - r * .42, r * .26, r * .12, -.7, 0, 7); x.fill();
       x.fillStyle = "rgba(255,255,255,.4)"; x.beginPath(); x.arc(X + r * .42, Y + r * .4, r * .08, 0, 7); x.fill(); }
     x.restore(); }
@@ -10302,6 +10312,11 @@ function shTegn(t) {
   for (const b of s.baller) { if (!(b.halo > s.tid)) { b.hale = null; continue; } const H = b.hale = b.hale || []; H.push([b.x, b.y]); if (H.length > 16) H.shift();
     const a0 = Math.min(1, (b.halo - s.tid) / .6); x.save(); x.globalCompositeOperation = "lighter";
     H.forEach(([hx, hy], i) => { const u = (i + 1) / H.length, rr = shRad(b) * f * (.5 + .9 * u), g = x.createRadialGradient(hx * f, hy * f, 0, hx * f, hy * f, rr * 1.6); g.addColorStop(0, `hsla(${(320 + i * 6) % 360},100%,72%,${.35 * u * a0})`); g.addColorStop(1, "hsla(300,100%,60%,0)"); x.fillStyle = g; x.fillRect(hx * f - rr * 1.6, hy * f - rr * 1.6, rr * 3.2, rr * 3.2); });
+    // Hyperspace etter store flippere: skyggekopier av boblen og lange fartsstriper bak den.
+    if (b.hyper > s.tid && H.length > 4) { const a1 = Math.min(1, (b.hyper - s.tid) / .8), R = shRad(b) * f, v = Math.hypot(b.vx, b.vy) || 1, dx = -b.vx / v, dy = -b.vy / v;
+      for (let k = 1; k <= 4; k++) { const j = H.length - 1 - k * 3; if (j < 0) break; const [gx, gy] = H[j]; x.strokeStyle = `rgba(200,240,255,${.45 * a1 * (1 - k / 5)})`; x.lineWidth = Math.max(1, R * .12); x.beginPath(); x.arc(gx * f, gy * f, R * (1 - k * .06), 0, 7); x.stroke(); }
+      for (const o of [-.7, -.25, .25, .7]) { const sx = b.x * f - dy * R * o, sy = b.y * f + dx * R * o, L = f * (.12 + .08 * (1 - Math.abs(o))), lg = x.createLinearGradient(sx, sy, sx + dx * L, sy + dy * L); lg.addColorStop(0, `rgba(235,250,255,${.6 * a1})`); lg.addColorStop(1, "rgba(235,250,255,0)");
+        x.strokeStyle = lg; x.lineWidth = Math.max(1, R * .1); x.beginPath(); x.moveTo(sx, sy); x.lineTo(sx + dx * L, sy + dy * L); x.stroke(); } }
     x.restore(); }
   shIldTegn(x, f, s);
   shMørkeTegn(x, f, s);
@@ -10457,7 +10472,7 @@ function shSteg(t) {
 }
 addEventListener("resize", () => { if (sh) shOppsett(); });
 // Bare for automatisk testing lokalt (?autotest).
-if (location.search.includes("autotest")) { window.__sh = () => sh; window.__shFerdig = () => shFerdig(); window.__ark = () => ark; window.__shHud = () => shHud(); window.__shMistet = () => shMistetLiv(); window.__shOppdater = dt => { shOppdater(dt); if (sh) { sh.tid += dt; shPartikler(dt); } }; window.__shTreff = shTreff; window.__shGalaga = shGalagaStart; window.__shSopp = shSopp; window.__shBytte = shByttetStart; window.__shOrm = shOrmStart; window.__levende = levendeStart; window.__gn = () => ({ gnister, raf: gnistRAF }); window.__hendelse = t => t === "katt" ? kattBesøk() : t === "stov" ? støvstorm() : t === "ketchup" ? ketchup() : t === "tilt" ? tilt(true) : t === "vokse" ? vokseBrikke() : t === "break" ? puzzleBreak() : t === "speilX" ? speilStart("x") : t === "speilY" ? speilStart("y") : lynnedslag(); window.__shSprekk = shSprekk; window.__shP2 = () => ({ pad2X: sh.pad2X, P2Y: SH_P2Y, TOPP: SH_TOPP, H: SH_H }); window.__shTegn = () => { shRens(); shTegn(performance.now()); }; window.__spill = () => spill; window.__banner = banner; window.__kast = kast; window.__gratisPeace = async () => sjekkGratis(await hentSammen("P")); window.__fremdrift = () => fremdrift; window.__sammenP = async () => ({ lok: minLokaleSum("P"), f: fremdrift.b1, liste: (await hentSammen("P")).slice(0, 2) }); window.__shKrabbe = () => shKrabbeStart(); window.__shHopper = () => shHopperStart(); window.__shSlipp = () => shSlipp(); window.__shPY = () => SH_PY; window.__shTopp = () => SH_TOPP; window.__shKapsel = shKapsel; window.__shSnø = shSnøStart; window.__shMørke = shMørkeStart; window.__uw = () => uw; window.__uwStart = uwStart; window.__uwOppdater = dt => uwOppdater(dt); window.__uwTegn = () => uwTegn(); window.__shFrys = shFrys; window.__shPlante = shPlante; window.__myntSprites = myntSprites; window.__katt = hentKattHode; window.__pote = hentKattPote; window.__shG = () => shG; window.__tellOpp = tellOpp; window.__lyd = () => { const c = lydCtx; return c ? { musikk: musikkUt(c).gain.value, effekt: effektUt(c).gain.value } : null; }; window.__speilSlutt = speilSlutt; window.__figurKant = async (n, farge) => shFigurKant(await hentBilde("figurer/" + n + ".webp"), farge); window.__hentBilde = hentBilde; window.__falskMusikk = () => { lydCtx = lydCtx || { currentTime: 0 }; const nei = () => {}; musikk = { kilde: { stop: nei, playbackRate: { v: 1, setTargetAtTime(r) { this.v = r; } } }, g: { gain: { value: .3, cancelScheduledValues: nei, setValueAtTime: nei, linearRampToValueAtTime: nei, setTargetAtTime: nei } } }; }; window.__musikkFart = () => musikk?.kilde?.playbackRate?.v ?? null; window.__musikkFor = id => musikkFor(id)?.fil; window.__geo = () => geo; window.__plasser = plasser; window.__skjermPkt = skjermPkt; }
+if (location.search.includes("autotest")) { window.__sh = () => sh; window.__shFerdig = () => shFerdig(); window.__ark = () => ark; window.__shHud = () => shHud(); window.__shMistet = () => shMistetLiv(); window.__shOppdater = dt => { shOppdater(dt); if (sh) { sh.tid += dt; shPartikler(dt); } }; window.__shTreff = shTreff; window.__shGalaga = shGalagaStart; window.__shSopp = shSopp; window.__shBytte = shByttetStart; window.__shOrm = shOrmStart; window.__levende = levendeStart; window.__gn = () => ({ gnister, raf: gnistRAF }); window.__hendelse = t => t === "katt" ? kattBesøk() : t === "stov" ? støvstorm() : t === "ketchup" ? ketchup() : t === "tilt" ? tilt(true) : t === "vokse" ? vokseBrikke() : t === "break" ? puzzleBreak() : t === "speilX" ? speilStart("x") : t === "speilY" ? speilStart("y") : lynnedslag(); window.__shSprekk = shSprekk; window.__shP2 = () => ({ pad2X: sh.pad2X, P2Y: SH_P2Y, TOPP: SH_TOPP, H: SH_H }); window.__shTegn = () => { shRens(); shTegn(performance.now()); }; window.__spill = () => spill; window.__banner = banner; window.__kast = kast; window.__gratisPeace = async () => sjekkGratis(await hentSammen("P")); window.__fremdrift = () => fremdrift; window.__sammenP = async () => ({ lok: minLokaleSum("P"), f: fremdrift.b1, liste: (await hentSammen("P")).slice(0, 2) }); window.__shKrabbe = () => shKrabbeStart(); window.__shHopper = () => shHopperStart(); window.__shSlipp = () => shSlipp(); window.__shPY = () => SH_PY; window.__shTopp = () => SH_TOPP; window.__shKapsel = shKapsel; window.__shSnø = shSnøStart; window.__shMørke = shMørkeStart; window.__uw = () => uw; window.__uwStart = uwStart; window.__uwOppdater = dt => uwOppdater(dt); window.__uwTegn = () => uwTegn(); window.__shFrys = shFrys; window.__shPlante = shPlante; window.__myntSprites = myntSprites; window.__katt = hentKattHode; window.__pote = hentKattPote; window.__shG = () => shG; window.__shStorm = () => shMørkeStart(); window.__tellOpp = tellOpp; window.__lyd = () => { const c = lydCtx; return c ? { musikk: musikkUt(c).gain.value, effekt: effektUt(c).gain.value } : null; }; window.__speilSlutt = speilSlutt; window.__figurKant = async (n, farge) => shFigurKant(await hentBilde("figurer/" + n + ".webp"), farge); window.__hentBilde = hentBilde; window.__falskMusikk = () => { lydCtx = lydCtx || { currentTime: 0 }; const nei = () => {}; musikk = { kilde: { stop: nei, playbackRate: { v: 1, setTargetAtTime(r) { this.v = r; } } }, g: { gain: { value: .3, cancelScheduledValues: nei, setValueAtTime: nei, linearRampToValueAtTime: nei, setTargetAtTime: nei } } }; }; window.__musikkFart = () => musikk?.kilde?.playbackRate?.v ?? null; window.__musikkFor = id => musikkFor(id)?.fil; window.__geo = () => geo; window.__plasser = plasser; window.__skjermPkt = skjermPkt; }
 
 
 
