@@ -630,7 +630,7 @@ body.lys #modusDeal{--farge:#0f8f6c;--glod:15,143,108}
   <div class="regel">Everything counts: Game, Peace, Scrub it 1P and 2P, every board, every level, every collection. Each board list gives up to 100 points (a Scrub it list up to 1,000): #1 gets them all, the rest their share of the top score.</div>
   <div class="sammen" id="spillere"><p class="liten">Loading players …</p></div>
   <p class="kreditt">© 2001–2026 Tarjei Krogh. All photography, music and art. <a href="https://kroghx.com" target="_blank" rel="noopener">kroghx.com</a></p>
-  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 1.47<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
+  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 1.48<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
 </section>
 
 <div class="ark" id="tidUtArk" hidden style="z-index:200001">
@@ -7223,7 +7223,6 @@ function shOppdater(dt) {
     for (let n = 0; n < 3 && s.skuddT <= 0; n++) {
       const angrep = !!s.galaga && s.eff.K < .3;
       s.skuddT += angrep ? .075 : .045;
-      if (s.tid - (s.skuddFlipT ?? -9) > .24) { s.skuddFlipT = s.tid; s.skuddSide = 1 - (s.skuddSide ?? 0); s.flip[s.skuddSide].t = 0; }
       const sikte = shClamp(s.padV * .6, -.6, .6) + Math.sin(s.tid * 7) * .05, v = 1.4 + Math.random() * .3;
       const kilder = [s.padX].concat(s.wingmen.filter(w => w.klar).map(w => s.padX + w.side * (s.padW / 2 + .05)));
       for (const kx of kilder) s.skudd.push({ x: kx + (Math.random() - .5) * .025, y: SH_PY - .03, vx: Math.sin(sikte) * v + (Math.random() - .5) * .06, vy: -Math.cos(sikte) * v, r: .008 + Math.random() * .006, budsjett: angrep ? 1 : 2, fase: Math.random() * 6, angrep });
@@ -7554,7 +7553,7 @@ function shStav(x, cx, cy, w, h, vinkel, pivot, s, alfa = 1, skitt = null) {
   x.fillStyle = gr; x.fill(sti);
   if (alfa < 1) { x.restore(); return; }
   x.strokeStyle = "#18181a"; x.lineWidth = Math.max(1.2, h * .14); x.lineJoin = "round"; x.stroke(sti);
-  x.fillStyle = "rgba(255,253,246,.55)"; x.beginPath(); x.ellipse(px + (tx - px) * .45, yy - r1 * .4, Math.abs(tx - px) * .38, r2 * .2, Math.atan2(r1 - r2, tx - px) * .5 * (venstre ? 1 : -1), 0, 7); x.fill();
+  x.fillStyle = "rgba(255,253,246,.55)"; x.beginPath(); x.ellipse(px + (tx - px) * .45, yy - r1 * .4, Math.abs(tx - px) * .38, r2 * .2, Math.atan2(r1 - r2, Math.abs(tx - px)) * .5 * (venstre ? 1 : -1), 0, 7); x.fill();
   if (skitt && skitt.length) {
     // Gjørme på flipperen: bare et svakt, lysegrått skjær på toppflaten (Krogh: flipperne skal være lyse og tydelige). Noen glinser litt.
     x.save(); x.clip(sti);
