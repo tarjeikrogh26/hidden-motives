@@ -628,7 +628,7 @@ body.lys #modusDeal{--farge:#0f8f6c;--glod:15,143,108}
   <div class="regel">Everything counts: Game, Peace, Scrub it 1P and 2P, every board, every level, every collection. Each board list gives up to 100 points (a Scrub it list up to 1,000): #1 gets them all, the rest their share of the top score.</div>
   <div class="sammen" id="spillere"><p class="liten">Loading players …</p></div>
   <p class="kreditt">© 2001–2026 Tarjei Krogh. All photography, music and art. <a href="https://kroghx.com" target="_blank" rel="noopener">kroghx.com</a></p>
-  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 1.36<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
+  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 1.37<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
 </section>
 
 <div class="ark" id="tidUtArk" hidden style="z-index:200001">
@@ -6578,6 +6578,8 @@ function shRacketTreff(b, R) {
     } else if (fl.t < .22) b.boost = 1.2;
     else shLyd("racket");
   }
+  if (Math.abs(b.x - s.padX) < .02 && !s.toP) { s.flip[0].t = 0; s.flip[1].t = 0; a = (Math.random() - .5) * .1; b.kraft = Math.max(b.kraft, 4); b.kraftN = Math.max(b.kraftN, 6); b.boost = Math.max(b.boost, 1.8); b.halo = Math.max(b.halo || 0, s.tid + 1.2); s.glod = 1; shLyd("power");
+    if (s.tid - (s.dobbelT ?? -9) > 3) { s.dobbelT = s.tid; s.tekster.push({ txt: "DOUBLE FLIP!", x: shClamp(b.x, .2, .8), y: SH_PY - .07, liv: 1.2, farge: "#ff6fd8" }); } }
   // GIANT FLIPPERS: boblen skytes av med voldsom kraft og en selvlysende hale, og bryter mye sterkere gjennom jorda.
   if ((s.kjempe || 0) > .4) { b.kraft = Math.max(b.kraft, 4); b.kraftN = Math.max(b.kraftN, 6); b.boost = Math.max(b.boost, 2); b.halo = s.tid + 1.8; s.glod = 1; shLyd("power"); }
   b.boost = Math.max(b.boost, 1.15);
@@ -7145,17 +7147,33 @@ function shSkittRens(xPos) {
   s.stavSkitt = s.stavSkitt.filter(q => q.a > .05);
 }
 function shStav(x, cx, cy, w, h, vinkel, pivot, s, alfa = 1, skitt = null) {
-  const fa = shStavFarger(s);
+  // Som på et flipperspill: tykk og rund ved festet, smal mot spissen. Hvit plast med grått i, rød gummi rundt, blank bolt.
+  const fa = shStavFarger(s), venstre = pivot < cx, r1 = h * .82, r2 = h * .4, yy = cy + h * .12;
+  const px = pivot + (venstre ? r1 * .7 : -r1 * .7), tx = venstre ? pivot + w - r2 : pivot - w + r2;
   x.save(); x.globalAlpha = alfa;
   x.translate(pivot, cy); x.rotate(vinkel); x.translate(-pivot, -cy);
-  if (alfa === 1) { x.shadowColor = `rgba(${fa.glod},${.75 + .25 * s.glod})`; x.shadowBlur = 12 + 22 * s.glod; }
-  const gr = x.createLinearGradient(0, cy - h / 2, 0, cy + h / 2);
-  gr.addColorStop(0, fa.kjerne); gr.addColorStop(.45, fa.midt); gr.addColorStop(1, fa.bunn);
-  shRund(x, cx - w / 2, cy - h / 2, w, h, h / 2); x.fillStyle = gr; x.fill();
-  x.shadowBlur = 0;
+  const sti = new Path2D(); sti.moveTo(px, yy - r1); sti.lineTo(tx, yy - r2);
+  if (venstre) { sti.arc(tx, yy, r2, -Math.PI / 2, Math.PI / 2); sti.lineTo(px, yy + r1); sti.arc(px, yy, r1, Math.PI / 2, Math.PI * 1.5); }
+  else { sti.arc(tx, yy, r2, -Math.PI / 2, Math.PI / 2, true); sti.lineTo(px, yy + r1); sti.arc(px, yy, r1, Math.PI / 2, -Math.PI / 2, true); }
+  sti.closePath();
+  if (alfa === 1) { x.shadowColor = `rgba(${fa.glod},${.35 + .35 * s.glod})`; x.shadowBlur = 8 + 16 * s.glod; }
+  const gr = x.createLinearGradient(0, yy - r1, 0, yy + r1);
+  gr.addColorStop(0, "#ffffff"); gr.addColorStop(.45, "#ecebe6"); gr.addColorStop(.8, "#c9c7c0"); gr.addColorStop(1, "#a9a69e");
+  x.fillStyle = gr; x.fill(sti); x.shadowBlur = 0;
   if (alfa < 1) { x.restore(); return; }
-  x.fillStyle = `rgba(255,255,255,${.55 + .45 * s.glod})`;
-  shRund(x, cx - w / 2 + h * .6, cy - h * .28, w - h * 1.2, h * .22, h * .11); x.fill();
+  // Litt grått og slitasje i plasten.
+  x.save(); x.clip(sti); x.lineCap = "round";
+  for (let j = 0; j < 5; j++) { const u = (j + .5) / 5, sx = px + (tx - px) * u, a = .1 + .08 * ((j * 7) % 3);
+    x.strokeStyle = `rgba(110,108,100,${a})`; x.lineWidth = Math.max(.6, h * .05); x.beginPath(); x.moveTo(sx - h * .3, yy - r1 * .2 + (j % 2) * h * .15); x.lineTo(sx + h * .45, yy + r1 * .25 - (j % 3) * h * .1); x.stroke(); }
+  x.fillStyle = "rgba(255,255,255,.75)"; x.beginPath(); x.ellipse((px + tx) / 2, yy - r1 * .45, Math.abs(tx - px) * .42, r2 * .22, 0, 0, 7); x.fill();
+  x.restore();
+  // Rød gummi rundt, med en mørk ytterkant og et lite glansstrøk.
+  x.strokeStyle = "#c41230"; x.lineWidth = Math.max(1.5, h * .24); x.lineJoin = "round"; x.stroke(sti);
+  x.strokeStyle = "rgba(80,0,12,.55)"; x.lineWidth = Math.max(.8, h * .06); x.stroke(sti);
+  x.strokeStyle = "rgba(255,150,160,.55)"; x.lineWidth = Math.max(.6, h * .05); x.beginPath(); x.moveTo(px, yy - r1 - h * .06); x.lineTo(tx, yy - r2 - h * .06); x.stroke();
+  // Bolten i festet.
+  { const br = r1 * .42, bg = x.createRadialGradient(px - br * .3, yy - br * .3, br * .1, px, yy, br); bg.addColorStop(0, "#ffffff"); bg.addColorStop(.5, "#a9adb3"); bg.addColorStop(1, "#4b4f55");
+    x.fillStyle = bg; x.beginPath(); x.arc(px, yy, br, 0, 7); x.fill(); x.strokeStyle = "rgba(30,30,35,.7)"; x.lineWidth = Math.max(.8, br * .22); x.beginPath(); x.moveTo(px - br * .55, yy); x.lineTo(px + br * .55, yy); x.stroke(); }
   if (skitt && skitt.length) {
     // Gjørme på flipperen: klumper med lys kant, og dråper som henger under. Lyset blinker gjennom.
     const [m1, m2, m3] = s.jord.mork, [l1, l2, l3] = s.jord.lys;
