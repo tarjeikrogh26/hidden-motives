@@ -635,7 +635,7 @@ body.lys #modusDeal{--farge:#0f8f6c;--glod:15,143,108}
   <div class="regel">Everything counts: Game, Peace, Scrub it 1P and 2P, every board, every level, every collection. Each board list gives up to 100 points (a Scrub it list up to 1,000): #1 gets them all, the rest their share of the top score.</div>
   <div class="sammen" id="spillere"><p class="liten">Loading players …</p></div>
   <p class="kreditt">© 2001–2026 Tarjei Krogh. All photography, music and art. <a href="https://kroghx.com" target="_blank" rel="noopener">kroghx.com</a></p>
-  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 1.56<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
+  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 1.57<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
 </section>
 
 <div class="ark" id="tidUtArk" hidden style="z-index:200001">
@@ -7755,8 +7755,9 @@ function shOppdater(dt) {
       const angrep = !!s.galaga && s.eff.K < .3;
       s.skuddT += angrep ? .075 : .045;
       const sikte = shClamp(s.padV * .6, -.6, .6) + Math.sin(s.tid * 7) * .05, v = 1.4 + Math.random() * .3;
-      const kilder = [s.padX].concat(s.wingmen.filter(w => w.klar).map(w => s.padX + w.side * (s.padW / 2 + .05)));
-      for (const kx of kilder) s.skudd.push({ x: kx + (Math.random() - .5) * .025, y: SH_PY - .03, vx: Math.sin(sikte) * v + (Math.random() - .5) * .06, vy: -Math.cos(sikte) * v, r: .008 + Math.random() * .006, budsjett: angrep ? 1 : 2, fase: Math.random() * 6, angrep });
+      const d1 = shDysePos(s, -1), d2 = shDysePos(s, 1), kilder = [[d1.x, d1.y], [d2.x, d2.y]].concat(s.wingmen.filter(w => w.klar).map(w => [s.padX + w.side * (s.padW / 2 + .05), SH_PY - .03]));
+      s.dyseT = s.tid;
+      for (const [kx, ky] of kilder) s.skudd.push({ x: kx + (Math.random() - .5) * .006, y: ky - .004, vx: Math.sin(sikte) * v + (Math.random() - .5) * .06, vy: -Math.cos(sikte) * v, r: .008 + Math.random() * .006, budsjett: angrep ? 1 : 2, fase: Math.random() * 6, angrep });
       shLyd("skudd");
     }
     if (s.skuddT < -.1) s.skuddT = 0;
@@ -8065,6 +8066,12 @@ function shSkittRens(xPos) {
   for (const q of s.stavSkitt) if (Math.abs(q.u - u) < .45) q.a -= .5;
   s.stavSkitt = s.stavSkitt.filter(q => q.a > .05);
 }
+// Dysene: to små hull nær tuppen av hver flipper. Samme mål som tegningen, så boblene kommer ut akkurat der.
+function shDysePos(s, side) {
+  const kjF = Math.max(0, s.kjempe || 0), h = .02 * (1 + 2.2 * kjF), H = h * 1.15, r2 = H * .42, cy = shPadTopp(s) + h / 2, halv = s.padW / 2 - .009;
+  const v = side < 0 ? shFlipVinkel(s.flip[0].t) : -shFlipVinkel(s.flip[1].t), piv = s.padX + side * s.padW / 2, dx = -side * (halv - r2 * 1.2), dy = -r2 * .55;
+  return { x: piv + dx * Math.cos(v) - dy * Math.sin(v), y: cy + dx * Math.sin(v) + dy * Math.cos(v) };
+}
 function shStav(x, cx, cy, w, h, vinkel, pivot, s, alfa = 1, skitt = null) {
   // Som på et flipperspill (Kroghs bilde): hvit toppflate, tykk svart gummiside under, myk mørk skygge. Avsmalnende mot spissen.
   const venstre = pivot < cx, r1 = h * .78, r2 = h * .42, yy = cy, dyp = h * .62;
@@ -8088,6 +8095,11 @@ function shStav(x, cx, cy, w, h, vinkel, pivot, s, alfa = 1, skitt = null) {
   x.fillStyle = gr; x.fill(sti);
   if (alfa < 1) { x.restore(); return; }
   x.strokeStyle = "#18181a"; x.lineWidth = Math.max(1.2, h * .14); x.lineJoin = "round"; x.stroke(sti);
+  { x.save(); x.clip(sti); const mg = x.createLinearGradient(0, yy - r1, 0, yy + r1); mg.addColorStop(0, "rgba(235,238,244,.9)"); mg.addColorStop(.5, "rgba(170,176,186,.6)"); mg.addColorStop(1, "rgba(210,214,222,.8)"); x.strokeStyle = mg; x.lineWidth = Math.max(1, h * .16); x.stroke(sti); x.restore(); }
+  if (alfa === 1) { const hx = tx + (venstre ? -r2 * .2 : r2 * .2), hy = yy - r2 * .55, aktiv = s.eff.K > 0;
+    x.fillStyle = "#c9ced6"; x.beginPath(); x.ellipse(hx, hy, r2 * .36, r2 * .22, 0, 0, 7); x.fill();
+    x.fillStyle = aktiv ? "#3a4a5a" : "#2a2c30"; x.beginPath(); x.ellipse(hx, hy, r2 * .24, r2 * .13, 0, 0, 7); x.fill();
+    if (aktiv) { x.fillStyle = "rgba(170,240,255,.8)"; x.beginPath(); x.ellipse(hx, hy - r2 * .03, r2 * .12, r2 * .06, 0, 0, 7); x.fill(); } }
   x.fillStyle = "rgba(255,253,246,.55)"; x.beginPath(); x.ellipse(px + (tx - px) * .45, yy - r1 * .4, Math.abs(tx - px) * .38, r2 * .2, Math.atan2(r1 - r2, Math.abs(tx - px)) * .5 * (venstre ? 1 : -1), 0, 7); x.fill();
   if (skitt && skitt.length) {
     // Gjørme på flipperen: bare et svakt, lysegrått skjær på toppflaten (Krogh: flipperne skal være lyse og tydelige). Noen glinser litt.
@@ -8725,11 +8737,7 @@ function shTegn(t) {
       }
     }
   }
-  if (s.eff.K > 0 && s.tilstand !== "ferdig") {
-    x.save(); x.globalCompositeOperation = "lighter";
-    const nx = s.padX * f, ny = (SH_PY - .025) * f, nr = .03 * f, ng = x.createRadialGradient(nx, ny, 0, nx, ny, nr);
-    ng.addColorStop(0, "rgba(160,235,255,.75)"); ng.addColorStop(1, "rgba(160,235,255,0)"); x.fillStyle = ng; x.fillRect(nx - nr, ny - nr, nr * 2, nr * 2); x.restore();
-  }
+
   // Bobler fra BUBBLE GUN.
   // Skummet: hvite, små bobler i en klynge som synker sammen etter hvert.
   for (const q of s.skumFlekk || []) {
@@ -8740,12 +8748,15 @@ function shTegn(t) {
       x.strokeStyle = s.eff.T > 0 ? `hsla(${(s.tid * 90 + j * 25 + q.frø * 10) % 360},95%,72%,${.75 * a})` : `rgba(190,225,255,${.5 * a})`; x.lineWidth = s.eff.T > 0 ? 1.4 : .8; x.stroke();
     }
   }
-  for (const q of s.skudd) {
-    const X = q.x * f, Y = q.y * f, r = q.r * f;
-    x.fillStyle = "rgba(200,240,255,.14)"; x.beginPath(); x.arc(X, Y, r, 0, 7); x.fill();
-    x.strokeStyle = `hsla(${(s.tid * 200 + q.fase * 60) % 360},90%,75%,.85)`; x.lineWidth = Math.max(1, r * .18); x.stroke();
-    x.fillStyle = "rgba(255,255,255,.85)"; x.beginPath(); x.ellipse(X - r * .35, Y - r * .4, r * .28, r * .14, -.7, 0, 7); x.fill();
-  }
+  if (s.skudd.length) { x.save();
+    for (const q of s.skudd) { const X = q.x * f, Y = q.y * f, r = q.r * f, hue = [175, 300, 95, 55, 200][Math.floor(q.fase * 10) % 5];
+      x.globalCompositeOperation = "lighter"; x.globalAlpha = .7; x.drawImage(shNeon(hue), X - r * 2.6, Y - r * 2.6, r * 5.2, r * 5.2);
+      const L = Math.min(r * 4, Math.hypot(q.vx, q.vy) * f * .03), a = Math.atan2(q.vy, q.vx); const tx = X - Math.cos(a) * L, ty = Y - Math.sin(a) * L, hg = x.createLinearGradient(X, Y, tx, ty); hg.addColorStop(0, `hsla(${hue},100%,75%,.5)`); hg.addColorStop(1, `hsla(${hue},100%,70%,0)`); x.globalAlpha = 1; x.strokeStyle = hg; x.lineWidth = r * .55; x.lineCap = "round"; x.beginPath(); x.moveTo(X, Y); x.lineTo(tx, ty); x.stroke();
+      x.globalCompositeOperation = "source-over"; x.globalAlpha = 1;
+      x.fillStyle = `hsla(${hue},100%,85%,.28)`; x.beginPath(); x.arc(X, Y, r, 0, 7); x.fill();
+      x.strokeStyle = `hsl(${hue},100%,72%)`; x.lineWidth = Math.max(1.2, r * .24); x.stroke();
+      x.fillStyle = "rgba(255,255,255,.95)"; x.beginPath(); x.ellipse(X - r * .35, Y - r * .4, r * .3, r * .15, -.7, 0, 7); x.fill(); }
+    x.restore(); }
   // Fint støv av gull, sølv og diamant.
   x.save(); x.globalCompositeOperation = "lighter";
   for (const p of s.stov) {
