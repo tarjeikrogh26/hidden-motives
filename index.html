@@ -676,7 +676,7 @@ body.lys #modusDeal{--farge:#0f8f6c;--glod:15,143,108}
   <div class="regel">Everything counts: Game, Peace, Bubble it 1P and 2P, every board, every level, every collection. Each board list gives up to 100 points (a Bubble it list up to 1,000): #1 gets them all, the rest their share of the top score.</div>
   <div class="sammen" id="spillere"><p class="liten">Loading players …</p></div>
   <p class="kreditt">© 2001–2026 Tarjei Krogh. All photography, music and art. <a href="https://kroghx.com" target="_blank" rel="noopener">kroghx.com</a></p>
-  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 1.63<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
+  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 1.64<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
 </section>
 
 <div class="ark" id="tidUtArk" hidden style="z-index:200001">
@@ -6499,6 +6499,9 @@ function shRegnStart() {
 }
 function shRegnKloss() {
   const s = sh;
+  // På brett med flipperbord renner regnet helst der delene ligger, så de kommer fram.
+  if (s.bord && Math.random() < .85) { const B = s.bord, pk = [[B.inngang.x, B.inngang.y], [B.saucer.x, B.saucer.y], [(B.spinner.x0 + B.spinner.x1) / 2, B.spinner.y], ...B.bumpere.map(q => [q.x, q.y]), ...B.baner.map(q => [q.cx, SH_TOPP + .075]), ...B.mål.map(q => [(q.ax + q.bx) / 2, (q.ay + q.by) / 2])];
+    for (let n = 0; n < 10; n++) { const [px, py] = pk[(Math.random() * pk.length) | 0], k = shKlossVed(px + (Math.random() - .5) * .05, py + (Math.random() - .5) * .04); if (k && !k.ramme && !(k.is > 0) && k.r < SH_RAD - 2) return k; } }
   for (let n = 0; n < 14; n++) { const k = s.klosser[(Math.random() * s.klosser.length) | 0]; if (k.liv > 0 && !k.ramme && !(k.is > 0) && k.r < SH_RAD - 2) return k; }
   return null;
 }
@@ -6721,7 +6724,10 @@ function shBordTreff(b) {
   const Y = SH_TOPP;
   if (b.y > Y + .035 && b.y < Y + .12) B.baner.forEach((q, k) => { if (b.x > q.x0 + .008 && b.x < q.x1 - .008 && b.iBane !== k && shFri(q.cx, Y + .075)) { b.iBane = k;
     q.lys = 1; if (!B.ord[k]) { B.ord[k] = true; gi(250); if (lydPa) tone(1318.5, 0, .14, .03, "square", .4, .5); }
-    if (B.ord.every(Boolean)) { gi(10000); B.ordBlink = 2.2; tekst("B U B B L E · +10,000", 0, Y + .2, "#7fe8ff", true); if (lydPa) [0, 4, 7, 12, 16, 19, 24].forEach((st, j) => tone(523.25 * Math.pow(2, st / 12), j * .07, .35, .03, "square", .4, 1));
+    if (B.ord.every(Boolean)) { gi(10000); B.ordBlink = 2.2;
+      // Som på et ekte flipperspill: hele ordet gir en ekstra ball. Er alle plassene fulle, kommer den rett i spill.
+      const fullt = s.liv >= (s.plasser || 3); if (!fullt) s.liv++; else { const n = shBall(.5, Y + .14, 0, s.fart, false); n.boost = 1.2; s.baller.push(n); } shHud();
+      tekst("B U B B L E · EXTRA BUBBLE", 0, Y + .2, "#7fe8ff", true); s.tekster.push({ txt: "+10,000", x: .5, y: Y + .26, liv: 2, farge: "#ffffff", liten: true }); if (lydPa) [0, 4, 7, 12, 16, 19, 24].forEach((st, j) => tone(523.25 * Math.pow(2, st / 12), j * .07, .35, .03, "square", .4, 1));
       shVask(.5, Y + .08, .14, 1, "syre"); setTimeout(() => { if (s.bord === B) B.ord = B.ord.map(() => false); }, 2200); } } });
   if (b.y > Y + .13 || b.y < Y + .03) b.iBane = -1;
   // Bumperne.
@@ -6737,7 +6743,9 @@ function shBordTreff(b) {
   const sp = B.spinner; if (shFri((sp.x0 + sp.x1) / 2, sp.y) && b.x > sp.x0 && b.x < sp.x1 && (fy - sp.y) * (b.y - sp.y) < 0) { sp.w = Math.sign(b.vy || 1) * (18 + Math.abs(b.vy) * 40); if (lydPa) shSus(.08, "highpass", 3000, .02, 1, .8, .1); }
   // Saucer: sluker boblen.
   const sc = B.saucer; if (!sc.holder && shFri(sc.x, sc.y) && s.tid - B.sistUt > 1 && Math.hypot(b.x - sc.x, b.y - sc.y) < .028) {
-    b.bane = { type: "saucer", t: 0, fraX: b.x, fraY: b.y }; sc.holder = b; gi(3000); tekst("SAUCER · +3,000", sc.x, sc.y - .05); if (lydPa) { tone(110, 0, .2, .07, "sine", .6, .3); tone(220, .05, .12, .03, "square", .5, .2); } return; }
+    b.bane = { type: "saucer", t: 0, fraX: b.x, fraY: b.y }; sc.holder = b; gi(3000); B.lås = (B.lås || 0) + 1;
+    if (B.lås >= 3) { B.lås = 0; b.bane.multi = true; tekst("MULTIBALL!", 0, SH_TOPP + .42, "#ff7ae0", true); s.tekster.push({ txt: "+3,000", x: sc.x, y: sc.y - .05, liv: 1.2, farge: "#ffe27a", liten: true }); }
+    else tekst("LOCK " + B.lås + " · +3,000", sc.x, sc.y - .05); if (lydPa) { tone(110, 0, .2, .07, "sine", .6, .3); tone(220, .05, .12, .03, "square", .5, .2); } return; }
   // Orbit: inngangen nede til venstre, bare på vei opp.
   const ig = B.inngang; if (b.vy < 0 && shFri(ig.x, ig.y) && Math.hypot(b.x - ig.x, b.y - ig.y) < .045) {
     b.bane = { type: "orbit", d: 0 }; B.orbitRekke = s.tid - B.orbitT < 6 ? B.orbitRekke + 1 : 1; B.orbitT = s.tid; if (lydPa) shSus(.5, "bandpass", 900, .05, 1.5, .8, .3, 0); }
@@ -6755,7 +6763,10 @@ function shBaneSteg(b, dt) {
     const sc = B.saucer, u = Math.min(1, (bn.t += dt) / .2); b.x = bn.fraX + (sc.x - bn.fraX) * u; b.y = bn.fraY + (sc.y - bn.fraY) * u; b.vx = b.vy = 0; sc.lys = 1;
     if (bn.t > 1.3) { // Spytter den ut mot flipperne.
       const mx = .4, my = SH_TOPP + .7, d = Math.hypot(mx - sc.x, my - sc.y); b.vx = (mx - sc.x) / d * s.fart; b.vy = (my - sc.y) / d * s.fart; b.x = sc.x + b.vx / s.fart * .04; b.y = sc.y + b.vy / s.fart * .04;
-      b.boost = Math.max(b.boost || 1, 1.5); b.bane = null; sc.holder = null; B.sistUt = s.tid; b.forrigeY = b.y; s.rist = Math.max(s.rist || 0, .25); shStov(sc.x, sc.y, 18, "255,240,200", .2);
+      const multi = bn.multi; b.boost = Math.max(b.boost || 1, 1.5); b.bane = null; sc.holder = null; B.sistUt = s.tid; b.forrigeY = b.y; s.rist = Math.max(s.rist || 0, .25); shStov(sc.x, sc.y, 18, "255,240,200", .2);
+      // Multiball: to bobler til spyttes ut i vifte, så det er tre i spill.
+      if (multi) { for (const da of [-.5, .45]) { if (s.baller.length >= 4) break; const a = Math.atan2(b.vy, b.vx) + da, n = shBall(sc.x, sc.y, Math.cos(a) * s.fart, Math.sin(a) * s.fart, false); n.boost = 1.4; n.forrigeY = n.y; s.baller.push(n); }
+        s.rist = Math.max(s.rist || 0, .6); s.glod = 1; shStov(sc.x, sc.y, 60, "255,140,230", .35); if (lydPa) [0, 3, 7, 12, 15, 19].forEach((st, j) => tone(392 * Math.pow(2, st / 12), j * .06, .3, .03, "square", .4, .8)); }
       if (lydPa) { tone(70, 0, .15, .08, "square", .6, .2); shSus(.12, "lowpass", 600, .06, 1, .8, .2); } }
   }
 }
@@ -6845,7 +6856,11 @@ function shBordTegn(x, f, s) {
     x.fillStyle = shKrom(x, X - R, Ys - R, X + R, Ys + R); x.beginPath(); x.arc(X, Ys, R, 0, 7); x.fill();
     const hg = x.createRadialGradient(X + R * .15, Ys + R * .2, 0, X, Ys, R * .78); hg.addColorStop(0, "#000"); hg.addColorStop(.7, "#15161a"); hg.addColorStop(1, "#4a4d55");
     x.fillStyle = hg; x.beginPath(); x.arc(X, Ys, R * .76, 0, 7); x.fill();
-    x.save(); x.font = `700 ${Math.max(8, f * .016)}px "IBM Plex Sans", sans-serif`; x.textAlign = "center"; x.fillStyle = "rgba(255,225,245,.85)"; x.shadowColor = "rgba(0,0,0,.8)"; x.shadowBlur = 3; x.fillText("SAUCER", X, Ys + R * 2.6); x.restore(); }
+    x.save(); x.font = `700 ${Math.max(8, f * .016)}px "IBM Plex Sans", sans-serif`; x.textAlign = "center"; x.fillStyle = "rgba(255,225,245,.85)"; x.shadowColor = "rgba(0,0,0,.8)"; x.shadowBlur = 3; x.fillText("SAUCER", X, Ys + R * 2.6); x.restore();
+    // LOCK: tre små innlegg. Tent én per gang saucer har holdt boblen; det tredje gir multiball.
+    for (let k = 0; k < 3; k++) { const på = k < (B.lås || 0) ? 1 : k === (B.lås || 0) ? .25 + .25 * Math.sin(t * 5) : .12; x.save(); x.translate(X + (k - 1) * R * .95, Ys + R * 3.3);
+      shInnlegg(x, () => { x.beginPath(); x.moveTo(-R * .38, -R * .2); x.lineTo(R * .38, -R * .2); x.lineTo(0, R * .3); x.closePath(); }, [255, 90, 200], på, .7); x.restore(); }
+    x.save(); x.font = `700 ${Math.max(7, f * .013)}px "IBM Plex Sans", sans-serif`; x.textAlign = "center"; x.fillStyle = "rgba(255,225,245,.75)"; x.shadowColor = "rgba(0,0,0,.8)"; x.shadowBlur = 3; x.fillText("LOCK", X, Ys + R * 4.2); x.restore(); }
   // Spinneren: en plate med trykk som henger under en krom-aksel og snurrer rundt den.
   { const sp = B.spinner, [x0, Ys] = P(sp.x0, sp.y), x1 = sp.x1 * f, h = f * .034, c = Math.cos(sp.a), ph = h * c, inn = f * .008;
     x.fillStyle = "rgba(0,0,0,.3)"; x.fillRect(x0 + inn + 3, Ys + 3, x1 - x0 - inn * 2, Math.abs(ph) * .9);
