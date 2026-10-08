@@ -704,7 +704,7 @@ body.lys #modusDeal{--farge:#0f8f6c;--glod:15,143,108}
   <div class="regel">Everything counts: Game, Peace, Bubble it 1P and 2P, every board, every level, every collection. Each board list gives up to 100 points (a Bubble it list up to 1,000): #1 gets them all, the rest their share of the top score.</div>
   <div class="sammen" id="spillere"><p class="liten">Loading players …</p></div>
   <p class="kreditt">© 2001–2026 Tarjei Krogh. All photography, music and art. <a href="https://kroghx.com" target="_blank" rel="noopener">kroghx.com</a></p>
-  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 1.77<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
+  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 1.78<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
 </section>
 
 <div class="ark" id="tidUtArk" hidden style="z-index:200001">
@@ -4431,7 +4431,7 @@ if (window.ResizeObserver) { let sistH = 0, sistB = 0; new ResizeObserver(([e]) 
 // ---------- SCRUB: såpebobler vasker møkka av kunstverket ----------
 // Bildet ligger under et lag med møkk. 864 små felt teller treffene, men møkka tegnes som ett sammenhengende lag.
 // SH_TOPP: tom gang over bildet, der boblen kan bli fanget og vaske ovenfra.
-const SH_KOL = 24, SH_RAD = 36, SH_R = 0.026, SH_TYKKEST = 20;
+const SH_KOL = 24, SH_RAD = 36, SH_R = 0.03, SH_TYKKEST = 20;
 // Bildets øvre kant i feltet. I 2P ligger bildet lenger ned, så spiller 2 får plass til sin flipper øverst.
 let SH_TOPP = 0.13; const SH_P2Y = 0.1;
 // Feltets høyde følger skjermen, så staven står nær bunnen. Settes i shOppsett.
@@ -5272,11 +5272,11 @@ function shJelly(b, dt, tid) {
       // Uro: rett etter slaget vrir den seg i to og tre buler, og roer seg mens den stiger.
       const th = i / SH_N * Math.PI * 2;
       const a = -520 * d[i] - 4.5 * v[i] + 220 * (d[(i + SH_N - 1) % SH_N] + d[(i + 1) % SH_N] - 2 * d[i])
-        + uro * (62 * Math.sin(2 * th + 6 * tid + b.fase) + 44 * Math.sin(3 * th - 8 * tid) + 18 * Math.sin(4 * th + 10 * tid))
-        + 22 * Math.sin(2 * th + 1.5 * tid + b.fase) + 13 * Math.sin(3 * th - 1.1 * tid + b.fase * 2);
+        + uro * (16 * Math.sin(2 * th + 6 * tid + b.fase) + 22 * Math.sin(3 * th - 8 * tid) + 16 * Math.sin(4 * th + 10 * tid) + 10 * Math.sin(5 * th - 12 * tid + b.fase))
+        + 10 * Math.sin(2 * th + 1.5 * tid + b.fase) + 12 * Math.sin(3 * th - 1.1 * tid + b.fase * 2);
       v[i] += a * h;
     }
-    for (let i = 0; i < SH_N; i++) { d[i] = shClamp(d[i] + v[i] * h, -.55, .6); snitt += d[i]; }
+    for (let i = 0; i < SH_N; i++) { d[i] = shClamp(d[i] + v[i] * h, -.3, .3); snitt += d[i]; }
     // Det den mister ett sted, buler ut et annet, som gummi.
     snitt /= SH_N; for (let i = 0; i < SH_N; i++) d[i] -= snitt;
   }
@@ -5493,9 +5493,9 @@ function shSkumSteg(dt) {
   const s = sh; if (!s.skumFlekk) return;
   for (const q of s.skumFlekk) {
     q.liv -= dt / 8; q.tikk -= dt;
-    if (q.tikk <= 0 && q.liv > 0) { q.tikk = q.spis ? .55 : 1.3; shVask(q.x, q.y, q.r * .85, 1, "syre");
+    if (q.tikk <= 0 && q.liv > 0) { q.tikk = q.spis ? .4 : 1.3; shVask(q.x, q.y, q.r * .85, 1, "syre");
       // Skum fra skuddboblene graver seg oppover i jorda, som såpe i en fontene.
-      if (q.spis && shKlossVed(q.x, q.y - q.r * .6)) { q.y -= .012; q.r = Math.min(.05, q.r + .0015); } }
+      if (q.spis && shKlossVed(q.x, q.y - q.r * .6)) { q.y -= .016; q.r = Math.min(.055, q.r + .002); } }
   }
   s.skumFlekk = s.skumFlekk.filter(q => q.liv > 0);
 }
@@ -7318,11 +7318,11 @@ function shVoksStart(type) {
 function shVoksSteg(b, dt) {
   const s = sh, V = b.voks; if (!V) return;
   V.t += dt;
-  // Vokser over 7 sekunder, holder seg ett sekund på full størrelse, og sprekker.
-  const u = Math.min(1, V.t / 7), e = 1 - Math.pow(1 - u, 2.2);
+  // Vokser jevnt og sakte over 22 sekunder, holder seg tre sekunder på full størrelse, og sprekker (Krogh).
+  const u = Math.min(1, V.t / 22), e = u * (.6 + .4 * u);
   b.str = V.fra + (V.mål - V.fra) * e; b.vokse = 1;
   // Jo større, jo roligere farter den.
-  const v = Math.hypot(b.vx, b.vy) || 1, maks = s.fart * (1 - .45 * e); if (v > maks) { b.vx *= maks / v; b.vy *= maks / v; }
+  const v = Math.hypot(b.vx, b.vy) || 1, maks = s.fart * (.8 - .3 * e); // Rolig fra start, enda roligere når den er stor. if (v > maks) { b.vx *= maks / v; b.vy *= maks / v; }
   const R = shRad(b);
   // Vasker et lag under seg, ofte, over hele flaten den dekker.
   V.vaskT -= dt; if (V.vaskT <= 0 && b.str > 2.2) { V.vaskT = .22; if (!s.bytte) shVask(b.x, b.y, R * .92, 1, "syre"); }
@@ -7330,7 +7330,7 @@ function shVoksSteg(b, dt) {
   for (const e2 of s.galaga?.fiender || []) if (shFangbar(e2) && Math.hypot(e2.x - b.x, e2.y - b.y) < R * .9) { e2.tilstand = "iboble"; e2.boble = b; e2.dx = e2.x - b.x; e2.dy = e2.y - b.y; V.fanger.push(e2); if (!s.bytte) s.poeng += 300; shHud(); s.tekster.push({ txt: "CAUGHT! +300", x: shClamp(e2.x, .15, .85), y: e2.y - .05, liv: 1, farge: "#e6d6ff", liten: true }); shLyd("innkapsle"); }
   for (const e2 of s.sabot || []) if ((e2.tilstand === "inn" || e2.tilstand === "legg" || e2.tilstand === "ut") && Math.hypot(e2.x - b.x, e2.y - b.y) < R * .9) { e2.tilstand = "boble"; e2.bt = 0; if (!s.bytte) s.poeng += 300; shHud(); }
   for (const e2 of V.fanger) { e2.dx *= Math.exp(-dt * .8); e2.dy *= Math.exp(-dt * .8); e2.x = b.x + e2.dx + Math.sin(s.tid * 2 + e2.fase) * R * .2; e2.y = b.y + e2.dy + Math.cos(s.tid * 1.7 + e2.fase) * R * .2; e2.rot = (e2.rot || 0) + dt * 1.5; }
-  if (V.t > 8) shVoksSprekk(b);
+  if (V.t > 25) shVoksSprekk(b);
 }
 function shVoksSprekk(b) {
   const s = sh, V = b.voks, R = shRad(b);
@@ -8133,7 +8133,7 @@ function shRacket2Treff(b, R) {
   else shLyd("racket");
   b.boost = Math.max(b.boost, 1.15); b.saape = 3;
   b.vx = s.fart * Math.sin(a); b.vy = s.fart * Math.cos(a); b.y = SH_P2Y + R + .001;
-  shStot(b, 0, 1, .45); b.uro = Math.max(b.uro || 0, .85);
+  shStot(b, 0, 1, .45); b.uro = Math.max(b.uro || 0, .5);
 }
 // Toppen av flipperne: de gigantiske flipperne er høyere, så boblen treffer dem tidligere.
 // Et slag med de gigantiske flipperne: den siden slår opp (eller begge, nær midten), med et tungt smell og en sky av glitter.
@@ -8150,7 +8150,7 @@ function shRacketTreff(b, R) {
   let a = t * 1.05;
   s.fart = Math.min(s.maksFart, s.fart * 1.008);
   s.kombo = 0; s.glod = 1;
-  shStot(b, 0, -1, .45); b.uro = Math.max(b.uro || 0, .85);
+  shStot(b, 0, -1, (s.kjempe || 0) > .4 || Math.abs(s.padV || 0) > 1.3 ? .32 : .2); b.uro = Math.max(b.uro || 0, .4);
   b.saape = 3;
   if (b.masse > .12) shMagnetSprekk(b);
   {
@@ -8189,7 +8189,8 @@ function shRacketTreff(b, R) {
   // Store flippere: mer kraft i hvert slag.
   const v = s.fart * (b.flipFart || 1) * ((s.kjempe || 0) > .4 ? 1.2 : 1); b.flipFart = 1;
   b.vx = v * Math.sin(a); b.vy = -v * Math.cos(a);
-  for (let i = 0; i < SH_N; i++) b.dv[i] += 4 * (Math.abs(Math.sin(i / SH_N * Math.PI * 2)) - .64);
+  // Litt bobleaktig dirring etter slaget; mer når slaget er hardt, men aldri oval.
+  { const hard = b.kraft >= 3 ? 1 : 0; b.uro = Math.max(b.uro || 0, .35 + .4 * hard); for (let i = 0; i < SH_N; i++) b.dv[i] += (1.4 + 1.6 * hard) * Math.sin(3 * i / SH_N * Math.PI * 2 + b.fase); }
 }
 function shBevegBall(b, dt) {
   const s = sh, R = shRad(b), px = b.x, py = b.y;
@@ -8347,11 +8348,11 @@ function shOppdater(dt) {
     if (b.klemT > 0) {
       b.klemT -= dt; b.x = shClamp(s.padX + b.klemOff, shRad(b), 1 - shRad(b)); b.y = SH_PY - shRad(b) * .62;
       // Klemt flat mot staven: undersiden presses inn, sidene buler ut.
-      const dyp = .5 * Math.min(1, .45 + (.075 - b.klemT) / .03);
+      const dyp = .22 * Math.min(1, .45 + (.075 - b.klemT) / .03); // Bare litt flat mot flipperen (Krogh).
       for (let i = 0; i < SH_N; i++) { const c = Math.sin(i / SH_N * Math.PI * 2); if (c > 0) { const mål = -dyp * c * c; if (b.d[i] > mål) { b.d[i] = mål; b.dv[i] = 0; } } }
       if (b.klemT <= 0 && b.klemV) {
-        b.vx = b.klemV[0]; b.vy = b.klemV[1]; b.klemV = null; b.y = SH_PY - shRad(b); b.uro = 1;
-        for (let i = 0; i < SH_N; i++) b.dv[i] += 8 * (Math.abs(Math.sin(i / SH_N * Math.PI * 2)) - .64);
+        b.vx = b.klemV[0]; b.vy = b.klemV[1]; b.klemV = null; b.y = SH_PY - shRad(b); b.uro = .6;
+        for (let i = 0; i < SH_N; i++) b.dv[i] += 2.2 * (Math.abs(Math.sin(i / SH_N * Math.PI * 2)) - .64);
       }
       continue;
     }
@@ -8448,7 +8449,7 @@ function shOppdater(dt) {
       const sikte = shClamp(s.padV * .6, -.6, .6) + Math.sin(s.tid * 7) * .05, v = 1.4 + Math.random() * .3;
       const d1 = shDysePos(s, -1), d2 = shDysePos(s, 1), kilder = [[d1.x, d1.y], [d2.x, d2.y]].concat(s.wingmen.filter(w => w.klar).map(w => [s.padX + w.side * (s.padW / 2 + .05), SH_PY - .03]));
       s.dyseT = s.tid;
-      for (const [kx, ky] of kilder) s.skudd.push({ x: kx + (Math.random() - .5) * .006, y: ky - .004, vx: Math.sin(sikte) * v + (Math.random() - .5) * .06, vy: -Math.cos(sikte) * v, r: .008 + Math.random() * .006, budsjett: angrep ? 1 : 2, fase: Math.random() * 6, angrep });
+      for (const [kx, ky] of kilder) s.skudd.push({ x: kx + (Math.random() - .5) * .006, y: ky - .004, vx: Math.sin(sikte) * v + (Math.random() - .5) * .06, vy: -Math.cos(sikte) * v, r: .013 + Math.random() * .009, budsjett: angrep ? 1 : 2, fase: Math.random() * 6, angrep });
       shLyd("skudd");
     }
     if (s.skuddT < -.1) s.skuddT = 0;
@@ -8496,7 +8497,7 @@ function shOppdater(dt) {
       if (bo) { bo.borte = true; q.borte = true; shStov(bo.x, bo.y, 6, "180,140,90", .08); continue; }
     }
     const k = shKlossVed(q.x, q.y);
-    if (k) { if (!q.angrep || Math.random() < .15) shTreff(k, 1); if (!q.angrep) shSkumFlekk(q.x, q.y, .6, true); for (let n = 0; n < 3; n++) if (s.skum.length < 320) s.skum.push({ x: q.x + (Math.random() - .5) * .025, y: q.y + (Math.random() - .5) * .01, r: .002 + Math.random() * .005, liv: 1, fart: 1.2 + Math.random() * .8 }); q.budsjett--; q.vy *= .55;
+    if (k) { if (!q.angrep || Math.random() < .15) shTreff(k, q.angrep ? 1 : 2); if (!q.angrep) shSkumFlekk(q.x, q.y, 1, true); for (let n = 0; n < 3; n++) if (s.skum.length < 320) s.skum.push({ x: q.x + (Math.random() - .5) * .025, y: q.y + (Math.random() - .5) * .01, r: .002 + Math.random() * .005, liv: 1, fart: 1.2 + Math.random() * .8 }); q.budsjett--; q.vy *= .55;
       if (q.budsjett <= 0) { q.borte = true; if (!q.angrep) shSkumFlekk(q.x, q.y, 1.2, true); for (let n = 0; n < 7; n++) if (s.skum.length < 320) s.skum.push({ x: q.x + (Math.random() - .5) * .035, y: q.y + (Math.random() - .5) * .015, r: .002 + Math.random() * .006, liv: 1, fart: 1.3 + Math.random() * .9 }); } }
     if (q.y < 0) q.borte = true;
   }
@@ -10201,11 +10202,11 @@ function shTegn(t) {
   if (s.skudd.length) { x.save();
     for (const q of s.skudd) { const X = q.x * f, Y = q.y * f, r = q.r * f, hue = [175, 300, 95, 55, 200][Math.floor(q.fase * 10) % 5], hue2 = (hue + 120) % 360;
       // Et svakt skjær rundt, så de synes over mørke bilder, men uten å bli lyskuler.
-      x.globalCompositeOperation = "lighter"; x.globalAlpha = .34; x.drawImage(shNeon(hue), X - r * 2.4, Y - r * 2.4, r * 4.8, r * 4.8);
+      x.globalCompositeOperation = "lighter"; x.globalAlpha = .42; x.drawImage(shNeon(hue), X - r * 2.2, Y - r * 2.2, r * 4.4, r * 4.4);
       const L = Math.min(r * 3, Math.hypot(q.vx, q.vy) * f * .02), a = Math.atan2(q.vy, q.vx); const tx = X - Math.cos(a) * L, ty = Y - Math.sin(a) * L, hg = x.createLinearGradient(X, Y, tx, ty); hg.addColorStop(0, "rgba(235,248,255,.22)"); hg.addColorStop(1, "rgba(235,248,255,0)"); x.globalAlpha = 1; x.strokeStyle = hg; x.lineWidth = r * .4; x.lineCap = "round"; x.beginPath(); x.moveTo(X, Y); x.lineTo(tx, ty); x.stroke();
       x.globalCompositeOperation = "source-over";
       // Nesten klar inni, litt lysere mot kanten.
-      const g = x.createRadialGradient(X, Y, r * .2, X, Y, r); g.addColorStop(0, `hsla(${hue},90%,85%,.08)`); g.addColorStop(.75, `hsla(${hue},90%,88%,.15)`); g.addColorStop(1, "rgba(255,255,255,.3)"); x.fillStyle = g; x.beginPath(); x.arc(X, Y, r, 0, 7); x.fill();
+      const g = x.createRadialGradient(X, Y, r * .2, X, Y, r); g.addColorStop(0, `hsla(${hue},90%,92%,.14)`); g.addColorStop(.75, `hsla(${hue},90%,94%,.22)`); g.addColorStop(1, "rgba(255,255,255,.42)"); x.fillStyle = g; x.beginPath(); x.arc(X, Y, r, 0, 7); x.fill();
       // Tynn regnbuekant: to svake farger som glir over i hverandre.
       const kg = x.createLinearGradient(X - r, Y - r, X + r, Y + r); kg.addColorStop(0, `hsla(${hue},95%,78%,.9)`); kg.addColorStop(.5, "rgba(255,255,255,.55)"); kg.addColorStop(1, `hsla(${hue2},95%,78%,.85)`);
       x.strokeStyle = kg; x.lineWidth = Math.max(1, r * .17); x.beginPath(); x.arc(X, Y, r, 0, 7); x.stroke();
