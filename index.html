@@ -628,7 +628,7 @@ body.lys #modusDeal{--farge:#0f8f6c;--glod:15,143,108}
   <div class="regel">Everything counts: Game, Peace, Scrub it 1P and 2P, every board, every level, every collection. Each board list gives up to 100 points (a Scrub it list up to 1,000): #1 gets them all, the rest their share of the top score.</div>
   <div class="sammen" id="spillere"><p class="liten">Loading players …</p></div>
   <p class="kreditt">© 2001–2026 Tarjei Krogh. All photography, music and art. <a href="https://kroghx.com" target="_blank" rel="noopener">kroghx.com</a></p>
-  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 1.43<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
+  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 1.44<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
 </section>
 
 <div class="ark" id="tidUtArk" hidden style="z-index:200001">
@@ -6973,6 +6973,8 @@ function shKontaktSteg(s) {
   if (s.tilstand !== "spill" || s.bytte || s.toP || s.finale) return;
   // En boble som ligger på flipperne etter nettet eller en ekstra boble, skytes ut av seg selv etter halvannet sekund.
   if (s.baller.some(b => b.fast && b.nettT != null && s.tid - b.nettT > 1.5)) { for (const b of s.baller) b.nettT = null; shSlipp(); return; }
+  // Under aliens (bobler parkert eller skutt ut mens du skyter) teller ikke tiden uten treff.
+  if (s.galaga || s.bytte || s.baller.some(b => b.parkert || b.friGalaga)) { s.kontaktT = s.tid; return; }
   if (!s.baller.length || s.baller.some(b => b.fast) || s.baller.length >= 4) return;
   if (s.kontaktT == null) { s.kontaktT = s.tid; return; }
   if (s.tid - s.kontaktT < 12) return;
