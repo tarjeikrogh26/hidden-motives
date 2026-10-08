@@ -278,6 +278,7 @@ body.lys #kraftLinje button,body.lys #shKraftLinje button{color:#fff7e6}
 #shKraftLinje button{font-family:var(--brod);font-weight:600;font-size:11px;letter-spacing:.1em;padding:7px 12px;gap:6px}
 @media (max-width:480px){#shKraftLinje{gap:2px}#shKraftLinje button{padding:8px 4px;font-size:9.5px;letter-spacing:0;gap:2px;min-height:34px}#shKraftLinje button .pris{font-size:9px}}
 #shKraftLinje button:disabled{opacity:.35}
+#shKraftLinje button[hidden]{display:none}
 @media (max-width:1000px){#shKraftLinje{display:grid;grid-template-columns:repeat(5,auto);justify-content:center;gap:4px 3px}}
 @media (min-width:561px) and (max-width:1000px){#shKraftLinje{gap:8px 8px}}
 #shKraftLinje button.trykket{transform:scale(.93);border-color:#7fe8ff}
@@ -499,13 +500,13 @@ body:has(.resultat.vis) #spill .linje{opacity:0;pointer-events:none;transition:o
   <div class="samlingsnavn">Next collection</div>
   <div class="rutenett"><div class="neste" id="samling2"><div></div></div></div>
   <div class="samlingsnavn" id="sammenTittel"></div>
-  <div class="regel"><b>The race:</b> Your best score on each of the ten boards is added up. Two classes: Normal + Harder, and Chaos + Insane (iPad). Every Sunday at midnight the list locks: the best player who has played all ten boards and beats the house names wins the next collection for free. One win per player, and one winner per race each week. <span id="ukeTekst"></span> Points: Normal (25 pieces) gives 10,000, Harder (49) 15,000, Chaos (100) 20,000 and Insane (144) 25,000 at normal speed. Be fast and you get up to double.</div>
+  <div class="regel"><b>The race:</b> Your best score on each of the ten boards is added up. Two classes: Normal + Harder, and Chaos + Insane (iPad). Every Sunday at midnight the list locks: the best player who has played all ten boards and beats the house names wins the next collection for free. One win per player, and one winner per race each week. <span id="ukeTekst"></span> Points: Normal gives 10,000, Harder 15,000, Chaos 20,000 and Insane 25,000 at normal speed. Be fast and you get up to double.</div>
   <div class="sammen" id="sammen"><p class="liten">Loading standings …</p></div>
   <div class="samlingsnavn">Top 100 players · motive points</div>
   <div class="regel">Everything counts: Game, Peace, Scrub it 1P and 2P, every board, every level, every collection. Each board list gives up to 100 points (a Scrub it list up to 1,000): #1 gets them all, the rest their share of the top score.</div>
   <div class="sammen" id="spillere"><p class="liten">Loading players …</p></div>
   <p class="kreditt">© 2001–2026 Tarjei Krogh. All photography, music and art. <a href="https://kroghx.com" target="_blank" rel="noopener">kroghx.com</a></p>
-  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 1.15<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
+  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 1.16<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
 </section>
 
 <div class="ark" id="tidUtArk" hidden style="z-index:200001">
@@ -522,7 +523,7 @@ body:has(.resultat.vis) #spill .linje{opacity:0;pointer-events:none;transition:o
   <div class="ark-boks" role="dialog" aria-labelledby="startTittel">
     <h2 id="startTittel">/01/01</h2>
     <div>
-      <div class="liten" style="margin-bottom:8px">Pieces</div>
+      <div class="liten" style="margin-bottom:8px">Level</div>
       <div class="valg" id="antallValg"></div>
     </div>
     <p class="liten" id="startInfo" style="margin:0"></p>
@@ -815,7 +816,7 @@ function visStartark(i) {
   const v = $("antallValg"); v.replaceChildren();
   VALG.filter(o => o.n < 100 || storSkjerm()).forEach(o => {
     const b = document.createElement("button");
-    b.textContent = o.navn + " · " + o.n;
+    b.textContent = o.navn;
     b.setAttribute("aria-pressed", String(o.n === valgtAntall));
     b.onclick = () => { valgtAntall = o.n; visStartark(i); };
     v.appendChild(b);
@@ -1229,7 +1230,7 @@ function visArkade() {
   const a = ark, sp = a, res = $("resultat");
   if (!a || !a.gyldig() || res.classList.contains("vis")) return;
   res.classList.toggle("tema-scrub", a.tema === "scrub"); res.classList.toggle("tema-pusle", a.tema !== "scrub"); res.classList.toggle("peace", !!a.peace || !!a.utenListe); res.classList.toggle("peace-look", !!a.peaceLook);
-  const nivå = a.tema !== "scrub" && spill ? " · " + (VALG.find(v => v.n === spill.n)?.navn || "").toUpperCase() + " " + spill.n : "";
+  const nivå = a.tema !== "scrub" && spill ? " · " + (VALG.find(v => v.n === spill.n)?.navn || "").toUpperCase() : "";
   $("arkHode").innerHTML = (a.tema === "scrub" ? (sh?.toP ? "SCRUB IT 2P" : "SCRUB IT") : a.peaceLook ? "PEACE" : "PIECE IT") + nivå + "<span>TOP 100</span>";
   if (a.peaceLook && geo) {
     // Steg 1: bildet står i full størrelse. Under navnet telles poengene opp, linje for linje.
@@ -2420,6 +2421,9 @@ function brukKraft(type) {
   if (!gratis) { settCredits(har - k.pris); spill.trekk = (spill.trekk || 0) + k.trekk; spill.brukteKraft = true; }
   // Hint trekker alltid poeng, også det gratis og også i Peace.
   if (gratisHint) { spill.gratisHint--; spill.trekk = (spill.trekk || 0) + k.trekk; }
+  // Peace: Tilt og Family koster ingen credits, men trekker poeng som juks (Hint trekker allerede over).
+  if (spill.peace && type !== "hint") spill.trekk = (spill.trekk || 0) + k.trekk;
+  spill.juks = spill.juks || {}; spill.juks[type] = (spill.juks[type] || 0) + 1;
   if (!spill.start) spill.start = Date.now();
   if (lydPa) { tone(660, 0, .12, .04, "sine", .7, .6); tone(990, .06, .14, .03, "sine", .7, .6); }
   if (type === "tilt") { tilt(false); spill.tiltMagnetTil = performance.now() + 8000; }
@@ -3076,12 +3080,15 @@ async function ferdig() {
     const neste = nesteIRekke(spill.brett), sp = spill;
     $("nesteKnapp").textContent = neste >= 0 ? "Next: " + BRETT[neste].navn + " →" : "Menu"; $("nesteKnapp").disabled = false;
     $("resTittel").textContent = BRETT[spill.brett].navn; $("resPoeng").textContent = "0 points";
-    $("resInfo").textContent = kode(spill.brett) + " · Peace · " + spill.n + " pieces · time " + fmt(sEkte) + (trekk ? " · hints −" + Math.round(trekk * 100) + " %" : "");
+    $("resInfo").textContent = kode(spill.brett) + " · Peace · " + VALG.find(v => v.n === spill.n).navn + " · time " + fmt(sEkte) + (trekk ? " · cheats −" + Math.round(trekk * 100) + " %" : "");
     $("resRekord").textContent = ny ? (gml ? "New Peace best! Before: " + gml.poeng.toLocaleString("en") + "." : "First time on this board in Peace.") : "Your Peace best is " + gml.poeng.toLocaleString("en") + ".";
     $("resRekord").classList.toggle("ny-rekord", ny && !!før);
     const frist = Math.round(tidsfrist(sp.brett, sp.n) * PEACE_TID), p0 = regnPoeng(sp.n, frist), p1 = regnPoeng(sp.n, sEkte);
-    const trinnP = [{ navn: "Finished · " + (VALG.find(v => v.n === sp.n)?.navn || "") + " " + sp.n, verdi: p0 }, { navn: "Time left " + fmt(Math.max(0, frist - sEkte)), verdi: p1 - p0 }];
-    if (trekk) trinnP.push({ navn: "Hints −" + Math.round(trekk * 100) + " %", verdi: pp - p1 });
+    const trinnP = [{ navn: "Finished · " + (VALG.find(v => v.n === sp.n)?.navn || ""), verdi: p0 }, { navn: "Time left " + fmt(Math.max(0, frist - sEkte)), verdi: p1 - p0 }];
+    // Én minuslinje per type juks. Delene summerer nøyaktig til trekket.
+    if (trekk) { const J = sp.juks || {}, deler = [["hint", "Hint"], ["familie", "Family"], ["tilt", "Tilt"]].filter(([k]) => J[k]).map(([k, n]) => ({ n: n + (J[k] > 1 ? " ×" + J[k] : ""), t: KRAFT[k].trekk * J[k] }));
+      const tot = deler.reduce((a, d) => a + d.t, 0) || 1; let rest = pp - p1;
+      deler.forEach((d, j) => { const v = j === deler.length - 1 ? rest : Math.round((pp - p1) * d.t / tot); rest -= v; trinnP.push({ navn: d.n + " −" + Math.round(d.t * 100) + " %", verdi: v }); }); }
     ark = { tema: "pusle", peaceLook: true, trinnP, img: sp.img, fra: { x: geo.x0, y: geo.y0, w: geo.bredde }, poeng: pp, sluttT: sp.sluttT, gyldig: () => spill === sp && !!sp.slutt,
       neste: () => { if (spill !== sp) return; valgtAntall = sp.n; tilMeny(); if (neste >= 0) visStartark(neste); }, meny: tilMeny };
     setTimeout(() => { if (spill === sp) sp.biter.forEach(b => { b.el.style.opacity = 0; }); }, 1900);
@@ -3099,7 +3106,7 @@ async function ferdig() {
   $("nesteKnapp").textContent = neste >= 0 ? "Next: " + BRETT[neste].navn + " →" : "Menu";
   $("nesteKnapp").disabled = false;
   $("resTittel").textContent = BRETT[spill.brett].navn;
-  $("resInfo").dataset.kode = kode(spill.brett) + " · " + VALG.find(v => v.n === spill.n).navn + " · " + spill.n + " pieces";
+  $("resInfo").dataset.kode = kode(spill.brett) + " · " + VALG.find(v => v.n === spill.n).navn;
   $("resPoeng").textContent = "0 points";
   { const sp = spill; ark = { tema: "pusle", img: sp.img, fra: { x: geo.x0, y: geo.y0, w: geo.bredde }, poeng: p, sluttT: sp.sluttT, gyldig: () => spill === sp && !!sp.slutt && !sp.tapt,
     neste: () => { if (spill !== sp) return; const n = nesteIRekke(sp.brett); valgtAntall = sp.n; tilMeny(); if (n >= 0) visStartark(n); }, meny: tilMeny }; }
@@ -3409,6 +3416,22 @@ const KAPSLER = [
   { t: "O", navn: "BOMBS", hva: "THE BUBBLE DROPS BOMBS · THEY BLOW AWAY THE MUD", farge: "#ffae3c", vekt: 3, edel: "gull" },
   { t: "Z", navn: "SNAKE!", hva: "IT EATS THE MUD · CATCH IT WHEN IT'S FULL", farge: "#7dff6a", vekt: 4, edel: "solv" },
 ];
+// Når kommer hva? Tallet er brettet (fra 0) på tvers av samlingene: samling 1 er 0–9, samling 2 er 10–19 osv.
+// Sesong 1 får én ny ting omtrent per brett, og et nytt kjøpevåpen annenhver gang. Så ett nytt kjøpevåpen per sesong.
+// I BETA er alt åpent; med ?betaav kan rekkefølgen prøves.
+const SH_INN = {
+  kapsel: { W: 0, S: 0, M: 1, B: 1, Z: 2, A: 3, K: 3, T: 5, O: 6, "+": 8 },
+  kjøp: { tilt: 0, orm: 2, magnet: 4, trip: 6, bombe: 8, missil: 10, laser: 20, alien: 30 },
+  fiende: { levende: 1, galaga: 2, sabot: 3, krabbe: 4, boss: 6, hopper: 7 } };
+const SH_NYNAVN = { kjøp: { tilt: "TILT", orm: "WORM", magnet: "VACUMA", trip: "TRIP", bombe: "BOMBS", missil: "MISSILES", laser: "LASER", alien: "ALIEN" },
+  fiende: { levende: "THE ART WAKES UP", galaga: "SPACESHIPS", sabot: "SABOTEURS", krabbe: "MUD CRAWLER", boss: "THE BOSS", hopper: "PARATROOPER" } };
+function shHar(type, navn, i = sh?.i ?? 0) { return BETA || aktiv * 10 + i >= (SH_INN[type][navn] ?? 0); }
+// Velger en power-up blant dem som er åpnet (vektet etter hvor vanlige de er, eller helt jevnt).
+function shKapselValg(vektet = true) {
+  const lov = KAPSLER.filter(q => shHar("kapsel", q.t)); if (!lov.length) return KAPSLER[0];
+  if (!vektet) return lov[(Math.random() * lov.length) | 0];
+  let r = Math.random() * lov.reduce((a, q) => a + q.vekt, 0); for (const q of lov) { if (r < q.vekt) return q; r -= q.vekt; } return lov[0];
+}
 // Våt gjørme: lys og mørk tone. Hvert spill blander to tilfeldige typer.
 const SH_JORD = [
   { lys: [128, 96, 66], mork: [44, 30, 20] },
@@ -3563,6 +3586,7 @@ function shVåkne() {
   const s = sh;
   for (const h of s.levende) {
     if (h.aktiv) continue;
+    if (h.t !== "bumper" && !shHar("fiende", "levende")) continue;
     let sum = 0, n = 0;
     for (const k of s.klosser) if (Math.hypot(k.x + k.w / 2 - h.x, k.y + k.h / 2 - h.fy) < Math.max(h.r, .03)) { sum += k.vis; n++; }
     if (!n || sum / n < .3) {
@@ -3693,7 +3717,9 @@ async function shatterStart(i, poeng = 0, liv = 3) {
   if (BETA) settCredits(Math.max(credits(), 30));
   // Vanskeligere for hvert brett, og for hver samling.
   // Vanskeligheten øker bare litt for hvert brett og hver samling: 0,1 per brett, 1 per samling.
-  const toP = variant.scrub === "2p"; SH_TOPP = toP ? .34 : innerWidth <= 1000 ? .21 : .13; // Smal skjerm: to rader knapper øverst.
+  const toP = variant.scrub === "2p", antallKjøp = Object.keys(SH_INN.kjøp).filter(t => shHar("kjøp", t, i)).length;
+  SH_TOPP = toP ? .34 : innerWidth <= 1000 && antallKjøp + 1 > 5 ? .21 : .13; // Smal skjerm med mange knapper: to rader øverst.
+  for (const [id, t] of [["shKraftTilt", "tilt"], ["shKraftOrm", "orm"], ["shKraftMagnet", "magnet"], ["shKraftTrip", "trip"], ["shKraftBombe", "bombe"], ["shKraftMissil", "missil"], ["shKraftLaser", "laser"], ["shKraftAlien", "alien"]]) $(id).hidden = !shHar("kjøp", t, i);
   const niva = Math.min(6, i * .1 + aktiv * .1 + (toP ? 1.2 : 0));
   stoppFest(); clearInterval(timer); spill = null;
   document.querySelectorAll(".bit").forEach(e => e.remove());
@@ -3735,6 +3761,10 @@ async function shatterStart(i, poeng = 0, liv = 3) {
   $("shNiva").textContent = kode(i) + " · " + BRETT[i].navn;
   spillMusikk(BRETT[i].id);
   shMelding("Tap to launch", "Drag anywhere to move the light, or hold the left or right side. Wash off the mud, and catch what falls out of it.");
+  if (!BETA) { const G = aktiv * 10 + i, nye = [];
+    for (const type in SH_INN) for (const navn in SH_INN[type]) if (SH_INN[type][navn] === G && !(toP && type === "kjøp"))
+      nye.push(type === "kapsel" ? "NEW POWER-UP · " + KAPSLER.find(q => q.t === navn).navn : type === "kjøp" ? "NEW TO BUY · " + SH_NYNAVN.kjøp[navn] : "NEW · " + SH_NYNAVN.fiende[navn]);
+    nye.slice(0, 4).forEach((t, j) => sh.tekster.push({ txt: t, x: .5, y: SH_TOPP + .2 + j * .055, liv: 6, fade: 1.5, farge: "#ffd23a", liten: true })); }
   shOppsett(); shLagMoekk(); shHud();
   cancelAnimationFrame(shRAF); shSist = performance.now(); shRAF = requestAnimationFrame(shSteg);
 }
@@ -4388,12 +4418,11 @@ function shTreff(k, lag = 1, kilde = null) {
   if (Math.random() < .3) shStjerne(k.x + Math.random() * k.w, k.y + Math.random() * k.h, .7);
   if (kilde !== "syre" && !s.bytte && s.smaa.length < 5 && Math.random() < .03) shSmaaNy(mx, my);
   // Edelsteiner er sjeldne, og bare én faller om gangen.
-  if (kilde !== "syre" && !(s.sopp > 0) && !s.kapsler.length && s.sabot.length && Math.random() < .012) s.kapsler.push({ x: mx, y: my, t: "K", r: .044, vy: .04, fase: Math.random() * 6 });
-  if (kilde !== "syre" && !s.ormSett && !s.orm && !(s.sopp > 0) && !s.bytte && !s.galaga && !s.kapsler.length && s.igjen < s.klosser.length * .85 && Math.random() < .02) {
+  if (kilde !== "syre" && !(s.sopp > 0) && !s.kapsler.length && s.sabot.length && shHar("kapsel", "K") && Math.random() < .012) s.kapsler.push({ x: mx, y: my, t: "K", r: .044, vy: .04, fase: Math.random() * 6 });
+  if (kilde !== "syre" && shHar("kapsel", "Z") && !s.ormSett && !s.orm && !(s.sopp > 0) && !s.bytte && !s.galaga && !s.kapsler.length && s.igjen < s.klosser.length * .85 && Math.random() < .02) {
     s.ormSett = true; s.kapsler.push({ x: mx, y: my, t: "Z", r: .044, vy: .04, fase: Math.random() * 6 });
   } else if (kilde !== "syre" && !(s.sopp > 0) && !s.bytte && !s.kapsler.length && Math.random() < .004) {
-    const sum = KAPSLER.reduce((a, q) => a + q.vekt, 0); let r = Math.random() * sum, valgt = KAPSLER[0];
-    for (const q of KAPSLER) { if (r < q.vekt) { valgt = q; break; } r -= q.vekt; }
+    const valgt = shKapselValg();
     s.kapsler.push({ x: mx, y: my, t: valgt.t, r: .044, vy: .04, fase: Math.random() * 6 });
     for (let n = 0; n < 4; n++) shKlatt(mx + (Math.random() - .5) * .05, my + Math.random() * .02, .004 + Math.random() * .005, .03 + Math.random() * .03);
   }
@@ -4550,7 +4579,7 @@ function shInnkaps(e) {
   s.poeng += 300; shHud(); shLyd("innkapsle");
   s.tekster.push({ txt: "+300", x: e.x, y: e.y - .04, liv: .8, farge: "#7fe8ff", liten: true });
   shStov(e.x, e.y, 20, "200,240,255", .15);
-  if (Math.random() < .3) { if (!s.kapsler.length && Math.random() < .35) { const sum = KAPSLER.reduce((a, q) => a + q.vekt, 0); let r = Math.random() * sum, v = KAPSLER[0]; for (const q of KAPSLER) { if (r < q.vekt) { v = q; break; } r -= q.vekt; } s.kapsler.push({ x: e.x, y: e.y, t: v.t, r: .044, vy: .04, fase: Math.random() * 6 }); } else s.smaa.push(shSmaaNy(e.x, e.y, true)); }
+  if (Math.random() < .3) { if (!s.kapsler.length && Math.random() < .35) { const v = shKapselValg(); s.kapsler.push({ x: e.x, y: e.y, t: v.t, r: .044, vy: .04, fase: Math.random() * 6 }); } else s.smaa.push(shSmaaNy(e.x, e.y, true)); }
 }
 function shGalagaSteg(dt) {
   const s = sh, g = s.galaga; if (!g) return;
@@ -4670,7 +4699,7 @@ function shBossTreff(q) {
   if (B.hp <= 0) {
     B.tilstand = "boble"; B.bt = 0; s.poeng += 5000; shHud(); shLyd("innkapsle");
     s.tekster.push({ txt: "BOSS CAUGHT! +5000", x: .5, y: .4, liv: 1.8, farge: "#ffd23a" });
-    if (!s.kapsler.length) { const v = KAPSLER[(Math.random() * KAPSLER.length) | 0]; s.kapsler.push({ x: B.x, y: B.y, t: v.t, r: .044, vy: .04, fase: Math.random() * 6 }); }
+    if (!s.kapsler.length) { const v = shKapselValg(false); s.kapsler.push({ x: B.x, y: B.y, t: v.t, r: .044, vy: .04, fase: Math.random() * 6 }); }
     for (let n = 0; n < 3; n++) s.smaa.push(shSmaaNy(B.x + (Math.random() - .5) * .1, B.y, true));
   }
   return true;
@@ -4682,7 +4711,7 @@ function shSabotSteg(dt) {
   if (!s.galaga && !(s.sopp > 0) && s.tilstand === "spill") {
     s.sabotT -= dt;
     const vasket = 1 - s.igjen / s.klosser.length;
-    if (s.sabotT <= 0 && s.sabot.length < 2 && vasket > .12 && vasket < .8) {
+    if (s.sabotT <= 0 && s.sabot.length < 2 && vasket > .12 && vasket < .8 && shHar("fiende", "sabot")) {
       s.sabotT = 16 + Math.random() * 14;
       const side = Math.random() < .5 ? -1 : 1, e = { figur: (Math.random() * 9) | 0, x: side < 0 ? -.1 : 1.1, y: .04 + Math.random() * .08, tilstand: "inn", t: 0, fase: Math.random() * 6, gave: Math.random() < .3 };
       if (shSabotMål(e)) { s.sabot.push(e); shLyd("spawn"); s.tekster.push({ txt: "SABOTEUR!", x: e.x < .5 ? .2 : .8, y: .1, liv: 1, farge: "#ff7ad9", liten: true }); }
@@ -4898,6 +4927,7 @@ setInterval(visShKraft, 400);
 setInterval(() => { const el = $("shTid"); if (!sh || !el || $("shatter").hidden) return; const igjen = Math.max(0, Math.ceil(SH_TIDSGRENSE - sh.tid)); el.textContent = fmt(igjen); el.classList.toggle("lite", igjen <= 30 && sh.tilstand !== "ferdig"); }, 250);
 function shBrukKraft(type) {
   const s = sh; if (!s || (s.tilstand !== "spill" && s.tilstand !== "klar") || s.bytte) return;
+  if (!shHar("kjøp", type)) return;
   const k = SH_KRAFT[type], har = credits();
   if (har < k.pris) { åpneButikk(k.pris); return; }
   if (type === "orm" && (s.ormer?.length || !s.baller.length)) return;
@@ -5510,7 +5540,7 @@ function shRacketTreff(b, R) {
       if (s.tid - (s.sveipT ?? -9) > 4) { s.sveipT = s.tid; s.tekster.push({ txt: "SWIPE SHOT!", x: b.x, y: SH_PY - .06, liv: 1.1, farge: "#ffd23a" }); } shStov(b.x, b.y, 18, "255,220,120", .25); }
     if (fl.t < .1) {
       b.kraft = Math.max(b.kraft, 3); b.kraftN = Math.max(b.kraftN, 6); b.boost = Math.max(b.boost || 0, 1.5); shLyd("power"); s.glod = 1;
-      if (!s.galaga && s.tid > s.galagaPause && s.igjen < s.klosser.length * .65 && s.igjen > s.klosser.length * .35) { s.lamper++; shLyd("lampe", s.lamper); if (s.lamper >= 6) shGalagaStart(); }
+      if (!s.galaga && shHar("fiende", "galaga") && s.tid > s.galagaPause && s.igjen < s.klosser.length * .65 && s.igjen > s.klosser.length * .35) { s.lamper++; shLyd("lampe", s.lamper); if (s.lamper >= 6) shGalagaStart(); }
       // Flipperne er alltid der, så teksten kommer bare av og til.
       if (s.tid - (s.powerT ?? -9) > 6) { s.powerT = s.tid; s.tekster.push({ txt: "POWER!", x: b.x, y: SH_PY - .05, liv: 1, farge: "#ff7ac8" }); }
     } else if (fl.t < .22) b.boost = 1.2;
@@ -5766,11 +5796,11 @@ function shOppdater(dt) {
     if (s.skuddT < -.1) s.skuddT = 0;
   }
   shGalagaSteg(dt); if (!s.bytte) shSabotSteg(dt); shOrmSteg(dt); shKrabbeSteg(dt); shHopperSteg(dt); shVapenSteg(dt);
-  { const andel = 1 - s.igjen / s.klosser.length; if (!s.hopper && s.tilstand === "spill" && !s.bytte && !s.galaga && andel > .15 && andel < .85 && s.tid > (s.hopperT ?? 25)) { s.hopperT = s.tid + 45 + Math.random() * 25; shHopperStart(); } }
-  { const andel = 1 - s.igjen / s.klosser.length; if (!s.krabbe && s.tilstand === "spill" && !s.bytte && !s.galaga && !(s.sopp > 0) && andel > .25 && andel < .85 && s.tid > (s.krabbeT ?? 30)) { s.krabbeT = s.tid + 40 + Math.random() * 20; shKrabbeStart(); } }
+  { const andel = 1 - s.igjen / s.klosser.length; if (!s.hopper && shHar("fiende", "hopper") && s.tilstand === "spill" && !s.bytte && !s.galaga && andel > .15 && andel < .85 && s.tid > (s.hopperT ?? 25)) { s.hopperT = s.tid + 45 + Math.random() * 25; shHopperStart(); } }
+  { const andel = 1 - s.igjen / s.klosser.length; if (!s.krabbe && shHar("fiende", "krabbe") && s.tilstand === "spill" && !s.bytte && !s.galaga && !(s.sopp > 0) && andel > .25 && andel < .85 && s.tid > (s.krabbeT ?? 30)) { s.krabbeT = s.tid + 40 + Math.random() * 20; shKrabbeStart(); } }
   if (s.bytte) shByttetSteg(dt);
   else if (s.byttePlan && !s.galaga && !(s.sopp > 0) && s.tid > 60 && s.igjen <= s.klosser.length * .35 && s.igjen > s.klosser.length * .12) shByttetStart();
-  if (!s.bytte && !(s.sopp > 0) && !s.galaga && !s.galagaKommet && s.tid >= 40 && s.igjen <= s.klosser.length * .65 && s.igjen >= s.klosser.length * .12) shGalagaStart(Math.random() < (s.niva >= 2 ? .5 : .3));
+  if (!s.bytte && !(s.sopp > 0) && !s.galaga && !s.galagaKommet && shHar("fiende", "galaga") && s.tid >= 40 && s.igjen <= s.klosser.length * .65 && s.igjen >= s.klosser.length * .12) shGalagaStart(shHar("fiende", "boss") && Math.random() < (s.niva >= 2 ? .5 : .3));
   for (const q of s.skudd) {
     q.x += q.vx * dt; q.y += q.vy * dt;
     if (q.x < .01 || q.x > .99) q.vx = -q.vx;
