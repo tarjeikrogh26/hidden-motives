@@ -635,7 +635,7 @@ body.lys #modusDeal{--farge:#0f8f6c;--glod:15,143,108}
   <div class="regel">Everything counts: Game, Peace, Scrub it 1P and 2P, every board, every level, every collection. Each board list gives up to 100 points (a Scrub it list up to 1,000): #1 gets them all, the rest their share of the top score.</div>
   <div class="sammen" id="spillere"><p class="liten">Loading players …</p></div>
   <p class="kreditt">© 2001–2026 Tarjei Krogh. All photography, music and art. <a href="https://kroghx.com" target="_blank" rel="noopener">kroghx.com</a></p>
-  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 1.52<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
+  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 1.53<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
 </section>
 
 <div class="ark" id="tidUtArk" hidden style="z-index:200001">
@@ -905,7 +905,7 @@ function tegnModus() {
   $("modusPuslespill").setAttribute("aria-selected", String(modus === "pusle"));
   $("modusScrub").setAttribute("aria-selected", String(modus === "scrub"));
   $("modusTekst").textContent = modus === "pusle"
-    ? (iPeace() ? "Piece it in peace. No fire, no surprises. Just the pieces, calm music and a quiet clock in a white gallery. Beat the clock, and climb the Peace list."
+    ? (iPeace() ? "Piece it in peace. No fire, no surprises, no power-ups to buy. Just the pieces, calm music and a quiet clock. Beat the clock, and climb the Peace list."
       : "You never see the picture until it's done. Place the pieces before the clock runs out, and the image reveals itself.")
     : variant.scrub === "2p" ? "Two players, one screen. A flipper at each end: wash the picture clean together. No shop, only what the mud gives you."
     : "The art is buried in mud. Wash it off with soap bubbles. Clear a board in either game and the next one opens.";
@@ -977,7 +977,8 @@ function visStartark(i) {
   // iPhone har bare to nivåer. Et lite frampek til de ville nivåene på iPad.
   if (!storSkjerm()) { const t = document.createElement("span"); t.className = "ipad-tips"; t.textContent = "If you dare, check out wilder levels on iPad."; v.appendChild(t); }
   const pc = iPeace(), f = fremdrift[BRETT[i].id]?.[(pc ? "peace_" : "") + valgtAntall];
-  $("startark").classList.toggle("peace", pc);
+  // Samme stil på startarket i GAME og PEACE (Krogh): hvitt ark med svart ramme, rød START.
+  $("startark").classList.add("peace");
   $("startInfo").textContent = "You have " + fmt(pc ? Math.round(tidsfrist(i, valgtAntall) * PEACE_TID) : tidsfrist(i, valgtAntall)) + ". The clock starts when you touch the first piece." + (f ? " Your best: " + f.poeng.toLocaleString("en") + " points in " + fmt(f.tid) + "." : "");
   $("startark").hidden = false;
 }
