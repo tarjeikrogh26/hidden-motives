@@ -522,7 +522,7 @@ h1{font-weight:300;letter-spacing:.14em;line-height:1.02}
   <div class="regel">Everything counts: Game, Peace, Scrub it 1P and 2P, every board, every level, every collection. Each board list gives up to 100 points (a Scrub it list up to 1,000): #1 gets them all, the rest their share of the top score.</div>
   <div class="sammen" id="spillere"><p class="liten">Loading players …</p></div>
   <p class="kreditt">© 2001–2026 Tarjei Krogh. All photography, music and art. <a href="https://kroghx.com" target="_blank" rel="noopener">kroghx.com</a></p>
-  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 1.18<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
+  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 1.19<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
 </section>
 
 <div class="ark" id="tidUtArk" hidden style="z-index:200001">
@@ -3756,19 +3756,22 @@ async function shatterStart(i, poeng = 0, liv = 3) {
   $("meny").hidden = true; $("spill").hidden = true; $("shatter").hidden = false; oppdaterTema(); $("kraftLinje").hidden = true;
   const img = await hentBilde(BRETT[i].src);
   const tykk = shMoekk(niva); shBalanser(tykk);
+  // De tre første brettene i spillet er lettere: rammen ett lag tynnere og ingen ekstra hard leire.
+  const nybegynner = aktiv === 0 && i < 3 && !toP;
   const klosser = [], j1 = Math.floor(Math.random() * SH_JORD.length), j2 = (j1 + 1 + Math.floor(Math.random() * (SH_JORD.length - 1))) % SH_JORD.length;
   for (let r = 0; r < SH_RAD; r++) for (let c = 0; c < SH_KOL; c++) {
     // Negativ tykkelse betyr bløt slaps i en åre: boblen pløyer gjennom den.
     // Ytterst langs kanten ligger rammen: alltid gjørme, minst to lag.
     const ramme = r <= 1 || r >= SH_RAD - 2 || c <= 1 || c >= SH_KOL - 2;
     const myk = !ramme && tykk[r * SH_KOL + c] < 0, nede = r >= SH_RAD - 2;
-    let h = ramme ? Math.max(Math.abs(tykk[r * SH_KOL + c]), 1) + 1 : Math.abs(tykk[r * SH_KOL + c]);
+    let h = ramme ? Math.max(Math.abs(tykk[r * SH_KOL + c]), 1) + (nybegynner ? 0 : 1) : Math.abs(tykk[r * SH_KOL + c]);
     if (nede) h = i === 0 ? 1 : Math.min(h, 2);
+    if (nybegynner && !ramme && h > 1) h -= 1; // Nybegynnerbrett: ett lag tynnere jord overalt.
     klosser.push({ r, c, x: c / SH_KOL, y: SH_TOPP + r / SH_RAD, w: 1 / SH_KOL, h: 1 / SH_RAD, liv: h, maks: h, vis: myk ? .42 : 1, glans: 0, sist: -9, myk, ramme });
   }
   // Leira er ikke lik overalt: noen partier er harde og tykke (1–3 lag ekstra), og tar flere treff.
   { const frø = Math.floor(Math.random() * 1e5);
-    for (const k of klosser) { if (k.ramme || k.myk || k.liv <= 0) continue;
+    for (const k of klosser) { if (nybegynner || k.ramme || k.myk || k.liv <= 0) continue;
       const n = shFbm(k.c / SH_KOL * 3.2, k.r / SH_RAD * 3.2, frø, 3);
       if (n > .52) { const ekstra = Math.min(3, 1 + Math.round((n - .52) * 12)); k.liv += ekstra; k.maks += ekstra; k.hardLeire = true; } } }
   // Et svakt punkt: en stripe med tynn jord fra bunnen og et stykke opp, så boblen kommer seg inn i bildet med en gang.
