@@ -699,7 +699,7 @@ body.lys #modusDeal{--farge:#0f8f6c;--glod:15,143,108}
   <div class="regel">Everything counts: Game, Peace, Bubble it 1P and 2P, every board, every level, every collection. Each board list gives up to 100 points (a Bubble it list up to 1,000): #1 gets them all, the rest their share of the top score.</div>
   <div class="sammen" id="spillere"><p class="liten">Loading players …</p></div>
   <p class="kreditt">© 2001–2026 Tarjei Krogh. All photography, music and art. <a href="https://kroghx.com" target="_blank" rel="noopener">kroghx.com</a></p>
-  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 1.69<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
+  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 1.70<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
 </section>
 
 <div class="ark" id="tidUtArk" hidden style="z-index:200001">
@@ -857,12 +857,13 @@ const NAVN_SAMLING = [
   ["Everyone Carried Their Shoes", "Customer Service", "The Wall Remembers", "Don't Ask About the Pool", "Walked In Without Knocking",
    "The Night Shift Never Left", "Winter Wrote This", "Rinse and Repeat", "Gravity Took the Day Off", "Somebody Else's Stop"],
   ["Don't Turn Around", "A Small Dog Owns This Moon", "Too Many Ways to Look", "Smile for the Teeth", "Say Cheese, Mean It",
-   "Bedtime for Giants", "Landed Softly, Probably", "He Came for the View", "Talking With His Mouth Full", "The Cherry on Top"]];
+   "Bedtime for Giants", "Landed Softly, Probably", "He Came for the View", "Talking With His Mouth Full", "The Cherry on Top"],
+  ["", "", "", "", "", "Bubbles Know Everything", "Patient Neighbour", "Please Remain Seated", "Carrying Something Home"]];
 // Samlinger: mappe med bilder og id-prefiks (samling 1 beholder gamle id-er, så rekordene står).
-const SAMLINGER = [{ nr: "01", mappe: "bilder/", pre: "b" }, { nr: "02", mappe: "bilder02/", pre: "c2b" }, { nr: "03", mappe: "bilder03/", pre: "c3b" }, { nr: "04", mappe: "bilder04/", pre: "c4b" }, { nr: "05", mappe: "bilder05/", pre: "c5b" }, { nr: "06" }];
-// Ni brett per sesong (rutenett 3 × 3). Sesong 6 er Mixed Media: ett brett fra hver av de fem første. Krogh finner flere.
+const SAMLINGER = [{ nr: "01", mappe: "bilder/", pre: "b" }, { nr: "02", mappe: "bilder02/", pre: "c2b" }, { nr: "03", mappe: "bilder03/", pre: "c3b" }, { nr: "04", mappe: "bilder04/", pre: "c4b" }, { nr: "05", mappe: "bilder05/", pre: "c5b" }, { nr: "06", mappe: "bilder06/", pre: "c6b" }];
+// Ni brett per sesong (rutenett 3 × 3). Sesong 6 er Mixed Media: ett brett fra hver av de fem første, og fire nye (bilder06, level 06–09).
 const _ni = (s, ut) => [1, 2, 3, 4, 5, 6, 7, 8, 9, 10].filter(n => n !== ut).map(n => [s, n]);
-const SESONG_BRETT = [_ni(0, 10), _ni(1, 9), _ni(2, 10), _ni(3, 7), _ni(4, 2), [[0, 10], [1, 9], [2, 10], [3, 7], [4, 2]]];
+const SESONG_BRETT = [_ni(0, 10), _ni(1, 9), _ni(2, 10), _ni(3, 7), _ni(4, 2), [[0, 10], [1, 9], [2, 10], [3, 7], [4, 2], [5, 6], [5, 7], [5, 8], [5, 9]]];
 let aktiv = 0;
 let SAMLING = "01";
 // Kryptiske samlingsnavn, brukes i rekkefølge: /01, /02, /03 …
@@ -909,7 +910,7 @@ function hentBilde(src) {
 //   PIECE IT: bokstaven står i bildet når du har lagt det ferdig.
 //   BUBBLE IT: en gullbrikke med bokstaven ligger under gjørma. Vask den fram og treff den.
 //   UNWRAP IT: bokstaven er malt på bildet under papiret. Riv vekk papiret over den.
-const SESONG_ORD = ["NIGHTMARE", "OVERGROWN", "MENAGERIE", "NIGHTFALL", "FORGERIES", "PATCH"];
+const SESONG_ORD = ["NIGHTMARE", "OVERGROWN", "MENAGERIE", "NIGHTFALL", "FORGERIES", "PATCHWORK"];
 const BOKSTAV_SPILL = ["p", "b", "u"], BOKSTAV_NAVN = { p: "PIECE IT", b: "BUBBLE IT", u: "UNWRAP IT" };
 const bokstavSpill = (j, i) => BOKSTAV_SPILL[(i + j) % 3];
 function bokstavLagret() { try { return JSON.parse(localStorage.getItem("sm-bokstaver") || "{}"); } catch { return {}; } }
