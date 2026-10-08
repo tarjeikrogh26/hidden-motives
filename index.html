@@ -704,7 +704,7 @@ body.lys #modusDeal{--farge:#0f8f6c;--glod:15,143,108}
   <div class="regel">Everything counts: Game, Peace, Bubble it 1P and 2P, every board, every level, every collection. Each board list gives up to 100 points (a Bubble it list up to 1,000): #1 gets them all, the rest their share of the top score.</div>
   <div class="sammen" id="spillere"><p class="liten">Loading players …</p></div>
   <p class="kreditt">© 2001–2026 Tarjei Krogh. All photography, music and art. <a href="https://kroghx.com" target="_blank" rel="noopener">kroghx.com</a></p>
-  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 1.72<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
+  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 1.73<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
 </section>
 
 <div class="ark" id="tidUtArk" hidden style="z-index:200001">
@@ -918,7 +918,7 @@ function hentBilde(src) {
 //   UNWRAP IT: bokstaven er malt på bildet under papiret. Riv vekk papiret over den.
 const SESONG_ORD = ["NIGHTMARE", "OVERGROWN", "MENAGERIE", "NIGHTFALL", "FORGERIES", "PATCHWORK"];
 const BOKSTAV_SPILL = ["p", "b", "u"], BOKSTAV_NAVN = { p: "PIECE IT", b: "BUBBLE IT", u: "UNWRAP IT" };
-const bokstavSpill = (j, i) => BOKSTAV_SPILL[(i + j) % 3];
+const bokstavSpill = (j, i) => ["p", "u"][(i + j) % 2]; // Bokstavene finnes i PIECE IT og UNWRAP IT, ikke i BUBBLE IT.
 function bokstavLagret() { try { return JSON.parse(localStorage.getItem("sm-bokstaver") || "{}"); } catch { return {}; } }
 function nøklerLagret() { try { return JSON.parse(localStorage.getItem("sm-nokler") || "[]"); } catch { return []; } }
 function bokstavHar(j, i) { return (bokstavLagret()[j] || []).includes(i); }
@@ -6792,7 +6792,7 @@ function shDelerTegn(x, f, s) {
 //   Høyre: en saucer som sluker boblen, holder den litt og spytter den ut mot flipperne, og en spinner som snurrer.
 //   Venstre side: tre drop targets. Alle nede: bonus, og de reiser seg igjen.
 const SH_BORD_ORD = ["B", "U", "B", "B", "L", "E"];
-function shBordPå(s) { return !s.toP; } // Flipperbordet er på alle brett (ikke 2P).
+function shBordPå(s) { return false; } // Flipperbordet (1.63–1.71) er slått av: egentegnet grafikk passer ikke i bildene.
 function shBaneGlatt(pk, n = 10) {
   // Catmull-Rom gjennom punktene, så banen blir en jevn kurve.
   const ut = [];
