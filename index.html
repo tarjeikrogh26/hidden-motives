@@ -676,7 +676,7 @@ body.lys #modusDeal{--farge:#0f8f6c;--glod:15,143,108}
   <div class="regel">Everything counts: Game, Peace, Bubble it 1P and 2P, every board, every level, every collection. Each board list gives up to 100 points (a Bubble it list up to 1,000): #1 gets them all, the rest their share of the top score.</div>
   <div class="sammen" id="spillere"><p class="liten">Loading players …</p></div>
   <p class="kreditt">© 2001–2026 Tarjei Krogh. All photography, music and art. <a href="https://kroghx.com" target="_blank" rel="noopener">kroghx.com</a></p>
-  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 1.64<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
+  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 1.65<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
 </section>
 
 <div class="ark" id="tidUtArk" hidden style="z-index:200001">
@@ -8409,9 +8409,9 @@ async function uwStart(i) {
   const støy = new Float32Array(G * G); for (let j = 0; j < G * G; j++) støy[j] = R();
   const bx = .36 + R() * .28, by = .34 + R() * .28, fiender = [];
   // Motstanderne: Kroghs figurer spretter rundt, maur går i rekker på papiret, en møll flyr over alt.
-  const nFig = n < 2 ? 1 : n < 6 ? 2 : 3, fart = .16 + aktiv * .012 + i * .005;
+  const nFig = n < 2 ? 1 : n < 12 ? 2 : 3, fart = .16 + aktiv * .012 + i * .005;
   for (let k = 0; k < nFig; k++) { const a = R() * 6.283; fiender.push({ type: "figur", x: .25 + R() * .5, y: .25 + R() * .5, vx: Math.cos(a) * fart, vy: Math.sin(a) * fart, r: .033, figur: n * 3 + k, fase: R() * 6 }); }
-  const rekker = n < 1 ? 0 : 1 + (n >= 8) + (n >= 16), iRekke = 5 + Math.min(4, Math.floor(n / 4));
+  const rekker = n < 1 ? 0 : 1 + (n >= 8) + (n >= 16), iRekke = 4 + Math.min(4, Math.floor(n / 5));
   for (let k = 0; k < rekker; k++) { const a = R() * 6.283, x = .5 + Math.cos(a + 3.14) * .25, y = .5 + Math.sin(a + 3.14) * .25; let foran = null;
     for (let m = 0; m < iRekke; m++) { const e = { type: "maur", x: shClamp(x - Math.cos(a) * m * .024, .04, .96), y: shClamp(y - Math.sin(a) * m * .024, .04, .96), a, v: .065 + aktiv * .004, r: .012, foran, fase: R() * 6 }; fiender.push(e); foran = e; } }
   const møll = n < 3 ? 0 : n < 10 ? 1 : 2;
@@ -8432,7 +8432,7 @@ function uwHud() {
   if (!uw) return; $("uwPoeng").textContent = uw.poeng.toLocaleString("en");
   $("uwLiv").textContent = "●".repeat(Math.max(0, uw.liv)) + "○".repeat(Math.max(0, 3 - uw.liv));
   $("uwTid").textContent = fmt(Math.max(0, Math.ceil(uw.frist - uw.tid)));
-  $("uwProsent").textContent = Math.floor(uw.åpne / (UW_G * UW_G) * 100) + " %";
+  $("uwProsent").textContent = Math.floor(uwSynlig() * 100) + " %";
   // Rivalen: din beste på dette brettet.
   const b = uw.best; $("uwRival").textContent = !b ? "" : uw.poeng < b ? "BEST " + b.toLocaleString("en") + " · " + (b - uw.poeng).toLocaleString("en") + " to go" : "NEW BEST";
 }
@@ -8480,6 +8480,7 @@ function uwFlyttKniv(p) {
   const u = uw, G = UW_G, k = u.kniv, gx = Math.floor(p.x * G), gy = Math.floor(p.y * G);
   const a = k && Math.hypot(p.x - k.x, p.y - k.y) > 1e-5 ? Math.atan2(p.y - k.y, p.x - k.x) : k?.a ?? -.6;
   u.kniv = { x: p.x, y: p.y, a: k ? k.a + Math.atan2(Math.sin(a - k.a), Math.cos(a - k.a)) * .35 : a };
+  uwHageKniv(p);
   if (u.spor.length) { const l = u.linje[u.linje.length - 1]; if (!l || Math.hypot(l.x - p.x, l.y - p.y) > .003) u.linje.push({ x: p.x, y: p.y }); }
   if (u.gc && u.gc.x === gx && u.gc.y === gy) return;
   // Alle cellene mellom forrige og denne (Bresenham), så streken alltid er tett.
@@ -8538,15 +8539,18 @@ function uwSjekkRiv() {
   // Figurer og maur i en bit som ble revet av, er fanget.
   const fanget = u.fiender.filter(e => e.type !== "møll" && rivNr.has(merke[Math.min(G - 1, Math.floor(e.y * G)) * G + Math.min(G - 1, Math.floor(e.x * G))]));
   for (const e of fanget) { const p = e.type === "maur" ? 400 : 2000; u.poeng += p; uwFjern(e); uwTekst(e.type === "maur" ? "+400" : "CAUGHT! +2000", e.x, e.y); }
-  const andel = n / (G * G), p = Math.round(n / (G * G) * 28800 * (1 + andel * 4)); u.poeng += p;
-  const k = u.kniv; uwTekst(andel > .12 ? "BIG RIP! +" + p.toLocaleString("en") : "+" + p.toLocaleString("en"), k.x, k.y);
+  // Combo: river du av igjen innen 2,5 s, ganges poengene (×2 … ×4).
+  u.combo = u.tid - (u.sistRiv ?? -9) < 2.5 ? Math.min(4, (u.combo || 1) + 1) : 1; u.sistRiv = u.tid;
+  const andel = n / (G * G), p = Math.round(n / (G * G) * 28800 * (1 + andel * 4)) * u.combo; u.poeng += p;
+  const k = u.kniv; uwTekst((u.combo > 1 ? "COMBO ×" + u.combo + " · +" : andel > .12 ? "BIG RIP! +" : "+") + p.toLocaleString("en"), k.x, k.y);
+  if (u.combo > 1 && lydPa) tone(660 * Math.pow(2, (u.combo - 1) * 4 / 12), 0, .25, .03, "triangle", .5, .8);
   if (lydPa) { shSus(.25 + andel * 2, "bandpass", 1800 - andel * 900, .05 + andel * .1, 1.2, .8, .3); shSus(.12, "highpass", 4000, .03, 1, .8, .2); }
   u.spor = []; u.linje = []; u.strekStart = 0;
   // Sløyfen: rives papiret under den, flyr den av og gir bonus.
   const sl = u.sløyfe; if (!sl.av && C[Math.min(G - 1, Math.floor(sl.y * G)) * G + Math.min(G - 1, Math.floor(sl.x * G))] === 1) { sl.av = { vx: (Math.random() - .5) * .5, vy: -.55, rot: 0, spinn: (Math.random() - .5) * 6, t: 0 }; u.poeng += 3000; uwTekst("BOW! +3,000", sl.x, sl.y - .05);
     if (lydPa) [0, 7, 12].forEach((st, j) => tone(784 * Math.pow(2, st / 12), j * .07, .35, .03, "triangle", .5, 1)); }
   uwHud();
-  if (u.åpne / (G * G) >= u.krav) uwVunnet();
+  uwRegnDekket(); if (uwSynlig(u) >= u.krav) uwVunnet();
   return true;
 }
 function uwFjern(e) { const u = uw, i = u.fiender.indexOf(e); if (i < 0) return; u.fiender.splice(i, 1); for (const f of u.fiender) if (f.foran === e) f.foran = e.foran; }
@@ -8562,15 +8566,16 @@ function uwTekst(txt, x, y) { uw.tekster.push({ txt, x, y, t: 0 }); }
 function uwMistet() {
   const u = uw; uwAvbryt(); u.kø = []; u.låst = true; u.slipp = false; u.liv--; u.usårbar = 1.5; uwHud();
   if (lydPa) { tone(220, 0, .3, .05, "sawtooth", .6, .3); tone(140, .1, .4, .04, "sine", .6, .3); }
-  if (u.liv <= 0) { u.tilstand = "over"; uwMelding("Out of knives", "Start the board again. " + Math.floor(u.åpne / (UW_G * UW_G) * 100) + " % unwrapped.", [["Try again", () => uwStart(u.i), true], ["Menu", uwAvslutt]]); }
+  if (u.liv <= 0) { u.tilstand = "over"; uwMelding("Out of knives", "Start the board again. " + Math.floor(uwSynlig(u) * 100) + " % unwrapped.", [["Try again", () => uwStart(u.i), true], ["Menu", uwAvslutt]]); }
   else uwTekst(u.liv === 1 ? "CUT! LAST KNIFE" : "CUT! " + u.liv + " KNIVES LEFT", .5, .45);
 }
 function uwVunnet() {
-  const u = uw, G = UW_G; u.tilstand = "ferdig"; uwPeker = null; const tidBonus = Math.round(Math.max(0, u.frist - u.tid) * 60), prosent = Math.floor(u.åpne / (G * G) * 100), ekstra = Math.max(0, prosent - 80) * 500;
+  const u = uw, G = UW_G; u.tilstand = "ferdig"; uwPeker = null; const tidBonus = Math.round(Math.max(0, u.frist - u.tid) * 60), prosent = Math.floor(uwSynlig(u) * 100), ekstra = Math.max(0, prosent - 80) * 500;
   u.poeng += tidBonus + ekstra;
   // Resten av papiret flyr av.
   const rest = []; for (let j = 0; j < G * G; j++) if (u.celle[j] !== 1 || (u.indre && u.indre[j])) { rest.push(j); u.celle[j] = 1; if (u.indre) u.indre[j] = 0; } if (rest.length) { uwFlak(rest, u.stil.bunn[0]); uwFlak(rest, (u.stil2 || u.stil).bunn[0]); } uwSkitt(0, 0, G - 1, G - 1); u.spor = []; u.linje = []; u.merket.fill(0);
   if (!u.sløyfe.av) u.sløyfe.av = { vx: .2, vy: -.5, rot: 0, spinn: 3, t: 0 };
+  if (u.hage) { u.hage.nett = []; u.hage.hauger = []; u.hage.edd = null; u.hage.mv = null; u.dekket = 0; }
   const b = BRETT[u.i]; fremdrift[b.id] = fremdrift[b.id] || {}; const før = fremdrift[b.id].unwrap || 0; if (u.poeng > før) fremdrift[b.id].unwrap = u.poeng; skrivLokal(fremdrift);
   const neste = nesteIRekke(u.i);
   if (lydPa) [0, 4, 7, 12, 16].forEach((st, j) => tone(523.25 * Math.pow(2, st / 12), j * .09, .5, .03, "triangle", .5, 1));
@@ -8590,9 +8595,10 @@ function uwOppdater(dt) {
   const av = u.sløyfe.av; if (av) { av.t += dt; av.vy += .9 * dt; u.sløyfe.x += av.vx * dt; u.sløyfe.y += av.vy * dt; av.rot += av.spinn * dt; }
   if (u.tilstand !== "spill") return;
   u.tid += dt; u.usårbar = Math.max(0, u.usårbar - dt);
-  if (u.tid >= u.frist) { u.tilstand = "over"; uwMelding("Time's up", Math.floor(u.åpne / (G * G) * 100) + " % unwrapped. You need 80 %.", [["Try again", () => uwStart(u.i), true], ["Menu", uwAvslutt]]); return; }
+  if (u.tid >= u.frist) { u.tilstand = "over"; uwMelding("Time's up", Math.floor(uwSynlig(u) * 100) + " % unwrapped. You need 80 %.", [["Try again", () => uwStart(u.i), true], ["Menu", uwAvslutt]]); return; }
   if (u.kniv) uwKniv(dt);
   if (u.tilstand !== "spill") return;
+  uwHageSteg(dt);
   for (const e of [...u.fiender]) {
     if (e.type === "figur") {
       const nx = e.x + e.vx * dt, ny = e.y + e.vy * dt;
@@ -8623,6 +8629,124 @@ function uwOppdater(dt) {
       if (truffet) { uwMistet(); return; } }
   }
   uwHud();
+}
+// HAGEN: småkryp som dekker til igjen det du har åpnet. Prosenten går ned til du rydder.
+//   Edderkoppen (fra brett 3) firer seg ned i tråd og spinner et nett over et åpent område. Kniven river nettet.
+//   Er edderkoppen på nettet når du river det, er den fanget.
+//   Muldvarpen (fra brett 5) skyter opp jordhauger. En haug må skrapes to ganger. Titter den opp og du treffer, er den fanget.
+const uwHeltÅpen = j => uw.celle[j] === 1 && !(uw.indre && uw.indre[j]);
+function uwSynlig(u = uw) { return Math.max(0, u.åpne - (u.dekket || 0)) / (UW_G * UW_G); }
+function uwÅpentSted(r) {
+  // Et sted der det meste rundt er åpnet (helst nær papiret, der det ser naturlig ut).
+  const G = UW_G; let best = null, bestS = 0;
+  for (let n = 0; n < 160; n++) { const x = .08 + Math.random() * .84, y = .08 + Math.random() * .84; let åpne = 0, tot = 0;
+    for (let a = 0; a < 12; a++) for (const rr of [.3, .7, 1]) { const px = x + Math.cos(a * .52) * r * rr, py = y + Math.sin(a * .52) * r * rr; tot++; if (uwCelle(px, py) === 1) åpne++; }
+    const s = åpne / tot; if (s > .75 && s > bestS) { bestS = s; best = { x, y }; if (s > .95) break; } }
+  return best;
+}
+function uwHageSteg(dt) {
+  const u = uw, n = aktiv * 9 + u.i, H = u.hage || (u.hage = { nett: [], hauger: [], edd: null, mv: null, nettT: 10 + Math.random() * 6, haugT: 14 + Math.random() * 6, dekkT: 0 });
+  const synlig = uwSynlig(u);
+  // Edderkoppen.
+  if (n >= 2 && !H.edd && H.nett.length < 2 && u.tid > H.nettT && synlig > .12) { const st = uwÅpentSted(.1); H.nettT = u.tid + 6;
+    if (st) { H.edd = { x: st.x, y: -.06, mål: st, tilstand: "ned", t: 0, fase: Math.random() * 6 }; if (lydPa) tone(1400, 0, .4, .01, "sine", .3, .6); } }
+  const E = H.edd;
+  if (E) { E.t += dt;
+    if (E.tilstand === "ned") { E.y = Math.min(E.mål.y, E.y + .32 * dt); if (E.y >= E.mål.y) { E.tilstand = "spinn"; E.t = 0; E.nett = { x: E.mål.x, y: E.mål.y, r: .085 + Math.random() * .03, vekst: 0, seed: Math.random() * 99 }; H.nett.push(E.nett); } }
+    else if (E.tilstand === "spinn") { E.nett.vekst = Math.min(1, E.t / 3.2); E.x = E.nett.x + Math.cos(E.t * 2.4) * E.nett.r * E.nett.vekst * .7; E.y = E.nett.y + Math.sin(E.t * 2.4) * E.nett.r * E.nett.vekst * .7; if (E.t > 3.2) { E.tilstand = "hvil"; E.t = 0; } }
+    else if (E.tilstand === "hvil") { E.x += (E.nett.x - E.x) * Math.min(1, dt * 3); E.y += (E.nett.y - E.y) * Math.min(1, dt * 3); if (E.t > 5) { E.tilstand = "opp"; E.t = 0; } }
+    else if (E.tilstand === "opp") { E.y -= .35 * dt; if (E.y < -.08) { H.edd = null; H.nettT = u.tid + 12 + Math.random() * 8; } }
+    else if (E.tilstand === "fanget") { E.y += .6 * dt; E.vr = (E.vr || 0) + dt * 8; if (E.t > 1.2) { H.edd = null; H.nettT = u.tid + 16 + Math.random() * 8; } } }
+  // Muldvarpen.
+  if (n >= 4 && !H.mv && u.tid > H.haugT && synlig > .2 && H.hauger.length < 3) { const st = uwÅpentSted(.06); H.haugT = u.tid + 5;
+    if (st) { const h = { x: st.x, y: st.y, r: 0, rMaks: .055 + Math.random() * .02, hp: 2, t: 0, klumper: Array.from({ length: 7 }, () => [Math.random() * 6.28, .2 + Math.random() * .55, .22 + Math.random() * .22, Math.random()]),
+        kant: Array.from({ length: 18 }, () => .8 + Math.random() * .32), prikk: Array.from({ length: 70 }, () => [Math.random() * 6.28, Math.sqrt(Math.random()), Math.random()]), smuler: Array.from({ length: 16 }, () => [Math.random() * 6.28, 1.05 + Math.random() * .5, .02 + Math.random() * .05]) };
+      H.hauger.push(h); H.mv = { haug: h, t: 0, opp: 0, neste: 1.5 + Math.random() }; if (lydPa) { shSus(.5, "lowpass", 300, .08, 1, .8, .2); tone(70, 0, .3, .06, "sine", .6, .2); } } }
+  for (const h of H.hauger) { h.t += dt; h.r = Math.min(h.rMaks * (h.hp === 2 ? 1 : .62), h.r + dt * .12); h.slag = Math.max(0, (h.slag || 0) - dt * 3); }
+  const M = H.mv;
+  if (M) { M.t += dt;
+    // Titter opp innimellom (ca. ett sekund), og graver seg videre etter en stund.
+    const tittT = (M.t - M.neste) % 3.2; M.opp = M.t > M.neste && tittT < 1.1 ? Math.sin(Math.min(1, tittT / 1.1) * Math.PI) : 0;
+    if (!H.hauger.includes(M.haug) || M.t > 9) { H.mv = null; H.haugT = u.tid + 10 + Math.random() * 8; } }
+  // Hva er dekket til igjen? Regnes fire ganger i sekundet.
+  H.dekkT -= dt; if (H.dekkT <= 0) { H.dekkT = .25; uwRegnDekket(); }
+}
+function uwRegnDekket() {
+  const u = uw, H = u.hage, G = UW_G; let d = 0; const sett = u.dekkSett || (u.dekkSett = new Uint8Array(G * G)); sett.fill(0);
+  const merk = (cx, cy, r) => { const x0 = Math.max(0, Math.floor((cx - r) * G)), x1 = Math.min(G - 1, Math.ceil((cx + r) * G)), y0 = Math.max(0, Math.floor((cy - r) * G)), y1 = Math.min(G - 1, Math.ceil((cy + r) * G)), r2 = (r * G) ** 2;
+    for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) { const j = y * G + x; if (!sett[j] && (x - cx * G) ** 2 + (y - cy * G) ** 2 < r2 && uwHeltÅpen(j)) { sett[j] = 1; d++; } } };
+  for (const w of H?.nett || []) if (w.vekst > .2) merk(w.x, w.y, w.r * Math.min(1, w.vekst * 1.2));
+  for (const h of H?.hauger || []) merk(h.x, h.y, h.r);
+  u.dekket = d;
+}
+// Kniven rører nett eller haug (kalles for hvert lite steg kniven tar).
+function uwHageKniv(p) {
+  const u = uw, H = u.hage; if (!H || u.tilstand !== "spill") return;
+  for (const w of [...H.nett]) { if (w.vekst < .15 || Math.hypot(p.x - w.x, p.y - w.y) > w.r * w.vekst) continue;
+    H.nett.splice(H.nett.indexOf(w), 1); u.poeng += 400; uwTekst("WEB CUT +400", w.x, w.y);
+    for (let k = 0; k < 14; k++) { const a = Math.random() * 6.28; u.flak.push({ x: w.x + Math.cos(a) * w.r * .5, y: w.y + Math.sin(a) * w.r * .5, vx: Math.cos(a) * .2, vy: -.1 - Math.random() * .2, r: .006 + Math.random() * .01, rot: a, spinn: (Math.random() - .5) * 8, liv: .8, farge: "rgba(245,248,255,.85)", form: [1, .3, 1, .3, 1, .3, 1] }); }
+    if (lydPa) shSus(.18, "highpass", 5000, .04, 1, .8, .2);
+    const E = H.edd; if (E && E.nett === w && (E.tilstand === "spinn" || E.tilstand === "hvil")) { E.tilstand = "fanget"; E.t = 0; u.poeng += 1500; uwTekst("SPIDER! +1,500", E.x, E.y - .05); if (lydPa) [0, 7, 12].forEach((st, j) => tone(587 * Math.pow(2, st / 12), j * .08, .3, .03, "triangle", .5, 1)); }
+    u.dekkT = 0; uwRegnDekket(); uwHud(); }
+  for (const h of [...H.hauger]) { const inne = Math.hypot(p.x - h.x, p.y - h.y) < h.r + .01; if (!inne) { h.inne = false; continue; } if (h.inne) continue; h.inne = true;
+    const M = H.mv; if (M && M.haug === h && M.opp > .4) { H.mv = null; H.haugT = u.tid + 14; u.poeng += 1500; uwTekst("MOLE! +1,500", h.x, h.y - .06); if (lydPa) [0, 4, 7, 12].forEach((st, j) => tone(523 * Math.pow(2, st / 12), j * .07, .3, .03, "triangle", .5, 1)); }
+    h.hp--; h.slag = 1; for (let k = 0; k < 10; k++) { const a = Math.random() * 6.28; u.flak.push({ x: h.x, y: h.y, vx: Math.cos(a) * .25, vy: -.15 - Math.random() * .25, r: .005 + Math.random() * .008, rot: a, spinn: (Math.random() - .5) * 8, liv: .9, farge: "#3a2616", form: [1, .8, 1.1, .7, 1, .9, .8] }); }
+    if (lydPa) shSus(.15, "lowpass", 700, .07, 1, .8, .2);
+    if (h.hp <= 0) { H.hauger.splice(H.hauger.indexOf(h), 1); u.poeng += 300; uwTekst("+300", h.x, h.y); if (M && M.haug === h) H.mv = null; }
+    u.dekkT = 0; uwRegnDekket(); uwHud(); }
+}
+// ---------- Tegning ----------
+function uwHageTegn(x, P, f, nå) {
+  const H = uw.hage; if (!H) return;
+  // Jordhauger: mørk, klumpete jord med skygge, og muldvarpen som titter opp.
+  for (const h of H.hauger) { const [X, Y] = P(h.x, h.y), R = h.r * f; if (R < 1) continue; const sk = 1 + (h.slag || 0) * .08;
+    x.save(); x.translate(X, Y); x.scale(sk, 1 / sk);
+    { const sg = x.createRadialGradient(R * .12, R * .25, R * .3, R * .12, R * .25, R * 1.05); sg.addColorStop(0, "rgba(0,0,0,.32)"); sg.addColorStop(1, "rgba(0,0,0,0)"); x.fillStyle = sg; x.beginPath(); x.ellipse(R * .12, R * .25, R * 1.05, R * .8, 0, 0, 7); x.fill(); }
+    // Ujevn kant, kornete overflate, klumper med lys topp og smuler rundt.
+    const kant = () => { const n = h.kant.length, pt = k => { const a = k / n * Math.PI * 2, v = h.kant[(k + n) % n]; return [Math.cos(a) * R * v, Math.sin(a) * R * v * .78]; };
+      x.beginPath(); for (let k = 0; k <= n; k++) { const [ax, ay] = pt(k), [bx, by] = pt(k + 1), mx = (ax + bx) / 2, my = (ay + by) / 2; k ? x.quadraticCurveTo(ax, ay, mx, my) : x.moveTo(mx, my); } x.closePath(); };
+    for (const [a, d, rr] of h.smuler) { x.fillStyle = "#3b281a"; x.beginPath(); x.arc(Math.cos(a) * R * d, Math.sin(a) * R * d * .78, R * rr, 0, 7); x.fill(); }
+    const g = x.createRadialGradient(-R * .35, -R * .45, R * .05, 0, 0, R * 1.05); g.addColorStop(0, "#8b6443"); g.addColorStop(.45, "#5a3d26"); g.addColorStop(1, "#21150b");
+    x.fillStyle = g; kant(); x.fill(); x.save(); kant(); x.clip();
+    for (const [a, d, l] of h.prikk) { x.fillStyle = l > .6 ? "rgba(170,130,90,.55)" : l < .25 ? "rgba(15,8,3,.55)" : "rgba(90,62,40,.6)"; x.fillRect(Math.cos(a) * R * d, Math.sin(a) * R * d * .78, Math.max(1, R * .05), Math.max(1, R * .05)); }
+    for (const [a, d, sz, l] of h.klumper) { const kx = Math.cos(a) * R * d, ky = Math.sin(a) * R * d * .7 - R * .05, kr = R * sz * .5;
+      x.fillStyle = "rgba(10,5,2,.35)"; x.beginPath(); x.ellipse(kx + kr * .2, ky + kr * .3, kr, kr * .75, 0, 0, 7); x.fill();
+      const gk = x.createRadialGradient(kx - kr * .35, ky - kr * .45, kr * .05, kx, ky, kr); gk.addColorStop(0, l > .5 ? "#a07a55" : "#7c5838"); gk.addColorStop(1, "#33210f"); x.fillStyle = gk; x.beginPath(); x.ellipse(kx, ky, kr, kr * .78, a, 0, 7); x.fill(); }
+    x.restore();
+    const M = H.mv; if (M && M.haug === h && M.opp > .02) { const o = M.opp, hy = -R * .1 - R * .55 * o;
+      x.fillStyle = "#2b2a2e"; x.beginPath(); x.ellipse(0, hy, R * .42, R * .38 * (.4 + .6 * o), 0, Math.PI, 0); x.lineTo(R * .42, -R * .1); x.lineTo(-R * .42, -R * .1); x.closePath(); x.fill();
+      x.fillStyle = "rgba(255,255,255,.12)"; x.beginPath(); x.ellipse(-R * .12, hy - R * .12, R * .16, R * .08, -.4, 0, 7); x.fill();
+      x.fillStyle = "#f2a0b4"; x.beginPath(); x.ellipse(0, hy - R * .02, R * .11, R * .08, 0, 0, 7); x.fill(); x.fillStyle = "#5a2030"; x.beginPath(); x.arc(-R * .035, hy, R * .018, 0, 7); x.arc(R * .035, hy, R * .018, 0, 7); x.fill();
+      for (const s of [-1, 1]) { x.fillStyle = "#f2b4c2"; x.beginPath(); x.ellipse(s * R * .5, -R * .15, R * .2, R * .13 * o, s * .5, 0, 7); x.fill();
+        x.strokeStyle = "#e8e0d0"; x.lineWidth = Math.max(1, R * .03); for (let k = -1; k <= 1; k++) { x.beginPath(); x.moveTo(s * R * .62, -R * .15 + k * R * .06); x.lineTo(s * R * .74, -R * .14 + k * R * .07); x.stroke(); } } }
+    x.restore(); }
+  // Nett: tråder ut fra midten først, så spiralen. Lyse, tynne og litt glinsende.
+  for (const w of H.nett) { const [X, Y] = P(w.x, w.y), R = w.r * f, v = w.vekst, n = 12; x.save(); x.translate(X, Y);
+    x.strokeStyle = "rgba(250,252,255,.78)"; x.lineWidth = Math.max(.6, R * .012); x.shadowColor = "rgba(0,0,0,.45)"; x.shadowBlur = 2; x.shadowOffsetY = 1;
+    const vin = k => k / n * Math.PI * 2 + w.seed, lengde = k => R * (.88 + .12 * Math.sin(k * 2.3 + w.seed)), rr = Math.min(1, v * 1.8);
+    x.beginPath(); for (let k = 0; k < n; k++) { x.moveTo(0, 0); x.lineTo(Math.cos(vin(k)) * lengde(k) * rr, Math.sin(vin(k)) * lengde(k) * rr); } x.stroke();
+    const ringer = Math.floor(Math.max(0, (v - .3) / .7) * 10);
+    for (let m = 1; m <= ringer; m++) { const fr = m / 10.5; x.beginPath();
+      for (let k = 0; k <= n; k++) { const a0 = vin(k % n), px = Math.cos(a0) * lengde(k % n) * fr, py = Math.sin(a0) * lengde(k % n) * fr;
+        if (!k) x.moveTo(px, py); else { const a1 = vin(k - 1), mx = (Math.cos(a1) * lengde(k - 1) + Math.cos(a0) * lengde(k % n)) / 2 * fr * .9, my = (Math.sin(a1) * lengde(k - 1) + Math.sin(a0) * lengde(k % n)) / 2 * fr * .9; x.quadraticCurveTo(mx, my, px, py); } }
+      x.stroke(); }
+    x.shadowColor = "transparent"; x.globalCompositeOperation = "lighter"; x.fillStyle = "rgba(255,255,255,.7)";
+    for (let k = 0; k < 5; k++) { const a = vin(k * 2) + .3, d = R * (.3 + ((k * 37) % 6) / 10) * rr; const gl = .5 + .5 * Math.sin(nå * 3 + k); x.globalAlpha = gl; x.beginPath(); x.arc(Math.cos(a) * d, Math.sin(a) * d, Math.max(1, R * .018), 0, 7); x.fill(); }
+    x.restore(); }
+  // Edderkoppen: tråden opp til toppen, kropp og åtte bein som går.
+  const E = H.edd; if (E) { const [X, Y] = P(E.x, E.y), s = Math.max(14, f * .05);
+    if (E.tilstand === "ned" || E.tilstand === "opp") { x.strokeStyle = "rgba(240,245,255,.6)"; x.lineWidth = 1; x.beginPath(); x.moveTo(X, P(0, 0)[1] - 30); x.lineTo(X, Y); x.stroke(); }
+    x.save(); x.translate(X, Y); if (E.tilstand === "fanget") { x.rotate(E.vr); x.globalAlpha = Math.max(0, 1 - E.t / 1.2); }
+    x.fillStyle = "rgba(0,0,0,.3)"; x.beginPath(); x.ellipse(s * .12, s * .2, s * .32, s * .2, 0, 0, 7); x.fill();
+    x.strokeStyle = "#141010"; x.lineWidth = Math.max(1.2, s * .05); x.lineCap = "round";
+    for (const side of [-1, 1]) for (let k = 0; k < 4; k++) { const a = (-.9 + k * .55) * 1, sv = Math.sin(nå * 14 + k * 1.7 + E.fase) * .15, kx = side * Math.cos(a + sv) * s * .3, ky = Math.sin(a + sv) * s * .3;
+      x.beginPath(); x.moveTo(side * s * .06, (k - 1.5) * s * .04); x.lineTo(kx, ky - s * .08); x.lineTo(kx * 1.7, ky * 1.5 + s * .1); x.stroke(); }
+    const gb = x.createRadialGradient(-s * .05, s * .02, s * .02, 0, s * .1, s * .2); gb.addColorStop(0, "#5a4a40"); gb.addColorStop(1, "#140e0b");
+    x.fillStyle = gb; x.beginPath(); x.ellipse(0, s * .12, s * .16, s * .2, 0, 0, 7); x.fill();
+    x.fillStyle = "#a82020"; x.beginPath(); x.moveTo(0, s * .06); x.lineTo(s * .05, s * .13); x.lineTo(0, s * .2); x.lineTo(-s * .05, s * .13); x.closePath(); x.fill();
+    x.fillStyle = "#221813"; x.beginPath(); x.ellipse(0, -s * .1, s * .1, s * .09, 0, 0, 7); x.fill();
+    x.fillStyle = "#e8e0d0"; x.beginPath(); x.arc(-s * .03, -s * .14, s * .018, 0, 7); x.arc(s * .03, -s * .14, s * .018, 0, 7); x.fill();
+    x.restore(); }
 }
 // Gavepapiret, med mønster og bånd, tegnes én gang i full oppløsning.
 function uwPapir(S, st, bånd) { // bånd = null: uten bånd (papiret under)
@@ -8738,6 +8862,7 @@ function uwTegn() {
   x.drawImage(uwLag(SL, 0), x0, y0, f, f);
   // Sløyfen ligger på papiret til den rives løs og flyr.
   const sl = u.sløyfe; if (!sl.av || sl.av.t < 2.5) { const [sx, sy] = P(sl.x, sl.y); x.save(); x.translate(sx, sy); if (sl.av) { x.rotate(sl.av.rot); x.globalAlpha = Math.max(0, 1 - sl.av.t / 2.5); } uwSløyfeTegn(x, sl.r * f, u.stil); x.restore(); }
+  uwHageTegn(x, P, f, nå);
   // Streken du skjærer: et tynt, mørkt snitt i papiret med en rosa glød, så du ser at den er sårbar.
   if (u.linje.length) { const pts = [...u.linje, u.kniv]; x.save(); x.lineCap = "round"; x.lineJoin = "round"; x.beginPath(); let [ax, ay] = P(pts[0].x, pts[0].y); x.moveTo(ax, ay);
     for (let q = 1; q < pts.length; q++) { const [bx, by] = P(pts[q].x, pts[q].y); x.quadraticCurveTo(ax, ay, (ax + bx) / 2, (ay + by) / 2); ax = bx; ay = by; } x.lineTo(ax, ay);
