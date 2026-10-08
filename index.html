@@ -704,7 +704,7 @@ body.lys #modusDeal{--farge:#0f8f6c;--glod:15,143,108}
   <div class="regel">Everything counts: Game, Peace, Bubble it 1P and 2P, every board, every level, every collection. Each board list gives up to 100 points (a Bubble it list up to 1,000): #1 gets them all, the rest their share of the top score.</div>
   <div class="sammen" id="spillere"><p class="liten">Loading players …</p></div>
   <p class="kreditt">© 2001–2026 Tarjei Krogh. All photography, music and art. <a href="https://kroghx.com" target="_blank" rel="noopener">kroghx.com</a></p>
-  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 1.73<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
+  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 1.74<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
 </section>
 
 <div class="ark" id="tidUtArk" hidden style="z-index:200001">
@@ -918,7 +918,7 @@ function hentBilde(src) {
 //   UNWRAP IT: bokstaven er malt på bildet under papiret. Riv vekk papiret over den.
 const SESONG_ORD = ["NIGHTMARE", "OVERGROWN", "MENAGERIE", "NIGHTFALL", "FORGERIES", "PATCHWORK"];
 const BOKSTAV_SPILL = ["p", "b", "u"], BOKSTAV_NAVN = { p: "PIECE IT", b: "BUBBLE IT", u: "UNWRAP IT" };
-const bokstavSpill = (j, i) => ["p", "u"][(i + j) % 2]; // Bokstavene finnes i PIECE IT og UNWRAP IT, ikke i BUBBLE IT.
+const bokstavSpill = (j, i) => BOKSTAV_SPILL[(i + j) % 3];
 function bokstavLagret() { try { return JSON.parse(localStorage.getItem("sm-bokstaver") || "{}"); } catch { return {}; } }
 function nøklerLagret() { try { return JSON.parse(localStorage.getItem("sm-nokler") || "[]"); } catch { return []; } }
 function bokstavHar(j, i) { return (bokstavLagret()[j] || []).includes(i); }
@@ -4783,8 +4783,8 @@ async function shatterStart(i, poeng = 0, liv = null) {
   const klosser = [], j1 = Math.floor(Math.random() * SH_JORD.length), j2 = (j1 + 1 + Math.floor(Math.random() * (SH_JORD.length - 1))) % SH_JORD.length;
   for (let r = 0; r < SH_RAD; r++) for (let c = 0; c < SH_KOL; c++) {
     // Negativ tykkelse betyr bløt slaps i en åre: boblen pløyer gjennom den.
-    // Ytterst langs kanten ligger rammen: alltid gjørme, minst to lag.
-    const ramme = r <= 1 || r >= SH_RAD - 2 || c <= 1 || c >= SH_KOL - 2;
+    // Ingen ramme langs kanten (Krogh): jorda er jevn over hele brettet.
+    const ramme = false;
     const myk = !ramme && tykk[r * SH_KOL + c] < 0, nede = r >= SH_RAD - 2;
     let h = ramme ? Math.max(Math.abs(tykk[r * SH_KOL + c]), 1) + (nybegynner ? 0 : 1) : Math.abs(tykk[r * SH_KOL + c]);
     if (nede) h = 1; // Bunnkanten: alltid ett lag, så boblen kommer gjennom på første forsøk (Krogh).
@@ -4814,7 +4814,7 @@ async function shatterStart(i, poeng = 0, liv = null) {
   sh = { niva, i, img, klosser, igjen: klosser.length, poeng, liv, plasser: shPlasser(i), gull: shMotivFunnet(aktiv) >= 9, fart, grunnfart: fart, maksFart: Math.min(1.3, fart + 0.61),
     padX: 0.5, padW: 0.26, baller: [], kapsler: [], tekster: [], smaa: [], stov: [], stavSkitt: [], skudd: [], skuddT: 0, lamper: 0, galaga: null, galagaPause: 18, wingmen: [], galagaKommet: false, padMål: null, sopp: 0, soppSide: -1, padY: .7, soppOverg: 1, soppTilbake: 1, bytte: null, byttePlan: Math.random() < .22, sabot: [], sabotT: 14 + Math.random() * 10, drypp: [], skum: [], stjerner: [], ringer: [],
     eff: { W: 0, B: 0, G: 0, A: 0, F: 0, K: 0 }, tilstand: "klar", kombo: 0, ferdigT: 0, tid: 0, lydSist: {},
-    jord: SH_JORD[j1], jord2: SH_JORD[j2], ramme: shVelgRamme(img), skitten: new Set(), milepael: 0, glimt: -9, sprekkT: 0,
+    jord: SH_JORD[j1], jord2: SH_JORD[j2], ramme: null, skitten: new Set(), milepael: 0, glimt: -9, sprekkT: 0,
     klatter: [], splatter: [], sigT: 0, flomT: 14, dryppT: 1, flomIgjen: Math.round(klosser.reduce((a, k) => a + k.liv, 0) * .05),
     skyllT: 0, skylling: false, spor: [], glod: 0, flip: [{ t: 9, ledd: 0.08 }, { t: 9, ledd: 0.08 }],
     svakX: (svakC + 1.5) / SH_KOL, førsteSkudd: true, toP, pad2X: .5, pad2W: .26, pad2Mål: null, pad2V: 0, flip2: [{ t: 9, ledd: 0.08 }, { t: 9, ledd: 0.08 }] };
@@ -4944,7 +4944,7 @@ void mud(vec2 p,out float H,out float A,out float W,out float F,out float L){
   float er=F*1.15-sl*.5+(kant-.5)*.45+(vn(p*240.)-.5)*.16+(vn(p*600.)-.5)*.08;
   float ee=smoothstep(0.,.25,er);
   A=ee*(.5+.5*min(1.,F*1.5));
-  float db=randB(p),list=db<.058?sin(3.14159*min(1.,db/.058))*.45:0.;
+  float list=0.; // Ingen opphøyd list langs kanten (Krogh): jorda er jevn over hele brettet.
   // Jordklumper og småstein oppå de store formene.
   // Noen partier er glatte og våte, andre smuldrete.
   float maske=smoothstep(.3,.75,vn(p*4.5+2.));vec2 pr=mat2(.8,-.6,.6,.8)*p;
@@ -4959,7 +4959,7 @@ void main(){
   mud(p,H,A,W,F,L);
   float e=1.2/uMR;
   mud(p+vec2(e,0.),Hx,a2,w2,f2,l2);mud(p+vec2(0.,e),Hy,a2,w2,f2,l2);
-  float db=randB(p),wR=uRamme*(db<.035?1.:db<.07?(.07-db)/.035:0.)*.85,smul=db<.075?1.-db/.075:0.;
+  float db=randB(p),wR=uRamme*(db<.035?1.:db<.07?(.07-db)/.035:0.)*.85,smul=0.; // Ikke grovere korn langs kanten (Krogh).
   // Kornet: sterkt i rammen, svakt i resten av gjørma.
   float ek=1./uRes.x,ka=A*(.022+smul*.2),k0=korn(p);
   float kx=(korn(p+vec2(ek,0.))-k0)/ek*ka,ky=(korn(p+vec2(0.,ek))-k0)/ek*ka;
@@ -5135,10 +5135,11 @@ function shMal(x0, y0, x1, y1) {
     const er = F * 1.15 - m.slit[k] * .5 + kn * .45, ee = er <= 0 ? 0 : er >= .25 ? 1 : (er / .25) * (er / .25) * (3 - 2 * er / .25);
     const a = ee * (.5 + .5 * Math.min(1, F * 1.5));
     A[i] = a; Wt[i] = W;
-    const db = Math.min(px, py, MR - 1 - px, MR - 1 - py) / MR, list = db < .058 ? Math.sin(Math.PI * Math.min(1, db / .058)) * .45 : 0;
+    const list = 0; // Ingen opphøyd list langs kanten (Krogh).
+    const db = Math.min(px, py, MR - 1 - px, MR - 1 - py) / MR;
     // Korn: tre lag støy (fint, middels, smuler), sterkest i rammen.
     const h1 = ((px * 374761393 + py * 668265263) ^ (px * 1274126177)) >>> 0, korn = (h1 % 1000) / 1000, h2 = (((px >> 1) * 2246822519 + (py >> 1) * 3266489917) >>> 0) % 1000 / 1000, h3 = (((px >> 2) * 1597334677 + (py >> 2) * 2654435761) >>> 0) % 1000 / 1000;
-    const smul = db < .075 ? (1 - db / .075) : 0, grus = smul * ((korn - .5) * .22 + (h2 - .5) * .3 + (h3 > .82 ? (h3 - .82) * 2.2 : 0));
+    const smul = 0, grus = smul * ((korn - .5) * .22 + (h2 - .5) * .3 + (h3 > .82 ? (h3 - .82) * 2.2 : 0));
     H[i] = a * (.2 + .25 * L + m.hump[k] * (.7 + .3 * L) * (1 - list * .7) + list + grus) * (.4 + .6 * F);
   }
   const K = MR / 45, sy = .009, sx = .006;
@@ -5526,9 +5527,9 @@ function shTreff(k, lag = 1, kilde = null) {
   s.igjen--; s.kombo++;
   k.vaatT = s.tid;
   if (k.smuldre && !s.toP) {
-    // Bunnkanten raser: naboene i de nederste radene smuldrer etter, med smuler som drysser ned.
+    // Bunnkanten: smuler drysser ned der en bit går.
     s.smuldreKø = s.smuldreKø || [];
-    for (const [dc, dr] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) { const n = s.klosser[(k.r + dr) * SH_KOL + k.c + dc]; if (n && n.smuldre && n.liv > 0 && Math.abs(n.c - k.c) <= 1 && Math.random() < .55) s.smuldreKø.push({ k: n, t: s.tid + .08 + Math.random() * .22 }); }
+    // Naboene raser ikke lenger etter (Krogh): det så falskt ut når hele bunnkanten forsvant. Bare smuler drysser.
     s.smuler = s.smuler || []; for (let n = 0; n < 4; n++) s.smuler.push({ x: mx + (Math.random() - .5) * k.w, y: my, vx: (Math.random() - .5) * .05, vy: Math.random() * .05, r: .0015 + Math.random() * .003, tone: Math.random(), stor: n === 0, støv: n === 3, rot: Math.random() * 6, t: 0 });
   }
   if (s.eff.T > 0) { s.tripP = s.tripP || []; if (s.tripP.length < (s.tripLett ? 140 : 420)) for (let n = 0; n < 3; n++) s.tripP.push({ x: mx + (Math.random() - .5) * k.w * 2, y: my + (Math.random() - .5) * k.h * 2, z: 0, vz: .35 + Math.random() * .5, hue: (s.tid * 70 + Math.random() * 160) % 360, r: .006 + Math.random() * .01, jord: Math.random() < .45 }); }
@@ -8482,7 +8483,8 @@ function shOppdater(dt) {
       if (bo) { bo.borte = true; q.borte = true; shStov(bo.x, bo.y, 6, "180,140,90", .08); continue; }
     }
     const k = shKlossVed(q.x, q.y);
-    if (k) { if (!q.angrep || Math.random() < .15) shTreff(k, 1); if (!q.angrep && Math.random() < .5) shSkumFlekk(q.x, q.y, .4); q.budsjett--; q.vy *= .55; if (q.budsjett <= 0) { q.borte = true; if (!q.angrep) shSkumFlekk(q.x, q.y); for (let n = 0; n < 3; n++) s.skum.push({ x: q.x + (Math.random() - .5) * .02, y: q.y, r: .002 + Math.random() * .004, liv: 1, fart: 1.6 }); } }
+    if (k) { if (!q.angrep || Math.random() < .15) shTreff(k, 1); if (!q.angrep) shSkumFlekk(q.x, q.y, .6); for (let n = 0; n < 3; n++) if (s.skum.length < 320) s.skum.push({ x: q.x + (Math.random() - .5) * .025, y: q.y + (Math.random() - .5) * .01, r: .002 + Math.random() * .005, liv: 1, fart: 1.2 + Math.random() * .8 }); q.budsjett--; q.vy *= .55;
+      if (q.budsjett <= 0) { q.borte = true; if (!q.angrep) shSkumFlekk(q.x, q.y, 1.2); for (let n = 0; n < 7; n++) if (s.skum.length < 320) s.skum.push({ x: q.x + (Math.random() - .5) * .035, y: q.y + (Math.random() - .5) * .015, r: .002 + Math.random() * .006, liv: 1, fart: 1.3 + Math.random() * .9 }); } }
     if (q.y < 0) q.borte = true;
   }
   s.skudd = s.skudd.filter(q => !q.borte);
@@ -10187,13 +10189,18 @@ function shTegn(t) {
     }
   }
   if (s.skudd.length) { x.save();
-    for (const q of s.skudd) { const X = q.x * f, Y = q.y * f, r = q.r * f, hue = [175, 300, 95, 55, 200][Math.floor(q.fase * 10) % 5];
-      x.globalCompositeOperation = "lighter"; x.globalAlpha = .7; x.drawImage(shNeon(hue), X - r * 2.6, Y - r * 2.6, r * 5.2, r * 5.2);
-      const L = Math.min(r * 4, Math.hypot(q.vx, q.vy) * f * .03), a = Math.atan2(q.vy, q.vx); const tx = X - Math.cos(a) * L, ty = Y - Math.sin(a) * L, hg = x.createLinearGradient(X, Y, tx, ty); hg.addColorStop(0, `hsla(${hue},100%,75%,.5)`); hg.addColorStop(1, `hsla(${hue},100%,70%,0)`); x.globalAlpha = 1; x.strokeStyle = hg; x.lineWidth = r * .55; x.lineCap = "round"; x.beginPath(); x.moveTo(X, Y); x.lineTo(tx, ty); x.stroke();
-      x.globalCompositeOperation = "source-over"; x.globalAlpha = 1;
-      x.fillStyle = `hsla(${hue},100%,85%,.28)`; x.beginPath(); x.arc(X, Y, r, 0, 7); x.fill();
-      x.strokeStyle = `hsl(${hue},100%,72%)`; x.lineWidth = Math.max(1.2, r * .24); x.stroke();
-      x.fillStyle = "rgba(255,255,255,.95)"; x.beginPath(); x.ellipse(X - r * .35, Y - r * .4, r * .3, r * .15, -.7, 0, 7); x.fill(); }
+    for (const q of s.skudd) { const X = q.x * f, Y = q.y * f, r = q.r * f, hue = [175, 300, 95, 55, 200][Math.floor(q.fase * 10) % 5], hue2 = (hue + 120) % 360;
+      // Et svakt skjær rundt, så de synes over mørke bilder, men uten å bli lyskuler.
+      x.globalCompositeOperation = "lighter"; x.globalAlpha = .16; x.drawImage(shNeon(hue), X - r * 2, Y - r * 2, r * 4, r * 4);
+      const L = Math.min(r * 3, Math.hypot(q.vx, q.vy) * f * .02), a = Math.atan2(q.vy, q.vx); const tx = X - Math.cos(a) * L, ty = Y - Math.sin(a) * L, hg = x.createLinearGradient(X, Y, tx, ty); hg.addColorStop(0, "rgba(235,248,255,.22)"); hg.addColorStop(1, "rgba(235,248,255,0)"); x.globalAlpha = 1; x.strokeStyle = hg; x.lineWidth = r * .4; x.lineCap = "round"; x.beginPath(); x.moveTo(X, Y); x.lineTo(tx, ty); x.stroke();
+      x.globalCompositeOperation = "source-over";
+      // Nesten klar inni, litt lysere mot kanten.
+      const g = x.createRadialGradient(X, Y, r * .2, X, Y, r); g.addColorStop(0, "rgba(255,255,255,.03)"); g.addColorStop(.75, "rgba(240,250,255,.08)"); g.addColorStop(1, "rgba(255,255,255,.22)"); x.fillStyle = g; x.beginPath(); x.arc(X, Y, r, 0, 7); x.fill();
+      // Tynn regnbuekant: to svake farger som glir over i hverandre.
+      const kg = x.createLinearGradient(X - r, Y - r, X + r, Y + r); kg.addColorStop(0, `hsla(${hue},80%,82%,.55)`); kg.addColorStop(.5, "rgba(255,255,255,.35)"); kg.addColorStop(1, `hsla(${hue2},80%,82%,.5)`);
+      x.strokeStyle = kg; x.lineWidth = Math.max(.8, r * .13); x.beginPath(); x.arc(X, Y, r, 0, 7); x.stroke();
+      x.fillStyle = "rgba(255,255,255,.85)"; x.beginPath(); x.ellipse(X - r * .38, Y - r * .42, r * .26, r * .12, -.7, 0, 7); x.fill();
+      x.fillStyle = "rgba(255,255,255,.4)"; x.beginPath(); x.arc(X + r * .42, Y + r * .4, r * .08, 0, 7); x.fill(); }
     x.restore(); }
   // Fint støv av gull, sølv og diamant.
   x.save(); x.globalCompositeOperation = "lighter";
