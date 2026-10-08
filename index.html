@@ -524,7 +524,7 @@ h1{font-weight:300;letter-spacing:.14em;line-height:1.02}
   <div class="regel">Everything counts: Game, Peace, Scrub it 1P and 2P, every board, every level, every collection. Each board list gives up to 100 points (a Scrub it list up to 1,000): #1 gets them all, the rest their share of the top score.</div>
   <div class="sammen" id="spillere"><p class="liten">Loading players …</p></div>
   <p class="kreditt">© 2001–2026 Tarjei Krogh. All photography, music and art. <a href="https://kroghx.com" target="_blank" rel="noopener">kroghx.com</a></p>
-  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 1.22<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
+  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 1.23<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
 </section>
 
 <div class="ark" id="tidUtArk" hidden style="z-index:200001">
@@ -4554,14 +4554,41 @@ const SH_FIGURER = [
   { m: ["m_c4b1_1", "m_c4b1_3", "m_c4b3_0", "m_c4b5_0", "m_c4b9_0", "m_b6_2"], b: ["boss_c4b4", "boss_c4b5"] }
 ];
 // Hver figur får en neonkant én gang, så den synes over alle bilder uten å koste noe per bilde.
-function shFigurKant(img, farge) {
+// Lager en høydekart-figur av utklippet: kanten er lav, midten høy (som en oppblåst vinylfigur), og detaljene i
+// kunsten preges litt inn. Så lyses den med et ekte lys (diffus + blank glans + kald kantlys), én gang ved lasting.
+function vinylLys(c) {
+  const W = c.width, H = c.height, x = c.getContext("2d"), id = x.getImageData(0, 0, W, H), d = id.data, N = W * H;
+  const a = new Float32Array(N); for (let i = 0; i < N; i++) a[i] = d[i * 4 + 3] / 255;
+  const r = Math.max(3, Math.round(Math.max(W, H) * .07)), tmp = new Float32Array(N);
+  const blur = (src, dst) => { // tre runder boksuskarphet, vannrett og loddrett
+    for (let y = 0; y < H; y++) { let s = 0; for (let k = -r; k <= r; k++) s += src[y * W + Math.min(W - 1, Math.max(0, k))];
+      for (let xx = 0; xx < W; xx++) { dst[y * W + xx] = s / (2 * r + 1); s += src[y * W + Math.min(W - 1, xx + r + 1)] - src[y * W + Math.max(0, xx - r)]; } }
+    for (let xx = 0; xx < W; xx++) { let s = 0; for (let k = -r; k <= r; k++) s += dst[Math.min(H - 1, Math.max(0, k)) * W + xx];
+      for (let y = 0; y < H; y++) { src[y * W + xx] = s / (2 * r + 1); s += dst[Math.min(H - 1, y + r + 1) * W + xx] - dst[Math.max(0, y - r) * W + xx]; } } };
+  const h = Float32Array.from(a); for (let p = 0; p < 3; p++) blur(h, tmp);
+  for (let i = 0; i < N; i++) { const lum = (d[i * 4] * .3 + d[i * 4 + 1] * .59 + d[i * 4 + 2] * .11) / 255; h[i] = (Math.sqrt(h[i]) + lum * .012) * a[i]; }
+  const k = r * 1.4, Lx = -.48, Ly = -.58, Lz = .66, Hx = Lx, Hy = Ly, Hz = Lz + 1, Hn = Math.hypot(Hx, Hy, Hz);
+  for (let y = 1; y < H - 1; y++) for (let xx = 1; xx < W - 1; xx++) {
+    const i = y * W + xx; if (a[i] < .02) continue;
+    let nx = -(h[i + 1] - h[i - 1]) * k, ny = -(h[i + W] - h[i - W]) * k, nz = 1; const nl = Math.hypot(nx, ny, nz); nx /= nl; ny /= nl; nz /= nl;
+    const dif = Math.max(0, nx * Lx + ny * Ly + nz * Lz), spec = Math.pow(Math.max(0, (nx * Hx + ny * Hy + nz * Hz) / Hn), 26) * .95, rim = Math.pow(1 - nz, 2) * .35;
+    const lys = .6 + .6 * dif;
+    d[i * 4] = Math.min(255, d[i * 4] * lys + 255 * spec + 120 * rim); d[i * 4 + 1] = Math.min(255, d[i * 4 + 1] * lys + 255 * spec + 170 * rim); d[i * 4 + 2] = Math.min(255, d[i * 4 + 2] * lys + 255 * spec + 255 * rim);
+  }
+  x.putImageData(id, 0, 0); return c;
+}
+function shFigurKant(img0, farge) {
+  // Noen utklipp er halvgjennomsiktige over hele figuren; da ble de mørke og grumsete. Gjør dem tette, med myk kant.
+  const img = document.createElement("canvas"); img.width = img0.naturalWidth; img.height = img0.naturalHeight; img.naturalWidth = img.width; img.naturalHeight = img.height;
+  { const ix = img.getContext("2d"); ix.drawImage(img0, 0, 0); try { const id = ix.getImageData(0, 0, img.width, img.height), d = id.data; for (let i = 3; i < d.length; i += 4) d[i] = Math.max(0, Math.min(255, (d[i] - 18) * 2.6)); ix.putImageData(id, 0, 0); } catch {} }
   const m = 12, w = img.naturalWidth, h = img.naturalHeight, W = w + 2 * m, H = h + 2 * m, L = Math.max(w, h);
   const lag = () => { const c = document.createElement("canvas"); c.width = W; c.height = H; return c; };
   // Selve figuren, med lys ovenfra til venstre og skygge nede til høyre, som om den er rund.
   const fig = lag(), fx = fig.getContext("2d"); fx.drawImage(img, m, m);
+  try { vinylLys(fig); } catch {}
   fx.globalCompositeOperation = "source-atop";
   const lg = fx.createRadialGradient(m + w * .32, m + h * .22, 0, m + w * .32, m + h * .22, L * .95);
-  lg.addColorStop(0, "rgba(255,248,230,.3)"); lg.addColorStop(.4, "rgba(255,248,230,0)"); lg.addColorStop(.75, "rgba(0,0,0,.12)"); lg.addColorStop(1, "rgba(0,0,0,.45)");
+  lg.addColorStop(0, "rgba(255,248,230,.08)"); lg.addColorStop(.4, "rgba(255,248,230,0)"); lg.addColorStop(.75, "rgba(0,0,0,.05)"); lg.addColorStop(1, "rgba(0,0,0,.2)");
   fx.fillStyle = lg; fx.fillRect(0, 0, W, H);
   // Relieff i kanten: mørkt innover nede til høyre, lyst innover oppe til venstre.
   const hull = lag(), hx = hull.getContext("2d"); hx.fillStyle = "#000"; hx.fillRect(0, 0, W, H); hx.globalCompositeOperation = "destination-out"; hx.drawImage(img, m, m);
@@ -5077,7 +5104,7 @@ function shMagnetSprekk(b) {
   shLyd("sprekk", 2); b.masse = 0; b.magnet = 0; b.vokse = 0; b.liten = true;
 }
 function shOrmStart() {
-  sh.ormSett = true; hentKattHode();
+  sh.ormSett = true; hentKattHode(); if (!slange3d) { slange3d = new Image(); slange3d.src = "figurer/slange.webp"; }
   const s = sh, x0 = s.sopp > 0 ? .5 : s.padX, y0 = SH_PY - .03, a = -Math.PI / 2 + (Math.random() - .5) * .9;
   s.orm = { x: x0, y: y0, a, v: .34, kropp: [{ x: x0, y: y0 }], spist: 0, t: 0, bitT: 0, målT: 0, mål: null, tilstand: "spis", hue: 110 + Math.random() * 40, tygg: 0 };
   shLyd("power"); shStov(x0, y0, 40, "125,255,106", .3);
@@ -5486,7 +5513,16 @@ function hentKattHode() {
   return null;
 }
 // Kroppen: rynkete, rosa hud som katten, i runde ledd med lys fra venstre, skygge under og litt jord på.
+let slange3d = null;
 function ormLedd(x, X, Y, r, dx, dy, i, s) {
+  if (!slange3d) { slange3d = new Image(); slange3d.src = "figurer/slange.webp"; }
+  if (slange3d.complete && slange3d.naturalWidth) {
+    x.fillStyle = "rgba(20,10,6,.3)"; x.beginPath(); x.ellipse(X + r * .2, Y + r * .35, r * 1.05, r * .92, 0, 0, 7); x.fill();
+    const sz = r * 2.45; x.save(); x.translate(X, Y); x.rotate(Math.atan2(dy, dx) + Math.PI / 2); x.drawImage(slange3d, (i % 4) * 128, 0, 128, 128, -sz / 2, -sz / 2, sz, sz); x.restore();
+    const [m1, m2, m3] = s.jord.mork;
+    for (let k = 0; k < 2; k++) { const a = i * 2.39 + k * 2.1, d = r * (.25 + ((i * 7 + k * 3) % 5) * .12); x.fillStyle = `rgba(${m1},${m2},${m3},${.3 + (k % 2) * .2})`; x.beginPath(); x.arc(X + Math.cos(a) * d, Y + Math.sin(a) * d, r * (.07 + (k % 3) * .04), 0, 7); x.fill(); }
+    return;
+  }
   x.fillStyle = "rgba(20,10,6,.28)"; x.beginPath(); x.ellipse(X + r * .18, Y + r * .32, r * 1.02, r * .9, 0, 0, 7); x.fill();
   const g = x.createRadialGradient(X - r * .38, Y - r * .42, r * .08, X, Y, r);
   g.addColorStop(0, "#ffe9e0"); g.addColorStop(.45, "#eab4a6"); g.addColorStop(.85, "#c7837a"); g.addColorStop(1, "#8f5552");
@@ -7008,7 +7044,7 @@ function shSteg(t) {
 }
 addEventListener("resize", () => { if (sh) shOppsett(); });
 // Bare for automatisk testing lokalt (?autotest).
-if (location.search.includes("autotest")) { window.__sh = () => sh; window.__shOppdater = dt => { shOppdater(dt); if (sh) { sh.tid += dt; shPartikler(dt); } }; window.__shTreff = shTreff; window.__shGalaga = shGalagaStart; window.__shSopp = shSopp; window.__shBytte = shByttetStart; window.__shOrm = shOrmStart; window.__levende = levendeStart; window.__gn = () => ({ gnister, raf: gnistRAF }); window.__hendelse = t => t === "tilt" ? tilt(true) : t === "vokse" ? vokseBrikke() : t === "break" ? puzzleBreak() : t === "speilX" ? speilStart("x") : t === "speilY" ? speilStart("y") : lynnedslag(); window.__shSprekk = shSprekk; window.__shP2 = () => ({ pad2X: sh.pad2X, P2Y: SH_P2Y, TOPP: SH_TOPP, H: SH_H }); window.__shTegn = () => { shRens(); shTegn(performance.now()); }; window.__spill = () => spill; window.__banner = banner; window.__kast = kast; window.__gratisPeace = async () => sjekkGratis(await hentSammen("P")); window.__fremdrift = () => fremdrift; window.__sammenP = async () => ({ lok: minLokaleSum("P"), f: fremdrift.b1, liste: (await hentSammen("P")).slice(0, 2) }); window.__shKrabbe = () => shKrabbeStart(); window.__shHopper = () => shHopperStart(); window.__shSlipp = () => shSlipp(); window.__shPY = () => SH_PY; window.__shKapsel = shKapsel; window.__lyd = () => { const c = lydCtx; return c ? { musikk: musikkUt(c).gain.value, effekt: effektUt(c).gain.value } : null; }; window.__speilSlutt = speilSlutt; window.__falskMusikk = () => { lydCtx = lydCtx || { currentTime: 0 }; const nei = () => {}; musikk = { kilde: { stop: nei, playbackRate: { v: 1, setTargetAtTime(r) { this.v = r; } } }, g: { gain: { value: .3, cancelScheduledValues: nei, setValueAtTime: nei, linearRampToValueAtTime: nei, setTargetAtTime: nei } } }; }; window.__musikkFart = () => musikk?.kilde?.playbackRate?.v ?? null; window.__musikkFor = id => musikkFor(id)?.fil; window.__geo = () => geo; window.__plasser = plasser; window.__skjermPkt = skjermPkt; }
+if (location.search.includes("autotest")) { window.__sh = () => sh; window.__shOppdater = dt => { shOppdater(dt); if (sh) { sh.tid += dt; shPartikler(dt); } }; window.__shTreff = shTreff; window.__shGalaga = shGalagaStart; window.__shSopp = shSopp; window.__shBytte = shByttetStart; window.__shOrm = shOrmStart; window.__levende = levendeStart; window.__gn = () => ({ gnister, raf: gnistRAF }); window.__hendelse = t => t === "tilt" ? tilt(true) : t === "vokse" ? vokseBrikke() : t === "break" ? puzzleBreak() : t === "speilX" ? speilStart("x") : t === "speilY" ? speilStart("y") : lynnedslag(); window.__shSprekk = shSprekk; window.__shP2 = () => ({ pad2X: sh.pad2X, P2Y: SH_P2Y, TOPP: SH_TOPP, H: SH_H }); window.__shTegn = () => { shRens(); shTegn(performance.now()); }; window.__spill = () => spill; window.__banner = banner; window.__kast = kast; window.__gratisPeace = async () => sjekkGratis(await hentSammen("P")); window.__fremdrift = () => fremdrift; window.__sammenP = async () => ({ lok: minLokaleSum("P"), f: fremdrift.b1, liste: (await hentSammen("P")).slice(0, 2) }); window.__shKrabbe = () => shKrabbeStart(); window.__shHopper = () => shHopperStart(); window.__shSlipp = () => shSlipp(); window.__shPY = () => SH_PY; window.__shKapsel = shKapsel; window.__lyd = () => { const c = lydCtx; return c ? { musikk: musikkUt(c).gain.value, effekt: effektUt(c).gain.value } : null; }; window.__speilSlutt = speilSlutt; window.__figurKant = async (n, farge) => shFigurKant(await hentBilde("figurer/" + n + ".webp"), farge); window.__hentBilde = hentBilde; window.__falskMusikk = () => { lydCtx = lydCtx || { currentTime: 0 }; const nei = () => {}; musikk = { kilde: { stop: nei, playbackRate: { v: 1, setTargetAtTime(r) { this.v = r; } } }, g: { gain: { value: .3, cancelScheduledValues: nei, setValueAtTime: nei, linearRampToValueAtTime: nei, setTargetAtTime: nei } } }; }; window.__musikkFart = () => musikk?.kilde?.playbackRate?.v ?? null; window.__musikkFor = id => musikkFor(id)?.fil; window.__geo = () => geo; window.__plasser = plasser; window.__skjermPkt = skjermPkt; }
 
 
 
