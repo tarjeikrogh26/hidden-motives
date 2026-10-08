@@ -630,7 +630,7 @@ body.lys #modusDeal{--farge:#0f8f6c;--glod:15,143,108}
   <div class="regel">Everything counts: Game, Peace, Scrub it 1P and 2P, every board, every level, every collection. Each board list gives up to 100 points (a Scrub it list up to 1,000): #1 gets them all, the rest their share of the top score.</div>
   <div class="sammen" id="spillere"><p class="liten">Loading players …</p></div>
   <p class="kreditt">© 2001–2026 Tarjei Krogh. All photography, music and art. <a href="https://kroghx.com" target="_blank" rel="noopener">kroghx.com</a></p>
-  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 1.45<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
+  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 1.46<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
 </section>
 
 <div class="ark" id="tidUtArk" hidden style="z-index:200001">
@@ -690,13 +690,13 @@ body.lys #modusDeal{--farge:#0f8f6c;--glod:15,143,108}
     <button class="lommebok" id="lommebok">◆ <span id="creditTall">10</span> +</button>
   </div>
   <div id="shKraftLinje" hidden>
-    <button class="kraft" id="shKraftTilt">TILT <span class="pris">◆ 2</span></button>
-    <button class="kraft" id="shKraftOrm">WORM <span class="pris">◆ 3</span></button>
-    <button class="kraft" id="shKraftMagnet">VACUMA <span class="pris">◆ 3</span></button>
     <button class="kraft" id="shKraftTrip">TRIP <span class="pris">◆ 3</span></button>
-    <button class="kraft" id="shKraftBombe">BOMBS <span class="pris">◆ 2</span></button>
     <button class="kraft" id="shKraftMissil">MISSILES <span class="pris">◆ 3</span></button>
+    <button class="kraft" id="shKraftOrm">WORM <span class="pris">◆ 3</span></button>
     <button class="kraft" id="shKraftLaser">BEAM <span class="pris">◆ 3</span></button>
+    <button class="kraft" id="shKraftTilt">TILT <span class="pris">◆ 2</span></button>
+    <button class="kraft" id="shKraftMagnet">VACUMA <span class="pris">◆ 3</span></button>
+    <button class="kraft" id="shKraftBombe">BOMBS <span class="pris">◆ 2</span></button>
     <button class="kraft" id="shKraftAlien">ALIEN <span class="pris">◆ 4</span></button>
     <button class="lommebok" id="shLommebok">◆ <span id="shCreditTall">10</span> +</button>
   </div>
@@ -4059,16 +4059,18 @@ const KAPSLER = [
   { t: "O", navn: "BOMBS", hva: "THE BUBBLE DROPS BOMBS · THEY BLOW AWAY THE MUD", farge: "#ffae3c", vekt: 3, edel: "gull" },
   { t: "Z", navn: "SNAKE!", hva: "IT EATS THE MUD · CATCH IT WHEN IT'S FULL", farge: "#7dff6a", vekt: 4, edel: "solv" },
   { t: "J", navn: "GIANT FLIPPERS", hva: "HUGE FLIPPERS · THEY FIRE EVERYTHING BACK, HARD", farge: "#ff5fd2", vekt: 3, edel: "gull" },
+  { t: "R", navn: "RAIN", hva: "THE MUD TURNS TO SLUSH AND RUNS AWAY", farge: "#8fd0ff", vekt: 3, edel: "blaa" },
+  { t: "I", navn: "FIREBALL", hva: "IT BURNS THE WEEDS · IT MELTS THE ICE", farge: "#ff8a2a", vekt: 3, edel: "gull" },
 ];
 // Når kommer hva? Tallet er brettet (fra 0) på tvers av samlingene: samling 1 er 0–9, samling 2 er 10–19 osv.
 // Sesong 1 får én ny ting omtrent per brett, og et nytt kjøpevåpen annenhver gang. Så ett nytt kjøpevåpen per sesong.
 // I BETA er alt åpent; med ?betaav kan rekkefølgen prøves.
 const SH_INN = {
-  kapsel: { W: 0, S: 0, M: 1, B: 1, Z: 2, A: 3, K: 3, J: 4, T: 5, O: 6, "+": 8 },
+  kapsel: { W: 0, S: 0, M: 1, B: 1, Z: 2, A: 3, K: 3, J: 4, T: 5, R: 5, O: 6, I: 7, "+": 8 },
   kjøp: { tilt: 0, orm: 2, magnet: 4, trip: 6, bombe: 8, missil: 10, laser: 20, alien: 30 },
-  fiende: { levende: 1, galaga: 2, sabot: 3, krabbe: 4, boss: 6, hopper: 7, fugl: 9 } };
+  fiende: { levende: 1, galaga: 2, sabot: 3, krabbe: 4, boss: 6, hopper: 7, fugl: 9, snø: 5 } };
 const SH_NYNAVN = { kjøp: { tilt: "TILT", orm: "WORM", magnet: "VACUMA", trip: "TRIP", bombe: "BOMBS", missil: "MISSILES", laser: "BEAM", alien: "ALIEN" },
-  fiende: { levende: "THE ART WAKES UP", galaga: "SPACESHIPS", sabot: "SABOTEURS", krabbe: "MUD CRAWLER", boss: "THE BOSS", hopper: "PARATROOPER", fugl: "SEED BIRD" } };
+  fiende: { levende: "THE ART WAKES UP", galaga: "SPACESHIPS", sabot: "SABOTEURS", krabbe: "MUD CRAWLER", boss: "THE BOSS", hopper: "PARATROOPER", fugl: "SEED BIRD", snø: "SNOW" } };
 function shHar(type, navn, i = sh?.i ?? 0) { return BETA || aktiv * 9 + i >= (SH_INN[type][navn] ?? 0); }
 // Velger en power-up blant dem som er åpnet (vektet etter hvor vanlige de er, eller helt jevnt).
 function shKapselValg(vektet = true) {
@@ -4529,12 +4531,13 @@ function shLagMoekk() {
 }
 const SH_GL_VS = "attribute vec2 p;void main(){gl_Position=vec4(p,0.,1.);}";
 const SH_GL_FS = `precision highp float;
-uniform sampler2D tS,tH,tG,tK;uniform vec2 uRes;uniform float uMR,uRamme,uMetall,uKunst;
+uniform sampler2D tS,tH,tG,tK,tV;uniform vec2 uRes;uniform float uMR,uRamme,uMetall,uKunst;
 uniform vec3 uJ1m,uJ1l,uJ2m,uJ2l,uRm,uRl;
 const vec2 GR=vec2(24.,36.);
 float h12(vec2 p){vec3 q=fract(vec3(p.xyx)*.1031);q+=dot(q,q.yzx+33.33);return fract((q.x+q.y)*q.z);}
 float vn(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);return mix(mix(h12(i),h12(i+vec2(1.,0.)),f.x),mix(h12(i+vec2(0.,1.)),h12(i+vec2(1.,1.)),f.x),f.y);}
 vec4 grid(vec2 uv){vec2 g=uv*GR-.5,c=floor(g),f=fract(g);f=f*f*(3.-2.*f);return texture2D(tG,(c+f+.5)/GR);}
+vec4 vgrid(vec2 uv){vec2 g=uv*GR-.5,c=floor(g),f=fract(g);f=f*f*(3.-2.*f);return texture2D(tV,(c+f+.5)/GR);}
 float randB(vec2 p){return min(min(p.x,p.y),min(1.-p.x,1.-p.y));}
 // Gjørmas høyde og hvor mye som dekker (a), tykkelse (L), væte (W).
 void mud(vec2 p,out float H,out float A,out float W,out float F,out float L){
@@ -4582,6 +4585,17 @@ void main(){
   float s8=pow(sp,8.),s32=s8*s8*s8*s8;
   float blank=(.5+.5*W)*(s32*160.+s8*30.)*(1.-wR*.55+(uMetall>.5?wR*.35:0.))/255.;
   col=col/255.+blank;
+  // Snø legger seg på toppene av klumpene først; mye snø blir et teppe. Is er en klar, blank glasur med lysstriper og sprekker.
+  vec4 vv=vgrid(p);
+  if(vv.r>.01){float sn=vv.r*1.5+(vn(p*150.+5.)-.5)*.55+(vn(p*420.)-.5)*.3+(H-.35)*.6+(dif-.55)*.5;
+    float cov=smoothstep(.42,.6,sn)*A;vec3 sc=mix(vec3(.66,.73,.86),vec3(1.,1.,1.02),clamp(dif*1.15,0.,1.));
+    sc+=smoothstep(.93,.99,vn(p*700.+3.))*.35;col=mix(col,sc,cov);}
+  if(vv.g>.01){float ic=smoothstep(.05,.3,vv.g)*A;vec3 ni=normalize(vec3(lx*.35,lyy*.35,1.));
+    float spI=pow(max(0.,dot(ni,Hv)),60.)*1.4+pow(max(0.,dot(ni,Hv)),12.)*.18;
+    float d=(p.x*.8+p.y)*26.,band=smoothstep(.82,1.,sin(d))*.22+smoothstep(.96,1.,sin(d*2.7+1.))*.25;
+    vec3 ice=col*vec3(.62,.8,1.)+vec3(.13,.2,.27)+spI+band;
+    float spr=(1.-smoothstep(0.,.025,abs(vn(p*38.+7.)-.5)))*smoothstep(.62,.45,vv.g)+(1.-smoothstep(0.,.02,abs(vn(p*70.+19.)-.5)))*smoothstep(.45,.3,vv.g);
+    ice+=spr*.55;col=mix(col,ice,ic*.92);}
   float aa=A*(1.-.22*W*W);
   // Skygge på kunsten under gjørma.
   float sa=clamp((grid(p-vec2(.006,.009)).r-.3)/.5,0.,1.)*.5;
@@ -4633,11 +4647,12 @@ function shGLInit(m) {
       gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, sh.img); harKunst = gl.getError() === gl.NO_ERROR ? 1 : 0; } catch { harKunst = 0; }
     gl.uniform1i(gl.getUniformLocation(pr, "tK"), 3); gl.uniform1f(gl.getUniformLocation(pr, "uKunst"), harKunst);
     const gridData = new Uint8Array(SH_KOL * SH_RAD * 4), tG = tekst(2, SH_KOL, SH_RAD, gridData, "tG");
+    const vaerData = new Uint8Array(SH_KOL * SH_RAD * 4), tV = tekst(4, SH_KOL, SH_RAD, vaerData, "tV");
     const U = n => gl.getUniformLocation(pr, n), s = sh, c3 = (n, v) => gl.uniform3f(U(n), v[0], v[1], v[2]);
     c3("uJ1m", s.jord.mork); c3("uJ1l", s.jord.lys); c3("uJ2m", s.jord2.mork); c3("uJ2l", s.jord2.lys);
     const R = s.ramme || { mork: [0, 0, 0], lys: [0, 0, 0] }; c3("uRm", R.mork); c3("uRl", R.lys);
     gl.uniform1f(U("uRamme"), s.ramme ? 1 : 0); gl.uniform1f(U("uMetall"), s.ramme?.metall ? 1 : 0); gl.uniform1f(U("uMR"), MR);
-    const G = { cv, gl, pr, tG, gridData, uRes: U("uRes"), tapt: false };
+    const G = { cv, gl, pr, tG, gridData, tV, vaerData, uRes: U("uRes"), tapt: false };
     cv.addEventListener("webglcontextlost", e => { e.preventDefault(); G.tapt = true; });
     return G;
   } catch (e) { console.warn("WebGL av:", e.message); return null; }
@@ -4656,6 +4671,14 @@ function shGLTegn(s) {
     d[j * 4] = Math.round(Math.min(1, m.F[j]) * 255); d[j * 4 + 1] = Math.round(Math.min(1, m.L[j]) * 255); d[j * 4 + 2] = Math.round(Math.min(1, m.W[j]) * 255); d[j * 4 + 3] = Math.round(wet * 255);
   }
   gl.activeTexture(gl.TEXTURE2); gl.bindTexture(gl.TEXTURE_2D, G.tG); gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, SH_KOL, SH_RAD, gl.RGBA, gl.UNSIGNED_BYTE, d);
+  // Snø (r) og is (g) per rute. Isen fryser til litt etter litt.
+  if (s.vaerCeller?.size || G.vaerVar) {
+    const v = G.vaerData; v.fill(0); G.vaerVar = false;
+    for (const k of s.vaerCeller || []) { if (k.liv <= 0) continue; const j = k.r * SH_KOL + k.c; G.vaerVar = true;
+      v[j * 4] = Math.round(Math.min(1, (k.snø || 0) / 1.5) * 255);
+      if (k.is > 0) { const u = Math.min(1, Math.max(0, (s.tid - (k.isT0 ?? 0)) / .45)); v[j * 4 + 1] = Math.round(u * Math.min(1, .3 + .23 * k.is) * 255); if (u < 1) { v[j * 4] = Math.round(v[j * 4] * (1 - u)); G.skitten = true; } } }
+    gl.activeTexture(gl.TEXTURE4); gl.bindTexture(gl.TEXTURE_2D, G.tV); gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, SH_KOL, SH_RAD, gl.RGBA, gl.UNSIGNED_BYTE, v);
+  }
   gl.viewport(0, 0, N, N); gl.uniform2f(G.uRes, N, N);
   gl.clearColor(0, 0, 0, 0); gl.clear(gl.COLOR_BUFFER_BIT); gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
 }
@@ -5078,10 +5101,15 @@ function shSkumSteg(dt) {
 }
 function shTreff(k, lag = 1, kilde = null) {
   const s = sh; if (k.liv <= 0 || s.tilstand === "ferdig" || s.tilstand === "over") return;
+  if ((k.is > 0 || k.snø > .2) && shVaerTreff(k, lag, kilde)) return;
+  const egen = kilde; if (kilde === "regn" || kilde === "visne" || kilde === "ild") kilde = "syre";
+  // Såpe (boblen selv eller sprut) får en plante til å visne, sakte.
+  if (k.plante && k.plante.visne == null && (egen == null || egen === "syre")) k.plante.visne = s.tid;
   const j = k.r * SH_KOL + k.c;
   k.liv = Math.max(0, k.liv - lag); shCelle(j); s.skitten.add(j);
+  if (k.liv <= 0 && (k.snø || k.is)) { k.snø = 0; k.is = 0; s.vaerSkitten = true; }
   const mx = k.x + k.w / 2, my = k.y + k.h / 2;
-  if (kilde !== "syre" || Math.random() < .4) shSkum(mx, my, kilde ? 1 : 2, kilde === "syre");
+  if (egen === kilde && (kilde !== "syre" || Math.random() < .4)) shSkum(mx, my, kilde ? 1 : 2, kilde === "syre");
   if (s.eff.T > 0 && !kilde && Math.random() < .22) shSkumFlekk(mx, my, 1);
   if (s.eff.T > 0 && Math.random() < .5) { s.tripP = s.tripP || []; if (s.tripP.length < (s.tripLett ? 140 : 420)) s.tripP.push({ x: mx + (Math.random() - .5) * k.w * 2, y: my + (Math.random() - .5) * k.h * 2, z: 0, vz: .3 + Math.random() * .4, hue: (s.tid * 70 + Math.random() * 160) % 360, r: .005 + Math.random() * .008, jord: Math.random() < .6 }); }
   if (k.liv > 0) {
@@ -6118,6 +6146,278 @@ function shHopperStart() {
   s.tekster.push({ txt: "PARATROOPER!", x: .5, y: .45, liv: 1.6, farge: "#ffb36b" }); shLyd("spawn");
 }
 // FRØFUGLEN: flyr tvers over bildet og slipper frø. Der et frø lander, vokser en plante som tar flere treff enn jord.
+// VÆR. RAIN (kapsel): regnet gjør gjørma til slaps som renner ned, også den harde.
+// SNOW (hendelse): snøen legger seg oppå gjørma og tar støyten først. Blir det kaldt, fryser snø og regn til is.
+// FIREBALL (kapsel): boblen brenner, smelter is og snø og brenner opp ugresset.
+function shRegnStart() {
+  const s = sh; if (s.regn && s.regn.t < s.regn.varighet) { s.regn.varighet = s.regn.t + 10; return; }
+  s.regn = { t: 0, varighet: 10, dråper: [], plask: [], rennT: 0, lydT: 0 };
+}
+function shRegnKloss() {
+  const s = sh;
+  for (let n = 0; n < 14; n++) { const k = s.klosser[(Math.random() * s.klosser.length) | 0]; if (k.liv > 0 && !k.ramme && !(k.is > 0) && k.r < SH_RAD - 2) return k; }
+  return null;
+}
+function shVaerP(p) { const s = sh; s.vaerP = s.vaerP || []; if (s.vaerP.length < 260) s.vaerP.push(p); }
+function shSnøStart() {
+  const s = sh; s.snø = { t: 0, varighet: 13, fnugg: [], kald: Math.random() < .5, rest: 0 };
+  s.tekster = s.tekster.filter(tk => !tk.kapsel && !tk.vaer); s.tekster.push({ txt: "IT'S SNOWING", x: .5, y: SH_TOPP + .42, liv: 3, fade: 1.6, farge: "#e8f4ff", vaer: true }, { txt: "THE SNOW SETTLES ON THE MUD · HIT IT OFF", x: .5, y: SH_TOPP + .48, liv: 3.4, fade: 1.6, farge: "#cfe6ff", liten: true, kapsel: true });
+  if (lydPa) [0, 4, 7, 11].forEach((t, j) => tone(1318.5 * Math.pow(2, t / 12), j * .12, .9, .012, "sine", .3, 1.6));
+}
+// Kulda: snøen og alt som er vått fra regnet blir is. Isen kryper utover litt etter litt.
+function shFrys() {
+  const s = sh; s.vaerCeller = s.vaerCeller || new Set(); let n = 0;
+  for (const k of s.klosser) {
+    if (k.liv <= 0 || k.ramme || k.r >= SH_RAD - 2) continue;
+    const snø = k.snø || 0, våt = k.regnT != null && s.tid - k.regnT < 14;
+    if (snø > .45 || våt) { k.is = snø > 1.2 ? 3 : 2; k.isT0 = s.tid + Math.random() * .5 + (k.y - SH_TOPP) * 1.1; k.snø = 0; s.vaerCeller.add(k); n++; }
+  }
+  if (s.regn) s.regn.varighet = Math.min(s.regn.varighet, s.regn.t + .3);
+  for (const d of s.drypp) if (d.slaps) d.budsjett = 0;
+  s.vaerSkitten = true; s.frostT = s.tid;
+  if (n) s.tekster = s.tekster.filter(tk => !tk.kapsel && !tk.vaer), s.tekster.push({ txt: "FROZEN!", x: .5, y: SH_TOPP + .42, liv: 2.6, fade: 1.4, farge: "#bfe6ff", vaer: true }, { txt: "ICE TAKES MORE HITS · FIRE MELTS IT", x: .5, y: SH_TOPP + .48, liv: 3, fade: 1.4, farge: "#e0f2ff", liten: true, kapsel: true });
+  if (lydPa) { shSus(1.6, "highpass", 5200, .03, 2, .5, 1); [0, 3, 7].forEach((t, j) => tone(2093 * Math.pow(2, t / 12), .1 + j * .09, .5, .01, "triangle", .4, 1.5)); }
+}
+function shIsLyd() {
+  const s = sh; if (!lydPa || s.tid - (s.lydSist.is ?? -9) < .06) return; s.lydSist.is = s.tid;
+  const f = 2400 + Math.random() * 1400; tone(f, 0, .07, .016, "triangle", .6, 1); tone(f * 1.51, .006, .05, .008, "sine", .5, 1.2);
+}
+// Snø og is tar treffet i stedet for gjørma. Ild smelter dem med en gang.
+function shVaerTreff(k, lag, kilde) {
+  const s = sh, mx = k.x + k.w / 2, my = k.y + k.h / 2; s.vaerSkitten = true;
+  if (k.is > 0) {
+    if (s.tid < (k.isT0 ?? 0)) return false;
+    if (kilde === "ild") { k.is = 0; shDamp(mx, my, 3); return false; }
+    if (s.tid - (k.isSist ?? -9) < .12) return true; k.isSist = s.tid;
+    k.is--; shIsLyd(); if (!s.bytte) { s.poeng += 3; shHud(); }
+    for (let n = 0; n < (k.is > 0 ? 3 : 8); n++) { const a = -Math.PI / 2 + (Math.random() - .5) * 2.6, v = .08 + Math.random() * .22; shVaerP({ x: mx + (Math.random() - .5) * k.w, y: my, vx: Math.cos(a) * v, vy: Math.sin(a) * v, liv: 1, type: "is", r: .002 + Math.random() * .004, rot: Math.random() * 6, spinn: (Math.random() - .5) * 20 }); }
+    return true;
+  }
+  if (kilde === "ild") { k.snø = 0; shDamp(mx, my, 2); return false; }
+  k.snø = Math.max(0, k.snø - .9 * lag); if (!s.bytte) { s.poeng += 1; }
+  for (let n = 0; n < 5; n++) { const a = Math.random() * 7, v = .02 + Math.random() * .06; shVaerP({ x: mx + (Math.random() - .5) * k.w, y: my + (Math.random() - .5) * k.h, vx: Math.cos(a) * v, vy: Math.sin(a) * v - .03, liv: 1, type: "snø", r: .003 + Math.random() * .004 }); }
+  return true;
+}
+function shDamp(x, y, n) { for (let j = 0; j < n; j++) shVaerP({ x: x + (Math.random() - .5) * .02, y, vx: (Math.random() - .5) * .03, vy: -.05 - Math.random() * .05, liv: 1, type: "damp", r: .01 + Math.random() * .01 }); }
+function shVaerSteg(dt) {
+  const s = sh, R = s.regn, aktiv = s.tilstand === "spill" && !s.bytte;
+  if (R) {
+    R.t += dt; const I = R.t < R.varighet ? Math.min(1, R.t / 1.2) * Math.min(1, (R.varighet - R.t) / 1.8) : 0; R.I = I;
+    // Dråpene: skrå streker. De fleste lander på bildet og spruter, resten faller helt ned.
+    const n = I * 320 * dt + R.rest || 0; R.rest = n % 1;
+    for (let j = 0; j < (n | 0) && R.dråper.length < 280; j++) { const nær = Math.random() < .35;
+      R.dråper.push({ x: Math.random() * 1.15 - .12, y: -.04 - Math.random() * .12, v: nær ? 2.5 + Math.random() * .6 : 1.6 + Math.random() * .4, nær, mål: Math.random() < .72 ? SH_TOPP + Math.random() : SH_TOPP + 1 + Math.random() * (SH_H - SH_TOPP - 1) }); }
+    for (const d of R.dråper) { d.y += d.v * dt; d.x += d.v * .13 * dt;
+      if (d.y >= d.mål) { d.borte = true;
+        if (R.plask.length < 80 && d.x > 0 && d.x < 1) { const k = d.mål < SH_TOPP + 1 ? shKlossVed(d.x, d.y) : null; R.plask.push({ x: d.x, y: d.y, t: 0, r: .006 + Math.random() * .008, jord: !!k, v: Math.random() * 6 }); if (k) k.regnT = s.tid; } } }
+    R.dråper = R.dråper.filter(d => !d.borte);
+    for (const p of R.plask) p.t += dt; R.plask = R.plask.filter(p => p.t < .45);
+    // Gjørma blir til slaps og renner ned fra flekker over hele bildet.
+    if (aktiv) { R.rennT += dt * I * 6.5;
+      while (R.rennT >= 1) { R.rennT--; const k = shRegnKloss(); if (!k) break; k.hardLeire = false; k.regnT = s.tid;
+        s.drypp.push({ x: k.x + k.w * (.2 + Math.random() * .6), y: k.y + k.h * .3, liv: 1, renn: true, slaps: true, budsjett: 3 + ((Math.random() * 3) | 0), t: 0, hale: [], br: .7 + Math.random() * .6, fase: Math.random() * 6 }); } }
+    R.lydT -= dt; if (I > .05 && R.lydT <= 0 && lydPa) { R.lydT = .55; shSus(1.3, "highpass", 2600, .02 * I, .6, .4, .8); shSus(1.3, "bandpass", 900, .012 * I, .5, .4, .6); }
+    if (R.t > R.varighet && !R.dråper.length && !R.plask.length) s.regn = null;
+  }
+  // Snø kommer av og til, én gang i løpet av et brett.
+  if (!s.snø && !s.snøFerdig && !s.toP && shHar("fiende", "snø") && aktiv && !s.galaga && !s.finale) {
+    if (s.snøVent == null) s.snøVent = 45 + Math.random() * 50;
+    const andel = 1 - s.igjen / s.klosser.length;
+    if (s.tid > s.snøVent && andel > .25 && andel < .8) { s.snøFerdig = true; if (Math.random() < .5) shSnøStart(); }
+  }
+  const N = s.snø;
+  if (N) {
+    N.t += dt; const I = N.t < N.varighet ? Math.min(1, N.t / 2) * Math.min(1, (N.varighet - N.t) / 2.5) : 0; N.I = I;
+    const n = I * 70 * dt + N.rest; N.rest = n % 1;
+    for (let j = 0; j < (n | 0) && N.fnugg.length < 240; j++) N.fnugg.push({ x: Math.random() * 1.04 - .02, y: -.03, vy: .13 + Math.random() * .09, r: .0022 + Math.random() * .004, fase: Math.random() * 6, mål: Math.random() < .82 ? SH_TOPP + Math.random() * .93 : SH_H - .005 });
+    s.vaerCeller = s.vaerCeller || new Set();
+    for (const q of N.fnugg) { q.y += q.vy * dt; q.x += (Math.sin(s.tid * 1.3 + q.fase) * .035 + .008) * dt;
+      if (q.y >= q.mål) { q.borte = true; if (q.mål > SH_TOPP + 1) continue;
+        const c = Math.floor(q.x * SH_KOL), r = Math.floor((q.y - SH_TOPP) * SH_RAD);
+        for (const [dc, dr, m] of [[0, 0, .5], [-1, 0, .18], [1, 0, .18], [0, -1, .14], [0, 1, .14]]) {
+          const cc = c + dc, rr = r + dr; if (cc < 0 || cc >= SH_KOL || rr < 0 || rr >= SH_RAD - 3) continue;
+          const k = s.klosser[rr * SH_KOL + cc]; if (k.liv <= 0 || k.ramme || k.is > 0) continue;
+          k.snø = Math.min(2, (k.snø || 0) + m); s.vaerCeller.add(k); s.vaerSkitten = true; } } }
+    N.fnugg = N.fnugg.filter(q => !q.borte);
+    if (N.kald && !N.frost && N.t > N.varighet * .55) { N.frost = true; N.frostT = s.tid + 2.8;
+      s.tekster = s.tekster.filter(tk => !tk.kapsel && !tk.vaer); s.tekster.push({ txt: "IT'S GETTING COLD…", x: .5, y: SH_TOPP + .42, liv: 2.6, fade: 1.4, farge: "#bfe6ff", vaer: true }, { txt: "SNOW AND RAIN WILL FREEZE", x: .5, y: SH_TOPP + .48, liv: 2.8, fade: 1.4, farge: "#e0f2ff", liten: true, kapsel: true }); }
+    if (N.frostT && s.tid >= N.frostT && !N.frosset) { N.frosset = true; if (s.tilstand === "spill") shFrys(); }
+    if (N.t > N.varighet && !N.fnugg.length && (!N.kald || N.frosset)) s.snø = null;
+  }
+  if (s.vaerP?.length) {
+    for (const p of s.vaerP) {
+      p.x += p.vx * dt; p.y += p.vy * dt;
+      if (p.type === "is") { p.vy += .7 * dt; p.rot += p.spinn * dt; p.liv -= dt * 1.4; }
+      else if (p.type === "snø") { p.vy += .05 * dt; p.liv -= dt * 1.6; }
+      else if (p.type === "damp") { p.vx *= Math.exp(-dt); p.r += .02 * dt; p.liv -= dt * .9; }
+      else if (p.type === "blad") { p.vy = Math.min(.06, p.vy + .02 * dt); p.x += Math.sin(s.tid * 2.4 + p.fase) * .025 * dt; p.rot += Math.sin(s.tid * 2 + p.fase) * 2 * dt; p.liv -= dt * .28; }
+      else if (p.type === "aske") { p.vy -= .03 * dt; p.vx *= Math.exp(-dt * .8); p.liv -= dt * .7; }
+      else p.liv -= dt;
+    }
+    s.vaerP = s.vaerP.filter(p => p.liv > 0 && p.y < SH_H);
+  }
+  if (s.vaerSkitten && s.moekk?.gl && s.tid - (s.vaerGLT ?? -9) > .1) { s.moekk.gl.skitten = true; s.vaerSkitten = false; s.vaerGLT = s.tid; }
+  if (s.vaerCeller?.size) { for (const k of s.vaerCeller) if (k.liv <= 0 || (!(k.snø > .01) && !(k.is > 0))) { k.snø = 0; k.is = 0; s.vaerCeller.delete(k); s.vaerSkitten = true; } }
+}
+// Snø og is tegnes på et eget lite lag over gjørma, og tegnes bare om når noe har endret seg.
+let shSnøSprite = null;
+function shVaerLag(s) {
+  const W = 480, ny = () => Object.assign(document.createElement("canvas"), { width: W, height: W });
+  const cv = s.vaerCv || (s.vaerCv = ny()), x = cv.getContext("2d");
+  if (!shSnøSprite) {
+    // Snø: små, skarpe klumper med korn og en blålig skygge. Is: en klar glassflate med lysstriper og sprekker.
+    const lag = (stopp) => { const c = Object.assign(document.createElement("canvas"), { width: 32, height: 32 }), g = c.getContext("2d"), r = g.createRadialGradient(16, 16, 0, 16, 16, 16); for (const [o, f] of stopp) r.addColorStop(o, f); g.fillStyle = r; g.fillRect(0, 0, 32, 32); return c; };
+    shSnøSprite = {
+      snø: lag([[0, "rgba(255,255,255,1)"], [.62, "rgba(250,252,255,1)"], [.82, "rgba(232,240,252,.6)"], [1, "rgba(225,235,250,0)"]]),
+      skygge: lag([[0, "rgba(80,100,135,.6)"], [.65, "rgba(80,100,135,.45)"], [1, "rgba(80,100,135,0)"]]),
+      maske: lag([[0, "rgba(0,0,0,1)"], [.72, "rgba(0,0,0,1)"], [.86, "rgba(0,0,0,.5)"], [1, "rgba(0,0,0,0)"]]) };
+    const k = ny(), g = k.getContext("2d");
+    for (let n = 0; n < 14000; n++) { const v = Math.random(); g.fillStyle = v < .55 ? "rgba(140,158,188,.28)" : "rgba(255,255,255,.6)"; g.fillRect(Math.random() * W, Math.random() * W, 1.3, 1.3); }
+    shSnøSprite.korn = k;
+    // Flekkmønster: grove og fine flekker med ulik tetthet. Der det er lite snø, blir bare toppene hvite.
+    const fl = ny(), h = fl.getContext("2d"), liten = Object.assign(document.createElement("canvas"), { width: 64, height: 64 }), lg = liten.getContext("2d");
+    for (let a = 0; a < 64; a++) for (let b = 0; b < 64; b++) { lg.fillStyle = `rgba(0,0,0,${.35 + Math.random() * .65})`; lg.fillRect(a, b, 1, 1); }
+    h.imageSmoothingEnabled = true; h.drawImage(liten, 0, 0, W, W);
+    h.globalCompositeOperation = "destination-out"; for (let n = 0; n < 5000; n++) { h.fillStyle = `rgba(0,0,0,${Math.random() * .7})`; const r = .6 + Math.random() * 1.6; h.beginPath(); h.arc(Math.random() * W, Math.random() * W, r, 0, 7); h.fill(); }
+    shSnøSprite.flekk = fl;
+  }
+  const sp = shSnøSprite, cw = W / SH_KOL, ch = W / SH_RAD, snø = []; let frys = 0;
+  x.clearRect(0, 0, W, W);
+  // Isen: en maske av alle isrutene, fylt med blåhvitt glass. Tegnes halvgjennomsiktig, så bildet og gjørma synes under.
+  const isLag = cv.isLag || (cv.isLag = ny()), y = isLag.getContext("2d"); y.globalCompositeOperation = "source-over"; y.clearRect(0, 0, W, W); let noeIs = false;
+  for (const k of s.vaerCeller || []) {
+    if (k.is > 0) { const u = Math.min(1, Math.max(0, (s.tid - (k.isT0 ?? 0)) / .45)); if (u < 1) frys++; if (u < 1 && k.snø) snø.push([k, 1 - u]); if (u <= 0) continue;
+      const X = (k.x + k.w / 2) * W, Y = (k.y + k.h / 2 - SH_TOPP) * W; y.globalAlpha = u; y.drawImage(sp.maske, X - cw * .95, Y - ch * 1.05, cw * 1.9, ch * 2.1); noeIs = true; }
+    else if (k.snø > .01) snø.push([k, 1]);
+  }
+  if (noeIs) {
+    y.globalAlpha = 1; y.globalCompositeOperation = "source-in";
+    const g = y.createLinearGradient(0, 0, W * .6, W); g.addColorStop(0, "rgba(215,240,255,.62)"); g.addColorStop(.5, "rgba(150,205,245,.5)"); g.addColorStop(1, "rgba(200,232,255,.6)"); y.fillStyle = g; y.fillRect(0, 0, W, W);
+    y.globalCompositeOperation = "source-atop";
+    y.strokeStyle = "rgba(255,255,255,.7)"; y.lineWidth = 2; for (let d = -W; d < W * 2; d += 31) { y.beginPath(); y.moveTo(d, 0); y.lineTo(d - W * .55, W); y.stroke(); }
+    y.strokeStyle = "rgba(255,255,255,.22)"; y.lineWidth = 10; for (let d = -W + 12; d < W * 2; d += 73) { y.beginPath(); y.moveTo(d, 0); y.lineTo(d - W * .55, W); y.stroke(); }
+    y.strokeStyle = "rgba(255,255,255,.9)"; y.lineWidth = 1;
+    for (const k of s.vaerCeller) if (k.is > 0 && k.is < 3 && s.tid > (k.isT0 ?? 0)) { const X = k.x * W, Y = (k.y - SH_TOPP) * W, h = (k.r * 13 + k.c * 7) % 10 / 10;
+      y.beginPath(); y.moveTo(X + cw * h, Y); y.lineTo(X + cw * .5, Y + ch * .5); y.lineTo(X + cw * (1 - h), Y + ch); if (k.is === 1) { y.moveTo(X + cw * .5, Y + ch * .5); y.lineTo(X + cw, Y + ch * h); y.moveTo(X + cw * .5, Y + ch * .5); y.lineTo(X, Y + ch * (1 - h)); } y.stroke(); }
+    x.drawImage(isLag, 0, 0);
+  }
+  // Snøen: et dryss som blir et teppe. Masken av rutene ganges med et kornete mønster, så det ser ut som snø på ujevn jord og ikke som bomull.
+  const snøLag = cv.snøLag || (cv.snøLag = ny()), z = snøLag.getContext("2d");
+  z.globalCompositeOperation = "source-over"; z.clearRect(0, 0, W, W);
+  for (const [k, a] of snø) { const X = (k.x + k.w / 2) * W, Y = (k.y + k.h / 2 - SH_TOPP) * W; z.globalAlpha = Math.min(1, k.snø * .9) * a; z.drawImage(sp.maske, X - cw * .9, Y - ch * .95, cw * 1.8, ch * 1.9); }
+  if (snø.length) {
+    z.globalAlpha = 1; z.globalCompositeOperation = "destination-in"; z.drawImage(sp.flekk, 0, 0);
+    z.globalCompositeOperation = "source-in"; const g = z.createLinearGradient(0, 0, 0, W); g.addColorStop(0, "#ffffff"); g.addColorStop(1, "#eef4fc"); z.fillStyle = g; z.fillRect(0, 0, W, W);
+    z.globalCompositeOperation = "source-atop"; z.drawImage(sp.korn, 0, 0);
+    // Litt skygge under kantene, så snøen ligger oppå.
+    const sk = cv.skLag || (cv.skLag = ny()), q = sk.getContext("2d"); q.globalCompositeOperation = "source-over"; q.clearRect(0, 0, W, W); q.drawImage(snøLag, 0, 2); q.globalCompositeOperation = "source-in"; q.fillStyle = "rgba(60,78,110,.55)"; q.fillRect(0, 0, W, W);
+    x.drawImage(sk, 0, 0); x.drawImage(snøLag, 0, 0);
+  }
+  s.vaerSkitten = frys > 0;
+}
+function shVaerTegn(x, f, s) {
+  const iy = SH_TOPP * f, R = s.regn;
+  const gpu = !!s.moekk?.gl;
+  if (!gpu && (s.vaerCeller?.size || s.vaerCv) && (s.vaerSkitten || !s.vaerCv) && s.tid - (s.vaerTegnT ?? -9) > 1 / 15) { s.vaerTegnT = s.tid; shVaerLag(s); }
+  if (s.vaerCeller?.size && (gpu || s.vaerCv)) {
+    x.save(); x.imageSmoothingEnabled = true; if (!gpu) x.drawImage(s.vaerCv, 0, iy, f, f);
+    // Glitter i snøen og et blink som vandrer over isen.
+    x.globalCompositeOperation = "lighter"; let n = 0;
+    for (const k of s.vaerCeller) { if (++n > 400) break; const h = (k.r * 31 + k.c * 17) % 23;
+      if (k.snø > .6 && h < 3) { const g = Math.max(0, Math.sin(s.tid * 2.2 + h * 2.7)); if (g > .3) { x.fillStyle = `rgba(255,255,255,${(g - .3) * .9})`; const px = (k.x + k.w * (h / 3)) * f, py = (k.y + k.h * .4) * f, rr = Math.max(.7, f * .0016); x.fillRect(px - rr, py - rr * .25, rr * 2, rr * .5); x.fillRect(px - rr * .25, py - rr, rr * .5, rr * 2); } }
+      if (k.is > 0 && h < 2 && s.tid > (k.isT0 ?? 0) + .5) { const g = Math.max(0, Math.sin(s.tid * 1.4 - k.c * .35 + k.r * .2)); if (g > .85) { x.fillStyle = `rgba(255,255,255,${(g - .85) * 4})`; x.beginPath(); x.arc((k.x + k.w * .5) * f, (k.y + k.h * .5) * f, f * .002, 0, 7); x.fill(); } } }
+    x.restore();
+  }
+  // Frostblinket når det fryser.
+  if (s.frostT != null && s.tid - s.frostT < 1.4) { const u = (s.tid - s.frostT) / 1.4; x.fillStyle = `rgba(200,230,255,${.18 * (1 - u)})`; x.fillRect(0, iy, f, f); }
+  if (R) {
+    const I = R.I || 0;
+    if (I > 0) { x.fillStyle = `rgba(12,22,40,${.24 * I})`; x.fillRect(0, iy, f, f);
+      // Et svakt, vått slør som driver skrått over bildet.
+      x.save(); x.globalCompositeOperation = "screen"; const sl = (s.tid * .35) % 1;
+      for (let j = -1; j < 3; j++) { const sx = (j * .5 + sl) * f, g = x.createLinearGradient(sx, 0, sx + f * .25, 0); g.addColorStop(0, "rgba(150,175,210,0)"); g.addColorStop(.5, `rgba(150,175,210,${.06 * I})`); g.addColorStop(1, "rgba(150,175,210,0)"); x.fillStyle = g; x.fillRect(sx, iy, f * .25, f); }
+      x.restore(); }
+    x.save(); x.lineCap = "round";
+    for (const nær of [false, true]) { x.beginPath(); for (const d of R.dråper) if (d.nær === nær) { const l = nær ? .055 : .032; x.moveTo((d.x - l * .13) * f, (d.y - l) * f); x.lineTo(d.x * f, d.y * f); }
+      x.strokeStyle = nær ? "rgba(225,238,255,.55)" : "rgba(185,208,240,.3)"; x.lineWidth = Math.max(.7, f * (nær ? .0024 : .0013)); x.stroke(); }
+    for (const p of R.plask) { const u = p.t / .45, X = p.x * f, Y = p.y * f, rr = p.r * f * (.4 + u * 1.3);
+      if (p.jord && u < .25) { x.fillStyle = `rgba(255,255,255,${.8 * (1 - u / .25)})`; x.beginPath(); x.arc(X, Y, Math.max(.8, f * .0022), 0, 7); x.fill(); }
+      x.strokeStyle = `rgba(210,228,250,${(p.jord ? .5 : .35) * (1 - u)})`; x.lineWidth = Math.max(.6, f * .0012); x.beginPath(); x.ellipse(X, Y, rr, rr * .32, 0, 0, 7); x.stroke();
+      if (u < .6) { x.fillStyle = `rgba(228,240,255,${.75 * (1 - u / .6)})`; for (let j = 0; j < 3; j++) { const a = p.v + j * 2.1, dx = Math.cos(a) * p.r * f * u * 1.7, dy = -Math.sin(u / .6 * Math.PI) * p.r * f * (.9 + .5 * (j % 2)); x.beginPath(); x.arc(X + dx, Y + dy, Math.max(.6, f * .0012), 0, 7); x.fill(); } } }
+    x.restore();
+  }
+  const N = s.snø;
+  if (N?.fnugg.length) { x.save(); x.fillStyle = "rgba(255,255,255,.9)"; x.shadowColor = "rgba(200,225,255,.8)"; x.shadowBlur = f * .006; x.beginPath();
+    for (const q of N.fnugg) { const X = q.x * f, Y = q.y * f, r = q.r * f; x.moveTo(X + r, Y); x.arc(X, Y, r, 0, 7); } x.fill(); x.restore(); }
+  if (s.vaerP?.length) {
+    x.save();
+    for (const p of s.vaerP) { const X = p.x * f, Y = p.y * f, r = p.r * f, a = Math.min(1, p.liv * 1.5);
+      if (p.type === "is") { x.save(); x.translate(X, Y); x.rotate(p.rot); x.fillStyle = `rgba(225,242,255,${.9 * a})`; x.beginPath(); x.moveTo(0, -r); x.lineTo(r * .7, r * .6); x.lineTo(-r * .6, r * .4); x.closePath(); x.fill(); x.restore(); }
+      else if (p.type === "snø") { x.fillStyle = `rgba(255,255,255,${.85 * a})`; x.beginPath(); x.arc(X, Y, r, 0, 7); x.fill(); }
+      else if (p.type === "damp") { x.globalAlpha = .35 * p.liv; x.drawImage(røykSprite(true), X - r, Y - r, r * 2, r * 2); x.globalAlpha = 1; }
+      else if (p.type === "aske") { x.globalAlpha = .5 * p.liv; x.drawImage(røykSprite(false), X - r, Y - r, r * 2, r * 2); x.globalAlpha = 1; }
+      else if (p.type === "blad") { x.save(); x.translate(X, Y); x.rotate(p.rot); x.fillStyle = `rgba(140,104,48,${.9 * a})`; x.beginPath(); x.ellipse(0, 0, r, r * .4, 0, 0, 7); x.fill(); x.restore(); } }
+    x.restore();
+  }
+}
+// FIREBALL: flammer bak boblen, smelter is og snø den kommer nær, og brenner opp ugresset.
+function shIldSteg(b, dt) {
+  const s = sh, R = shRad(b);
+  s.ildP = s.ildP || [];
+  const v = Math.hypot(b.vx, b.vy) || 1, n = dt * 130;
+  for (let j = 0; j < n + Math.random() - .5 && s.ildP.length < 320; j++) { const a = Math.random() * 7, rr = R * (.3 + Math.random() * .7);
+    s.ildP.push({ x: b.x + Math.cos(a) * rr, y: b.y + Math.sin(a) * rr, vx: -b.vx / v * .05 + Math.cos(a) * .03, vy: -b.vy / v * .05 + Math.sin(a) * .03 - .03, liv: 1, st: R * (.45 + Math.random() * .5), fase: Math.random() * 6 }); }
+  // Gnister som spruter av.
+  if (Math.random() < dt * 18 && s.ildP.length < 320) { const a = Math.random() * 7, g = .12 + Math.random() * .2; s.ildP.push({ x: b.x, y: b.y, vx: Math.cos(a) * g - b.vx * .2, vy: Math.sin(a) * g - b.vy * .2, liv: 1, st: 0, gnist: true }); }
+  const c0 = Math.max(0, Math.floor((b.x - .05) * SH_KOL)), c1 = Math.min(SH_KOL - 1, Math.floor((b.x + .05) * SH_KOL));
+  const r0 = Math.max(0, Math.floor((b.y - .05 - SH_TOPP) * SH_RAD)), r1 = Math.min(SH_RAD - 1, Math.floor((b.y + .05 - SH_TOPP) * SH_RAD));
+  for (let r = r0; r <= r1; r++) for (let c = c0; c <= c1; c++) { const k = s.klosser[r * SH_KOL + c];
+    if (k.liv <= 0 || Math.hypot(k.x + k.w / 2 - b.x, k.y + k.h / 2 - b.y) > .05) continue;
+    if (k.is > 0 || k.snø > .01) { const var_ = k.is > 0; k.is = 0; k.snø = 0; s.vaerSkitten = true; shDamp(k.x + k.w / 2, k.y + k.h / 2, var_ ? 2 : 1);
+      if (var_ && s.tid - (s.smeltT ?? -9) > 2.5) { s.smeltT = s.tid; s.tekster.push({ txt: "MELT!", x: b.x, y: b.y - .04, liv: 1, farge: "#ffb36a" }); if (lydPa) shSus(.5, "highpass", 3000, .03, 1, .5, .6); } }
+    if (k.plante) shBrennPlante(k); }
+}
+function shBrennPlante(k) {
+  const s = sh, mx = k.x + k.w / 2, my = k.y + k.h / 2; k.plante = null;
+  shTreff(k, Math.min(k.liv, 4), "ild");
+  for (let n = 0; n < 6; n++) shVaerP({ x: mx + (Math.random() - .5) * .02, y: my - Math.random() * .03, vx: (Math.random() - .5) * .03, vy: -.03 - Math.random() * .04, liv: 1, type: "aske", r: .008 + Math.random() * .01 });
+  s.ildP = s.ildP || []; for (let n = 0; n < 14; n++) s.ildP.push({ x: mx + (Math.random() - .5) * .02, y: my - Math.random() * .04, vx: (Math.random() - .5) * .04, vy: -.08 - Math.random() * .06, liv: 1, st: .012 + Math.random() * .012, fase: Math.random() * 6 });
+  if (!s.bytte) s.poeng += 150; shHud();
+  s.tekster.push({ txt: "WEED BURNT! +150", x: shClamp(mx, .15, .85), y: my - .05, liv: 1.3, farge: "#ff9a3a" });
+  if (lydPa) { shSus(.6, "lowpass", 1400, .05, .8, .7, .5); shGlid(300, 120, .3, .02, "sawtooth", .5, .3); }
+}
+function shIldTegn(x, f, s) {
+  if (s.ildP?.length) { const dt = Math.min(.05, Math.max(0, s.tid - (s.ildT ?? s.tid))); s.ildT = s.tid;
+    for (const p of s.ildP) { p.x += p.vx * dt; p.y += p.vy * dt; if (p.gnist) { p.vy += .25 * dt; p.liv -= dt * 1.6; } else { p.vy -= .12 * dt; p.liv -= dt * 3.2; } }
+    s.ildP = s.ildP.filter(p => p.liv > 0); }
+  if (!s.ildP?.length && !(s.eff.I > 0)) return;
+  x.save();
+  x.globalCompositeOperation = "screen";
+  for (const p of s.ildP || []) if (p.gnist) { const a = Math.min(1, p.liv * 1.5); x.globalAlpha = a; x.fillStyle = p.liv > .5 ? "#fff3b0" : "#ff9a3a"; x.beginPath(); x.arc(p.x * f, p.y * f, Math.max(.7, f * .0018), 0, 7); x.fill(); }
+  for (const p of s.ildP || []) { if (p.gnist) continue; const u = 1 - p.liv, X = p.x * f, Y = p.y * f, bred = p.st * f * (1 - u * .55), høy = bred * 2.4, rot = Math.atan2(p.vx, -p.vy);
+    x.save(); x.translate(X, Y); x.rotate(rot);
+    x.globalCompositeOperation = "source-over";
+    if (u > .45) { x.globalAlpha = Math.min(1, (u - .45) * 2.5) * p.liv * .7; x.drawImage(flammeSprite(u > .8 ? "sot" : "kant"), -bred, -høy * .8, bred * 2, høy); }
+    if (u < .8) { x.globalAlpha = Math.max(0, 1 - Math.abs(u - .35) / .45) * .75; x.drawImage(flammeSprite("kropp"), -bred, -høy * .75, bred * 2, høy); }
+    x.globalCompositeOperation = "screen";
+    if (u < .45) { x.globalAlpha = (1 - u / .45) * .8; x.drawImage(flammeSprite("gul"), -bred * .7, -høy * .55, bred * 1.4, høy * .75); }
+    if (u < .2) { x.globalAlpha = (1 - u / .2) * .8; x.drawImage(flammeSprite("kjerne"), -bred * .45, -høy * .38, bred * .9, høy * .5); }
+    x.restore(); }
+  if (s.eff.I > 0) { const a = Math.min(1, s.eff.I / .8);
+    for (const b of s.baller) { if (b.fanget) continue; const X = b.x * f, Y = b.y * f, R = shRad(b) * f, g = x.createRadialGradient(X, Y, R * .6, X, Y, R * 2.3);
+      g.addColorStop(0, `rgba(255,170,60,${.55 * a})`); g.addColorStop(.5, `rgba(255,90,20,${.25 * a})`); g.addColorStop(1, "rgba(255,60,0,0)");
+      x.globalCompositeOperation = "screen"; x.globalAlpha = 1; x.fillStyle = g; x.fillRect(X - R * 2.3, Y - R * 2.3, R * 4.6, R * 4.6);
+      // Flammetunger rundt boblen, mest bakover, som blafrer.
+      const bak = Math.atan2(-b.vx, b.vy);
+      for (let j = 0; j < 7; j++) { const sp = (j - 3) * .3 + .12 * Math.sin(s.tid * 5 + j * 1.7), fl = .6 + .45 * Math.abs(Math.sin(s.tid * 13 + j * 2.1)) + .2 * Math.sin(s.tid * 29 + j * 4), rot = bak + sp, l = R * (1.2 + 2.2 * Math.pow(1 - Math.abs(sp) / 1.2, 2)) * fl, w = R * (1 + .25 * Math.sin(s.tid * 7 + j));
+        x.save(); x.translate(X, Y); x.rotate(rot); x.translate(0, R * .55);
+        x.globalCompositeOperation = "source-over"; x.globalAlpha = .55 * a; x.drawImage(flammeSprite("kant"), -w, -l * .1, w * 2, l * 1.1);
+        x.globalAlpha = .8 * a; x.drawImage(flammeSprite("kropp"), -w * .8, -l * .05, w * 1.6, l * .95);
+        x.globalCompositeOperation = "screen"; x.globalAlpha = .8 * a; x.drawImage(flammeSprite("gul"), -w * .5, 0, w, l * .6);
+        x.restore(); }
+      x.save(); x.globalCompositeOperation = "screen"; x.globalAlpha = .9 * a; x.drawImage(flammeSprite("kjerne"), X - R * 1.1, Y - R * 1.6, R * 2.2, R * 2.4); x.restore(); } }
+  x.restore();
+}
 function shFuglStart() {
   const s = sh, side = Math.random() < .5 ? -1 : 1;
   s.fugl = { x: side < 0 ? -.1 : 1.1, y: SH_TOPP + .1 + Math.random() * .22, retn: -side, t: 0, frøT: .8, frøIgjen: 4 + ((Math.random() * 3) | 0), figur: (Math.random() * 9) | 0, fase: Math.random() * 6 };
@@ -6135,7 +6435,11 @@ function shFuglSteg(dt) {
   const s = sh;
   // Frø i lufta: faller, og blir planter der de lander.
   if (s.frø?.length) { for (const q of s.frø) { q.vy += .9 * dt; q.y += q.vy * dt; q.x += q.vx * dt; if (q.y >= q.mål) { q.borte = true; shPlante(q.x, q.mål); shLyd("plopp"); } } s.frø = s.frø.filter(q => !q.borte); }
-  if (s.planter?.length) s.planter = s.planter.filter(k => k.liv > 0);
+  if (s.planter?.length) s.planter = s.planter.filter(k => k.liv > 0 && k.plante);
+  for (const k of s.planter || []) { const P = k.plante; if (P.visne == null) continue;
+    P.vT = (P.vT ?? 4 + Math.random() * 3) - dt;
+    if (Math.random() < dt * .5) shVaerP({ x: k.x + k.w / 2 + (Math.random() - .5) * .02, y: k.y - .02 * Math.random(), vx: (Math.random() - .5) * .02, vy: .02, liv: 1, type: "blad", r: .004 + Math.random() * .003, rot: Math.random() * 6, fase: Math.random() * 6 });
+    if (P.vT <= 0) { P.vT = 6 + Math.random() * 4; shTreff(k, 1, "visne"); } }
   const F = s.fugl; if (!F) return;
   F.t += dt; F.x += F.retn * .2 * dt; F.y += Math.sin(F.t * 2.2 + F.fase) * .03 * dt;
   F.frøT -= dt;
@@ -6151,14 +6455,16 @@ function shPlanterTegn(x, f, s) {
   for (const q of s.frø || []) { x.fillStyle = "#6b4a1e"; x.beginPath(); x.ellipse(q.x * f, q.y * f, .005 * f, .0035 * f, q.vy * 3, 0, 7); x.fill(); x.fillStyle = "rgba(200,255,150,.8)"; x.beginPath(); x.arc(q.x * f - .0015 * f, q.y * f - .0012 * f, .0012 * f, 0, 7); x.fill(); }
   for (const k of s.planter || []) {
     if (k.liv <= 0 || !k.plante) continue; const P = k.plante, vekst = Math.min(1, (s.tid - P.t0) / 2.2), kraft = k.liv / P.maks, h = (.045 + .04 * kraft) * f * vekst;
-    const X = (k.x + k.w / 2) * f, Y = (k.y + k.h * .9) * f, sv = Math.sin(s.tid * 1.6 + P.frø) * h * .12;
+    // Visner: blir brun, henger med hodet og bladene, og gløden slukner.
+    const brun = P.visne == null ? 0 : Math.min(1, (s.tid - P.visne) / 22), mix = (a, b) => `rgb(${a.map((v, i) => Math.round(v + (b[i] - v) * brun)).join(",")})`;
+    const X = (k.x + k.w / 2) * f, Y = (k.y + k.h * .9) * f, sv = Math.sin(s.tid * 1.6 + P.frø) * h * .12 * (1 - brun * .7) + h * .32 * brun * (P.frø % 2 < 1 ? 1 : -1);
     x.save(); x.lineCap = "round";
-    x.strokeStyle = "#2f7d2a"; x.lineWidth = Math.max(1.5, .006 * f); x.beginPath(); x.moveTo(X, Y); x.quadraticCurveTo(X + sv, Y - h * .55, X + sv * 1.5, Y - h); x.stroke();
-    for (let n = 0; n < 3; n++) { const v = (n + 1) / 4, side = n % 2 ? 1 : -1, ly = Y - h * v, lx = X + sv * v * 1.5, l = h * .38 * vekst * (1.1 - v * .3);
-      x.fillStyle = n % 2 ? "#4fb33a" : "#3c9a2e"; x.beginPath(); x.ellipse(lx + side * l * .55, ly, l * .55, l * .2, side * -.5 + Math.sin(s.tid * 2 + n + P.frø) * .1, 0, 7); x.fill(); }
-    if (vekst > .7) { const g = .6 + .4 * Math.sin(s.tid * 3 + P.frø), bx = X + sv * 1.5, by = Y - h, br = .009 * f * (.5 + .5 * kraft);
-      x.globalCompositeOperation = "lighter"; x.fillStyle = `rgba(200,120,255,${.35 * g})`; x.beginPath(); x.arc(bx, by, br * 2.4, 0, 7); x.fill(); x.globalCompositeOperation = "source-over";
-      x.fillStyle = "#c86bff"; x.beginPath(); x.arc(bx, by, br, 0, 7); x.fill(); x.fillStyle = "#f4e0ff"; x.beginPath(); x.arc(bx - br * .3, by - br * .3, br * .35, 0, 7); x.fill(); }
+    x.strokeStyle = mix([47, 125, 42], [104, 82, 40]); x.lineWidth = Math.max(1.5, .006 * f); x.beginPath(); x.moveTo(X, Y); x.quadraticCurveTo(X + sv * .3, Y - h * .55, X + sv * 1.5, Y - h * (1 - brun * .22)); x.stroke();
+    for (let n = 0; n < 3; n++) { const v = (n + 1) / 4, side = n % 2 ? 1 : -1, ly = Y - h * v, lx = X + sv * v * v * 1.5, l = h * .38 * vekst * (1.1 - v * .3) * (1 - brun * .3);
+      x.fillStyle = n % 2 ? mix([79, 179, 58], [146, 112, 52]) : mix([60, 154, 46], [120, 90, 42]); x.beginPath(); x.ellipse(lx + side * l * .55, ly + l * .3 * brun, l * .55, l * .2, side * (-.5 + 1.2 * brun) + Math.sin(s.tid * 2 + n + P.frø) * .1 * (1 - brun), 0, 7); x.fill(); }
+    if (vekst > .7) { const g = (.6 + .4 * Math.sin(s.tid * 3 + P.frø)) * (1 - brun), bx = X + sv * 1.5, by = Y - h * (1 - brun * .22), br = .009 * f * (.5 + .5 * kraft) * (1 - brun * .35);
+      if (g > .02) { x.globalCompositeOperation = "lighter"; x.fillStyle = `rgba(200,120,255,${.35 * g})`; x.beginPath(); x.arc(bx, by, br * 2.4, 0, 7); x.fill(); x.globalCompositeOperation = "source-over"; }
+      x.fillStyle = mix([200, 107, 255], [110, 80, 70]); x.beginPath(); x.arc(bx, by, br, 0, 7); x.fill(); x.fillStyle = `rgba(244,224,255,${1 - brun * .8})`; x.beginPath(); x.arc(bx - br * .3, by - br * .3, br * .35, 0, 7); x.fill(); }
     x.restore();
   }
 }
@@ -6507,6 +6813,8 @@ function shKapsel(t) {
   s.tekster.push({ txt: q.navn, x: .5, y: SH_TOPP + .52, liv: 4.2, fade: 1.8, farge: q.farge, stor: true, kapsel: true }, { txt: q.hva, x: .5, y: SH_TOPP + .58, liv: 4.2, fade: 1.8, farge: "#ffffff", liten: true, kapsel: true });
   if (t === "W") s.eff.W = 15;
   if (t === "J") { s.eff.J = 12; shLyd("power"); }
+  if (t === "R") shRegnStart();
+  if (t === "I") { s.eff.I = 10; shLyd("power"); }
   if (t === "S") s.fart = Math.max(s.grunnfart * 0.75, s.fart * 0.7);
   if (t === "B") s.eff.B = 16;
   if (t === "G") s.eff.G = 12;
@@ -6623,6 +6931,7 @@ function shBevegBall(b, dt) {
   }
   let lag = b.kraftN > 0 ? b.kraft : 1;
   if (b.kraftN > 0 && --b.kraftN === 0) b.kraft = 1;
+  if (s.eff.I > 0) lag += 1;
   // Såpen fra flipperne: de neste treffene i hard gjørme tar et lag ekstra.
   if (b.saape > 0 && alle.some(q => q.liv >= 2)) { lag += 1; b.saape--; }
   // Hvert treff vasker det boblen berører. Den graver seg inn, som i Arkanoid.
@@ -6705,6 +7014,7 @@ function shOppdater(dt) {
   if (s.tripS) { for (const q of s.tripS) q.liv -= dt / 3; s.tripS = s.tripS.filter(q => q.liv > 0); if (s.tripS.length > 260) s.tripS.splice(0, s.tripS.length - 260); }
   for (const b of s.baller) {
     shMagnetSteg(b, dt);
+    if (s.eff.I > 0 && !b.fanget && !b.parkert) shIldSteg(b, dt); else if (b.ild) b.ild = null;
     if ((s.eff.O > 0 || s.bomberIgjen > 0) && !b.fanget) b.bombeT = (b.bombeT ?? 0) - dt;
     if (s.eff.T > 0) {
       if (!b.fanget) b.skala = 1 + .14 * Math.sin(s.tid * 5 + b.fase) * Math.min(1, s.eff.T);
@@ -6717,14 +7027,7 @@ function shOppdater(dt) {
     b.boost = 1 + (b.boost - 1) * Math.exp(-dt / 1.2);
     shJelly(b, dt, s.tid);
     if (!s.galaga && b.friGalaga) b.friGalaga = false;
-    if (s.galaga && s.tilstand === "spill" && !b.fanget && !(b.klemT > 0) && !b.fast && !b.hent && !s.vapen && !b.friGalaga) {
-      // Parkert i en såpehinne over flipperne: du trenger ikke passe på den mens du skyter. Trykk, så slipper du den.
-      if (!b.parkert && !s.slippHint && !s.toP) { s.slippHint = true; s.tekster.push({ txt: "TAP: ONE BUBBLE · DOUBLE TAP: ALL OF THEM", x: .5, y: SH_PY - .26, liv: 3, fade: 1.4, farge: "#bfefff", liten: true, kapsel: true }); }
-      b.parkert = true;
-      // De ligger nede på flipperne, side om side, og vipper litt med dem.
-      const park = s.baller.filter(q => q.parkert || q === b), j = park.indexOf(b), n = park.length, steg = Math.min(.075, s.padW / (n + 1)), mx = shClamp(s.padX + (j - (n - 1) / 2) * steg, .05, .95), my = shPadTopp(s) - shRad(b) - .002 + Math.sin(s.tid * 3 + j) * .002;
-      b.x += (mx - b.x) * Math.min(1, dt * 5); b.y += (my - b.y) * Math.min(1, dt * 5); continue;
-    }
+    // Under aliens og boss er boblen fortsatt i spill. Bare en ny boble etter en miss ligger fast; trykk for å skyte den opp.
     if (b.parkert) { b.parkert = false; const a = (Math.random() - .5) * .6; b.vx = s.fart * Math.sin(a); b.vy = -s.fart * Math.cos(a); }
     if (b.fanget) {
       const h = b.fanget, u = Math.min(1, (b.fangT += dt) / .25);
@@ -6840,7 +7143,7 @@ function shOppdater(dt) {
   }
   if (s.smuldreKø?.length) { const nå = s.smuldreKø.filter(q => s.tid >= q.t); s.smuldreKø = s.smuldreKø.filter(q => s.tid < q.t); for (const q of nå) if (q.k.liv > 0) shTreff(q.k, q.k.liv, "syre"); }
   if (s.wingmen.length && !s.galaga && !(s.eff.K > 0)) { for (const w of s.wingmen) shStov(shClamp(s.padX + w.side * (s.padW / 2 + .05), .03, .97), SH_PY - .02, 22, "200,240,255", .25); s.wingmen = []; shLyd("innkapsle"); }
-  shFinaleSteg(s, dt); shKontaktSteg(s); shGalagaSteg(dt); if (!s.bytte) shSabotSteg(dt); shOrmSteg(dt); shKrabbeSteg(dt); shHopperSteg(dt); shFuglSteg(dt); shVapenSteg(dt);
+  shFinaleSteg(s, dt); shKontaktSteg(s); shGalagaSteg(dt); if (!s.bytte) shSabotSteg(dt); shOrmSteg(dt); shKrabbeSteg(dt); shHopperSteg(dt); shFuglSteg(dt); shVaerSteg(dt); shVapenSteg(dt);
   { const andel = 1 - s.igjen / s.klosser.length; if (!s.fugl && !s.toP && shHar("fiende", "fugl") && s.tilstand === "spill" && !s.bytte && !s.galaga && !s.finale && andel > .2 && andel < .8 && s.tid > (s.fuglT ?? 35)) { s.fuglT = s.tid + 60 + Math.random() * 30; shFuglStart(); } }
   { const andel = 1 - s.igjen / s.klosser.length; if (!s.hopper && shHar("fiende", "hopper") && s.tilstand === "spill" && !s.bytte && !s.galaga && andel > .15 && andel < .85 && s.tid > (s.hopperT ?? 25)) { s.hopperT = s.tid + 45 + Math.random() * 25; shHopperStart(); } }
   { const andel = 1 - s.igjen / s.klosser.length; if (!s.krabbe && shHar("fiende", "krabbe") && s.tilstand === "spill" && !s.bytte && !s.galaga && !(s.sopp > 0) && andel > .25 && andel < .85 && s.tid > (s.krabbeT ?? 30)) { s.krabbeT = s.tid + 40 + Math.random() * 20; shKrabbeStart(); } }
@@ -6919,9 +7222,10 @@ function shPartikler(dt) {
     } else if (d.renn) {
       d.hale.push(d.x, d.y); if (d.hale.length > 48) d.hale.splice(0, 2);
       const k = vask && d.budsjett > 0 ? shKlossVed(d.x, d.y) : null;
-      if (k) { d.t += dt; d.y += .05 * dt; if (d.t > .07) { d.t = 0; d.budsjett--; shTreff(k, 1, "syre"); } }
-      else d.y += (d.budsjett > 0 ? .24 : .3) * dt;
-      d.x += Math.sin(s.tid * 2.3 + d.y * 40) * .012 * dt;
+      if (k) { d.t += dt; d.y += (d.slaps ? .085 : .05) * dt; if (d.t > (d.slaps ? .12 : .07)) { d.t = 0; d.budsjett--; shTreff(k, 1, d.slaps ? "regn" : "syre"); } }
+      else d.y += (d.budsjett > 0 ? (d.slaps ? .32 : .24) : .3) * dt;
+      d.x += Math.sin(s.tid * 2.3 + d.y * 40 + (d.fase || 0)) * (d.slaps ? .02 : .012) * dt;
+      if (d.slaps && !d.dryppet && d.y > SH_TOPP + 1) { d.dryppet = true; shDrypp(d.x, SH_TOPP + 1); if (Math.random() < .5) shDrypp(d.x, SH_TOPP + 1.004); }
       if (d.budsjett <= 0 || d.y > SH_TOPP + 1) d.liv -= dt * .9;
     } else { d.vy = Math.min(.09, d.vy + .05 * dt); d.y += d.vy * dt; d.len = Math.min(.05, d.len + .03 * dt); d.liv -= dt * .4; }
   }
@@ -7619,6 +7923,16 @@ function shTegn(t) {
       x.beginPath(); x.moveTo(d.hale[0] * f, d.hale[1] * f);
       for (let j = 2; j < d.hale.length; j += 2) x.lineTo(d.hale[j] * f, d.hale[j + 1] * f);
       x.lineTo(d.x * f, d.y * f);
+      if (d.slaps) {
+        // Slaps: brunt, vått og blankt, med en mørk dråpe først.
+        const [l1, l2, l3] = s.jord.lys, a = d.liv, br = d.br || 1;
+        x.strokeStyle = `rgba(${mr * .6 | 0},${mg * .6 | 0},${mb * .6 | 0},${.5 * a})`; x.lineWidth = f * .016 * br; x.stroke();
+        x.strokeStyle = `rgba(${l1},${l2},${l3},${.7 * a})`; x.lineWidth = f * .0085 * br; x.stroke();
+        x.strokeStyle = `rgba(240,246,252,${.45 * a})`; x.lineWidth = Math.max(.7, f * .0018); x.stroke();
+        x.fillStyle = `rgba(${mr * .7 | 0},${mg * .7 | 0},${mb * .7 | 0},${.85 * a})`; x.beginPath(); x.ellipse(d.x * f, d.y * f, f * .0045 * br, f * .006 * br, 0, 0, 7); x.fill();
+        x.fillStyle = `rgba(255,255,255,${.6 * a})`; x.beginPath(); x.arc(d.x * f - f * .0015 * br, d.y * f - f * .002 * br, f * .0013 * br, 0, 7); x.fill();
+        continue;
+      }
       const tf = d.lys ? ["255,220,150", "255,244,214", "255,255,245"] : d.tåre ? ["170,215,255", "225,242,255", "245,250,255"] : ["214,255,90", "235,255,170", "250,255,220"];
       x.strokeStyle = `rgba(${tf[0]},${.1 * d.liv})`; x.lineWidth = f * .014; x.stroke();
       x.strokeStyle = `rgba(${tf[1]},${.55 * d.liv})`; x.lineWidth = f * .005; x.stroke();
@@ -7632,6 +7946,7 @@ function shTegn(t) {
       x.fillStyle = `rgba(255,255,255,${.45 * d.liv})`; x.beginPath(); x.arc(d.x * f - f * .0012, d.y * f - f * .0014, f * .0011, 0, 7); x.fill();
     }
   }
+  shVaerTegn(x, f, s);
   // Skum.
   x.lineWidth = Math.max(.7, f * .0016);
   for (const q of s.skum) {
@@ -7767,9 +8082,21 @@ function shTegn(t) {
         if (B.blink > 0 && sp) { x.save(); x.globalCompositeOperation = "lighter"; x.globalAlpha = B.blink * .6; tegnFigur(sp, X, Y, BR, B.rot, false, false, 0); x.restore(); x.globalAlpha = 1; }
         if (B.tilstand === "boble") boble(X, Y, BR * 1.35, 1);
         if (B.tilstand === "kamp" || B.tilstand === "inn") {
-          const bw = BR * 1.6, by = Y + BR * 1.2;
-          x.fillStyle = "rgba(0,0,0,.6)"; x.fillRect(X - bw / 2 - 1, by - 1, bw + 2, 6);
-          x.fillStyle = "#ff5a6a"; x.fillRect(X - bw / 2, by, bw * B.hp / B.maks, 4);
+          // Livslinja: en rolig neonlinje som glir ned (og opp) med livet. Gløden puster sakte, ingen blinking.
+          const mål = shClamp(B.hp / B.maks, 0, 1), dtv = Math.min(.1, Math.max(0, s.tid - (B.hpT ?? s.tid))); B.hpT = s.tid;
+          B.hpVis = B.hpVis == null ? mål : B.hpVis + (mål - B.hpVis) * Math.min(1, dtv * 3.2);
+          const bw = BR * 1.7, by = Y + BR * 1.25, x0 = X - bw / 2, lw = Math.max(2, f * .0042), puls = .5 + .5 * Math.sin(s.tid * 2.1);
+          x.save(); x.lineCap = "round";
+          x.strokeStyle = "rgba(20,0,30,.32)"; x.lineWidth = lw + 2; x.beginPath(); x.moveTo(x0, by); x.lineTo(x0 + bw, by); x.stroke();
+          x.strokeStyle = "rgba(255,90,220,.18)"; x.lineWidth = lw * .6; x.beginPath(); x.moveTo(x0, by); x.lineTo(x0 + bw, by); x.stroke();
+          const lx = x0 + bw * B.hpVis;
+          if (B.hpVis > .003) {
+            x.shadowColor = `rgba(255,60,210,${.55 + .3 * puls})`; x.shadowBlur = lw * (3.5 + 2.5 * puls);
+            x.strokeStyle = "#ff3fd0"; x.lineWidth = lw * 1.5; x.beginPath(); x.moveTo(x0, by); x.lineTo(lx, by); x.stroke();
+            x.shadowBlur = lw * 1.5; x.shadowColor = "rgba(255,160,240,.9)";
+            x.strokeStyle = "#ffe6fa"; x.lineWidth = lw * .55; x.beginPath(); x.moveTo(x0, by); x.lineTo(lx, by); x.stroke();
+          }
+          x.restore();
         }
       }
     }
@@ -7891,6 +8218,7 @@ function shTegn(t) {
     const a0 = Math.min(1, (b.halo - s.tid) / .6); x.save(); x.globalCompositeOperation = "lighter";
     H.forEach(([hx, hy], i) => { const u = (i + 1) / H.length, rr = shRad(b) * f * (.5 + .9 * u), g = x.createRadialGradient(hx * f, hy * f, 0, hx * f, hy * f, rr * 1.6); g.addColorStop(0, `hsla(${(320 + i * 6) % 360},100%,72%,${.35 * u * a0})`); g.addColorStop(1, "hsla(300,100%,60%,0)"); x.fillStyle = g; x.fillRect(hx * f - rr * 1.6, hy * f - rr * 1.6, rr * 3.2, rr * 3.2); });
     x.restore(); }
+  shIldTegn(x, f, s);
   for (const b of s.baller) shBobleTegn(x, b, f, s);
   const tdt = Math.min(.05, Math.max(0, (t - (s.sistTegnT ?? t)) / 1000)); s.sistTegnT = t;
   if (s.bytte) s.tekster = s.tekster.filter(tk => !/^\+\d/.test(tk.txt));
@@ -7899,9 +8227,15 @@ function shTegn(t) {
   for (const tk of s.tekster) {
     // Første gang: poengtekster blir delikate og får kontrastfarge mot bildet der de står. Alle tekster står lenge nok.
     if (!tk.init) { tk.init = true; tk.alder = 0; tk.pt = /\+\s?\d/.test(tk.txt) && !tk.stor;
-      if (tk.pt) { tk.liv = Math.max(tk.liv, 1.9); tk.fade = 1.2;
+      // Samme korte tekst rett ved siden av (DOUBLE FLIP!, POWER!): den som står, får leve litt lenger i stedet.
+      if (!tk.stor && !tk.kapsel) { const lik = s.tekster.find(o => o !== tk && o.init && o.txt === tk.txt && o.liv > .3 && Math.abs(o.y - tk.y) < .08 && Math.abs(o.x - tk.x) < .3); if (lik) { lik.liv = Math.max(lik.liv, Math.min(tk.liv, 1.5)); tk.liv = 0; continue; } }
+      if (!tk.pt && !tk.stor && !tk.kapsel) for (const o of s.tekster) if (o !== tk && o.init && !o.stor && !o.kapsel && Math.abs(o.y - tk.y) < .045 && Math.abs(o.x - tk.x) < .45) { o.liv = Math.min(o.liv, .25); o.fade = .25; }
+      if (tk.pt) { tk.liv = Math.max(tk.liv, 1.9); tk.fade = 1.2; tk.x = shClamp(tk.x, .2 + Math.max(0, tk.txt.length - 12) * .012, .8 - Math.max(0, tk.txt.length - 12) * .012);
         // Står det allerede en poengtekst her, legger den nye seg over, ikke oppå.
-        for (let n = 0; n < 6 && s.tekster.some(o => o !== tk && o.init && o.pt && Math.abs(o.y - tk.y) < .04 && Math.abs(o.x - tk.x) < .3); n++) tk.y -= .042;
+        const kolli = o => o !== tk && o.init && !o.stor && !o.kapsel && o.liv > .15 && Math.abs(o.y - tk.y) < .04 && Math.abs(o.x - tk.x) < .45;
+        for (let n = 0; n < 6 && s.tekster.some(kolli); n++) tk.y -= .042;
+        // Fortsatt fullt: de gamle som ligger i veien fader raskt ut, så ingenting står oppå hverandre.
+        for (const o of s.tekster) if (kolli(o)) { o.liv = Math.min(o.liv, .25); o.fade = .25; }
         tk.L = shLys(tk.x, tk.y); tk.fp = shPoengFarge(tk.L, tk.gull); }
       else if (tk.stor || tk.kapsel) { tk.liv = Math.max(tk.liv, 3.2); tk.fade = Math.max(tk.fade || 1, 1.5); }
       else { tk.liv = Math.max(tk.liv, 1.5); tk.fade = Math.max(tk.fade || 1, .9); }
@@ -8035,7 +8369,7 @@ function shSteg(t) {
 }
 addEventListener("resize", () => { if (sh) shOppsett(); });
 // Bare for automatisk testing lokalt (?autotest).
-if (location.search.includes("autotest")) { window.__sh = () => sh; window.__shOppdater = dt => { shOppdater(dt); if (sh) { sh.tid += dt; shPartikler(dt); } }; window.__shTreff = shTreff; window.__shGalaga = shGalagaStart; window.__shSopp = shSopp; window.__shBytte = shByttetStart; window.__shOrm = shOrmStart; window.__levende = levendeStart; window.__gn = () => ({ gnister, raf: gnistRAF }); window.__hendelse = t => t === "stov" ? støvstorm() : t === "ketchup" ? ketchup() : t === "tilt" ? tilt(true) : t === "vokse" ? vokseBrikke() : t === "break" ? puzzleBreak() : t === "speilX" ? speilStart("x") : t === "speilY" ? speilStart("y") : lynnedslag(); window.__shSprekk = shSprekk; window.__shP2 = () => ({ pad2X: sh.pad2X, P2Y: SH_P2Y, TOPP: SH_TOPP, H: SH_H }); window.__shTegn = () => { shRens(); shTegn(performance.now()); }; window.__spill = () => spill; window.__banner = banner; window.__kast = kast; window.__gratisPeace = async () => sjekkGratis(await hentSammen("P")); window.__fremdrift = () => fremdrift; window.__sammenP = async () => ({ lok: minLokaleSum("P"), f: fremdrift.b1, liste: (await hentSammen("P")).slice(0, 2) }); window.__shKrabbe = () => shKrabbeStart(); window.__shHopper = () => shHopperStart(); window.__shSlipp = () => shSlipp(); window.__shPY = () => SH_PY; window.__shKapsel = shKapsel; window.__lyd = () => { const c = lydCtx; return c ? { musikk: musikkUt(c).gain.value, effekt: effektUt(c).gain.value } : null; }; window.__speilSlutt = speilSlutt; window.__figurKant = async (n, farge) => shFigurKant(await hentBilde("figurer/" + n + ".webp"), farge); window.__hentBilde = hentBilde; window.__falskMusikk = () => { lydCtx = lydCtx || { currentTime: 0 }; const nei = () => {}; musikk = { kilde: { stop: nei, playbackRate: { v: 1, setTargetAtTime(r) { this.v = r; } } }, g: { gain: { value: .3, cancelScheduledValues: nei, setValueAtTime: nei, linearRampToValueAtTime: nei, setTargetAtTime: nei } } }; }; window.__musikkFart = () => musikk?.kilde?.playbackRate?.v ?? null; window.__musikkFor = id => musikkFor(id)?.fil; window.__geo = () => geo; window.__plasser = plasser; window.__skjermPkt = skjermPkt; }
+if (location.search.includes("autotest")) { window.__sh = () => sh; window.__shOppdater = dt => { shOppdater(dt); if (sh) { sh.tid += dt; shPartikler(dt); } }; window.__shTreff = shTreff; window.__shGalaga = shGalagaStart; window.__shSopp = shSopp; window.__shBytte = shByttetStart; window.__shOrm = shOrmStart; window.__levende = levendeStart; window.__gn = () => ({ gnister, raf: gnistRAF }); window.__hendelse = t => t === "stov" ? støvstorm() : t === "ketchup" ? ketchup() : t === "tilt" ? tilt(true) : t === "vokse" ? vokseBrikke() : t === "break" ? puzzleBreak() : t === "speilX" ? speilStart("x") : t === "speilY" ? speilStart("y") : lynnedslag(); window.__shSprekk = shSprekk; window.__shP2 = () => ({ pad2X: sh.pad2X, P2Y: SH_P2Y, TOPP: SH_TOPP, H: SH_H }); window.__shTegn = () => { shRens(); shTegn(performance.now()); }; window.__spill = () => spill; window.__banner = banner; window.__kast = kast; window.__gratisPeace = async () => sjekkGratis(await hentSammen("P")); window.__fremdrift = () => fremdrift; window.__sammenP = async () => ({ lok: minLokaleSum("P"), f: fremdrift.b1, liste: (await hentSammen("P")).slice(0, 2) }); window.__shKrabbe = () => shKrabbeStart(); window.__shHopper = () => shHopperStart(); window.__shSlipp = () => shSlipp(); window.__shPY = () => SH_PY; window.__shKapsel = shKapsel; window.__shSnø = shSnøStart; window.__shFrys = shFrys; window.__shPlante = shPlante; window.__lyd = () => { const c = lydCtx; return c ? { musikk: musikkUt(c).gain.value, effekt: effektUt(c).gain.value } : null; }; window.__speilSlutt = speilSlutt; window.__figurKant = async (n, farge) => shFigurKant(await hentBilde("figurer/" + n + ".webp"), farge); window.__hentBilde = hentBilde; window.__falskMusikk = () => { lydCtx = lydCtx || { currentTime: 0 }; const nei = () => {}; musikk = { kilde: { stop: nei, playbackRate: { v: 1, setTargetAtTime(r) { this.v = r; } } }, g: { gain: { value: .3, cancelScheduledValues: nei, setValueAtTime: nei, linearRampToValueAtTime: nei, setTargetAtTime: nei } } }; }; window.__musikkFart = () => musikk?.kilde?.playbackRate?.v ?? null; window.__musikkFor = id => musikkFor(id)?.fil; window.__geo = () => geo; window.__plasser = plasser; window.__skjermPkt = skjermPkt; }
 
 
 
