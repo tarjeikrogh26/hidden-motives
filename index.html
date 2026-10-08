@@ -402,6 +402,16 @@ body:has(.resultat.vis) #spill .linje{opacity:0;pointer-events:none;transition:o
 .resultat.peace-look .ark-hoyre{order:4;width:auto;flex:1 1 auto;min-height:0}
 .resultat.peace-look .knapper{order:5}
 .resultat.peace-look .poeng{font-size:28px}
+.resultat.peace-look{transition:transform 1.1s cubic-bezier(.2,.7,.2,1),top 1.1s cubic-bezier(.2,.7,.2,1),left 1.1s cubic-bezier(.2,.7,.2,1)}
+/* Steg 1 (teller): bare linjene og summen. Lista, knappene og infoen kommer i steg 2. */
+.res-trinn{display:none}
+.resultat.peace-look.teller .res-trinn{display:grid;order:0;gap:6px;padding-bottom:10px;border-bottom:2px solid #111;font-family:var(--brod);font-size:15px;color:#333}
+.res-trinn .trinn{display:flex;justify-content:space-between;gap:16px;opacity:0;transform:translateY(6px);transition:opacity .45s ease,transform .45s ease}
+.res-trinn .trinn.vis{opacity:1;transform:none}
+.res-trinn .trinn b{font-family:var(--tall);font-weight:400;font-variant-numeric:tabular-nums;color:#111}
+.res-trinn .trinn.minus b{color:#d4141c}
+.resultat.peace-look.teller .ark-hoyre,.resultat.peace-look.teller .knapper,.resultat.peace-look.teller #resInfo,.resultat.peace-look.teller #resRekord{display:none}
+.resultat.peace-look.teller .poeng{font-size:34px}
 .resultat.peace-look::after{display:none}
 .resultat.peace-look h2{color:#111;font-family:var(--brod);font-weight:300;letter-spacing:.02em}
 .resultat.peace-look .poeng{color:#111;font-weight:300}
@@ -492,7 +502,7 @@ body:has(.resultat.vis) #spill .linje{opacity:0;pointer-events:none;transition:o
   <div class="regel">Everything counts: Game, Peace, Scrub it 1P and 2P, every board, every level, every collection. Each board list gives up to 100 points (a Scrub it list up to 1,000): #1 gets them all, the rest their share of the top score.</div>
   <div class="sammen" id="spillere"><p class="liten">Loading players …</p></div>
   <p class="kreditt">© 2001–2026 Tarjei Krogh. All photography, music and art. <a href="https://kroghx.com" target="_blank" rel="noopener">kroghx.com</a></p>
-  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 1.12<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
+  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 1.13<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
 </section>
 
 <div class="ark" id="tidUtArk" hidden style="z-index:200001">
@@ -580,6 +590,7 @@ body:has(.resultat.vis) #spill .linje{opacity:0;pointer-events:none;transition:o
   <aside class="resultat" id="resultat" aria-live="polite">
     <div class="ark-venstre">
     <div class="ark-bildeplass" id="arkPlass"><canvas id="arkBilde" aria-label="The finished picture"></canvas></div>
+    <div class="res-trinn" id="resTrinn"></div>
     <div class="ark-linje"><h2 id="resTittel">Done</h2><div class="poeng" id="resPoeng">0</div></div>
     <div class="liten" id="resInfo"></div>
     <div class="liten" id="resRekord"></div>
@@ -1218,11 +1229,15 @@ function visArkade() {
   const nivå = a.tema !== "scrub" && spill ? " · " + (VALG.find(v => v.n === spill.n)?.navn || "").toUpperCase() + " " + spill.n : "";
   $("arkHode").innerHTML = (a.tema === "scrub" ? (sh?.toP ? "SCRUB IT 2P" : "SCRUB IT") : a.peaceLook ? "PEACE" : "PIECE IT") + nivå + "<span>TOP 100</span>";
   if (a.peaceLook && geo) {
-    if (geo.staaende) Object.assign(res.style, { top: geo.y0 + geo.hoyde + geo.RT + 16 + "px", left: "0px" });
+    // Steg 1: bildet står i full størrelse. Under navnet telles poengene opp, linje for linje.
+    if (geo.staaende) Object.assign(res.style, { top: geo.y0 + geo.hoyde + geo.RT + 44 + "px", left: "0px" });
     else Object.assign(res.style, { top: "44px", left: geo.x0 + geo.bredde + geo.RT + 28 + "px" });
+    res.classList.add("teller"); $("resPoeng").textContent = "0 points";
+    const tr = $("resTrinn"); tr.replaceChildren();
+    (a.trinnP || []).forEach((t, j) => { const r = document.createElement("div"); r.className = "trinn" + (t.verdi < 0 ? " minus" : "");
+      const n = document.createElement("span"); n.textContent = t.navn; const v = document.createElement("b"); v.textContent = (!j ? "" : t.verdi < 0 ? "− " : "+ ") + Math.abs(t.verdi).toLocaleString("en"); r.append(n, v); tr.appendChild(r); });
     void res.offsetWidth; res.classList.add("vis"); rullet = false; $("liste").scrollTop = 0;
-    arkTimere.push(setTimeout(() => { if (ark === a) tellOpp(a.poeng || 0, () => {}, 1900); }, 800));
-    arkTimere.push(setTimeout(() => { if (ark === a) rullTilMeg(); }, 1200));
+    arkTimere.push(setTimeout(() => { if (ark === a) peaceTell(a, () => arkTimere.push(setTimeout(() => { if (ark === a) peaceKrymp(a); }, 1300))); }, 900));
     return;
   }
   res.style.top = res.style.left = "";
@@ -1255,6 +1270,32 @@ document.addEventListener("pointerdown", e => {
   if (e.target === $("arkBilde")) sprengBilde();
 });
 // Lista ruller rolig ned til plassen din. Tar du i lista selv, stopper den.
+// Peace, steg 1: én linje om gangen kommer fram, og summen glir dit. Stille og rolig, uten mynter.
+function peaceTell(a, nårFerdig) {
+  const rader = [...$("resTrinn").children], el = $("resPoeng"); let sum = 0, j = 0;
+  const neste = () => {
+    if (ark !== a) return;
+    if (j >= rader.length) { nårFerdig?.(); return; }
+    const t = a.trinnP[j], r = rader[j++], fra = sum, til = sum + t.verdi, t0 = performance.now(), D = j === 1 ? 1100 : 700;
+    r.classList.add("vis"); if (lydPa) tone(t.verdi < 0 ? 392 : 523 + j * 60, 0, .35, .025, "sine", .7, .9);
+    const steg = tt => { if (ark !== a) return; const u = Math.min(1, (tt - t0) / D), v = Math.round(fra + (til - fra) * (1 - Math.pow(1 - u, 3))); el.textContent = v.toLocaleString("en") + " points";
+      if (u < 1) requestAnimationFrame(steg); else { sum = til; setTimeout(neste, 420); } };
+    requestAnimationFrame(steg);
+  };
+  neste();
+}
+// Peace, steg 2: bildet (med klokke og navn) blir mindre og flytter opp. Lista ruller opp under og får plass til flere.
+function peaceKrymp(a) {
+  const res = $("resultat"), g = geo; if (!g) return;
+  const W = innerWidth, H = innerHeight, st = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--st")) || 0;
+  const topp = g.y0 - g.RT - 32, høyde = g.hoyde + 2 * g.RT + 66, b = $("bord");
+  let s, tx, ty, ny;
+  if (g.staaende) { s = Math.min(1, H * .3 / høyde); tx = W / 2 - s * (g.x0 + g.bredde / 2); ty = st + 40 - s * topp; ny = { top: st + 40 + s * høyde + 4 + "px" }; }
+  else { s = .78; const venstre = g.x0 - g.RT, midt = topp + høyde / 2; tx = venstre * (1 - s); ty = midt * (1 - s); ny = { left: venstre + s * (g.bredde + 2 * g.RT) + 26 + "px" }; }
+  b.style.transformOrigin = "0 0"; b.style.transition = "transform 1.1s cubic-bezier(.2,.7,.2,1)"; b.style.transform = `translate(${tx}px,${ty}px) scale(${s})`;
+  Object.assign(res.style, ny); res.classList.remove("teller");
+  arkTimere.push(setTimeout(() => { if (ark === a) rullTilMeg(); }, 1200));
+}
 function rullTilMeg() {
   const liste = $("liste"), rad = liste.querySelector(".rad.meg");
   if (!rad || rullet || !$("resultat").classList.contains("vis")) return;
@@ -3035,10 +3076,13 @@ async function ferdig() {
     $("resInfo").textContent = kode(spill.brett) + " · Peace · " + spill.n + " pieces · time " + fmt(sEkte) + (trekk ? " · hints −" + Math.round(trekk * 100) + " %" : "");
     $("resRekord").textContent = ny ? (gml ? "New Peace best! Before: " + gml.poeng.toLocaleString("en") + "." : "First time on this board in Peace.") : "Your Peace best is " + gml.poeng.toLocaleString("en") + ".";
     $("resRekord").classList.toggle("ny-rekord", ny && !!før);
-    ark = { tema: "pusle", peaceLook: true, img: sp.img, fra: { x: geo.x0, y: geo.y0, w: geo.bredde }, poeng: pp, sluttT: sp.sluttT, gyldig: () => spill === sp && !!sp.slutt,
+    const frist = Math.round(tidsfrist(sp.brett, sp.n) * PEACE_TID), p0 = regnPoeng(sp.n, frist), p1 = regnPoeng(sp.n, sEkte);
+    const trinnP = [{ navn: "Finished · " + (VALG.find(v => v.n === sp.n)?.navn || "") + " " + sp.n, verdi: p0 }, { navn: "Time left " + fmt(Math.max(0, frist - sEkte)), verdi: p1 - p0 }];
+    if (trekk) trinnP.push({ navn: "Hints −" + Math.round(trekk * 100) + " %", verdi: pp - p1 });
+    ark = { tema: "pusle", peaceLook: true, trinnP, img: sp.img, fra: { x: geo.x0, y: geo.y0, w: geo.bredde }, poeng: pp, sluttT: sp.sluttT, gyldig: () => spill === sp && !!sp.slutt,
       neste: () => { if (spill !== sp) return; valgtAntall = sp.n; tilMeny(); if (neste >= 0) visStartark(neste); }, meny: tilMeny };
     setTimeout(() => { if (spill === sp) sp.biter.forEach(b => { b.el.style.opacity = 0; }); }, 1900);
-    arkTimere.push(setTimeout(visArkade, 3200));
+    arkTimere.push(setTimeout(visArkade, 2400));
     await lagreRekord(id + "P", spill.n, pp, s); await visToppliste();
     { const lp = await hentLøp(løpFor(true, sp.n)), pl = lp.findIndex(erMeg) + 1; if (pl && spill === sp) $("resRekord").textContent += " This week you are #" + pl + " in " + LØP[løpFor(true, sp.n)].navn + "."; }
     return;
