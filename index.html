@@ -46,7 +46,7 @@ body.lys .modus[aria-selected="true"]{text-shadow:0 0 10px rgba(255,170,0,.55),0
 body.lys .hud-knapper button{background:#ece6dc}
 /* Arkadelista er en mørk spillehall, også når veggen er lys. */
 .resultat{--rom:#141312;--flate:#1f1d1b;--strek:#3a3633;--tekst:#efe9e1;--demp:#a39b91;--signal:#ffb000;color:var(--tekst)}
-/* Fargene glir rolig over når du bytter mellom PIECE IT (lys), SCRUB IT (mørk) og UNWRAP IT (rosa). */
+/* Fargene glir rolig over når du bytter mellom PIECE IT (lys), BUBBLE IT (mørk) og UNWRAP IT (rosa). */
 @property --rom{syntax:"<color>";inherits:true;initial-value:#141312}
 @property --flate{syntax:"<color>";inherits:true;initial-value:#1f1d1b}
 @property --tekst{syntax:"<color>";inherits:true;initial-value:#efe9e1}
@@ -81,7 +81,7 @@ h1 .tittel span{color:var(--signal)}
 .hm-av{display:flex;flex-direction:column;align-items:flex-start;justify-content:center;font-family:var(--brod);font-weight:400;font-size:11px;line-height:1.25;letter-spacing:.08em;color:var(--demp);text-decoration:none;opacity:.8;white-space:nowrap;flex:none}
 .hm-av b{font-family:var(--display);font-weight:800;letter-spacing:.1em;font-size:11px}
 .hm-av:hover{opacity:1}
-/* Spillene under logoen: PIECE IT rosa, SCRUB IT oransje. Det som ikke er valgt, er svakt og gjennomsiktig. */
+/* Spillene under logoen: PIECE IT rosa, BUBBLE IT oransje. Det som ikke er valgt, er svakt og gjennomsiktig. */
 .moduser{font-family:var(--display);font-weight:800;font-size:30px;margin-top:16px;gap:.8em!important;max-width:100%}
 #modusPuslespill,#modusScrub{--farge:#ff5fa2;--glod:255,95,162}
 #modusScrub{--farge:#ffa21a;--glod:255,162,26}
@@ -413,7 +413,7 @@ body.lys #kraftLinje button,body.lys #shKraftLinje button{color:#fff7e6}
 @media (max-height:520px){.resultat h2{font-size:18px}.resultat .poeng{font-size:26px}.ark-hode{font-size:15px}}
 .resultat h2{font-family:var(--display);margin:0;font-size:clamp(19px,2.6vw,26px);line-height:1.1;text-wrap:balance}
 body:has(.resultat.vis) #spill .linje{opacity:0;pointer-events:none;transition:opacity .4s ease}
-/* Rød tone for HIDDEN, dypblå for SCRUB IT. */
+/* Rød tone for HIDDEN, dypblå for BUBBLE IT. */
 .resultat.tema-pusle{background:radial-gradient(ellipse at 50% 0%,rgba(70,16,20,.97),rgba(10,7,7,.985) 65%)}
 .resultat.tema-scrub{background:radial-gradient(ellipse at 50% 0%,rgba(10,28,78,.97),rgba(5,7,14,.985) 65%)}
 .resultat.tema-pusle .ark-hode{color:#ff5a6a;text-shadow:0 0 12px rgba(255,90,106,.6)}
@@ -630,7 +630,7 @@ body.lys #modusDeal{--farge:#0f8f6c;--glod:15,143,108}
       <h1 class="hm-logo"><span class="hm-navn"><span class="hm-l1">HIDDEN</span><span class="hm-l2">MOTIVES</span></span><a class="hm-av" href="https://kroghx.com" target="_blank" rel="noopener"><span>by</span><b>KROGHX</b></a></h1>
       <div class="moduser" role="tablist" aria-label="Choose a game">
         <button class="modus" id="modusPuslespill" role="tab"><span class="tittel">PIECE&nbsp;IT</span></button>
-        <button class="modus" id="modusScrub" role="tab"><span class="tittel">SCRUB&nbsp;IT</span></button>
+        <button class="modus" id="modusScrub" role="tab"><span class="tittel">BUBBLE&nbsp;IT</span></button>
         <button class="modus" id="modusUnwrap" role="tab"><span class="tittel">UNWRAP&nbsp;IT</span></button>
         <button class="modus" id="modusDeal" role="tab" hidden><span class="tittel">DEAL&nbsp;IT</span></button>
       </div>
@@ -647,10 +647,10 @@ body.lys #modusDeal{--farge:#0f8f6c;--glod:15,143,108}
   <div class="regel"><b>The race:</b> Your best score on each board in the collection is added up. Two classes: Normal + Harder, and Chaos + Insane (iPad). Every Sunday at midnight the list locks: the best player who has played every board and beats the house names wins the next collection for free. One win per player, and one winner per race each week. <span id="ukeTekst"></span> Points: Normal gives 10,000, Harder 15,000, Chaos 20,000 and Insane 25,000 at normal speed. Be fast and you get up to double.</div>
   <div class="sammen" id="sammen"><p class="liten">Loading standings …</p></div>
   <div class="samlingsnavn">Top 100 players · motive points</div>
-  <div class="regel">Everything counts: Game, Peace, Scrub it 1P and 2P, every board, every level, every collection. Each board list gives up to 100 points (a Scrub it list up to 1,000): #1 gets them all, the rest their share of the top score.</div>
+  <div class="regel">Everything counts: Game, Peace, Bubble it 1P and 2P, every board, every level, every collection. Each board list gives up to 100 points (a Bubble it list up to 1,000): #1 gets them all, the rest their share of the top score.</div>
   <div class="sammen" id="spillere"><p class="liten">Loading players …</p></div>
   <p class="kreditt">© 2001–2026 Tarjei Krogh. All photography, music and art. <a href="https://kroghx.com" target="_blank" rel="noopener">kroghx.com</a></p>
-  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 1.58<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
+  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 1.59<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
 </section>
 
 <div class="ark" id="tidUtArk" hidden style="z-index:200001">
@@ -761,9 +761,9 @@ body.lys #modusDeal{--farge:#0f8f6c;--glod:15,143,108}
   <canvas id="magi"></canvas>
   <canvas id="levende"></canvas>
 </section>
-<section id="shatter" class="skjerm" hidden aria-label="Scrub">
+<section id="shatter" class="skjerm" hidden aria-label="Bubble">
   <div class="sh-hud" id="shHud">
-    <div class="sh-venstre"><b>SCRUB IT</b><span id="shNiva"></span><span class="spor" id="shSpor"></span></div>
+    <div class="sh-venstre"><b>BUBBLE IT</b><span id="shNiva"></span><span class="spor" id="shSpor"></span></div>
     <div class="sh-hoyre"><span class="sh-tid" id="shTid" aria-label="Time left"></span><span class="sh-liv" id="shLiv" aria-label="Spare balls"></span><span class="sh-poeng" id="shPoeng">0</span><button class="sh-ut sh-lyd" id="shLyd" aria-label="Sound" aria-pressed="true"></button><button class="sh-ut" id="shUt">Menu</button></div>
   </div>
   <canvas id="shCanvas"></canvas>
@@ -925,7 +925,7 @@ addEventListener("resize", tilpassLogo); document.fonts?.ready.then(tilpassLogo)
 $("modusPuslespill").onclick = () => velgModus("pusle");
 $("modusScrub").onclick = () => { ctx(); velgModus("scrub"); };
 $("modusUnwrap").onclick = () => { ctx(); velgModus("unwrap"); };
-// Lys vegg i HIDDEN MOTIVES (menyen og brettet), mørk i SCRUB IT.
+// Lys vegg i HIDDEN MOTIVES (menyen og brettet), mørk i BUBBLE IT.
 function oppdaterTema() { const meny = !$("meny").hidden; document.body.classList.toggle("lys", !$("spill").hidden || (meny && (modus === "pusle" || modus === "unwrap"))); document.body.classList.toggle("rosa", meny && modus === "unwrap"); }
 function tegnModus() {
   $("modusPuslespill").setAttribute("aria-selected", String(modus === "pusle"));
@@ -937,7 +937,7 @@ function tegnModus() {
     : modus === "unwrap" ? "The art is wrapped in paper. Cut into it with your knife, close off a piece, and it tears away. Don't let the creatures touch your line. Unwrap 80 % to win."
     : variant.scrub === "2p" ? "Two players, one screen. A flipper at each end: wash the picture clean together. No shop, only what the mud gives you."
     : "The art is buried in mud. Wash it off with soap bubbles. Clear a board in either game and the next one opens.";
-  // Bryteren under spillet som er valgt (SCRUB IT får 1P | 2P når 2P er bygget).
+  // Bryteren under spillet som er valgt (BUBBLE IT får 1P | 2P når 2P er bygget).
   const vr = $("variant"); vr.replaceChildren(); vr.className = "variant " + (modus === "pusle" ? "v-pusle" : "v-scrub");
   requestAnimationFrame(plasserVariant);
   const del = modus === "pusle" ? "pusle" : "scrub";
@@ -970,7 +970,7 @@ async function tegnMeny() {
     const st = document.createElement("span");
     const beste = besteLokal(b.id);
     const pf = peaceBeste(b.id);
-    st.textContent = iPeace() ? (pf ? pf.poeng.toLocaleString("en") + " pts" : "") : erLost(b.id) ? (beste ? beste.poeng.toLocaleString("en") + " pts" : fremdrift[b.id]?.scrub ? "Scrubbed" : "Solved") : "";
+    st.textContent = iPeace() ? (pf ? pf.poeng.toLocaleString("en") + " pts" : "") : erLost(b.id) ? (beste ? beste.poeng.toLocaleString("en") + " pts" : fremdrift[b.id]?.scrub ? "Bubbled" : "Solved") : "";
     st.className = "status";
     merke.append(nr, st); kort.appendChild(merke);
     if (erApen(i)) kort.onclick = () => { if (modus === "scrub") { ctx(); shatterStart(i); } else if (modus === "unwrap") { ctx(); uwStart(i); } else visStartark(i); };
@@ -1407,14 +1407,14 @@ function stoppFest() {
 }
 // ---------- arkadelista: bildet krymper opp, lista ruller ned til deg, bildet blir til gullstøv ----------
 let arkTimere = [], stovRAF = 0, rullRAF = 0, rullet = false, ark = null;
-// Lista, myntene og støvet ligger rett i body, så de virker både fra puslespillet og SCRUB IT.
+// Lista, myntene og støvet ligger rett i body, så de virker både fra puslespillet og BUBBLE IT.
 for (const id of ["mynter", "resultat", "stovLag"]) document.body.appendChild($(id));
 function visArkade() {
   const a = ark, sp = a, res = $("resultat");
   if (!a || !a.gyldig() || res.classList.contains("vis")) return;
   res.classList.toggle("tema-scrub", a.tema === "scrub"); res.classList.toggle("tema-pusle", a.tema !== "scrub"); res.classList.toggle("peace", !!a.peace || !!a.utenListe); res.classList.toggle("peace-look", !!a.peaceLook);
   const nivå = a.tema !== "scrub" && spill ? " · " + (VALG.find(v => v.n === spill.n)?.navn || "").toUpperCase() : "";
-  $("arkHode").innerHTML = (a.tema === "scrub" ? (sh?.toP ? "SCRUB IT 2P" : "SCRUB IT") : a.peaceLook ? "PEACE" : "PIECE IT") + nivå + "<span>TOP 100</span>";
+  $("arkHode").innerHTML = (a.tema === "scrub" ? (sh?.toP ? "BUBBLE IT 2P" : "BUBBLE IT") : a.peaceLook ? "PEACE" : "PIECE IT") + nivå + "<span>TOP 100</span>";
   if (a.peaceLook && geo) {
     // Steg 1: bildet står i full størrelse. Under navnet telles poengene opp, linje for linje.
     if (geo.staaende) Object.assign(res.style, { top: geo.y0 + geo.hoyde + geo.RT + 44 + "px", left: "0px" });
@@ -1629,7 +1629,7 @@ function stoppPad() {
 }
 // Poengene teller opp mens mynter flyr fra brettet inn i summen.
 let myntRAF = 0;
-// SCRUB IT: poengene telles fort opp, så legges hver bonus på med en linje under («+ 19,500 TIME LEFT 2:10»).
+// BUBBLE IT: poengene telles fort opp, så legges hver bonus på med en linje under («+ 19,500 TIME LEFT 2:10»).
 function tellTrinn(a, nårFerdig) {
   let lb = $("resBonus"); if (!lb) { lb = document.createElement("span"); lb.id = "resBonus"; lb.className = "res-bonus"; $("resPoeng").parentNode.appendChild(lb); }
   lb.textContent = ""; lb.classList.remove("minus");
@@ -1829,7 +1829,7 @@ function visSpor(id) {
   }
 }
 function visLydKnapp() { const k = $("lydKnapp"); k.textContent = $("veggLyd").textContent = lydPa ? "Sound on" : "Sound off"; k.setAttribute("aria-pressed", String(lydPa));
-  // SCRUB IT: en liten høyttaler ved siden av Menu, med eller uten lydbølger.
+  // BUBBLE IT: en liten høyttaler ved siden av Menu, med eller uten lydbølger.
   const sk = $("shLyd"); if (sk) { sk.setAttribute("aria-pressed", String(lydPa)); sk.setAttribute("aria-label", lydPa ? "Sound on" : "Sound off");
     sk.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor" stroke="none"/>' + (lydPa ? '<path d="M16.5 8.5a5 5 0 0 1 0 7"/><path d="M19 6a8.5 8.5 0 0 1 0 12"/>' : '<path d="M17 9l5 6"/><path d="M22 9l-5 6"/>') + '</svg>'; } }
 $("lydKnapp").onclick = () => { lydPa = !lydPa; try { localStorage.setItem("sm-lyd", lydPa ? "på" : "av"); } catch {} visLydKnapp(); if (lydPa) { plingLyd(0); if (spill) spillMusikk(BRETT[spill.brett].id); låsOppLyd(); } else { stoppPad(); stoppMusikk(.3); if (stilleLyd) stilleLyd.pause(); } visLydStatus(); };
@@ -3746,7 +3746,7 @@ async function ferdig() {
   $("resPoeng").textContent = "0 points";
   { const sp = spill; ark = { tema: "pusle", img: sp.img, fra: { x: geo.x0, y: geo.y0, w: geo.bredde }, poeng: p, sluttT: sp.sluttT, gyldig: () => spill === sp && !!sp.slutt && !sp.tapt,
     neste: () => { if (spill !== sp) return; const n = nesteIRekke(sp.brett); if (n >= 0) videreTil(n); else tilMeny(); }, meny: tilMeny };
-    // Poengene i trinn, som i SCRUB IT: grunnpoeng, så + tid igjen (godt betalt), så − hver power-up for seg.
+    // Poengene i trinn, som i BUBBLE IT: grunnpoeng, så + tid igjen (godt betalt), så − hver power-up for seg.
     { const frist = tidsfrist(sp.brett, sp.n), p0 = regnPoeng(sp.n, Math.max(frist, sEkte)), p1 = regnPoeng(sp.n, sEkte), trinn = [{ verdi: p0 }];
       if (p1 > p0) trinn.push({ navn: "TIME LEFT " + fmt(frist - sEkte), verdi: p1 - p0 });
       if (trekk && p < p1) { const J = sp.juks || {}, deler = [["familie", "FAMILY"], ["lim", "GLUE"], ["magnet", "MAGNET"], ["tilt", "TILT"], ["hint", "HINT"]].filter(([k]) => J[k]).map(([k, n]) => ({ n: n + (J[k] > 1 ? " ×" + J[k] : ""), t: KRAFT[k].trekk * J[k] }));
@@ -3788,7 +3788,7 @@ const ukeSlutt = w => UKE0 + (w + 1) * UKE_MS;
 const LØP = {
   gt: { suf: "", n: [25, 49], navn: "Game · Normal + Harder" }, gi: { suf: "", n: [100, 144], navn: "Game · Chaos + Insane" },
   pt: { suf: "P", n: [25, 49], navn: "Peace · Normal + Harder" }, pi: { suf: "P", n: [100, 144], navn: "Peace · Chaos + Insane" },
-  s1: { sh: "sh_", navn: "Scrub it · 1P" }, s2: { sh: "sh2_", navn: "Scrub it · 2P" } };
+  s1: { sh: "sh_", navn: "Bubble it · 1P" }, s2: { sh: "sh2_", navn: "Bubble it · 2P" } };
 const løpNå = () => modus === "scrub" ? (variant.scrub === "2p" ? "s2" : "s1") : (iPeace() ? "p" : "g") + (storSkjerm() ? "i" : "t");
 const løpFor = (peace, n) => (peace ? "p" : "g") + (n >= 100 ? "i" : "t");
 // Verdien i et felt slik den var før tidspunktet T. Forbedringer etter T teller ikke; da brukes forrige verdi hvis den finnes.
@@ -4092,7 +4092,7 @@ function dlKlar() {
   const T = $("dlTerninger"); T.replaceChildren(); for (let i = 0; i < 6; i++) { const d = document.createElement("div"); d.className = "dl-terning"; dlTerningVis(d, 0); T.appendChild(d); }
   $("dlMal").textContent = "–"; $("dlKortrad").replaceChildren(); dlInfo();
   const n = dlStokk().length;
-  if (n < 6) { dlStatus("", "Your deck has " + n + " card" + (n === 1 ? "" : "s") + ". Every board you play in PIECE IT or SCRUB IT becomes a card. You need 6 to play."); dlKnapper([["Roll the dice", dlKast, true, true]]); }
+  if (n < 6) { dlStatus("", "Your deck has " + n + " card" + (n === 1 ? "" : "s") + ". Every board you play in PIECE IT or BUBBLE IT becomes a card. You need 6 to play."); dlKnapper([["Roll the dice", dlKast, true, true]]); }
   else { dlStatus("", "Roll six dice. Then get as close to the sum as you can, fast. You see the art, not the value. Going over is allowed."); dlKnapper([["Roll the dice", dlKast, true]]); }
   dlTegnMappe();
 }
@@ -7989,12 +7989,12 @@ function shFerdig() {
   else if (!fremdrift[id].scrub || s.poeng > fremdrift[id].scrub.poeng) fremdrift[id].scrub = { poeng: s.poeng };
   skrivLokal(fremdrift);
   let nesteI = -1; for (let j = s.i + 1; j < BRETT.length; j++) if (erApen(j)) { nesteI = j; break; }
-  // Se på bildet i fred. Trykk, eller vent litt, så krymper det og SCRUB IT TOP 100 kommer.
+  // Se på bildet i fred. Trykk, eller vent litt, så krymper det og BUBBLE IT TOP 100 kommer.
   ark = { tema: "scrub", img: s.img, fra: { x: shG.fx, y: shG.fy + SH_TOPP * shG.fw, w: shG.fw }, poeng: s.poeng, trinn, sluttT: performance.now(), gyldig: () => sh === s && s.tilstand === "ferdig",
     neste: () => { if (sh !== s) return; if (nesteI >= 0) shatterStart(nesteI, s.poeng, s.liv); else shAvslutt(); }, meny: shAvslutt };
   visResNiva(false);
   $("resTittel").textContent = BRETT[s.i].navn; $("resPoeng").textContent = "0 points";
-  $("resInfo").textContent = kode(s.i) + " · SCRUB IT · time " + fmt(Math.round(s.tid)) + " · time left " + fmt(tidIgjen) + (trekk ? " · power-ups −" + Math.round(trekk * 100) + " %" : "");
+  $("resInfo").textContent = kode(s.i) + " · BUBBLE IT · time " + fmt(Math.round(s.tid)) + " · time left " + fmt(tidIgjen) + (trekk ? " · power-ups −" + Math.round(trekk * 100) + " %" : "");
   $("resRekord").textContent = (nesteI >= 0 ? "All clean!" : "All clean! Every board in this collection is clean.") + (s.toP ? "" : " Relics this season: " + shMotivFunnet(aktiv) + "/9" + (s.motiv && s.motiv.tilstand !== "fanget" ? " (this one is still in the mud)." : "."));
   $("nesteKnapp").textContent = nesteI >= 0 ? "Next: " + BRETT[nesteI].navn + " →" : "Menu"; $("nesteKnapp").disabled = false;
   shLagreRekord(s.poeng, s.toP).then(() => shArkListe(s.poeng, s.toP)).then(async liste => {
@@ -8036,7 +8036,7 @@ async function shVisToppliste(naa) {
     rad.append(a, n, pp); el.appendChild(rad);
   });
 }
-// SCRUB IT TOP 100 i arkadelista, med navnefelt på din rad.
+// BUBBLE IT TOP 100 i arkadelista, med navnefelt på din rad.
 async function shArkListe(naa, toP = false) {
   const el = $("liste"); el.innerHTML = '<p class="liten">Loading leaderboard …</p>';
   let ekte = [];
