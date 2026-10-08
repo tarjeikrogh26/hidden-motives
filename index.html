@@ -628,7 +628,7 @@ body.lys #modusDeal{--farge:#0f8f6c;--glod:15,143,108}
   <div class="regel">Everything counts: Game, Peace, Scrub it 1P and 2P, every board, every level, every collection. Each board list gives up to 100 points (a Scrub it list up to 1,000): #1 gets them all, the rest their share of the top score.</div>
   <div class="sammen" id="spillere"><p class="liten">Loading players …</p></div>
   <p class="kreditt">© 2001–2026 Tarjei Krogh. All photography, music and art. <a href="https://kroghx.com" target="_blank" rel="noopener">kroghx.com</a></p>
-  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 1.34<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
+  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 1.35<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
 </section>
 
 <div class="ark" id="tidUtArk" hidden style="z-index:200001">
@@ -2684,7 +2684,7 @@ function tikk() {
 function gjestekort(n) {
   const antall = n <= 25 ? 3 + (Math.random() < .5) : n <= 49 ? 5 + (Math.random() < .5) : 6 + (Math.random() < .5);
   // Lynet (brann) er med i 3 av 4 spill. Resten trekkes fra alle typene, uten å gjenta før alle er brukt.
-  const pool = () => ["tilt", "break", "sag", "stov", "ketchup", "lyn"].sort(() => Math.random() - .5);
+  const pool = () => ["tilt", "break", "stov", "ketchup", "lyn"].sort(() => Math.random() - .5);
   let typer = Math.random() < .75 ? ["lyn"] : []; while (typer.length < antall) typer.push(...pool().filter(t => t !== "lyn" || !typer.includes("lyn")));
   const liste = typer.slice(0, antall).sort(() => Math.random() - .5).map((t, j) => ({ t, ved: .08 + (j + Math.random() * .8) * (.74 / antall) }));
   // Speilvending i ca. 40 % av spillene, og bare én av typene.
@@ -2706,9 +2706,8 @@ function hendelseSjekk() {
   if (h.t === "break" && sp.lagt < 4) return;
   if (h.t === "lyn" && sp.lagt < 6) return;
   if (h.t === "vokse" && sp.lagt < 5) return;
-  if (h.t === "sag" && sp.lagt < 4) return;
   sp.hendelser.shift(); sp.sistHendelse = performance.now();
-  if (h.t === "tilt") tilt(true); else if (h.t === "break") puzzleBreak(); else if (h.t === "speilX" || h.t === "speilY") speilStart(h.t === "speilX" ? "x" : "y"); else if (h.t === "vokse") vokseBrikke(); else if (h.t === "sag") sagblad(); else if (h.t === "stov") støvstorm(); else if (h.t === "ketchup") ketchup(); else lynnedslag();
+  if (h.t === "tilt") tilt(true); else if (h.t === "break") puzzleBreak(); else if (h.t === "speilX" || h.t === "speilY") speilStart(h.t === "speilX" ? "x" : "y"); else if (h.t === "vokse") vokseBrikke();  else if (h.t === "stov") støvstorm(); else if (h.t === "ketchup") ketchup(); else lynnedslag();
 }
 function lynTid(brukt, frist) {
   const sp = spill; if (!sp || sp.n !== 49 || !sp.start || sp.slutt || sp.tapt || sp.brann || sp.speil) return;
@@ -2998,56 +2997,6 @@ function kjempefot(sp) {
     return aktiv;
   });
 }
-// SAGBLADET: et sirkelsagblad kommer inn fra kanten og skjærer av en stripe. Brikkene der spinner av brettet og ned i bunken.
-let sagRAF = 0;
-function sagblad() {
-  const sp = spill; if (!sp || !geo) return;
-  banner("SAW BLADE!", "IT CUTS PIECES LOOSE · PUT THEM BACK", "#cfd8e2");
-  const { x0, y0, bredde, hoyde, bw, bh } = geo, kant = (Math.random() * 4) | 0, rad = Math.random() < .6 ? 0 : 1, R = Math.max(bw, bh) * .85;
-  const vannrett = kant < 2, lengde = 3 + ((Math.random() * 3) | 0), fraStart = Math.random() < .5;
-  const linje = vannrett ? (kant === 0 ? rad : sp.r - 1 - rad) : (kant === 2 ? rad : sp.k - 1 - rad);
-  const ant = vannrett ? sp.k : sp.r, sist = Math.min(ant, lengde);
-  const midt = i => vannrett ? [x0 + (i + .5) * bw, y0 + (linje + .5) * bh] : [x0 + (linje + .5) * bw, y0 + (i + .5) * bh];
-  const [ax, ay] = midt(fraStart ? -1.3 : ant + .3), [bx, by] = midt(fraStart ? sist - .3 : ant - sist - 1.3);
-  let tid = 0, rot = 0; const T = 1.8, gnist = [], kuttet = new Set();
-  if (lydPa) for (let j = 0; j < 9; j++) tone(170 + (j % 3) * 9, j * .17, .2, .025, "sawtooth", .7, .3);
-  smussStart((dt, t, fx, lag) => {
-    tid += dt; rot += dt * 38;
-    const u = tid < T ? tid / T : 1 + (tid - T) / .6, e = Math.min(1, u), px = ax + (bx - ax) * e + (u > 1 ? (bx - ax) * .25 * (u - 1) : 0), py = ay + (by - ay) * e + (u > 1 ? -R * 2 * (u - 1) : 0);
-    // Skjær løs brikkene bladet passerer.
-    for (const b of sp.biter) { if (kuttet.has(b.id) || b.limt || b.lander) continue; const [cx, cy] = midt(vannrett ? slotC(b) : slotR(b));
-      const påLinja = (vannrett ? slotR(b) : slotC(b)) === linje, nær = Math.hypot(cx - px, cy - py) < R * .7;
-      if (b.ferdig && påLinja && nær) { kuttet.add(b.id); sagAv(b, sp); }
-      else if (!b.ferdig && !b.iBunke && !b.el.classList.contains("drar")) { const r = b.el.getBoundingClientRect(); if (Math.hypot(r.left + r.width / 2 - px, r.top + r.height / 2 - py) < R * .8) { kuttet.add(b.id); sagAv(b, sp); } } }
-    if (u <= 1) for (let k = 0; k < 4; k++) { const a = Math.random() * 7; gnist.push({ x: px + Math.cos(a) * R * .9, y: py + Math.sin(a) * R * .9, vx: Math.cos(a) * 300 + (Math.random() - .5) * 200, vy: Math.sin(a) * 300 - 120, liv: .5 + Math.random() * .3 }); }
-    if (u <= 1 && Math.random() < .5) { lag.globalAlpha = .55; lag.fillStyle = "rgb(214,186,140)"; for (let k = 0; k < 6; k++) lag.fillRect(px + (Math.random() - .5) * R * 1.4, py + (Math.random() - .5) * R * 1.4, 2, 2); lag.globalAlpha = 1; }
-    for (const g of gnist) { g.liv -= dt; if (g.liv <= 0) continue; const ox = g.x, oy = g.y; g.vy += 700 * dt; g.x += g.vx * dt; g.y += g.vy * dt;
-      fx.strokeStyle = `rgba(255,${190 + 60 * g.liv | 0},120,${Math.min(1, g.liv * 2)})`; fx.lineWidth = 1.6; fx.beginPath(); fx.moveTo(ox, oy); fx.lineTo(g.x, g.y); fx.stroke(); }
-    // Bladet: blankt stål med tenner, bevegelsesuskarphet og et hull i midten.
-    fx.save(); fx.translate(px, py); fx.shadowColor = "rgba(0,0,0,.45)"; fx.shadowBlur = R * .4; fx.shadowOffsetY = R * .25;
-    for (const [dr, al] of [[-.18, .25], [-.09, .45], [0, 1]]) { fx.save(); fx.rotate(rot + dr); fx.globalAlpha = al; fx.beginPath();
-      const Z = 22; for (let k = 0; k < Z; k++) { const a = k / Z * Math.PI * 2, a2 = (k + .55) / Z * Math.PI * 2; fx.lineTo(Math.cos(a) * R * .86, Math.sin(a) * R * .86); fx.lineTo(Math.cos(a2) * R, Math.sin(a2) * R); }
-      fx.closePath(); const g = fx.createRadialGradient(-R * .3, -R * .3, R * .1, 0, 0, R); g.addColorStop(0, "#f4f7fb"); g.addColorStop(.5, "#9ea8b4"); g.addColorStop(1, "#5d6672"); fx.fillStyle = g; fx.fill(); fx.restore(); fx.shadowColor = "transparent"; }
-    fx.strokeStyle = "rgba(60,66,76,.6)"; fx.lineWidth = 1; for (const r of [.55, .7]) { fx.beginPath(); fx.arc(0, 0, R * r, 0, 7); fx.stroke(); }
-    fx.fillStyle = "#2b2f36"; fx.beginPath(); fx.arc(0, 0, R * .16, 0, 7); fx.fill(); fx.fillStyle = "rgba(255,255,255,.55)"; fx.beginPath(); fx.ellipse(-R * .35, -R * .4, R * .3, R * .07, -.7, 0, 7); fx.fill();
-    fx.restore(); fx.globalAlpha = 1;
-    return u < 1.6 || gnist.some(g => g.liv > 0);
-  });
-}
-function sagAv(b, sp) {
-  if (b.ferdig) { b.ferdig = false; sp.lagt--; oppdaterTeller(); visHintKnapp(); }
-  b.z = ++sp.ztopp; tegnBit(b); plasser(b);
-  const p = bunkePlass(), fx = b.x, fy = b.y, t0 = performance.now(), varighet = 900, spinn = (Math.random() < .5 ? -1 : 1) * (2 + Math.random() * 3), r0 = b.rot || 0;
-  if (lydPa) tone(520 + Math.random() * 200, 0, .08, .03, "square", .6, .3);
-  const steg = t => {
-    if (spill !== sp || !b.el.isConnected) return;
-    const u = Math.min(1, (t - t0) / varighet), e = u * u * (3 - 2 * u);
-    b.x = fx + (p.x - fx) * e; b.y = fy + (p.y - fy) * e - Math.sin(Math.PI * u) * .35; b.loft = Math.sin(Math.PI * u) * 1.6; b.rot = r0 + spinn * Math.sin(Math.PI * u) * .5; plasser(b);
-    if (u < 1) { requestAnimationFrame(steg); return; }
-    b.loft = 0; b.rot = 0; b.iBunke = true; b.bj = [(Math.random() - .5) * 12, (Math.random() - .5) * 8]; sp.bunke.push(b); leggBunke();
-  };
-  requestAnimationFrame(steg);
-}
 function tilt(dino) {
   const sp = spill;
   // Noen dyttet borti bordet. Av og til (sjelden på Normal og Harder, oftere på Chaos og Insane): jordskjelv, som rister løs dobbelt så mange.
@@ -3176,20 +3125,23 @@ function lagLyn(x0, y0, x1, y1, ru) {
   return p;
 }
 function lynnedslag() {
-  const sp = spill, lagte = sp.biter.filter(b => b.ferdig && !b.lander);
-  if (!lagte.length) return;
-  const mål = lagte[(Math.random() * lagte.length) | 0];
+  const sp = spill, lagte = sp.biter.filter(b => b.ferdig && !b.lander && !b.limt), løse = sp.biter.filter(b => !b.ferdig && !b.iBunke && !b.lander && b.el.isConnected);
+  if (!lagte.length && !løse.length) return;
+  const mål = (lagte.length && (Math.random() < .7 || !løse.length) ? lagte : løse)[(Math.random() * (lagte.length && (Math.random() < .7 || !løse.length) ? lagte : løse).length) | 0] || lagte[0] || løse[0];
   const blink = document.createElement("div"); blink.className = "lynblink"; document.body.appendChild(blink); setTimeout(() => blink.remove(), 650);
   banner("LIGHTNING STRIKE!", "TAP THE FIRE TO SPLASH WATER ON IT", "#bfe9ff");
   // Smellet: et skarpt knekk, et nytt knekk når lynet slår ned igjen, et dypt drønn og torden som ruller.
   if (lydPa) { tsjing(0, .55, 1, .5, 6500); tsjing(.01, .45, 1, .4, 2200); tsjing(.12, .38, 1, .6, 5000); tone(52, .01, 1.4, .24, "sine", .9, .8); tone(34, .04, 2, .16, "sine", .9, .9); tone(70, 0, .25, .12, "sawtooth", .8, .5); torden(.18, 2.6); }
   { const bord = $("bord"); bord.classList.remove("rist"); void bord.offsetWidth; bord.classList.add("rist"); setTimeout(() => bord.classList.remove("rist"), 800); }
   sp.lynAntall = (sp.lynAntall || 0) + 1;
-  const lx = geo.x0 + (mål.c + .5) * geo.bw, ly = geo.y0 + (mål.r + .5) * geo.bh, topp = lx + (Math.random() - .5) * innerWidth * .35;
+  const [lx, ly] = brannPos(mål), topp = lx + (Math.random() - .5) * innerWidth * .35;
   const hoved = lagLyn(topp, -10, lx, ly, .55), greiner = [];
   for (let n = 0; n < 4; n++) { const i = 20 + ((Math.random() * (hoved.length - 50)) | 0), [gx, gy] = hoved[i], l = (ly - gy) * (.25 + Math.random() * .35); greiner.push(lagLyn(gx, gy, gx + (Math.random() < .5 ? -1 : 1) * l * (.4 + Math.random() * .5), gy + l, .6).slice(0, 60 + ((Math.random() * 60) | 0))); }
   const gnister = Array.from({ length: 46 }, () => { const a = -Math.PI * Math.random(), v = 150 + Math.random() * 420; return { x: lx, y: ly, vx: Math.cos(a) * v, vy: Math.sin(a) * v, liv: .5 + Math.random() * .6 }; });
-  sp.brann = { spre: .3 + Math.random() * .6, ild: new Map([[mål.id, .8]]), brent: new Map(), glor: new Map(), lyn: { x: lx, y: ly, t: 0, hoved, greiner, gnister }, partikler: [], plask: [], damp: [], sist: performance.now(), tegnT: 0, slange: null };
+  // Brikka slås løs og kastes ut av lynet. Den tar fyr der den lander.
+  if (mål.ferdig) { mål.ferdig = false; sp.lagt--; mål.z = ++sp.ztopp; tegnBit(mål); plasser(mål); oppdaterTeller(); visHintKnapp(); }
+  setTimeout(() => { if (spill === sp && !mål.ferdig) kast(mål, false); }, 60);
+  sp.brann = { spre: .3 + Math.random() * .6, tenn: mål.id, ild: new Map(), brent: new Map(), glor: new Map(), lyn: { x: lx, y: ly, t: 0, hoved, greiner, gnister }, partikler: [], plask: [], damp: [], sist: performance.now(), tegnT: 0, slange: null };
   const c = $("brannLag"), dpr = Math.min(devicePixelRatio || 1, 2); c.width = innerWidth * dpr; c.height = innerHeight * dpr; c.style.width = innerWidth + "px"; c.style.height = innerHeight + "px";
   cancelAnimationFrame(brannRAF); brannRAF = requestAnimationFrame(brannSteg);
 }
@@ -3197,15 +3149,18 @@ function brannSteg(t) {
   const sp = spill, B = sp?.brann; if (!B || sp.slutt) { brannRAF = 0; return; }
   const dt = Math.min(.05, (t - B.sist) / 1000); B.sist = t;
   const k = sp.k, bitAv = id => sp.biter[id];
+  // Brikka lynet slo løs, tar fyr når den har landet.
+  if (B.tenn != null) { const b = bitAv(B.tenn); if (b.iBunke || b.ferdig) B.tenn = null; else if (!b.lander) { B.ild.set(B.tenn, .55); B.tenn = null; } }
   // Brannen vokser og sprer seg til naboer som ligger på plass. Vannet slukker der du drar.
   for (const [id, v] of [...B.ild]) {
     const b = bitAv(id); if (b.iBunke || b.lander) { B.ild.delete(id); continue; }
     // Jo lenger en brikke har brent, jo seigere er den å slukke.
     const brent = (B.brent.get(id) || 0) + dt; B.brent.set(id, brent);
     const fukt = B.fukt?.get(id) || 0;
-    let ny = Math.min(1, v + (fukt > 0 ? -.15 : .55 + .5 * (B.spre ?? .6)) * dt);
-    if (B.slange) { const [cx, cy] = brannPos(b); if (Math.hypot(cx - B.slange.x, cy - B.slange.y) < Math.max(geo.bw, geo.bh) * 1.25) ny -= 2.5 * dt / brannSeig(B, id); }
-    if (ny <= 0) { B.ild.delete(id); B.glor.set(id, 2.6); tegnBit(b); plasser(b); continue; }
+    const gjen = B.gjenopp?.get(id), vekst = gjen != null ? Math.min(1, .12 + (t - gjen) / 4500) : 1;
+    let ny = Math.min(1, v + (fukt > 0 ? -.15 : (.55 + .5 * (B.spre ?? .6)) * vekst) * dt);
+    if (B.slange) { const [cx, cy] = brannPos(b); if (Math.hypot(cx - B.slange.x, cy - B.slange.y) < Math.max(geo.bw, geo.bh) * 1.25) ny -= 1.8 * dt / brannSeig(B, id); }
+    if (ny <= 0) { B.ild.delete(id); B.gjenopp?.delete(id); B.glor.set(id, 5.5); tegnBit(b); plasser(b); continue; }
     B.ild.set(id, ny); b.svidd = Math.min(1, (b.svidd || 0) + ny * dt * .32);
     if (ny > .35) {
       const [bx, by] = brannPos(b), nær = Math.max(geo.bw, geo.bh) * 1.05;
@@ -3227,14 +3182,17 @@ function brannSteg(t) {
   // Glør: en brikke du nettopp slukket, gløder litt, og kan blusse opp igjen om den ikke fikk nok vann.
   for (const [id, g] of [...B.glor]) {
     const ny = g - dt; if (ny <= 0 || B.ild.has(id)) { B.glor.delete(id); continue; } B.glor.set(id, ny);
-    if (!((B.fukt?.get(id) || 0) > 0) && Math.random() < .3 * dt * (1 + Math.min(2, (B.brent.get(id) || 0) * .12))) { B.ild.set(id, .45); B.glor.delete(id); }
+    // Glørne ryker.
+    if (Math.random() < dt * 4) { const [cx, cy] = brannPos(bitAv(id)); (B.sot = B.sot || []).push({ x: cx + (Math.random() - .5) * geo.bw * .5, y: cy - geo.bh * .2, vy: -(35 + Math.random() * 40), r: 4 + Math.random() * 4, liv: 1, fase: id * 1.3, sky: true }); }
+    // Får glørne ikke nok vann, vokser de sakte fra glo til flamme igjen.
+    if (!((B.fukt?.get(id) || 0) > 0) && Math.random() < .075 * dt * (1 + Math.min(2, (B.brent.get(id) || 0) * .12))) { B.ild.set(id, .05); (B.gjenopp = B.gjenopp || new Map()).set(id, t); B.glor.delete(id); }
   }
   // Brennende brikker blir gradvis svidde.
   B.tegnT -= dt; if (B.tegnT <= 0) { B.tegnT = .4; for (const id of B.ild.keys()) { tegnBit(bitAv(id)); plasser(bitAv(id)); } }
   const tapt = sp.biter.reduce((a, b) => a + (b.svidd || 0), 0) / sp.biter.length;
   tegnBrann(B, dt, t);
   if (tapt > .8) { B.ild.clear(); sp.brann = null; brannRAF = 0; tegnBrann({ ild: new Map(), partikler: [], plask: [], damp: [] }, 0, t); tidUt("Burned", "Too much of the picture went up in flames. It can't be approved."); return; }
-  if (!B.ild.size && !(B.glor?.size)) {
+  if (!B.ild.size && !(B.glor?.size) && B.tenn == null) {
     if (!B.ute) {
       B.ute = true;
       const svidd = sp.biter.filter(b => b.svidd > .05).length;
@@ -3276,12 +3234,14 @@ function plask(px, py) {
   let traff = 0;
   // Alle brikker i nærheten blir fuktige i noen sekunder: de tar ikke fyr og blusser ikke opp.
   B.fukt = B.fukt || new Map();
-  for (const n of spill.biter) { const [cx, cy] = brannPos(n), d = Math.hypot(cx - px, cy - py); if (d < R * 1.6) B.fukt.set(n.id, Math.max(B.fukt.get(n.id) || 0, 2.4 - d / R)); }
+  for (const n of spill.biter) { const [cx, cy] = brannPos(n), d = Math.hypot(cx - px, cy - py); if (d < R * 1.6) B.fukt.set(n.id, Math.max(B.fukt.get(n.id) || 0, 3.4 - d / R)); }
   for (const id of [...(B.glor?.keys() || [])]) { const [cx, cy] = brannPos(spill.biter[id]); if (Math.hypot(cx - px, cy - py) < R * 1.6 && !B.ild.has(id)) B.glor.delete(id); }
   for (const [id, v] of B.ild) {
     const b = spill.biter[id], [cx, cy] = brannPos(b);
     if (Math.hypot(cx - px, cy - py) > R * 1.9) continue;
-    traff++; const ny = v - (Math.hypot(cx - px, cy - py) < R * 1.2 ? .58 : .34) / brannSeig(B, id); if (B.glor) B.glor.set(id, 2.6);
+    traff++; const ny = v - (Math.hypot(cx - px, cy - py) < R * 1.2 ? .42 : .25) / brannSeig(B, id); if (B.glor) B.glor.set(id, 5.5);
+    // Det ryker kraftig der vannet treffer.
+    for (let n = 0; n < 3; n++) (B.sot = B.sot || []).push({ x: cx + (Math.random() - .5) * geo.bw * .7, y: cy - geo.bh * .2, vy: -(50 + Math.random() * 50), r: 6 + Math.random() * 6, liv: 1, fase: id + n, sky: true });
     for (let n = 0; n < 5; n++) B.damp.push({ x: cx + (Math.random() - .5) * geo.bw * .8, y: cy + (Math.random() - .5) * geo.bh * .5, r: 9 + Math.random() * 12, liv: 1, vy: -(25 + Math.random() * 35) });
     if (ny <= 0) { B.ild.delete(id); tegnBit(b); plasser(b); } else B.ild.set(id, ny);
   }
@@ -3498,9 +3458,9 @@ function sprut(px, py, d) {
   for (const [id, v] of B.ild) {
     const b = spill.biter[id], [cx, cy] = brannPos(b);
     if (Math.hypot(cx - px, cy - py) > R * 1.5) continue;
-    const ny = v - .15 / brannSeig(B, id);
+    const ny = v - .1 / brannSeig(B, id);
     if (Math.random() < .5) B.damp.push({ x: cx + (Math.random() - .5) * geo.bw * .8, y: cy + (Math.random() - .5) * geo.bh * .5, r: 8 + Math.random() * 10, liv: 1, vy: -(25 + Math.random() * 35) });
-    if (ny <= 0) { B.ild.delete(id); tegnBit(b); plasser(b); } else B.ild.set(id, ny);
+    if (ny <= 0) { B.ild.delete(id); B.gjenopp?.delete(id); (B.glor = B.glor || new Map()).set(id, 5.5); tegnBit(b); plasser(b); } else B.ild.set(id, ny);
   }
   if (lydPa && performance.now() - (B.sprutLydT || 0) > 260) { B.sprutLydT = performance.now(); vannLyd(.55); }
 }
@@ -4441,7 +4401,8 @@ async function shatterStart(i, poeng = 0, liv = 3) {
   // Mye jord øverst, mindre i midten, aldri hardt nederst. Noen myke lommer øverst og i midten, der boblen kan herje.
   if (!toP) { const lommer = Array.from({ length: 3 + ((Math.random() * 3) | 0) }, () => ({ c: 3 + Math.random() * (SH_KOL - 6), r: 2 + Math.random() * SH_RAD * .5, rad: 1.4 + Math.random() * 1.8 }));
     for (const k of klosser) { if (k.ramme || k.myk || k.liv <= 0) continue; const u = k.r / SH_RAD;
-      if (u < .35) k.liv += nybegynner ? 1 : 2; else if (u < .6 && !nybegynner) k.liv += 1; else if (u > .7) { k.liv = Math.min(k.liv, u > .8 || Math.random() < .8 ? 1 : 2); k.hardLeire = false; }
+      // Nederste 40 %: ett lag, så boblen glir et godt stykke opp før det blir tungt (Krogh: aldri stress nede ved flipperen fra start).
+      if (u < .35) k.liv += nybegynner ? 1 : 2; else if (u < .5 && !nybegynner) k.liv += 1; else if (u < .6) { k.liv = Math.min(k.liv, 2); k.hardLeire = false; } else { k.liv = Math.min(k.liv, 1); k.hardLeire = false; }
       if (lommer.some(l => Math.hypot(k.c - l.c, (k.r - l.r) * 1.2) < l.rad)) { k.liv = 1; k.hardLeire = false; }
       k.maks = Math.max(1, k.liv); } }
   // Bunnkanten smuldrer: når en bit går, raser naboene etter, og det drysser.
@@ -5421,7 +5382,9 @@ function shNyGjorme(x, y, rad, tak = 2, stille = false) {
   const s = sh; let n = 0;
   for (const k of s.klosser) {
     const d = Math.hypot(k.x + k.w / 2 - x, k.y + k.h / 2 - y);
-    if (d > rad || k.liv >= tak) continue;
+    // Nederst bygges det aldri vegg: bunnkanten får ingen ny jord, og nederste femtedel høyst ett lag.
+    const u = k.r / SH_RAD; if (u > .93 && !s.toP) continue; const tk = u > .78 && !s.toP ? 1 : tak;
+    if (d > rad || k.liv >= tk) continue;
     if (k.liv === 0) { s.igjen++; k.myk = false; }
     k.liv++; k.maks = Math.max(k.maks, k.liv); n++;
   }
@@ -7899,11 +7862,12 @@ function shTegn(t) {
         tk.L = shLys(tk.x, tk.y); tk.fp = shPoengFarge(tk.L, tk.gull); }
       else if (tk.stor || tk.kapsel) { tk.liv = Math.max(tk.liv, 3.2); tk.fade = Math.max(tk.fade || 1, 1.5); }
       else { tk.liv = Math.max(tk.liv, 1.5); tk.fade = Math.max(tk.fade || 1, .9); }
+      if (!tk.pt && (tk.stor || tk.kapsel || tk.liten)) for (const o of s.tekster) if (o !== tk && o.init && !o.pt && o.alder < .08 && Math.abs(o.x - tk.x) < .3 && Math.abs(o.y - tk.y) < .14) { const L = Math.max(o.liv, tk.liv), F = Math.max(o.fade || 1, tk.fade || 1); o.liv = tk.liv = L; o.fade = tk.fade = F; o.par = tk.par = true; }
       if (!tk.pt) { tk.L = shLys(tk.x, tk.y); tk.kjerne = shKontrastFarge(tk.farge, tk.L);
         // En ny overskrift der det allerede står en: den gamle fader rolig ut i stedet for å bli liggende under.
         for (const o of s.tekster) if (o !== tk && o.init && !o.pt && o.alder > .2 && Math.abs(o.y - tk.y) < .09 && Math.abs(o.x - tk.x) < .3) { o.liv = Math.min(o.liv, .5); o.fade = .5; } } }
     const lang = tk.stor || tk.kapsel; tk.alder += tdt;
-    tk.y -= (tk.pt ? .0009 : tk.liv > 1 ? 0.0012 : 0.004) * tdt * 60 * (lang ? .25 : 1); tk.liv -= (lang ? .62 : tk.pt ? .9 : 1.2) * tdt;
+    tk.y -= (tk.pt ? .0009 : tk.liv > 1 ? 0.0012 : 0.004) * tdt * 60 * (lang ? .25 : 1); tk.liv -= (lang || tk.par ? .62 : tk.pt ? .9 : 1.2) * tdt;
     const myk = v => { v = Math.max(0, Math.min(1, v)); return v * v * (3 - 2 * v); };
     x.globalAlpha = myk(tk.alder / .28) * myk(tk.liv / (tk.fade || 1));
     if (tk.pt) {
@@ -8028,7 +7992,7 @@ function shSteg(t) {
 }
 addEventListener("resize", () => { if (sh) shOppsett(); });
 // Bare for automatisk testing lokalt (?autotest).
-if (location.search.includes("autotest")) { window.__sh = () => sh; window.__shOppdater = dt => { shOppdater(dt); if (sh) { sh.tid += dt; shPartikler(dt); } }; window.__shTreff = shTreff; window.__shGalaga = shGalagaStart; window.__shSopp = shSopp; window.__shBytte = shByttetStart; window.__shOrm = shOrmStart; window.__levende = levendeStart; window.__gn = () => ({ gnister, raf: gnistRAF }); window.__hendelse = t => t === "sag" ? sagblad() : t === "stov" ? støvstorm() : t === "ketchup" ? ketchup() : t === "tilt" ? tilt(true) : t === "vokse" ? vokseBrikke() : t === "break" ? puzzleBreak() : t === "speilX" ? speilStart("x") : t === "speilY" ? speilStart("y") : lynnedslag(); window.__shSprekk = shSprekk; window.__shP2 = () => ({ pad2X: sh.pad2X, P2Y: SH_P2Y, TOPP: SH_TOPP, H: SH_H }); window.__shTegn = () => { shRens(); shTegn(performance.now()); }; window.__spill = () => spill; window.__banner = banner; window.__kast = kast; window.__gratisPeace = async () => sjekkGratis(await hentSammen("P")); window.__fremdrift = () => fremdrift; window.__sammenP = async () => ({ lok: minLokaleSum("P"), f: fremdrift.b1, liste: (await hentSammen("P")).slice(0, 2) }); window.__shKrabbe = () => shKrabbeStart(); window.__shHopper = () => shHopperStart(); window.__shSlipp = () => shSlipp(); window.__shPY = () => SH_PY; window.__shKapsel = shKapsel; window.__lyd = () => { const c = lydCtx; return c ? { musikk: musikkUt(c).gain.value, effekt: effektUt(c).gain.value } : null; }; window.__speilSlutt = speilSlutt; window.__figurKant = async (n, farge) => shFigurKant(await hentBilde("figurer/" + n + ".webp"), farge); window.__hentBilde = hentBilde; window.__falskMusikk = () => { lydCtx = lydCtx || { currentTime: 0 }; const nei = () => {}; musikk = { kilde: { stop: nei, playbackRate: { v: 1, setTargetAtTime(r) { this.v = r; } } }, g: { gain: { value: .3, cancelScheduledValues: nei, setValueAtTime: nei, linearRampToValueAtTime: nei, setTargetAtTime: nei } } }; }; window.__musikkFart = () => musikk?.kilde?.playbackRate?.v ?? null; window.__musikkFor = id => musikkFor(id)?.fil; window.__geo = () => geo; window.__plasser = plasser; window.__skjermPkt = skjermPkt; }
+if (location.search.includes("autotest")) { window.__sh = () => sh; window.__shOppdater = dt => { shOppdater(dt); if (sh) { sh.tid += dt; shPartikler(dt); } }; window.__shTreff = shTreff; window.__shGalaga = shGalagaStart; window.__shSopp = shSopp; window.__shBytte = shByttetStart; window.__shOrm = shOrmStart; window.__levende = levendeStart; window.__gn = () => ({ gnister, raf: gnistRAF }); window.__hendelse = t => t === "stov" ? støvstorm() : t === "ketchup" ? ketchup() : t === "tilt" ? tilt(true) : t === "vokse" ? vokseBrikke() : t === "break" ? puzzleBreak() : t === "speilX" ? speilStart("x") : t === "speilY" ? speilStart("y") : lynnedslag(); window.__shSprekk = shSprekk; window.__shP2 = () => ({ pad2X: sh.pad2X, P2Y: SH_P2Y, TOPP: SH_TOPP, H: SH_H }); window.__shTegn = () => { shRens(); shTegn(performance.now()); }; window.__spill = () => spill; window.__banner = banner; window.__kast = kast; window.__gratisPeace = async () => sjekkGratis(await hentSammen("P")); window.__fremdrift = () => fremdrift; window.__sammenP = async () => ({ lok: minLokaleSum("P"), f: fremdrift.b1, liste: (await hentSammen("P")).slice(0, 2) }); window.__shKrabbe = () => shKrabbeStart(); window.__shHopper = () => shHopperStart(); window.__shSlipp = () => shSlipp(); window.__shPY = () => SH_PY; window.__shKapsel = shKapsel; window.__lyd = () => { const c = lydCtx; return c ? { musikk: musikkUt(c).gain.value, effekt: effektUt(c).gain.value } : null; }; window.__speilSlutt = speilSlutt; window.__figurKant = async (n, farge) => shFigurKant(await hentBilde("figurer/" + n + ".webp"), farge); window.__hentBilde = hentBilde; window.__falskMusikk = () => { lydCtx = lydCtx || { currentTime: 0 }; const nei = () => {}; musikk = { kilde: { stop: nei, playbackRate: { v: 1, setTargetAtTime(r) { this.v = r; } } }, g: { gain: { value: .3, cancelScheduledValues: nei, setValueAtTime: nei, linearRampToValueAtTime: nei, setTargetAtTime: nei } } }; }; window.__musikkFart = () => musikk?.kilde?.playbackRate?.v ?? null; window.__musikkFor = id => musikkFor(id)?.fil; window.__geo = () => geo; window.__plasser = plasser; window.__skjermPkt = skjermPkt; }
 
 
 
