@@ -87,14 +87,16 @@ body.lys #modusScrub{--farge:#e07800;--glod:224,120,0}
 .resultat.peace .ark-hoyre{display:none}
 #kraftLinje.peace #kraftMagnet,#kraftLinje.peace #kraftLim,#kraftLinje.peace #lommebok,#kraftLinje.peace .pris{display:none}
 #kraftLinje.peace button{font-family:"Pacifico",cursive;font-weight:400;font-size:16px;letter-spacing:.02em;text-transform:lowercase;color:#fff;padding:5px 18px 8px;border:0;
-  background:radial-gradient(ellipse at 35% 25%,#ffd3ea 0%,#ff9fcf 45%,#f27bb5 100%);box-shadow:inset 0 -4px 8px rgba(160,30,90,.35),inset 0 3px 6px rgba(255,255,255,.65),0 5px 14px rgba(120,30,80,.35);text-shadow:0 1px 2px rgba(150,30,90,.6)}
+  background:radial-gradient(ellipse at 35% 25%,#ffd3ea 0%,#ff9fcf 45%,#f27bb5 100%);box-shadow:inset 0 -4px 8px rgba(160,30,90,.35),inset 0 3px 6px rgba(255,255,255,.65),0 5px 14px rgba(120,30,80,.35);
+  text-shadow:1px 0 0 #a8306a,-1px 0 0 #a8306a,0 1px 0 #a8306a,0 -1px 0 #a8306a,.7px .7px 0 #a8306a,-.7px .7px 0 #a8306a,.7px -.7px 0 #a8306a,-.7px -.7px 0 #a8306a,0 2px 3px rgba(120,20,70,.5)}
 #kraftLinje.peace button:active{transform:scale(.95)}
 #kraftLinje.peace button::first-letter{text-transform:uppercase}
 body.peace-modus #hintKnapp{display:none!important}
 body.peace-modus #ramme{box-shadow:0 0 0 10px #f7f0e6,0 0 0 11px rgba(60,40,20,.25),0 22px 60px rgba(0,0,0,.5)}
 body.peace-modus #spill{z-index:1}
+#ramme::after{content:"";position:absolute;inset:-1px;border:1px solid var(--kant1,#111);box-shadow:0 0 0 1px var(--kant2,transparent);pointer-events:none;z-index:5}
 #peaceBg{position:fixed;inset:0;z-index:0;pointer-events:none}
-#timeglass{display:none;width:30px;height:48px}
+#timeglass{display:none;width:110px;height:66px}
 body.peace-modus #timeglass{display:block}
 .resultat.peace-look .poeng{color:#ff5fa2}
 .resultat.peace .poeng{color:#ff5fa2}
@@ -410,7 +412,7 @@ body:has(.resultat.vis) #spill .linje{opacity:0;pointer-events:none;transition:o
   <div class="regel"><b>The race:</b> Your best score on each of the ten boards in a collection is added up. Finish #1 overall and you get the next collection for free. Anyone who takes first place later gets it too. Points: Easy (25 pieces) gives 10,000, Medium (49) 15,000, Hard (100) 20,000 and Chaos (144) 25,000 at normal speed. Be fast and you get up to double.</div>
   <div class="sammen" id="sammen"><p class="liten">Loading standings …</p></div>
   <p class="kreditt">© 2001–2026 Tarjei Krogh. All photography, music and art. <a href="https://kroghx.com" target="_blank" rel="noopener">kroghx.com</a></p>
-  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 1.03<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
+  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 1.04<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
 </section>
 
 <div class="ark" id="tidUtArk" hidden style="z-index:200001">
@@ -1511,7 +1513,7 @@ async function startSpill(i, n, gjenoppta) {
     biter.push({ id, r, c, kanter, el, x: lagret ? lagret.x : tilfeldig[id].x, y: lagret ? lagret.y : tilfeldig[id].y, ferdig: !!lagret?.ferdig, z: id });
   }
   spill = { brett: i, n: o.n, k: o.k, r: o.r, img, biter, start: gjenoppta?.start ? Date.now() - gjenoppta.start : 0, slutt: 0, lagt: biter.filter(b => b.ferdig).length, ztopp: biter.length, straff: gjenoppta?.straff || 0 };
-  $("hudKode").textContent = kode(i); $("hudNavn").textContent = BRETT[i].navn;
+  $("hudKode").textContent = kode(i); $("hudNavn").textContent = BRETT[i].navn; settBildeKant(img);
   spill.peace = iPeace(); document.body.classList.toggle("peace-modus", spill.peace);
   if (spill.peace) { stoppMusikk(.6); stoppPad(); setTimeout(() => { if (spill?.peace && !spill.slutt) startPad(); }, 700); timeglassStart(); peaceBg(i); }
   else if (!gjenoppta || musikkØnske !== BRETT[i].id) spillMusikk(BRETT[i].id);
@@ -2023,7 +2025,7 @@ function koble(b) {
     b.ferdig = true; spill.lagt++;
     oppdaterTeller(); visHintKnapp();
     const andel = spill.lagt / spill.biter.length;
-    if (spill.lagt === spill.biter.length) { ferdigLyd(); ferdig(); settNed(b, fraX, fraY, () => {}); }
+    if (spill.lagt === spill.biter.length) { const sp = spill; sp.slutt = Date.now(); settNed(b, fraX, fraY, () => setTimeout(() => { if (spill === sp) { ferdigLyd(); ferdig(); } }, 200)); }
     else settNed(b, fraX, fraY, () => plingLyd(andel, b));
     return true;
   }
@@ -2288,27 +2290,29 @@ for (const id of ["kraftLinje", "shKraftLinje", "butikk"]) $(id).addEventListene
 // Timeglass: sanden renner. De siste 30 sekundene får det en rolig, rosa aura (ikke blink).
 let glassRAF = 0;
 function timeglassStart() {
-  const c = $("timeglass"), dpr = Math.min(devicePixelRatio || 1, 2); c.width = 30 * dpr; c.height = 48 * dpr; const x = c.getContext("2d");
+  const c = $("timeglass"), dpr = Math.min(devicePixelRatio || 1, 2); c.width = 110 * dpr; c.height = 66 * dpr; const x = c.getContext("2d");
   cancelAnimationFrame(glassRAF);
-  const korn = [];
+  // 22 fjær i en haug. Etter hvert som tiden går, løfter én og én seg og blåser bort. De siste 30 sekundene: rolig rosa aura.
+  const N = 18, fjær = Array.from({ length: N }, (_, j) => ({ x: 55 + Math.sin(j * 2.4) * (10 + (j % 5) * 5), y: 58 - (j / N) * 26 - Math.abs(Math.cos(j * 1.7)) * 4, a: Math.sin(j * 3.1) * .55, l: 22 + (j % 4) * 3, fase: j * 1.3, borte: false, fly: null }));
+  const tegnFjær = (fx, fy, a, l, alfa) => { x.save(); x.translate(fx, fy); x.rotate(a); x.globalAlpha = alfa;
+    const g = x.createLinearGradient(-l / 2, 0, l / 2, 0); g.addColorStop(0, "#ffffff"); g.addColorStop(1, "#ffd9ec");
+    // Myk, bred fjær: dunete kant, svak skygge, en tynn fjærstilk og fine fjærstråler.
+    x.shadowColor = "rgba(150,60,110,.35)"; x.shadowBlur = 3; x.shadowOffsetY = 1;
+    x.fillStyle = g; x.beginPath(); x.moveTo(-l / 2, 0); x.bezierCurveTo(-l * .3, -l * .42, l * .25, -l * .4, l / 2, -l * .04); x.bezierCurveTo(l * .2, l * .3, -l * .3, l * .3, -l / 2, 0); x.fill();
+    x.shadowColor = "transparent";
+    x.strokeStyle = "rgba(255,255,255,.9)"; x.lineWidth = .5; for (let k = -3; k <= 3; k++) { x.beginPath(); x.moveTo(k * l * .11, 0); x.quadraticCurveTo(k * l * .11 + l * .06, -l * .14, k * l * .11 + l * .1, -l * .26); x.stroke(); x.beginPath(); x.moveTo(k * l * .11, 0); x.quadraticCurveTo(k * l * .11 + l * .05, l * .1, k * l * .11 + l * .09, l * .19); x.stroke(); }
+    x.strokeStyle = "rgba(190,110,150,.8)"; x.lineWidth = .9; x.beginPath(); x.moveTo(-l / 2 - 3, l * .04); x.quadraticCurveTo(0, -l * .02, l / 2, -l * .04); x.stroke();
+    x.restore(); };
   const steg = t => {
     if (!spill?.peace || spill.slutt) { glassRAF = 0; return; }
     const frist = Math.round(tidsfrist(spill.brett, spill.n) * PEACE_TID), s = sekunder(), u = spill.start ? Math.min(1, s / frist) : 0, igjen = frist - s;
-    x.setTransform(dpr, 0, 0, dpr, 0, 0); x.clearRect(0, 0, 30, 48);
-    if (spill.start && igjen <= 30) { const a = .35 + .25 * Math.sin(t / 700); const g = x.createRadialGradient(15, 24, 2, 15, 24, 24); g.addColorStop(0, `rgba(255,140,200,${a})`); g.addColorStop(1, "rgba(255,140,200,0)"); x.fillStyle = g; x.fillRect(0, 0, 30, 48); }
-    const glass = () => { x.beginPath(); x.moveTo(6, 5); x.bezierCurveTo(6, 17, 13, 20, 14, 24); x.bezierCurveTo(13, 28, 6, 31, 6, 43); x.lineTo(24, 43); x.bezierCurveTo(24, 31, 17, 28, 16, 24); x.bezierCurveTo(17, 20, 24, 17, 24, 5); x.closePath(); };
-    x.save(); glass(); x.clip();
-    x.fillStyle = "rgba(255,255,255,.18)"; x.fillRect(0, 0, 30, 48);
-    const sand = "#e9c98f";
-    // Øverst: sanden synker. Nederst: haugen vokser.
-    const top = 6 + 17 * u; x.fillStyle = sand; x.fillRect(0, top, 30, 23 - top);
-    const h = 18 * u; x.beginPath(); x.moveTo(5, 43); x.quadraticCurveTo(15, 43 - h * 1.6, 25, 43); x.fill();
-    if (spill.start && u < 1) { x.fillRect(14.4, 23, 1.2, 20 - h * .8); if (Math.random() < .6) korn.push({ y: 24, v: 20 + Math.random() * 20 }); }
-    for (const k of korn) { k.y += k.v / 60; x.fillRect(14.2 + Math.random() * 1.6, k.y, 1, 1); }
-    while (korn.length && korn[0].y > 42 - h) korn.shift();
-    x.restore();
-    x.strokeStyle = "rgba(255,255,255,.85)"; x.lineWidth = 1.2; glass(); x.stroke();
-    x.fillStyle = "#c98fb0"; x.fillRect(4, 2, 22, 3); x.fillRect(4, 43, 22, 3);
+    x.setTransform(dpr, 0, 0, dpr, 0, 0); x.clearRect(0, 0, 110, 66);
+    if (spill.start && igjen <= 30) { const a = .3 + .2 * Math.sin(t / 900); const g = x.createRadialGradient(55, 48, 2, 55, 48, 52); g.addColorStop(0, `rgba(255,140,200,${a})`); g.addColorStop(1, "rgba(255,140,200,0)"); x.fillStyle = g; x.fillRect(0, 0, 110, 66); }
+    // Fjærene øverst i haugen blåser først.
+    const igjenAntall = Math.ceil(N * (1 - u));
+    for (let j = N - 1; j >= igjenAntall; j--) { const f = fjær[j]; if (!f.fly) f.fly = { x: f.x, y: f.y, vx: 10 + Math.random() * 14, vy: -8 - Math.random() * 8, a: f.a, liv: 1 }; }
+    for (const f of fjær) { if (f.fly) { const q = f.fly; if (q.liv <= 0) continue; q.x += q.vx / 60; q.y += (q.vy + Math.sin(t / 300 + f.fase) * 10) / 60; q.a += Math.sin(t / 250 + f.fase) * .03; q.liv -= 1 / 150; tegnFjær(q.x, q.y, q.a, f.l, Math.max(0, q.liv)); }
+      else tegnFjær(f.x + Math.sin(t / 1400 + f.fase) * .6, f.y, f.a + Math.sin(t / 1600 + f.fase) * .04, f.l, 1); }
     glassRAF = requestAnimationFrame(steg);
   };
   glassRAF = requestAnimationFrame(steg);
@@ -2329,7 +2333,7 @@ function peaceBg(i) {
     const x = c.getContext("2d"); x.setTransform(dpr, 0, 0, dpr, 0, 0); const tt = t / 1000;
     const himmel = (stopp) => { const g = x.createLinearGradient(0, 0, 0, H); stopp.forEach(([o, f]) => g.addColorStop(o, f)); x.fillStyle = g; x.fillRect(0, 0, W, H); };
     const stjernehimmel = () => { for (const s of stjerner) { x.globalAlpha = .45 + .45 * Math.sin(tt * 1.3 + s.f); x.fillStyle = "#fff"; x.beginPath(); x.arc(s.x * W, s.y * H, s.r, 0, 7); x.fill(); } x.globalAlpha = 1; };
-    const sivrad = (bunn, farge, skala) => { x.strokeStyle = farge; x.lineCap = "round"; for (const s of siv) { const bx = s.x * W, by = bunn, h = s.h * H * skala, sv = Math.sin(tt * (.9 + s.b * .4) + s.f) * h * .12;
+    const sivrad = (bunn, farge, skala) => { x.strokeStyle = farge; x.lineCap = "round"; for (const s of siv) { const bx = s.x * W, by = bunn, h = s.h * H * skala, sv = Math.sin(tt * (.35 + s.b * .15) + s.f) * h * .07;
       x.lineWidth = 1.6 * s.b; x.beginPath(); x.moveTo(bx, by); x.quadraticCurveTo(bx + sv * .4, by - h * .6, bx + sv, by - h); x.stroke();
       if (s.b > 1.2) { x.fillStyle = farge; x.beginPath(); x.ellipse(bx + sv, by - h - 6, 2.5, 8, sv * .01, 0, 7); x.fill(); } } };
     if (scene === "strand") {
@@ -2355,6 +2359,14 @@ function peaceBg(i) {
     bgRAF = requestAnimationFrame(steg);
   };
   bgRAF = requestAnimationFrame(steg);
+}
+// Er bildet mørkt langs kanten? Da får det hvit strek innerst og svart utenfor (som på foto.no i gamle dager).
+function settBildeKant(img) {
+  let mork = false;
+  try { const c = document.createElement("canvas"); c.width = c.height = 32; const x = c.getContext("2d"); x.drawImage(img, 0, 0, 32, 32); const d = x.getImageData(0, 0, 32, 32).data; let sum = 0, n = 0;
+    for (let i = 0; i < 32; i++) for (const [px, py] of [[i, 0], [i, 31], [0, i], [31, i]]) { const o = (py * 32 + px) * 4; sum += (d[o] * .3 + d[o + 1] * .59 + d[o + 2] * .11) / 255; n++; }
+    mork = sum / n < .28; } catch {}
+  const r = $("ramme"); r.style.setProperty("--kant1", mork ? "#fff" : "#111"); r.style.setProperty("--kant2", mork ? "#111" : "transparent");
 }
 function tikk() {
   visKraftLinje();
