@@ -628,7 +628,7 @@ body.lys #modusDeal{--farge:#0f8f6c;--glod:15,143,108}
   <div class="regel">Everything counts: Game, Peace, Scrub it 1P and 2P, every board, every level, every collection. Each board list gives up to 100 points (a Scrub it list up to 1,000): #1 gets them all, the rest their share of the top score.</div>
   <div class="sammen" id="spillere"><p class="liten">Loading players …</p></div>
   <p class="kreditt">© 2001–2026 Tarjei Krogh. All photography, music and art. <a href="https://kroghx.com" target="_blank" rel="noopener">kroghx.com</a></p>
-  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 1.42<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
+  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 1.43<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
 </section>
 
 <div class="ark" id="tidUtArk" hidden style="z-index:200001">
@@ -6060,6 +6060,7 @@ function shVapenSteg(dt) {
 function shVapenTegn(x, f, s) {
   const v = s.vapen, t = s.tid, fig = s.figurer || { m: [], b: [] };
   if (s.finale) shFinaleTegn(x, f, s);
+  if (s.fyr) shFyrTegn(x, f, s);
   // BEAM: en sverm av selvlysende partikler (stjernestøv og alger) som strømmer opp fra flipperne, med glorier.
   if (v?.type === "laser" && v.stråler && s.tid < v.slutt) {
     const dt = Math.min(.05, Math.max(0, t - (s.beamSist ?? t))); s.beamSist = t; const P = s.beamP = s.beamP || [], y0 = SH_PY - .02;
@@ -7018,8 +7019,11 @@ function shFerdig() {
   if (tidBonus) trinn.push({ navn: "TIME LEFT " + fmt(tidIgjen), verdi: tidBonus });
   if (bonus) trinn.push({ navn: "SPARE BUBBLES", verdi: bonus });
   if (trekk) trinn.push({ navn: "POWER-UPS −" + Math.round(trekk * 100) + " %", verdi: s.poeng - førTrekk });
-  s.baller = []; s.fugl = null; s.frø = []; s.kapsler = []; s.smaa = []; s.skudd = []; s.galaga = null; s.sabot = []; s.orm = null; s.ormer = []; s.ormFase = false; s.skumFlekk = []; s.tripB = []; s.tripS = []; s.sug = []; s.syre = []; s.tripP = []; s.smaaBomber = []; s.smell = []; s.krabbe = null; s.hopper = null; s.brentFlekk = []; s.vapen = null; s.missiler = []; s.miniAliens = []; s.laserBall = null;
+  const baller0 = s.baller.slice(); s.baller = []; s.fugl = null; s.frø = []; s.kapsler = []; s.smaa = []; s.skudd = []; s.galaga = null; s.sabot = []; s.orm = null; s.ormer = []; s.ormFase = false; s.skumFlekk = []; s.tripB = []; s.tripS = []; s.sug = []; s.syre = []; s.tripP = []; s.smaaBomber = []; s.smell = []; s.krabbe = null; s.hopper = null; s.brentFlekk = []; s.vapen = null; s.missiler = []; s.miniAliens = []; s.laserBall = null;
   for (const k of s.klosser) k.glans = 0;
+  // Overgangen: ikke tomt med en gang. Boblene sprekker med glitter, og fyrverkeri skytes opp fra flipperne.
+  for (const b of baller0) { shStov(b.x, b.y, 34, "220,240,255", .3); for (let n = 0; n < 6; n++) shStjerne(b.x + (Math.random() - .5) * .05, b.y + (Math.random() - .5) * .05, .8); }
+  s.fyr = { t: 0, raketter: Array.from({ length: s.toP ? 0 : 7 }, (_, j) => ({ x: .15 + Math.random() * .7, y: SH_PY - .02, mål: SH_TOPP + .2 + Math.random() * .4, t: -j * .18 - Math.random() * .08, vy: -2 - Math.random() * .4, vx: (Math.random() - .5) * .12, farge: ["255,214,90", "255,111,216", "111,243,255", "255,255,255", "160,255,140"][j % 5] })), gnist: [] };
   magiStart(s.kunst || s.img, { x: shG.fx, y: shG.fy + SH_TOPP * shG.fw, w: shG.fw, h: shG.fw }, 3.4);
   feiringStart(s.toP ? s.kunst : s.img, { x: shG.fx, y: shG.fy + SH_TOPP * shG.fw, w: shG.fw, h: shG.fw }, s.toP ? "" : BRETT[s.i].id, 3.2);
   ferdigLyd(); dempMusikk(); s.glimt = s.tid; s.drypp = []; s.skum = []; s.klatter = []; s.kantFall = [];
@@ -7287,6 +7291,27 @@ function shFinaleSteg(s, dt) {
     for (let j = 0; j < 6; j++) s.smuler.push({ x: mx + (Math.random() - .5) * k.w, y: my, vx: (Math.random() - .5) * .06, vy: Math.random() * .04, r: .0015 + Math.random() * .003, tone: Math.random(), stor: j === 0, støv: j > 3, rot: Math.random() * 6, t: 0 });
     if (Math.random() < .5) s.drypp.push({ x: mx, y: k.y, liv: 1, renn: true, budsjett: 0, t: 0, hale: [] });
     shKlatt(mx, my, .004 + Math.random() * .005, .1); shTreff(k, k.liv, "syre"); }
+}
+// Fyrverkeriet når brettet er ferdig: raketter med hale som smeller i stjerneregn.
+function shFyrTegn(x, f, s) {
+  const F = s.fyr; if (!F) return; const nå = performance.now(), dt = Math.min(.05, Math.max(0, (nå - (F.sist ?? nå)) / 1000)); F.sist = nå; F.t += dt;
+  x.save(); x.globalCompositeOperation = "lighter"; x.lineCap = "round";
+  for (const r of F.raketter) {
+    // Blaffet når den smeller: et kort, mykt lys.
+    if (r.smalt && r.blaff < .5) { r.blaff += dt; const a = 1 - r.blaff / .5, rr = (.06 + .1 * r.blaff) * f, g = x.createRadialGradient(r.x * f, r.y * f, 0, r.x * f, r.y * f, rr); g.addColorStop(0, `rgba(255,255,255,${.7 * a})`); g.addColorStop(.3, `rgba(${r.farge},${.45 * a})`); g.addColorStop(1, `rgba(${r.farge},0)`); x.fillStyle = g; x.fillRect(r.x * f - rr, r.y * f - rr, rr * 2, rr * 2); }
+    r.t += dt; if (r.t < 0 || r.smalt) continue;
+    r.x += r.vx * dt; r.y += r.vy * dt; r.vy *= 1 - dt * .25;
+    x.strokeStyle = `rgba(${r.farge},.85)`; x.lineWidth = Math.max(2, .005 * f); x.beginPath(); x.moveTo(r.x * f, r.y * f); x.lineTo((r.x - r.vx * .05) * f, (r.y - r.vy * .08) * f); x.stroke();
+    if (r.y <= r.mål) { r.smalt = true; r.blaff = 0; const n = 85;
+      for (let k = 0; k < n; k++) { const a = k / n * 6.283 + Math.random() * .1, v = .32 + Math.random() * .42; F.gnist.push({ x: r.x, y: r.y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, liv: 1, varighet: 1.1 + Math.random() * .8, farge: Math.random() < .2 ? "255,255,255" : r.farge }); }
+      if (lydPa) { tone(140, 0, .25, .06, "sine", .9, .6); for (let k = 0; k < 4; k++) tone(1400 + Math.random() * 1600, .05 + k * .05, .05, .012, "square", .4, .8); } }
+  }
+  for (const g of F.gnist) { g.liv -= dt / g.varighet; if (g.liv <= 0) continue; g.vx *= 1 - dt * 1.6; g.vy = g.vy * (1 - dt * 1.6) + .22 * dt; g.x += g.vx * dt; g.y += g.vy * dt;
+    const a = Math.min(1, g.liv * 1.4), r = Math.max(1.5, .006 * f * (.5 + g.liv));
+    x.strokeStyle = `rgba(${g.farge},${.55 * a})`; x.lineWidth = r; x.beginPath(); x.moveTo(g.x * f, g.y * f); x.lineTo((g.x - g.vx * .04) * f, (g.y - g.vy * .04) * f); x.stroke();
+    x.fillStyle = `rgba(${g.farge},${a})`; x.beginPath(); x.arc(g.x * f, g.y * f, r * .6, 0, 7); x.fill(); }
+  F.gnist = F.gnist.filter(g => g.liv > 0); x.restore();
+  if (F.t > 6) s.fyr = null;
 }
 function shFinaleTegn(x, f, s) {
   const F = s.finale; if (!F || F.t > 2.8) return;
