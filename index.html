@@ -478,6 +478,9 @@ body:has(.resultat.vis) #spill .linje{opacity:0;pointer-events:none;transition:o
 .res-bonus.minus{color:#ff8a7a}
 .sh-liv{color:var(--signal);letter-spacing:.15em;font-size:12px}
 .sh-ut{border:1px solid var(--strek);border-radius:6px;padding:5px 10px;font-size:12px;color:var(--demp);background:var(--rom)}
+.sh-lyd{display:inline-flex;align-items:center;justify-content:center;padding:4px 7px;margin-right:5px}
+.sh-lyd svg{width:17px;height:17px;display:block}
+@media (max-width:480px){.sh-venstre b{white-space:nowrap;font-size:12px;letter-spacing:.05em}.sh-venstre{flex:1 1 60px}.sh-poeng{font-size:17px}.sh-liv{letter-spacing:.05em;font-size:10px}.sh-tid{font-size:13px}.sh-hoyre{gap:7px}.sh-ut{padding:5px 7px}.sh-lyd{padding:4px 5px;margin-right:4px}.sh-lyd svg{width:15px;height:15px}}
 .sh-melding{position:absolute;left:50%;top:58%;transform:translate(-50%,-50%);z-index:3;width:min(340px,calc(100% - 32px));text-align:center;
   display:flex;flex-direction:column;gap:6px;padding:14px 16px;border-radius:12px;background:rgba(20,19,18,.82);border:1px solid var(--strek);pointer-events:none}
 .sh-melding.aktiv{pointer-events:auto;background:var(--flate);top:50%}
@@ -630,7 +633,7 @@ body.lys #modusDeal{--farge:#0f8f6c;--glod:15,143,108}
   <div class="regel">Everything counts: Game, Peace, Scrub it 1P and 2P, every board, every level, every collection. Each board list gives up to 100 points (a Scrub it list up to 1,000): #1 gets them all, the rest their share of the top score.</div>
   <div class="sammen" id="spillere"><p class="liten">Loading players …</p></div>
   <p class="kreditt">© 2001–2026 Tarjei Krogh. All photography, music and art. <a href="https://kroghx.com" target="_blank" rel="noopener">kroghx.com</a></p>
-  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 1.49<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
+  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 1.50<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
 </section>
 
 <div class="ark" id="tidUtArk" hidden style="z-index:200001">
@@ -743,7 +746,7 @@ body.lys #modusDeal{--farge:#0f8f6c;--glod:15,143,108}
 <section id="shatter" class="skjerm" hidden aria-label="Scrub">
   <div class="sh-hud" id="shHud">
     <div class="sh-venstre"><b>SCRUB IT</b><span id="shNiva"></span><span class="spor" id="shSpor"></span></div>
-    <div class="sh-hoyre"><span class="sh-tid" id="shTid" aria-label="Time left"></span><span class="sh-liv" id="shLiv" aria-label="Spare balls"></span><span class="sh-poeng" id="shPoeng">0</span><button class="sh-ut" id="shUt">Menu</button></div>
+    <div class="sh-hoyre"><span class="sh-tid" id="shTid" aria-label="Time left"></span><span class="sh-liv" id="shLiv" aria-label="Spare balls"></span><span class="sh-poeng" id="shPoeng">0</span><button class="sh-ut sh-lyd" id="shLyd" aria-label="Sound" aria-pressed="true"></button><button class="sh-ut" id="shUt">Menu</button></div>
   </div>
   <canvas id="shCanvas"></canvas>
   <div class="sh-melding" id="shMelding" hidden><b id="shTittel"></b><span id="shTekst"></span><div class="sh-liste" id="shListe" hidden></div><div class="knapper" id="shKnapper"></div></div>
@@ -1792,7 +1795,10 @@ function visSpor(id) {
     else el.textContent = "♪ " + m.tittel;
   }
 }
-function visLydKnapp() { const k = $("lydKnapp"); k.textContent = $("veggLyd").textContent = lydPa ? "Sound on" : "Sound off"; k.setAttribute("aria-pressed", String(lydPa)); }
+function visLydKnapp() { const k = $("lydKnapp"); k.textContent = $("veggLyd").textContent = lydPa ? "Sound on" : "Sound off"; k.setAttribute("aria-pressed", String(lydPa));
+  // SCRUB IT: en liten høyttaler ved siden av Menu, med eller uten lydbølger.
+  const sk = $("shLyd"); if (sk) { sk.setAttribute("aria-pressed", String(lydPa)); sk.setAttribute("aria-label", lydPa ? "Sound on" : "Sound off");
+    sk.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor" stroke="none"/>' + (lydPa ? '<path d="M16.5 8.5a5 5 0 0 1 0 7"/><path d="M19 6a8.5 8.5 0 0 1 0 12"/>' : '<path d="M17 9l5 6"/><path d="M22 9l-5 6"/>') + '</svg>'; } }
 $("lydKnapp").onclick = () => { lydPa = !lydPa; try { localStorage.setItem("sm-lyd", lydPa ? "på" : "av"); } catch {} visLydKnapp(); if (lydPa) { plingLyd(0); if (spill) spillMusikk(BRETT[spill.brett].id); låsOppLyd(); } else { stoppPad(); stoppMusikk(.3); if (stilleLyd) stilleLyd.pause(); } visLydStatus(); };
 // Trykk på lydstatusen i menyen for å slå lyden av og på.
 $("lydStatus").onclick = () => $("lydKnapp").click();
@@ -2727,7 +2733,7 @@ function tikk() {
 function gjestekort(n) {
   const antall = n <= 25 ? 3 + (Math.random() < .5) : n <= 49 ? 5 + (Math.random() < .5) : 6 + (Math.random() < .5);
   // Lynet (brann) er med i 3 av 4 spill. Resten trekkes fra alle typene, uten å gjenta før alle er brukt.
-  const pool = () => ["tilt", "break", "stov", "ketchup", "lyn"].sort(() => Math.random() - .5);
+  const pool = () => ["tilt", "break", "stov", "ketchup", "lyn", "katt"].sort(() => Math.random() - .5);
   let typer = Math.random() < .75 ? ["lyn"] : []; while (typer.length < antall) typer.push(...pool().filter(t => t !== "lyn" || !typer.includes("lyn")));
   const liste = typer.slice(0, antall).sort(() => Math.random() - .5).map((t, j) => ({ t, ved: .08 + (j + Math.random() * .8) * (.74 / antall) }));
   // Speilvending i ca. 40 % av spillene, og bare én av typene.
@@ -2749,8 +2755,9 @@ function hendelseSjekk() {
   if (h.t === "break" && sp.lagt < 4) return;
   if (h.t === "lyn" && sp.lagt < 6) return;
   if (h.t === "vokse" && sp.lagt < 5) return;
+  if (h.t === "katt" && sp.lagt < 4) return;
   sp.hendelser.shift(); sp.sistHendelse = performance.now();
-  if (h.t === "tilt") tilt(true); else if (h.t === "break") puzzleBreak(); else if (h.t === "speilX" || h.t === "speilY") speilStart(h.t === "speilX" ? "x" : "y"); else if (h.t === "vokse") vokseBrikke();  else if (h.t === "stov") støvstorm(); else if (h.t === "ketchup") ketchup(); else lynnedslag();
+  if (h.t === "katt") kattBesøk(); else if (h.t === "tilt") tilt(true); else if (h.t === "break") puzzleBreak(); else if (h.t === "speilX" || h.t === "speilY") speilStart(h.t === "speilX" ? "x" : "y"); else if (h.t === "vokse") vokseBrikke();  else if (h.t === "stov") støvstorm(); else if (h.t === "ketchup") ketchup(); else lynnedslag();
 }
 function lynTid(brukt, frist) {
   const sp = spill; if (!sp || sp.n !== 49 || !sp.start || sp.slutt || sp.tapt || sp.brann || sp.speil) return;
@@ -2848,7 +2855,7 @@ function smussStart(jobb, sek = 70) {
   if (!smussRAF) { smussSist = performance.now(); smussRAF = requestAnimationFrame(smussSteg); }
 }
 function smussStopp() {
-  cancelAnimationFrame(smussRAF); smussRAF = 0; smussJobber.length = 0; klut = null; tørkSist.clear();
+  cancelAnimationFrame(smussRAF); smussRAF = 0; smussJobber.length = 0; klut = null; tørkSist.clear(); kattSlutt();
   for (const id of ["smussLag", "smussFx"]) { const c = $(id); if (c) c.getContext("2d").clearRect(0, 0, c.width, c.height); }
   if (spill) spill.smussTil = 0;
 }
@@ -2942,6 +2949,93 @@ function støvstorm() {
   });
 }
 // KETCHUP: en flaske dukker opp over brettet og spruter tre store slurper utover.
+// ---------- KATTEN: kommer inn fra kanten, legger poten over brikkene og slår løse brikker unna ----------
+// Poten og hodet er fra Kroghs eget kattebilde (samling 03, bilde 10). Trykk på katten, så trekker den seg unna og kommer igjen et annet sted.
+let kattPote = null, kattPoteLaster = false;
+function hentKattPote() {
+  if (kattPote || kattPoteLaster) return kattPote; kattPoteLaster = true;
+  const img = new Image(); img.crossOrigin = "anonymous";
+  img.onload = () => {
+    const u0 = 0, u1 = .37, v0 = 0, v1 = .64, W = 260, H = Math.round(W * (v1 - v0) / (u1 - u0)), iw = img.naturalWidth, ih = img.naturalHeight;
+    const c = document.createElement("canvas"); c.width = W; c.height = H; const x = c.getContext("2d");
+    x.drawImage(img, u0 * iw, v0 * ih, (u1 - u0) * iw, (v1 - v0) * ih, 0, 0, W, H);
+    // Masken: rosa hud skilles fra vinduer (hvite og blå) og den mørke genseren. Hånda nede til høyre og kanten mot kattens øre tas bort.
+    const m = x.getImageData(0, 0, W, H), d = m.data, a = new Float32Array(W * H);
+    for (let j = 0; j < W * H; j++) { const r = d[j * 4], g = d[j * 4 + 1], b = d[j * 4 + 2], u = (j % W) / W * (u1 - u0) + u0, v = Math.floor(j / W) / H * (v1 - v0) + v0;
+      let s = Math.min(1, Math.max(0, (r - b - 14) / 26)) * Math.min(1, Math.max(0, (r - 60) / 40)) * (b > r ? 0 : 1);
+      if (u > .26 && v > .57) s = 0; if (u > .35 && v > .3) s = 0;
+      s *= Math.min(1, Math.max(0, (v1 - v) / .1));
+      a[j] = s; }
+    const mk = document.createElement("canvas"); mk.width = W; mk.height = H; const mx = mk.getContext("2d"), md = mx.createImageData(W, H);
+    for (let j = 0; j < W * H; j++) { md.data[j * 4 + 3] = Math.round(a[j] * 255); } mx.putImageData(md, 0, 0);
+    const mb = document.createElement("canvas"); mb.width = W; mb.height = H; const bx = mb.getContext("2d"); bx.filter = "blur(1.2px)"; bx.drawImage(mk, 0, 0);
+    x.globalCompositeOperation = "destination-in"; x.drawImage(mb, 0, 0);
+    kattPote = c;
+  };
+  img.src = SAMLINGER[2].mappe + "10.jpg";
+  return null;
+}
+function kattBesøk() {
+  const sp = spill; if (!sp || !geo || sp.katt) return;
+  hentKattHode(); hentKattPote();
+  sp.katt = { besøk: 0, fase: "vent", t: 0, vent: .6, slagT: 2.2, slag: 0, totalt: 0 };
+  banner("THE CAT WANTS TO HELP", "TAP IT TO MOVE IT", "#ffb3d9", 4600, false, .9);
+  let sperre = $("kattSperre"); if (!sperre) { sperre = document.createElement("div"); sperre.id = "kattSperre"; sperre.style.cssText = "position:fixed;z-index:257;display:none;touch-action:none"; document.body.appendChild(sperre);
+    sperre.addEventListener("pointerdown", e => { e.preventDefault(); e.stopPropagation(); kattJag(); }); }
+  smussStart((dt, t, fx) => kattSteg(dt, fx), 0);
+}
+function kattJag() {
+  const K = spill?.katt; if (!K || K.fase !== "ligger" && K.fase !== "inn") return;
+  K.fase = "ut"; K.t = 0;
+  if (lydPa) { tone(760, 0, .14, .03, "triangle", .7, .5); tone(560, .1, .28, .03, "triangle", .7, .5); tone(380, .3, .2, .015, "sine", .7, .5); }
+}
+function kattSted(sp) {
+  // Velg en kant med plass utenfor brettet til hodet. Nede er det nesten alltid plass.
+  const { x0, y0, bredde, hoyde } = geo, plass = { b: innerHeight - (y0 + hoyde), t: y0 - 60, v: x0, h: innerWidth - (x0 + bredde) }, cell = Math.max(geo.bw, geo.bh);
+  const sider = Object.keys(plass).filter(k => plass[k] > cell * 1.6); const side = sider.length ? sider[(Math.random() * sider.length) | 0] : "b";
+  // Hodet ligger til høyre for poten (sett fra katten), så poten holdes litt unna det hjørnet, ellers havner hodet utenfor skjermen.
+  return { side, langs: side === "t" || side === "v" ? .55 + Math.random() * .3 : .15 + Math.random() * .3 };
+}
+function kattSteg(dt, fx) {
+  const sp = spill, K = sp?.katt; if (!K || !geo || sp.slutt || sp.tapt) { kattSlutt(); return false; }
+  const pote = kattPote, hode = kattHode, { x0, y0, bredde, hoyde } = geo, cell = Math.max(geo.bw, geo.bh);
+  K.t += dt; K.totalt += dt;
+  if (K.fase === "vent") { if (K.t > K.vent && pote && hode) { if (K.besøk >= 3 || K.totalt > 50) { banner("THE CAT GOT BORED", null, "#ffb3d9", 2400, true); kattSlutt(); return false; }
+      Object.assign(K, kattSted(sp), { fase: "inn", t: 0, slagT: 2.2 + Math.random() }); K.besøk++; } else return true; }
+  // Lokalt: origo på brettkanten, «inn» er oppover (−y).
+  const vinkel = { b: 0, t: Math.PI, v: Math.PI / 2, h: -Math.PI / 2 }[K.side];
+  const ex = K.side === "b" || K.side === "t" ? x0 + bredde * K.langs : K.side === "v" ? x0 : x0 + bredde, ey = K.side === "v" || K.side === "h" ? y0 + hoyde * K.langs : K.side === "b" ? y0 + hoyde : y0;
+  const pw = Math.min(cell * 2.8, Math.min(bredde, hoyde) * .34), ph = pw * pote.height / pote.width, inne = ph * .78;
+  let fram = 1; if (K.fase === "inn") { const u = Math.min(1, K.t / .7); fram = 1 - Math.pow(1 - u, 3); if (u >= 1) { K.fase = "ligger"; K.t = 0; } }
+  if (K.fase === "ut") { const u = Math.min(1, K.t / .45); fram = 1 - u * u; if (u >= 1) { K.fase = "vent"; K.t = 0; K.vent = 2 + Math.random() * 2.5; $("kattSperre").style.display = "none"; return true; } }
+  if (K.fase === "ligger" && K.t > 13) { K.fase = "ut"; K.t = 0; }
+  // Slaget: poten skyves fram og tilbake, og løse brikker under den blir slått unna.
+  let slag = 0;
+  if (K.fase === "ligger") { K.slagT -= dt; if (K.slagT <= 0) { K.slagT = 2.4 + Math.random() * 1.6; K.slag = .001; }
+    if (K.slag > 0) { K.slag += dt; slag = Math.sin(Math.min(1, K.slag / .35) * Math.PI);
+      if (K.slag > .17 && !K.slått) { K.slått = true; const [cx, cy] = kattTilSkjerm(ex, ey, vinkel, 0, -inne * .72);
+        const under = sp.biter.filter(b => !b.ferdig && !b.iBunke && !b.lander && !b.el.classList.contains("drar")).filter(b => { const r = b.el.getBoundingClientRect(); return Math.hypot(r.left + r.width / 2 - cx, r.top + r.height / 2 - cy) < pw * .75; });
+        for (const b of under.slice(0, 2)) kast(b);
+        if (lydPa) tone(200, 0, .07, .03, "sine", .8, .2); }
+      if (K.slag > .35) { K.slag = 0; K.slått = false; } } }
+  const dyp = (1 - fram) * (inne + ph * .3);
+  fx.save(); fx.translate(ex, ey); fx.rotate(vinkel);
+  // Hodet titter inn ved siden av poten, mest utenfor brettet.
+  const hb = pw * 1.25, hh = hb * hode.height / hode.width, hx = pw * .95, hy = hh * .2 + (1 - fram) * hh * .9;
+  fx.save(); fx.translate(hx, hy); fx.rotate(-.12 + Math.sin(K.totalt * 1.3) * .05); fx.shadowColor = "rgba(0,0,0,.35)"; fx.shadowBlur = hb * .08; fx.shadowOffsetY = hb * .04;
+  fx.globalAlpha = Math.min(1, fram * 1.5); fx.drawImage(hode, -hb * .5, -hh * .55, hb, hh); fx.restore();
+  // Poten: underarmen kommer fra utsiden, tærne ligger på brikkene.
+  fx.save(); fx.translate(0, dyp - slag * cell * .45); fx.shadowColor = "rgba(0,0,0,.4)"; fx.shadowBlur = pw * .12; fx.shadowOffsetY = pw * .06 + slag * pw * .08;
+  fx.drawImage(pote, -pw / 2, -inne, pw, ph); fx.restore();
+  fx.restore();
+  // Sperra: der katten ligger, kan du ikke ta brikker. Trykk der, så går den.
+  const sperre = $("kattSperre");
+  if (K.fase === "ligger" || K.fase === "inn") { const pkt = [[-pw / 2, -inne], [pw / 2, -inne], [pw / 2, 0], [-pw / 2, 0], [hx - hb / 2, hy - hh * .5], [hx + hb / 2, hy + hh * .4]].map(([a, b]) => kattTilSkjerm(ex, ey, vinkel, a, b));
+    const xs = pkt.map(p => p[0]), ys = pkt.map(p => p[1]); Object.assign(sperre.style, { display: "block", left: Math.min(...xs) + "px", top: Math.min(...ys) + "px", width: Math.max(...xs) - Math.min(...xs) + "px", height: Math.max(...ys) - Math.min(...ys) + "px" }); }
+  return true;
+}
+function kattTilSkjerm(ex, ey, v, a, b) { return [ex + a * Math.cos(v) - b * Math.sin(v), ey + a * Math.sin(v) + b * Math.cos(v)]; }
+function kattSlutt() { if (spill) spill.katt = null; const s = $("kattSperre"); if (s) s.style.display = "none"; }
 function ketchup() {
   const sp = spill; if (!sp || !geo) return;
   banner("MARTHA MISSED HER SPAGHETTI!", "KETCHUP EVERYWHERE · WIPE IT OFF", "#ff5a4a", 5200, false, .92);
@@ -4082,6 +4176,9 @@ function tilMeny() {
 $("utKnapp").onclick = tilMeny;
 $("veggUt").onclick = tilMeny;
 $("veggLyd").onclick = () => $("lydKnapp").click();
+$("shLyd").onclick = e => { e.stopPropagation(); $("lydKnapp").click(); if (lydPa && sh && !spill) spillMusikk(BRETT[sh.i].id); };
+$("shLyd").addEventListener("pointerdown", e => e.stopPropagation());
+visLydKnapp();
 $("tilbakeKnapp").onclick = () => (ark?.meny || tilMeny)();
 $("nesteKnapp").onclick = () => ark?.neste?.();
 addEventListener("resize", () => { if (spill) oppsett(); });
@@ -4117,9 +4214,9 @@ const KAPSLER = [
 const SH_INN = {
   kapsel: { W: 0, S: 0, M: 1, B: 1, Z: 2, A: 3, K: 3, J: 4, T: 5, R: 5, O: 6, I: 7, "+": 8 },
   kjøp: { tilt: 0, orm: 2, magnet: 4, trip: 6, bombe: 8, missil: 10, laser: 20, alien: 30, boble: 0 },
-  fiende: { levende: 1, galaga: 2, sabot: 3, krabbe: 4, boss: 6, hopper: 7, fugl: 9, snø: 5 } };
+  fiende: { levende: 1, galaga: 2, sabot: 3, krabbe: 4, boss: 6, hopper: 7, fugl: 9, snø: 5, mørke: 4, deler: 3 } };
 const SH_NYNAVN = { kjøp: { tilt: "TILT", orm: "WORM", magnet: "VACUMA", trip: "TRIP", bombe: "BOMBS", missil: "MISSILES", laser: "BEAM", alien: "ALIEN", boble: "EXTRA BUBBLE" },
-  fiende: { levende: "THE ART WAKES UP", galaga: "SPACESHIPS", sabot: "SABOTEURS", krabbe: "MUD CRAWLER", boss: "THE BOSS", hopper: "PARATROOPER", fugl: "SEED BIRD", snø: "SNOW" } };
+  fiende: { levende: "THE ART WAKES UP", galaga: "SPACESHIPS", sabot: "SABOTEURS", krabbe: "MUD CRAWLER", boss: "THE BOSS", hopper: "PARATROOPER", fugl: "SEED BIRD", snø: "SNOW", mørke: "BLACKOUT", deler: "PINBALL PARTS" } };
 function shHar(type, navn, i = sh?.i ?? 0) { return BETA || aktiv * 9 + i >= (SH_INN[type][navn] ?? 0); }
 // Velger en power-up blant dem som er åpnet (vektet etter hvor vanlige de er, eller helt jevnt).
 function shKapselValg(vektet = true) {
@@ -4470,7 +4567,7 @@ async function shatterStart(i, poeng = 0, liv = null) {
   for (const k of klosser) if (k.c >= svakC && k.c < svakC + 3 && k.r >= SH_RAD - 6 && k.liv > 1) { k.liv = 1; k.maks = 1; k.hardLeire = false; }
   // Rolig start, så farten øker litt for hvert nivå og litt underveis.
   const fart = (0.5 + Math.min(niva, 14) * 0.03) * .98 * .9; // 10 % roligere (Krogh): skal være deilig, ikke stress.
-  sh = { niva, i, img, klosser, igjen: klosser.length, poeng, liv, plasser: shPlasser(i), fart, grunnfart: fart, maksFart: Math.min(1.3, fart + 0.61),
+  sh = { niva, i, img, klosser, igjen: klosser.length, poeng, liv, plasser: shPlasser(i), gull: shMotivFunnet(aktiv) >= 9, fart, grunnfart: fart, maksFart: Math.min(1.3, fart + 0.61),
     padX: 0.5, padW: 0.26, baller: [], kapsler: [], tekster: [], smaa: [], stov: [], stavSkitt: [], skudd: [], skuddT: 0, lamper: 0, galaga: null, galagaPause: 18, wingmen: [], galagaKommet: false, padMål: null, sopp: 0, soppSide: -1, padY: .7, soppOverg: 1, soppTilbake: 1, bytte: null, byttePlan: Math.random() < .22, sabot: [], sabotT: 14 + Math.random() * 10, drypp: [], skum: [], stjerner: [], ringer: [],
     eff: { W: 0, B: 0, G: 0, A: 0, F: 0, K: 0 }, tilstand: "klar", kombo: 0, ferdigT: 0, tid: 0, lydSist: {},
     jord: SH_JORD[j1], jord2: SH_JORD[j2], ramme: shVelgRamme(img), skitten: new Set(), milepael: 0, glimt: -9, sprekkT: 0,
@@ -6018,6 +6115,10 @@ function shOrmStart() {
 function shOrmSteg(dt) {
   const s = sh;
   if (s.stråler) { s.stråler.t += dt; if (s.stråler.t > 1.1) s.stråler = null; }
+  if (s.kattBiter) { const K = s.kattBiter; K.t += dt;
+    for (const b of K.biter) { b.vy += .45 * dt; b.dx += b.vx * dt; b.dy += b.vy * dt; b.rot += b.spinn * dt; b.vaskT -= dt;
+      const bx = K.x + b.dx, by = K.y + b.dy; if (K.t < .7 && b.vaskT <= 0 && by > SH_TOPP && by < SH_TOPP + 1 && !s.bytte) { b.vaskT = .1; shVask(bx, by, .02, 1, "syre"); } }
+    if (K.t > 1.7) s.kattBiter = null; }
   if (s.ormJord?.length) {
     for (const q of s.ormJord) { q.t += dt; if (q.t >= q.T) { q.borte = true;
       // Lander: et tynt lag slaps der det var rent. Der det allerede er gjørme, bare en flekk.
@@ -6099,6 +6200,10 @@ function shOrmEn(O, dt) {
         for (let j = 0; j < 8; j++) { const a = j / 8 * Math.PI * 2 + Math.random() * .4, v = .6 + Math.random() * .5; s.syre.push({ x: O.x, y: O.y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, t: 0, liv: .55 + Math.random() * .35, r: .012 + Math.random() * .01 }); }
         shStov(O.x, O.y, 80, "214,255,58", .5); shLyd("sprekk", 2.5);
         s.tekster.push({ txt: "ACID BURST!", x: O.x, y: O.y - .04, liv: 2, fade: 1.2, farge: "#d6ff3a" });
+        if (hentKattHode()) { const N = 9, biter = [];
+          for (let j = 0; j < N; j++) { const a0 = j / N * Math.PI * 2 + (Math.random() - .5) * .15, a1 = (j + 1) / N * Math.PI * 2 + (Math.random() - .5) * .15, am = (a0 + a1) / 2, v = .7 + Math.random() * .9;
+            biter.push({ a0, a1, kant: [Math.random(), Math.random(), Math.random()], dx: 0, dy: 0, vx: Math.cos(am) * v, vy: Math.sin(am) * v - .25, rot: 0, spinn: (Math.random() - .5) * 14, vaskT: 0 }); }
+          s.kattBiter = { x: O.x, y: O.y, r: O.r, t: 0, biter, O: { x: O.x, tilstand: "skutt" }, cv: null }; }
         s.stråler = { x: O.x, y: O.y, t: 0, a: Array.from({ length: 30 }, (_, j) => j / 30 * Math.PI * 2 + Math.random() * .16), l: Array.from({ length: 30 }, () => .6 + Math.random() * .7), h: Array.from({ length: 30 }, () => Math.random()) };
         s.ormJord = s.ormJord || [];
         for (let j = 0, n = Math.min(55, Math.round(O.spist * .3)); j < n; j++) { const a = Math.random() * Math.PI * 2, d = .12 + Math.random() * .55;
@@ -6277,6 +6382,177 @@ function shRegnKloss() {
   return null;
 }
 function shVaerP(p) { const s = sh; s.vaerP = s.vaerP || []; if (s.vaerP.length < 260) s.vaerP.push(p); }
+// BLACKOUT: strømmen går. Bare boblen lyser, flipperne har et svakt skjær, og lynet viser hele brettet et øyeblikk innimellom.
+function shMørkeStart() {
+  const s = sh; s.mørke = { t: 0, varighet: 14, lynT: 2 + Math.random() * 1.5, lyn: [], tordenT: null };
+  s.tekster = s.tekster.filter(tk => !tk.kapsel && !tk.vaer);
+  s.tekster.push({ txt: "BLACKOUT!", x: .5, y: SH_TOPP + .42, liv: 2.8, fade: 1.4, farge: "#c9d6ff", vaer: true }, { txt: "ONLY THE BUBBLE GIVES LIGHT", x: .5, y: SH_TOPP + .48, liv: 3.2, fade: 1.4, farge: "#e6ecff", liten: true, kapsel: true });
+  if (lydPa) { shGlid(220, 40, .7, .05, "sawtooth", .5, .3); shSus(.5, "lowpass", 400, .04, 1, .6, .3); }
+}
+function shMørkeSteg(dt) {
+  const s = sh, M = s.mørke; if (!M) return;
+  M.t += dt;
+  // Ned i mørket på ett sekund. Tilbake med flimring, som når lyset kommer igjen.
+  const inn = Math.min(1, M.t / 1), ut = M.t < M.varighet ? 1 : Math.max(0, 1 - (M.t - M.varighet) / 1.4), flimmer = M.t > M.varighet && M.t < M.varighet + 1 ? (Math.sin(M.t * 45) > .2 ? .35 : 1) : 1;
+  M.I = inn * ut * flimmer;
+  M.lynT -= dt;
+  if (M.lynT <= 0 && M.t < M.varighet - 1) { M.lynT = 2.4 + Math.random() * 2.2; M.lyn.push({ t: 0, x: .1 + Math.random() * .8 }); M.tordenT = .35 + Math.random() * .6; }
+  for (const L of M.lyn) L.t += dt; M.lyn = M.lyn.filter(L => L.t < .5);
+  if (M.tordenT != null) { M.tordenT -= dt; if (M.tordenT <= 0) { M.tordenT = null; if (lydPa) { shSus(1.8, "lowpass", 160, .14, 1, .8, .7); shGlid(80, 38, 1.6, .06, "sine", .8, .6); } } }
+  if (M.t > M.varighet + 1.5) s.mørke = null;
+}
+function shMørkeTegn(x, f, s) {
+  const M = s.mørke; if (!M || !(M.I > 0)) return;
+  // Lynet: to raske glimt der hele brettet synes.
+  let lys = 0; for (const L of M.lyn) lys = Math.max(lys, L.t < .07 ? 1 : L.t < .16 ? .15 : L.t < .24 ? .8 : Math.max(0, .5 - (L.t - .24) * 2));
+  const I = M.I * (1 - lys * .92); if (I <= .01) { if (lys > 0) { x.fillStyle = `rgba(220,230,255,${.12 * lys})`; x.fillRect(0, 0, f, SH_H * f); } return; }
+  const c = x.canvas, oc = s.mørkCv && s.mørkCv.width === c.width && s.mørkCv.height === c.height ? s.mørkCv : (s.mørkCv = Object.assign(document.createElement("canvas"), { width: c.width, height: c.height })), o = oc.getContext("2d");
+  o.setTransform(1, 0, 0, 1, 0, 0); o.clearRect(0, 0, oc.width, oc.height); o.setTransform(x.getTransform());
+  o.globalCompositeOperation = "source-over"; o.fillStyle = `rgba(3,5,12,${.95 * I})`; o.fillRect(-2, -2, f + 4, SH_H * f + 4);
+  // Hull i mørket der det lyser.
+  o.globalCompositeOperation = "destination-out";
+  const hull = (X, Y, R, a = 1) => { const g = o.createRadialGradient(X, Y, 0, X, Y, R); g.addColorStop(0, `rgba(0,0,0,${a})`); g.addColorStop(.45, `rgba(0,0,0,${a * .75})`); g.addColorStop(1, "rgba(0,0,0,0)"); o.fillStyle = g; o.fillRect(X - R, Y - R, R * 2, R * 2); };
+  for (const b of s.baller) hull(b.x * f, b.y * f, f * (s.eff.I > 0 ? .3 : .19) * (1 + .04 * Math.sin(s.tid * 9 + b.fase)));
+  hull(s.padX * f, SH_PY * f, f * .14, .55);
+  for (const k of s.kapsler) hull(k.x * f, k.y * f, f * .07, .8);
+  for (const q of s.skudd || []) hull(q.x * f, q.y * f, f * .03, .5);
+  x.save(); x.setTransform(1, 0, 0, 1, 0, 0); x.drawImage(oc, 0, 0); x.restore();
+  // Lynet selv: en sikksakk ned fra toppen.
+  for (const L of M.lyn) if (L.t < .24 && (L.t < .07 || L.t > .16)) {
+    x.save(); x.globalCompositeOperation = "lighter"; x.strokeStyle = "rgba(225,235,255,.9)"; x.lineWidth = Math.max(1.5, f * .004); x.shadowColor = "#bcd0ff"; x.shadowBlur = f * .03;
+    x.beginPath(); let lx = L.x * f, ly = 0; x.moveTo(lx, ly); let r = L.x * 999;
+    while (ly < (SH_TOPP + .5) * f) { r = (r * 9301 + 49297) % 233280; lx += (r / 233280 - .5) * f * .08; ly += f * (.03 + (r % 7) * .006); x.lineTo(lx, ly); }
+    x.stroke(); x.restore(); }
+  if (lys > 0) { x.fillStyle = `rgba(220,230,255,${.1 * lys})`; x.fillRect(0, 0, f, SH_H * f); }
+}
+// FLIPPERDELER under gjørma: to bumpere, tre lamper og en jackpot-lampe ligger gjemt i bildet.
+// Vaskes de fram, virker de: bumperne sparker boblen, lampene tennes når boblen ruller over,
+// og når alle lampene lyser, gir jackpot-lampa en stor bonus og vasker rundt seg.
+function shLagDeler() {
+  const s = sh, ut = [], typer = ["bumper", "bumper", "lampe", "lampe", "lampe", "jackpot"];
+  for (const type of typer) for (let n = 0; n < 40; n++) {
+    const x = .12 + Math.random() * .76, y = SH_TOPP + .12 + Math.random() * .6;
+    if (ut.every(q => Math.hypot(q.x - x, q.y - y) > .17)) { ut.push({ type, x, y, synlig: false, t: 0, lys: 0, tent: false, sistT: -9 }); break; }
+  }
+  return ut;
+}
+function shDelerSteg(dt) {
+  const s = sh; if (s.toP || !shHar("fiende", "deler")) return;
+  if (!s.deler) s.deler = shLagDeler();
+  for (const q of s.deler) {
+    q.lys = Math.max(0, q.lys - dt * 2.5);
+    if (!q.synlig && !shKlossVed(q.x, q.y) && s.tilstand === "spill") { q.synlig = true; q.t = 0;
+      const navn = { bumper: "BUMPER!", lampe: "A LIGHT!", jackpot: "JACKPOT LIGHT!" }[q.type];
+      s.tekster.push({ txt: navn, x: shClamp(q.x, .15, .85), y: q.y - .05, liv: 1.4, farge: "#ffe27a" }); shLyd("glimt"); shStov(q.x, q.y, 20, "255,230,140", .2); }
+    if (q.synlig) q.t += dt;
+  }
+}
+// Kalles for hver boble etter at den har flyttet seg.
+function shDelerTreff(b) {
+  const s = sh; if (!s.deler || b.fast || b.parkert) return;
+  const R = shRad(b);
+  for (const q of s.deler) { if (!q.synlig || q.t < .4) continue;
+    const dx = b.x - q.x, dy = b.y - q.y, d = Math.hypot(dx, dy) || 1e-6;
+    if (q.type === "bumper") { const BR = .037; if (d < BR + R) {
+        const nx = dx / d, ny = dy / d, v = Math.max(Math.hypot(b.vx, b.vy), s.fart * 1.35), dot = b.vx * nx + b.vy * ny;
+        if (dot < 0 || s.tid - q.sistT > .15) { b.vx = nx * v; b.vy = ny * v; b.x = q.x + nx * (BR + R + .002); b.y = q.y + ny * (BR + R + .002); b.boost = Math.max(b.boost || 1, 1.4); shStot(b, nx, ny, .7);
+          if (s.tid - q.sistT > .15) { q.sistT = s.tid; q.lys = 1; if (!s.bytte) s.poeng += 50; shHud(); shDelerLyd("bumper"); shVask(q.x, q.y, .05, 1, "syre"); s.tekster.push({ txt: "+50", x: q.x, y: q.y - .045, liv: .7, farge: "#ff7a7a", liten: true }); } } } }
+    else if (d < .032 + R * .6 && s.tid - q.sistT > .5) { q.sistT = s.tid;
+      if (q.type === "lampe" && !q.tent) { q.tent = true; q.lys = 1; if (!s.bytte) s.poeng += 100; shHud(); shDelerLyd("lampe");
+        const tent = s.deler.filter(z => z.type === "lampe" && z.tent).length, alle = s.deler.filter(z => z.type === "lampe").length;
+        s.tekster.push({ txt: tent >= alle ? "ALL LIGHTS! GO FOR THE JACKPOT" : tent + " OF " + alle + " LIGHTS +100", x: shClamp(q.x, .2, .8), y: q.y - .05, liv: 1.4, farge: "#ffe27a", liten: tent < alle }); }
+      if (q.type === "jackpot" && s.deler.filter(z => z.type === "lampe").every(z => z.tent)) {
+        q.lys = 1; if (!s.bytte) s.poeng += 5000; shHud(); shDelerLyd("jackpot"); s.rist = Math.max(s.rist || 0, .6); s.glod = 1;
+        s.tekster = s.tekster.filter(tk => !tk.kapsel); s.tekster.push({ txt: "JACKPOT! +5000", x: .5, y: SH_TOPP + .45, liv: 2.6, fade: 1.2, farge: "#ffd23a", stor: true, kapsel: true });
+        shVask(q.x, q.y, .16, 2, "syre"); shStov(q.x, q.y, 120, "255,215,90", .5); s.stråler = { x: q.x, y: q.y, t: 0, a: Array.from({ length: 24 }, (_, j) => j / 24 * Math.PI * 2), l: Array.from({ length: 24 }, () => .5 + Math.random() * .5), h: Array.from({ length: 24 }, () => .85 + Math.random() * .15) };
+        for (const z of s.deler) if (z.type === "lampe") z.tent = false; } }
+  }
+}
+function shDelerLyd(type) {
+  if (!lydPa) return;
+  if (type === "bumper") { tone(392, 0, .09, .05, "square", .5, .4); tone(784, .02, .07, .02, "triangle", .5, .5); }
+  if (type === "lampe") [0, 4, 7].forEach((st, j) => tone(1046.5 * Math.pow(2, st / 12), j * .05, .2, .02, "square", .4, .7));
+  if (type === "jackpot") [0, 4, 7, 12, 16, 19, 24].forEach((st, j) => tone(523.25 * Math.pow(2, st / 12), j * .07, .35, .03, "square", .4, 1));
+}
+// Tegnet som ekte flipperspill-deler: forkrommet ring og plasthette, og lampeinnlegg i plast som lyser når de er tent.
+function shDelerTegn(x, f, s) {
+  if (!s.deler) return;
+  for (const q of s.deler) { if (!q.synlig) continue;
+    const X = q.x * f, Y = q.y * f, opp = Math.min(1, q.t / .4), sk = opp < 1 ? .4 + .6 * (1 - Math.pow(1 - opp, 3)) + Math.sin(opp * Math.PI) * .15 : 1;
+    x.save(); x.translate(X, Y); x.scale(sk, sk);
+    if (q.type === "bumper") { const R = .037 * f;
+      x.fillStyle = "rgba(0,0,0,.4)"; x.beginPath(); x.ellipse(R * .15, R * .35, R * 1.05, R * .9, 0, 0, 7); x.fill();
+      const ring = x.createLinearGradient(-R, -R, R, R); ring.addColorStop(0, "#ffffff"); ring.addColorStop(.4, "#b9bcc2"); ring.addColorStop(.7, "#6b6f78"); ring.addColorStop(1, "#d8dade");
+      x.fillStyle = ring; x.beginPath(); x.arc(0, 0, R, 0, 7); x.fill();
+      const hette = x.createRadialGradient(-R * .25, -R * .3, R * .05, 0, 0, R * .78); hette.addColorStop(0, q.lys > 0 ? "#fff3f0" : "#ff8a7a"); hette.addColorStop(.5, q.lys > 0 ? "#ff6a50" : "#e0281e"); hette.addColorStop(1, "#7a0c08");
+      x.fillStyle = hette; x.beginPath(); x.arc(0, 0, R * .78, 0, 7); x.fill();
+      x.fillStyle = "#f6f2ea"; x.beginPath(); x.arc(0, 0, R * .32, 0, 7); x.fill(); x.fillStyle = "rgba(255,255,255,.7)"; x.beginPath(); x.ellipse(-R * .32, -R * .38, R * .22, R * .1, -.6, 0, 7); x.fill();
+      if (q.lys > 0) { x.globalCompositeOperation = "lighter"; const g = x.createRadialGradient(0, 0, R * .5, 0, 0, R * 2.4); g.addColorStop(0, `rgba(255,120,90,${.5 * q.lys})`); g.addColorStop(1, "rgba(255,80,40,0)"); x.fillStyle = g; x.fillRect(-R * 2.4, -R * 2.4, R * 4.8, R * 4.8); } }
+    else { const R = (q.type === "jackpot" ? .036 : .025) * f, klar = q.type === "jackpot" && s.deler.filter(z => z.type === "lampe").every(z => z.tent), på = q.type === "lampe" ? q.tent : klar, puls = klar ? .6 + .4 * Math.sin(s.tid * 8) : 1;
+      const farge = q.type === "jackpot" ? [255, 200, 40] : [80, 200, 255];
+      x.fillStyle = "rgba(0,0,0,.45)"; x.beginPath(); x.arc(0, R * .12, R * 1.12, 0, 7); x.fill();
+      x.strokeStyle = "#c9ccd2"; x.lineWidth = Math.max(1, R * .14); x.beginPath(); x.arc(0, 0, R, 0, 7); x.stroke();
+      const g = x.createRadialGradient(-R * .3, -R * .3, R * .05, 0, 0, R); const [r, gg, bb] = farge;
+      if (på) { g.addColorStop(0, "#ffffff"); g.addColorStop(.4, `rgb(${r},${gg},${bb})`); g.addColorStop(1, `rgb(${r * .5 | 0},${gg * .5 | 0},${bb * .5 | 0})`); }
+      else { g.addColorStop(0, `rgba(${r},${gg},${bb},.55)`); g.addColorStop(1, `rgba(${r * .25 | 0},${gg * .25 | 0},${bb * .25 | 0},.85)`); }
+      x.fillStyle = g; x.beginPath(); x.arc(0, 0, R * .9, 0, 7); x.fill();
+      // Stjerne i lampene, «JP» i jackpot.
+      x.fillStyle = på ? "rgba(255,255,255,.85)" : "rgba(255,255,255,.35)";
+      if (q.type === "jackpot") { x.font = `800 ${R * .75}px "IBM Plex Sans", sans-serif`; x.textAlign = "center"; x.textBaseline = "middle"; x.fillText("JP", 0, R * .05); }
+      else { x.beginPath(); for (let j = 0; j < 10; j++) { const a = -Math.PI / 2 + j * Math.PI / 5, rr = R * (j % 2 ? .22 : .5); j ? x.lineTo(Math.cos(a) * rr, Math.sin(a) * rr) : x.moveTo(Math.cos(a) * rr, Math.sin(a) * rr); } x.closePath(); x.fill(); }
+      if (på || q.lys > 0) { x.globalCompositeOperation = "lighter"; const gl = x.createRadialGradient(0, 0, R * .4, 0, 0, R * 3); gl.addColorStop(0, `rgba(${r},${gg},${bb},${.45 * Math.max(q.lys, på ? puls * .7 : 0)})`); gl.addColorStop(1, `rgba(${r},${gg},${bb},0)`); x.fillStyle = gl; x.fillRect(-R * 3, -R * 3, R * 6, R * 6); } }
+    x.restore(); }
+}
+// SKJULTE MOTIVER: på hvert brett ligger en av Kroghs små figurer gjemt i en gullmedaljong under gjørma.
+// Vaskes den fram, har du 6 sekunder på å treffe den med boblen. Ellers graver den seg ned et annet sted.
+// Finner du alle ni i en sesong, blir flipperne gull i den sesongen.
+function shMotivLagret() { try { return JSON.parse(localStorage.getItem("sm-motiver") || "{}"); } catch { return {}; } }
+function shMotivFunnet(sesong) { return (shMotivLagret()[sesong] || []).length; }
+function shMotivSted(s, frø) {
+  // Et sted med gjørme over, helst midt i bildet.
+  let r = frø; const rnd = () => (r = (r * 9301 + 49297) % 233280) / 233280;
+  for (let n = 0; n < 60; n++) { const x = .14 + rnd() * .72, y = SH_TOPP + .12 + rnd() * .62, k = shKlossVed(x, y); if (k && k.liv > 0) return { x, y }; }
+  return null;
+}
+function shMotivSteg(dt) {
+  const s = sh; if (s.toP || s.bytte) return;
+  if (s.motiv === undefined) {
+    const funnet = shMotivLagret()[aktiv] || [];
+    if (funnet.includes(s.i)) { s.motiv = null; return; }
+    const sted = shMotivSted(s, (aktiv * 9 + s.i) * 7919 + 13); s.motiv = sted ? { ...sted, tilstand: "gjemt", t: 0, figur: (aktiv * 9 + s.i) * 5 } : null; return;
+  }
+  const M = s.motiv; if (!M) return; M.t += dt;
+  if (M.tilstand === "gjemt" && s.tilstand === "spill" && !shKlossVed(M.x, M.y) && !shKlossVed(M.x + .02, M.y) && !shKlossVed(M.x - .02, M.y)) {
+    M.tilstand = "fram"; M.t = 0; s.tekster.push({ txt: "A HIDDEN MOTIVE! HIT IT!", x: shClamp(M.x, .25, .75), y: M.y - .07, liv: 2, farge: "#ffd76a" }); shLyd("glimt"); shStov(M.x, M.y, 30, "255,215,110", .25);
+  }
+  if (M.tilstand === "fram") {
+    for (const b of s.baller) if (!b.fast && Math.hypot(b.x - M.x, b.y - M.y) < shRad(b) + .045) {
+      M.tilstand = "fanget"; M.t = 0; const lagret = shMotivLagret(); lagret[aktiv] = [...new Set([...(lagret[aktiv] || []), s.i])]; try { localStorage.setItem("sm-motiver", JSON.stringify(lagret)); } catch {}
+      const n = lagret[aktiv].length; if (!s.bytte) s.poeng += 1000; shHud(); shStov(M.x, M.y, 90, "255,215,110", .45); shLyd("fang");
+      s.tekster = s.tekster.filter(tk => !tk.kapsel); s.tekster.push({ txt: "HIDDEN MOTIVE " + n + "/9", x: .5, y: SH_TOPP + .45, liv: 3, fade: 1.4, farge: "#ffd76a", stor: true, kapsel: true }, { txt: n >= 9 ? "ALL NINE! GOLDEN FLIPPERS THIS SEASON" : "+1000", x: .5, y: SH_TOPP + .51, liv: 3, fade: 1.4, farge: "#fff4d0", liten: true, kapsel: true });
+      if (n >= 9) s.gull = true; break; }
+    if (M.tilstand === "fram" && M.t > 6) {
+      const ny = shMotivSted(s, Math.floor(Math.random() * 99999));
+      if (ny) { Object.assign(M, ny, { tilstand: "gjemt", t: 0 }); s.tekster.push({ txt: "IT DUG BACK IN", x: .5, y: SH_TOPP + .5, liv: 1.6, farge: "#ffd76a", liten: true }); }
+      else { M.tilstand = "borte"; s.tekster.push({ txt: "IT GOT AWAY", x: .5, y: SH_TOPP + .5, liv: 1.6, farge: "#ffd76a", liten: true }); }
+    }
+  }
+}
+function shMotivTegn(x, f, s) {
+  const M = s.motiv; if (!M || (M.tilstand !== "fram" && !(M.tilstand === "fanget" && M.t < .8))) return;
+  const sp = s.figurer?.m?.length ? s.figurer.m[M.figur % s.figurer.m.length] : null;
+  const ut = M.tilstand === "fanget" ? M.t / .8 : 0, X = M.x * f, Y = (M.y - ut * ut * .4) * f, opp = Math.min(1, M.t / .35), R = .042 * f * (M.tilstand === "fram" ? .5 + .5 * (1 - Math.pow(1 - opp, 3)) : 1 + ut * .5);
+  x.save(); x.globalAlpha = 1 - ut;
+  const gl = x.createRadialGradient(X, Y, R * .8, X, Y, R * 2.2); gl.addColorStop(0, `rgba(255,215,110,${.35 + .2 * Math.sin(s.tid * 6)})`); gl.addColorStop(1, "rgba(255,215,110,0)"); x.fillStyle = gl; x.fillRect(X - R * 2.2, Y - R * 2.2, R * 4.4, R * 4.4);
+  const ring = x.createLinearGradient(X - R, Y - R, X + R, Y + R); ring.addColorStop(0, "#fff1b0"); ring.addColorStop(.4, "#e2a52a"); ring.addColorStop(.75, "#8a5a08"); ring.addColorStop(1, "#f2cd62");
+  x.fillStyle = ring; x.beginPath(); x.arc(X, Y, R, 0, 7); x.fill();
+  const inn = x.createRadialGradient(X, Y - R * .3, R * .1, X, Y, R * .8); inn.addColorStop(0, "#3a2a52"); inn.addColorStop(1, "#120a1c"); x.fillStyle = inn; x.beginPath(); x.arc(X, Y, R * .8, 0, 7); x.fill();
+  if (sp && shTegnFigur) { x.save(); x.beginPath(); x.arc(X, Y, R * .78, 0, 7); x.clip(); shTegnFigur(sp, X, Y + R * .05, R * .62, Math.sin(s.tid * 2) * .1, false, false, 0); x.restore(); }
+  x.fillStyle = "rgba(255,255,255,.5)"; x.beginPath(); x.ellipse(X - R * .4, Y - R * .55, R * .3, R * .1, -.5, 0, 7); x.fill();
+  // Tiden som er igjen: en lys bue rundt medaljongen.
+  if (M.tilstand === "fram") { x.strokeStyle = "rgba(255,250,230,.9)"; x.lineWidth = Math.max(1.5, f * .004); x.lineCap = "round"; x.beginPath(); x.arc(X, Y, R * 1.18, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * Math.max(0, 1 - M.t / 6)); x.stroke(); }
+  x.restore();
+}
 function shSnøStart() {
   const s = sh; s.snø = { t: 0, varighet: 13, fnugg: [], kald: Math.random() < .5, rest: 0 };
   s.tekster = s.tekster.filter(tk => !tk.kapsel && !tk.vaer); s.tekster.push({ txt: "IT'S SNOWING", x: .5, y: SH_TOPP + .42, liv: 3, fade: 1.6, farge: "#e8f4ff", vaer: true }, { txt: "THE SNOW SETTLES ON THE MUD · HIT IT OFF", x: .5, y: SH_TOPP + .48, liv: 3.4, fade: 1.6, farge: "#cfe6ff", liten: true, kapsel: true });
@@ -6337,8 +6613,15 @@ function shVaerSteg(dt) {
     R.lydT -= dt; if (I > .05 && R.lydT <= 0 && lydPa) { R.lydT = .55; shSus(1.3, "highpass", 2600, .02 * I, .6, .4, .8); shSus(1.3, "bandpass", 900, .012 * I, .5, .4, .6); }
     if (R.t > R.varighet && !R.dråper.length && !R.plask.length) s.regn = null;
   }
+  shMørkeSteg(dt); shDelerSteg(dt); shMotivSteg(dt);
+  // Strømmen går av og til, én gang i løpet av et brett.
+  if (!s.mørke && !s.mørkeFerdig && !s.toP && shHar("fiende", "mørke") && aktiv && !s.galaga && !s.finale && !s.snø) {
+    if (s.mørkeVent == null) s.mørkeVent = 35 + Math.random() * 60;
+    const andel = 1 - s.igjen / s.klosser.length;
+    if (s.tid > s.mørkeVent && andel > .2 && andel < .8) { s.mørkeFerdig = true; if (Math.random() < .4) shMørkeStart(); }
+  }
   // Snø kommer av og til, én gang i løpet av et brett.
-  if (!s.snø && !s.snøFerdig && !s.toP && shHar("fiende", "snø") && aktiv && !s.galaga && !s.finale) {
+  if (!s.snø && !s.snøFerdig && !s.toP && shHar("fiende", "snø") && aktiv && !s.galaga && !s.finale && !s.mørke) {
     if (s.snøVent == null) s.snøVent = 45 + Math.random() * 50;
     const andel = 1 - s.igjen / s.klosser.length;
     if (s.tid > s.snøVent && andel > .25 && andel < .8) { s.snøFerdig = true; if (Math.random() < .5) shSnøStart(); }
@@ -6799,25 +7082,13 @@ function ormLedd(x, X, Y, r, dx, dy, i, s) {
   for (let k = 0; k < 3; k++) { const a = i * 2.39 + k * 2.1, d = r * (.25 + ((i * 7 + k * 3) % 5) * .12); x.fillStyle = `rgba(${m1},${m2},${m3},${.35 + (k % 2) * .2})`; x.beginPath(); x.arc(X + Math.cos(a) * d, Y + Math.sin(a) * d, r * (.07 + (k % 3) * .04), 0, 7); x.fill(); }
 }
 // Jordklumpen: en tung ball av fuktig jord med klumper, småstein og sprekker. Den ruller mens den flyr.
-// Kattehodet med kjeve: bildet deles ved munnen, og haken med tunga går ned og opp i bitt. Munnhulen er mørk bak.
-// Hodet dukker litt ned for hvert bitt. Alt er fra Kroghs eget bilde, ingenting er lagt på.
+// Kattehodet i bitt: det nikker ned i gjørma og klemmes litt sammen for hvert bitt (Krogh: delt kjeve så glitchete ut).
+// Har vi et bilde av katten med åpen munn, kan vi bytte mellom to bilder i stedet.
 function kattMedKjeve(x, katt, B, bitt, R) {
-  const H = B * katt.height / katt.width, ax = -B * .394, ay = -H * .686, kut = .725, åpen = bitt * H * .085;
-  x.translate(0, bitt * H * .03); x.scale(1 - .04 * bitt, 1 - .04 * bitt);
+  const H = B * katt.height / katt.width;
+  x.translate(0, bitt * H * .05); x.rotate(bitt * .06); x.scale(1 + .03 * bitt, 1 - .07 * bitt);
   x.shadowColor = "rgba(0,0,0,.45)"; x.shadowBlur = R * .8; x.shadowOffsetY = R * .25;
-  // Kjevepartiet: haken og tunga, innenfor en oval rundt munnen.
-  const kjeve = new Path2D(); kjeve.ellipse(ax + B * .405, ay + H * .86, B * .2, H * .15, 0, 0, Math.PI * 2);
-  const over = new Path2D(); over.rect(ax - B, ay + H * kut, B * 3, H * 2);
-  x.save(); x.drawImage(katt, ax, ay, B, H); x.restore();
-  if (åpen > H * .012) {
-    x.shadowColor = "transparent";
-    // Munnhulen.
-    x.save(); x.beginPath(); x.ellipse(ax + B * .405, ay + H * kut + åpen * .5, B * .15, åpen * .65 + H * .015, 0, 0, Math.PI * 2);
-    const g = x.createRadialGradient(ax + B * .405, ay + H * kut + åpen * .4, 0, ax + B * .405, ay + H * kut + åpen * .5, B * .15); g.addColorStop(0, "#1a0306"); g.addColorStop(.7, "#4a1016"); g.addColorStop(1, "#7a2a2c");
-    x.fillStyle = g; x.fill(); x.restore();
-    // Kjeven flyttes ned. Først dekkes plassen den kom fra med hud fra rett over, så tegnes haken.
-    x.save(); x.translate(0, åpen); x.clip(kjeve); x.clip(over); x.drawImage(katt, ax, ay, B, H); x.restore();
-  }
+  x.drawImage(katt, -B * .394, -H * .686, B, H);
 }
 // Den mette ormen krøller seg til en rull: den rosa kroppen i en spiral, en liten hale ut på siden og kattehodet foran.
 function ormRull(x, X, Y, R, s, O, katt) {
@@ -6835,6 +7106,13 @@ function ormRull(x, X, Y, R, s, O, katt) {
 }
 // Smellet: lysende streker ut over hele brettet, og jordklatter som flyr ut og legger seg tynt der de lander.
 function shOrmSmellTegn(x, f, s) {
+  const K = s.kattBiter;
+  if (K) { const R = K.r * f, str = Math.ceil(R * 2.6);
+    if (!K.cv || K.cv.width !== str) { K.cv = Object.assign(document.createElement("canvas"), { width: str, height: str }); const kx = K.cv.getContext("2d"); ormRull(kx, str / 2, str / 2, R, s, K.O, hentKattHode()); }
+    const X = K.x * f, Y = K.y * f, a = Math.min(1, (1.7 - K.t) / .45);
+    for (const b of K.biter) { x.save(); x.globalAlpha = Math.max(0, a); x.translate(X + b.dx * f, Y + b.dy * f); x.rotate(b.rot);
+      x.beginPath(); x.moveTo(0, 0); for (let j = 0; j <= 3; j++) { const u = j / 3, an = b.a0 + (b.a1 - b.a0) * u, rr = R * 1.3 * (j === 0 || j === 3 ? 1 : .85 + b.kant[j - 1] * .3); x.lineTo(Math.cos(an) * rr, Math.sin(an) * rr); } x.closePath(); x.clip();
+      x.drawImage(K.cv, -str / 2, -str / 2); x.restore(); } }
   const S = s.stråler;
   if (S) { const u = S.t / 1.1, X = S.x * f, Y = S.y * f;
     x.save(); x.globalCompositeOperation = "lighter"; x.lineCap = "round";
@@ -7248,6 +7526,7 @@ function shOppdater(dt) {
       if (b.vy > 0 && b.y > SH_PY - .004) { b.vy = -Math.abs(b.vy); b.y = SH_PY - .006; shStov(b.x, SH_PY, 16, "214,140,255", .2); shLyd("racket"); }
     }
     for (let j = 0; j < n && !b.borte && !b.fast && s.tilstand === "spill"; j++) shBevegBall(b, dt * sakte / n);
+    if (!b.borte) shDelerTreff(b);
   }
   if (s.tilstand !== "spill") return;
   s.baller = s.baller.filter(b => !b.borte);
@@ -7525,7 +7804,7 @@ function shFerdig() {
   visResNiva(false);
   $("resTittel").textContent = BRETT[s.i].navn; $("resPoeng").textContent = "0 points";
   $("resInfo").textContent = kode(s.i) + " · SCRUB IT · time " + fmt(Math.round(s.tid)) + " · time left " + fmt(tidIgjen) + (trekk ? " · power-ups −" + Math.round(trekk * 100) + " %" : "");
-  $("resRekord").textContent = nesteI >= 0 ? "All clean!" : "All clean! Every board in this collection is clean.";
+  $("resRekord").textContent = (nesteI >= 0 ? "All clean!" : "All clean! Every board in this collection is clean.") + (s.toP ? "" : " Hidden motives this season: " + shMotivFunnet(aktiv) + "/9" + (s.motiv && s.motiv.tilstand !== "fanget" ? " (this one got away)." : "."));
   $("nesteKnapp").textContent = nesteI >= 0 ? "Next: " + BRETT[nesteI].navn + " →" : "Menu"; $("nesteKnapp").disabled = false;
   shLagreRekord(s.poeng, s.toP).then(() => shArkListe(s.poeng, s.toP)).then(async liste => {
   });
@@ -7641,7 +7920,8 @@ function shStav(x, cx, cy, w, h, vinkel, pivot, s, alfa = 1, skitt = null) {
   { const sg = x.createLinearGradient(0, yy, 0, yy + r1 + dyp); sg.addColorStop(0, "rgba(255,255,255,0)"); sg.addColorStop(.85, "rgba(255,255,255,.08)"); sg.addColorStop(1, "rgba(255,255,255,0)"); x.fillStyle = sg; x.fill(form(dyp)); }
   // Toppflaten: hvit plast med svak grå toning, og en tynn mørk kant der gummien går rundt.
   const gr = x.createLinearGradient(0, yy - r1, 0, yy + r1);
-  gr.addColorStop(0, "#f3f0e8"); gr.addColorStop(.55, "#e5e1d7"); gr.addColorStop(1, "#c8c3b8");
+  // Alle ni skjulte motiver funnet i sesongen: flipperne er gull.
+  if (s.gull) { gr.addColorStop(0, "#fff0b8"); gr.addColorStop(.5, "#e8b440"); gr.addColorStop(1, "#9a6a10"); } else { gr.addColorStop(0, "#f3f0e8"); gr.addColorStop(.55, "#e5e1d7"); gr.addColorStop(1, "#c8c3b8"); }
   x.fillStyle = gr; x.fill(sti);
   if (alfa < 1) { x.restore(); return; }
   x.strokeStyle = "#18181a"; x.lineWidth = Math.max(1.2, h * .14); x.lineJoin = "round"; x.stroke(sti);
@@ -8123,7 +8403,9 @@ function shTegn(t) {
       x.fillStyle = `rgba(255,255,255,${.45 * d.liv})`; x.beginPath(); x.arc(d.x * f - f * .0012, d.y * f - f * .0014, f * .0011, 0, 7); x.fill();
     }
   }
+  shDelerTegn(x, f, s);
   shVaerTegn(x, f, s);
+  shMotivTegn(x, f, s);
   // Skum.
   x.lineWidth = Math.max(.7, f * .0016);
   for (const q of s.skum) {
@@ -8403,6 +8685,7 @@ function shTegn(t) {
     H.forEach(([hx, hy], i) => { const u = (i + 1) / H.length, rr = shRad(b) * f * (.5 + .9 * u), g = x.createRadialGradient(hx * f, hy * f, 0, hx * f, hy * f, rr * 1.6); g.addColorStop(0, `hsla(${(320 + i * 6) % 360},100%,72%,${.35 * u * a0})`); g.addColorStop(1, "hsla(300,100%,60%,0)"); x.fillStyle = g; x.fillRect(hx * f - rr * 1.6, hy * f - rr * 1.6, rr * 3.2, rr * 3.2); });
     x.restore(); }
   shIldTegn(x, f, s);
+  shMørkeTegn(x, f, s);
   for (const b of s.baller) shBobleTegn(x, b, f, s);
   const tdt = Math.min(.05, Math.max(0, (t - (s.sistTegnT ?? t)) / 1000)); s.sistTegnT = t;
   if (s.bytte) s.tekster = s.tekster.filter(tk => !/^\+\d/.test(tk.txt));
@@ -8555,7 +8838,7 @@ function shSteg(t) {
 }
 addEventListener("resize", () => { if (sh) shOppsett(); });
 // Bare for automatisk testing lokalt (?autotest).
-if (location.search.includes("autotest")) { window.__sh = () => sh; window.__shOppdater = dt => { shOppdater(dt); if (sh) { sh.tid += dt; shPartikler(dt); } }; window.__shTreff = shTreff; window.__shGalaga = shGalagaStart; window.__shSopp = shSopp; window.__shBytte = shByttetStart; window.__shOrm = shOrmStart; window.__levende = levendeStart; window.__gn = () => ({ gnister, raf: gnistRAF }); window.__hendelse = t => t === "stov" ? støvstorm() : t === "ketchup" ? ketchup() : t === "tilt" ? tilt(true) : t === "vokse" ? vokseBrikke() : t === "break" ? puzzleBreak() : t === "speilX" ? speilStart("x") : t === "speilY" ? speilStart("y") : lynnedslag(); window.__shSprekk = shSprekk; window.__shP2 = () => ({ pad2X: sh.pad2X, P2Y: SH_P2Y, TOPP: SH_TOPP, H: SH_H }); window.__shTegn = () => { shRens(); shTegn(performance.now()); }; window.__spill = () => spill; window.__banner = banner; window.__kast = kast; window.__gratisPeace = async () => sjekkGratis(await hentSammen("P")); window.__fremdrift = () => fremdrift; window.__sammenP = async () => ({ lok: minLokaleSum("P"), f: fremdrift.b1, liste: (await hentSammen("P")).slice(0, 2) }); window.__shKrabbe = () => shKrabbeStart(); window.__shHopper = () => shHopperStart(); window.__shSlipp = () => shSlipp(); window.__shPY = () => SH_PY; window.__shKapsel = shKapsel; window.__shSnø = shSnøStart; window.__shFrys = shFrys; window.__shPlante = shPlante; window.__myntSprites = myntSprites; window.__katt = hentKattHode; window.__shG = () => shG; window.__tellOpp = tellOpp; window.__lyd = () => { const c = lydCtx; return c ? { musikk: musikkUt(c).gain.value, effekt: effektUt(c).gain.value } : null; }; window.__speilSlutt = speilSlutt; window.__figurKant = async (n, farge) => shFigurKant(await hentBilde("figurer/" + n + ".webp"), farge); window.__hentBilde = hentBilde; window.__falskMusikk = () => { lydCtx = lydCtx || { currentTime: 0 }; const nei = () => {}; musikk = { kilde: { stop: nei, playbackRate: { v: 1, setTargetAtTime(r) { this.v = r; } } }, g: { gain: { value: .3, cancelScheduledValues: nei, setValueAtTime: nei, linearRampToValueAtTime: nei, setTargetAtTime: nei } } }; }; window.__musikkFart = () => musikk?.kilde?.playbackRate?.v ?? null; window.__musikkFor = id => musikkFor(id)?.fil; window.__geo = () => geo; window.__plasser = plasser; window.__skjermPkt = skjermPkt; }
+if (location.search.includes("autotest")) { window.__sh = () => sh; window.__shOppdater = dt => { shOppdater(dt); if (sh) { sh.tid += dt; shPartikler(dt); } }; window.__shTreff = shTreff; window.__shGalaga = shGalagaStart; window.__shSopp = shSopp; window.__shBytte = shByttetStart; window.__shOrm = shOrmStart; window.__levende = levendeStart; window.__gn = () => ({ gnister, raf: gnistRAF }); window.__hendelse = t => t === "katt" ? kattBesøk() : t === "stov" ? støvstorm() : t === "ketchup" ? ketchup() : t === "tilt" ? tilt(true) : t === "vokse" ? vokseBrikke() : t === "break" ? puzzleBreak() : t === "speilX" ? speilStart("x") : t === "speilY" ? speilStart("y") : lynnedslag(); window.__shSprekk = shSprekk; window.__shP2 = () => ({ pad2X: sh.pad2X, P2Y: SH_P2Y, TOPP: SH_TOPP, H: SH_H }); window.__shTegn = () => { shRens(); shTegn(performance.now()); }; window.__spill = () => spill; window.__banner = banner; window.__kast = kast; window.__gratisPeace = async () => sjekkGratis(await hentSammen("P")); window.__fremdrift = () => fremdrift; window.__sammenP = async () => ({ lok: minLokaleSum("P"), f: fremdrift.b1, liste: (await hentSammen("P")).slice(0, 2) }); window.__shKrabbe = () => shKrabbeStart(); window.__shHopper = () => shHopperStart(); window.__shSlipp = () => shSlipp(); window.__shPY = () => SH_PY; window.__shKapsel = shKapsel; window.__shSnø = shSnøStart; window.__shMørke = shMørkeStart; window.__shFrys = shFrys; window.__shPlante = shPlante; window.__myntSprites = myntSprites; window.__katt = hentKattHode; window.__shG = () => shG; window.__tellOpp = tellOpp; window.__lyd = () => { const c = lydCtx; return c ? { musikk: musikkUt(c).gain.value, effekt: effektUt(c).gain.value } : null; }; window.__speilSlutt = speilSlutt; window.__figurKant = async (n, farge) => shFigurKant(await hentBilde("figurer/" + n + ".webp"), farge); window.__hentBilde = hentBilde; window.__falskMusikk = () => { lydCtx = lydCtx || { currentTime: 0 }; const nei = () => {}; musikk = { kilde: { stop: nei, playbackRate: { v: 1, setTargetAtTime(r) { this.v = r; } } }, g: { gain: { value: .3, cancelScheduledValues: nei, setValueAtTime: nei, linearRampToValueAtTime: nei, setTargetAtTime: nei } } }; }; window.__musikkFart = () => musikk?.kilde?.playbackRate?.v ?? null; window.__musikkFor = id => musikkFor(id)?.fil; window.__geo = () => geo; window.__plasser = plasser; window.__skjermPkt = skjermPkt; }
 
 
 
