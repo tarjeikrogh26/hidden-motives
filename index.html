@@ -677,7 +677,7 @@ body.lys #modusDeal{--farge:#0f8f6c;--glod:15,143,108}
   <div class="regel">Everything counts: Game, Peace, Bubble it 1P and 2P, every board, every level, every collection. Each board list gives up to 100 points (a Bubble it list up to 1,000): #1 gets them all, the rest their share of the top score.</div>
   <div class="sammen" id="spillere"><p class="liten">Loading players …</p></div>
   <p class="kreditt">© 2001–2026 Tarjei Krogh. All photography, music and art. <a href="https://kroghx.com" target="_blank" rel="noopener">kroghx.com</a></p>
-  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 1.67<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
+  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 1.68<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
 </section>
 
 <div class="ark" id="tidUtArk" hidden style="z-index:200001">
@@ -6688,6 +6688,7 @@ function shLagBord() {
     spinner: { x0: .855, x1: .955, y: Y + .45, a: 0, w: 0, halv: 0 },
     mål: [0, 1, 2].map(k => { const ax = .14 + k * .02, ay = Y + .19 + k * .066; return { ax, ay, bx: ax + .017, by: ay + .054, nede: false, t: 1, lys: 0, nr: k + 1 }; }),
     målReisT: 0,
+    fange: { x: .905, y0: Y + .315, y1: Y + .4, y: Y + .4, vy: 0, treff: 0, lys: 0 }, mysteryLys: false, spinTeller: 0, dobbel: 0, hurry: null,
   };
   return B;
 }
@@ -6697,12 +6698,21 @@ function shBordSteg(dt) {
   const s = sh; if (!shBordPå(s)) return;
   if (!s.bord) s.bord = shLagBord();
   const B = s.bord; B.t += dt; B.ordBlink = Math.max(0, B.ordBlink - dt); if (B.show) { B.show.t += dt; if (B.show.t > B.show.d) B.show = null; }
+  // DOUBLE SCORE: alt du har fått siden forrige bilde, får du én gang til.
+  { const d = s.poeng - (B.sistPoeng ?? s.poeng); if (B.dobbel > 0 && d > 0 && !s.bytte && s.tilstand === "spill") { s.poeng += d; shHud(); } B.sistPoeng = s.poeng; B.dobbel = Math.max(0, B.dobbel - dt); }
+  // HURRY-UP: jackpoten teller ned. Saucer tar den.
+  if (B.hurry) { B.hurry.v -= 2000 * dt; B.hurry.t += dt; if (B.hurry.v <= 0) { B.hurry = null; if (lydPa) tone(196, 0, .4, .04, "sawtooth", .5, .3); } }
+  // Captive ball: kula i kanalen faller tilbake ned.
+  { const c = B.fange; c.lys = Math.max(0, c.lys - dt * 2); c.vy += 2.6 * dt; c.y += c.vy * dt;
+    if (c.y >= c.y1) { c.y = c.y1; c.vy = 0; }
+    if (c.y <= c.y0) { c.y = c.y0; c.vy = Math.abs(c.vy) * .25; c.treff++; c.lys = 1; if (!s.bytte) s.poeng += 500; shHud(); if (lydPa) tone(1046, 0, .12, .04, "square", .5, .4);
+      if (c.treff % 3 === 0) { if (!s.bytte) s.poeng += 7500; shHud(); B.show = { t: 0, d: 1.4 }; s.tekster.push({ txt: "CAPTIVE BALL · +7,500", x: .62, y: SH_TOPP + .3, liv: 1.4, farge: "#ffd23a", liten: true }); if (lydPa) [0, 4, 7, 12].forEach((st, j) => tone(784 * Math.pow(2, st / 12), j * .06, .25, .03, "triangle", .5, .8)); } } }
   for (const q of B.bumpere) q.lys = Math.max(0, q.lys - dt * 3);
   for (const q of B.baner) q.lys = Math.max(0, q.lys - dt * 2);
   for (const q of B.mål) { q.lys = Math.max(0, q.lys - dt * 2); q.t = Math.min(1, q.t + dt * 5); }
   B.saucer.lys = Math.max(0, B.saucer.lys - dt); if (B.saucer.holder && !s.baller.includes(B.saucer.holder)) B.saucer.holder = null;
   const sp = B.spinner; sp.w *= Math.exp(-dt * 1.6); if (Math.abs(sp.w) < .3) sp.w = 0; sp.a += sp.w * dt;
-  const halv = Math.floor(sp.a / Math.PI); if (halv !== sp.halv) { sp.halv = halv; if (!s.bytte) s.poeng += 100; shHud(); if (lydPa) tone(2200 + Math.random() * 200, 0, .025, .018, "square", .4, .15); }
+  const halv = Math.floor(sp.a / Math.PI); if (halv !== sp.halv) { sp.halv = halv; if (!s.bytte) s.poeng += 100; shHud(); if (++B.spinTeller >= 20 && !B.mysteryLys) { B.mysteryLys = true; B.spinTeller = 0; s.tekster.push({ txt: "MYSTERY IS LIT", x: .78, y: SH_TOPP + .14, liv: 1.3, farge: "#c9a2ff", liten: true }); if (lydPa) tone(1318, 0, .2, .03, "triangle", .5, .8); } if (lydPa) tone(2200 + Math.random() * 200, 0, .025, .018, "square", .4, .15); }
   if (B.målReisT > 0) { B.målReisT -= dt; if (B.målReisT <= 0) { for (const q of B.mål) { q.nede = false; q.t = 0; } if (lydPa) tone(330, 0, .12, .04, "square", .5, .3); } }
   // Første gang en del kommer fram: et glimt og en lyd, ingen tekst.
   const vis = (navn, x, y) => { if (B.avslørt[navn] || !shFri(x, y)) return; B.avslørt[navn] = true; shLyd("glimt"); shStov(x, y, 24, "255,230,150", .22); };
@@ -6729,7 +6739,7 @@ function shBordTreff(b) {
   const Y = SH_TOPP;
   if (b.y > Y + .035 && b.y < Y + .12) B.baner.forEach((q, k) => { if (b.x > q.x0 + .008 && b.x < q.x1 - .008 && b.iBane !== k && shFri(q.cx, Y + .075)) { b.iBane = k;
     q.lys = 1; if (!B.ord[k]) { B.ord[k] = true; gi(250); if (lydPa) tone(1318.5, 0, .14, .03, "square", .4, .5); }
-    if (B.ord.every(Boolean)) { gi(10000); B.ordBlink = 2.2; B.show = { t: 0, d: 2.4 };
+    if (B.ord.every(Boolean)) { gi(10000); B.ordBlink = 2.2; B.show = { t: 0, d: 2.4 }; shHurryStart();
       // Som på et ekte flipperspill: hele ordet gir en ekstra ball. Er alle plassene fulle, kommer den rett i spill.
       const fullt = s.liv >= (s.plasser || 3); if (!fullt) s.liv++; else { const n = shBall(.5, Y + .14, 0, s.fart, false); n.boost = 1.2; s.baller.push(n); } shHud();
       tekst("B U B B L E · EXTRA BUBBLE", 0, Y + .2, "#7fe8ff", true); s.tekster.push({ txt: "+10,000", x: .5, y: Y + .26, liv: 2, farge: "#ffffff", liten: true }); if (lydPa) [0, 4, 7, 12, 16, 19, 24].forEach((st, j) => tone(523.25 * Math.pow(2, st / 12), j * .07, .35, .03, "square", .4, 1));
@@ -6744,16 +6754,51 @@ function shBordTreff(b) {
   for (const q of B.mål) { if (q.nede || !shFri((q.ax + q.bx) / 2, (q.ay + q.by) / 2)) continue;
     if (shKapselStøt(b, q.ax, q.ay, q.bx, q.by, .009, .5)) { q.nede = true; q.t = 0; q.lys = 1; gi(500); if (lydPa) { tone(196, 0, .08, .05, "square", .5, .2); tone(98, .03, .12, .04, "sine", .5, .2); }
       if (B.mål.every(z => z.nede)) { gi(5000); B.show = { t: 0, d: 1.6 }; tekst("TARGETS · +5,000", q.ax, q.ay - .03, "#ffd23a"); B.målReisT = 3; if (lydPa) [0, 7, 12].forEach((st, j) => tone(659.25 * Math.pow(2, st / 12), j * .08, .3, .03, "triangle", .5, 1)); } } }
+  // Captive ball: kanalen har to krom-vegger; boblen dytter kula opp.
+  { const c = B.fange; if (shFri(c.x, (c.y0 + c.y1) / 2)) { shKapselStøt(b, c.x - .028, c.y0 - .012, c.x - .028, c.y1 + .006, .005, .3); shKapselStøt(b, c.x + .028, c.y0 - .012, c.x + .028, c.y1 + .006, .005, .3);
+      const cr = .016, dx = b.x - c.x, dy = b.y - c.y, d = Math.hypot(dx, dy) || 1e-6; if (d < R + cr) { const nx = dx / d, ny = dy / d, dot = b.vx * nx + b.vy * ny; b.x = c.x + nx * (R + cr + .001); b.y = c.y + ny * (R + cr + .001);
+        if (dot < 0) { b.vx -= 2 * dot * nx; b.vy -= 2 * dot * ny; shStot(b, nx, ny, .5); if (ny > .3) { c.vy = Math.min(c.vy, -Math.max(.9, Math.abs(dot) * 2.2)); if (lydPa) tone(220, 0, .06, .05, "square", .5, .2); } } } } }
   // Spinneren: boblen går gjennom porten og den snurrer etter farten.
   const sp = B.spinner; if (shFri((sp.x0 + sp.x1) / 2, sp.y) && b.x > sp.x0 && b.x < sp.x1 && (fy - sp.y) * (b.y - sp.y) < 0) { sp.w = Math.sign(b.vy || 1) * (18 + Math.abs(b.vy) * 40); if (lydPa) shSus(.08, "highpass", 3000, .02, 1, .8, .1); }
   // Saucer: sluker boblen.
   const sc = B.saucer; if (!sc.holder && shFri(sc.x, sc.y) && s.tid - B.sistUt > 1 && Math.hypot(b.x - sc.x, b.y - sc.y) < .028) {
-    b.bane = { type: "saucer", t: 0, fraX: b.x, fraY: b.y }; sc.holder = b; gi(3000); B.lås = (B.lås || 0) + 1;
-    if (B.lås >= 3) { B.lås = 0; b.bane.multi = true; B.show = { t: 0, d: 3 }; tekst("MULTIBALL!", 0, SH_TOPP + .42, "#ff7ae0", true); s.tekster.push({ txt: "+3,000", x: sc.x, y: sc.y - .05, liv: 1.2, farge: "#ffe27a", liten: true }); }
+    b.bane = { type: "saucer", t: 0, fraX: b.x, fraY: b.y }; sc.holder = b; gi(3000); B.lås = (B.lås || 0) + 1; shBordSkudd();
+    if (B.hurry) { const v = Math.max(1000, Math.round(B.hurry.v / 100) * 100); gi(v); B.hurry = null; B.show = { t: 0, d: 1.6 }; tekst("HURRY-UP · +" + v.toLocaleString("en"), 0, SH_TOPP + .36, "#ff9a3c", true); if (lydPa) [0, 7, 12, 19].forEach((st, j) => tone(659 * Math.pow(2, st / 12), j * .07, .3, .03, "square", .4, 1)); }
+    if (B.mysteryLys) { B.mysteryLys = false; shMystery(); }
+    if (B.lås >= 3) { B.lås = 0; b.bane.multi = true; B.show = { t: 0, d: 3 }; shHurryStart(); tekst("MULTIBALL!", 0, SH_TOPP + .42, "#ff7ae0", true); s.tekster.push({ txt: "+3,000", x: sc.x, y: sc.y - .05, liv: 1.2, farge: "#ffe27a", liten: true }); }
     else tekst("LOCK " + B.lås + " · +3,000", sc.x, sc.y - .05); if (lydPa) { tone(110, 0, .2, .07, "sine", .6, .3); tone(220, .05, .12, .03, "square", .5, .2); } return; }
   // Orbit: inngangen nede til venstre, bare på vei opp.
   const ig = B.inngang; if (b.vy < 0 && shFri(ig.x, ig.y) && Math.hypot(b.x - ig.x, b.y - ig.y) < .045) {
-    b.bane = { type: "orbit", d: 0 }; B.orbitRekke = s.tid - B.orbitT < 6 ? B.orbitRekke + 1 : 1; B.orbitT = s.tid; if (lydPa) shSus(.5, "bandpass", 900, .05, 1.5, .8, .3, 0); }
+    b.bane = { type: "orbit", d: 0 }; shBordSkudd(); B.orbitRekke = s.tid - B.orbitT < 6 ? B.orbitRekke + 1 : 1; B.orbitT = s.tid; if (lydPa) shSus(.5, "bandpass", 900, .05, 1.5, .8, .3, 0); }
+}
+// COMBO: store skudd (orbit og saucer) etter hverandre, innen 5 sekunder.
+function shBordSkudd() {
+  const s = sh, B = s.bord; B.combo = s.tid - (B.sistSkuddT ?? -9) < 5 ? (B.combo || 1) + 1 : 1; B.sistSkuddT = s.tid;
+  if (B.combo > 1) { const p = 2500 * B.combo; if (!s.bytte) s.poeng += p; shHud(); s.tekster.push({ txt: "COMBO ×" + B.combo + " · +" + p.toLocaleString("en"), x: .5, y: SH_TOPP + .5, liv: 1.4, farge: "#a6ff7a", liten: true });
+    if (lydPa) tone(523.25 * Math.pow(2, (B.combo - 1) * 3 / 12), 0, .2, .04, "square", .4, .6); }
+}
+// MYSTERY: tennes av 20 halve runder på spinneren. Neste saucer gir en tilfeldig premie.
+function shMystery() {
+  const s = sh, B = s.bord, valg = [["EXTRA BUBBLE", "liv"], ["DOUBLE SCORE · 20 s", "dobbel"], ["+2 ◆ CREDITS", "credits"], ["LOCK IS LIT", "lås"], ["MUD BLAST", "vask"], ["HURRY-UP", "hurry"]];
+  const [navn, hva] = valg[(Math.random() * valg.length) | 0];
+  if (hva === "liv") { if (s.liv < (s.plasser || 3)) s.liv++; else { const n = shBall(B.saucer.x, B.saucer.y + .05, -.3 * s.fart, s.fart, false); s.baller.push(n); } shHud(); }
+  else if (hva === "dobbel") B.dobbel = 20;
+  else if (hva === "credits") settCredits(credits() + 2);
+  else if (hva === "lås") B.lås = Math.min(2, (B.lås || 0) + 1);
+  else if (hva === "vask") { for (let k = 0; k < 6; k++) shVask(.15 + Math.random() * .7, SH_TOPP + .1 + Math.random() * .6, .07, 2, "syre"); s.rist = Math.max(s.rist || 0, .5); }
+  else shHurryStart();
+  s.tekster.push({ txt: "MYSTERY: " + navn, x: .5, y: SH_TOPP + .44, liv: 2.4, fade: 1.1, farge: "#c9a2ff", stor: true });
+  if (lydPa) [0, 6, 3, 9, 12].forEach((st, j) => tone(440 * Math.pow(2, st / 12), j * .08, .3, .03, "sine", .5, 1.2));
+}
+function shHurryStart() { const s = sh, B = s.bord; B.hurry = { v: 50000, t: 0 }; s.tekster.push({ txt: "HURRY-UP · SHOOT THE SAUCER", x: .5, y: SH_TOPP + .56, liv: 2, farge: "#ff9a3c", liten: true }); }
+// Over gjørma: hurry-up-tallet og DOUBLE SCORE, så de synes selv om bordet er skittent.
+function shBordOverTegn(x, f, s) {
+  const B = s.bord; if (!B) return;
+  if (B.hurry) { const sc = B.saucer, blink = Math.sin(B.hurry.t * 12) > -.3; x.save(); x.textAlign = "center"; x.font = `800 ${Math.max(14, f * .04)}px "IBM Plex Mono", monospace`;
+    x.shadowColor = "rgba(255,120,40,.9)"; x.shadowBlur = 12; x.fillStyle = blink ? "#ffd27a" : "#ff8a3c"; x.fillText(Math.max(0, Math.round(B.hurry.v / 100) * 100).toLocaleString("en"), .53 * f, (SH_TOPP + .2) * f);
+    x.font = `700 ${Math.max(9, f * .018)}px "IBM Plex Sans", sans-serif`; x.fillText("HURRY-UP · SAUCER", .53 * f, (SH_TOPP + .155) * f); x.restore(); }
+  if (B.dobbel > 0) { x.save(); x.textAlign = "center"; x.font = `800 ${Math.max(10, f * .022)}px "IBM Plex Sans", sans-serif`; x.shadowColor = "rgba(166,255,122,.9)"; x.shadowBlur = 10; x.fillStyle = "#d8ffc0";
+    x.globalAlpha = B.dobbel < 3 ? (Math.sin(B.t * 14) > 0 ? 1 : .3) : 1; x.fillText("2× SCORE · " + Math.ceil(B.dobbel) + " s", .5 * f, (SH_TOPP + .97) * f); x.restore(); }
 }
 // Boblen på en bane (orbit) eller i saucerens hull: flyttes av bordet, ikke av fysikken.
 function shBaneSteg(b, dt) {
@@ -6869,6 +6914,18 @@ function shBordTegn(x, f, s) {
     for (let k = 0; k < 3; k++) { const på = SH ? løp(k + 1, 3) : k < (B.lås || 0) ? 1 : k === (B.lås || 0) ? .25 + .25 * Math.sin(t * 5) : .12; x.save(); x.translate(X + (k - 1) * R * .95, Ys + R * 3.3);
       shInnlegg(x, () => { x.beginPath(); x.moveTo(-R * .38, -R * .2); x.lineTo(R * .38, -R * .2); x.lineTo(0, R * .3); x.closePath(); }, [255, 90, 200], på, .7); x.restore(); }
     x.save(); x.font = `700 ${Math.max(7, f * .013)}px "IBM Plex Sans", sans-serif`; x.textAlign = "center"; x.fillStyle = "rgba(255,225,245,.75)"; x.shadowColor = "rgba(0,0,0,.8)"; x.shadowBlur = 3; x.fillText("LOCK", X, Ys + R * 4.2); x.restore(); }
+  // Captive ball: en kort kanal med krom-vegger og en blank stålkule. Lyset over tennes når den slår i toppen.
+  { const c = B.fange, X = c.x * f, y0 = c.y0 * f, y1 = c.y1 * f, w = Math.max(2, f * .006);
+    shInnlegg(x, () => { x.beginPath(); x.moveTo(X - f * .018, y0 - f * .025); x.lineTo(X + f * .018, y0 - f * .025); x.lineTo(X, y0 - f * .045); x.closePath(); }, [255, 210, 60], Math.max(c.lys, ((c.treff % 3) / 3) * .6), .8);
+    for (const sd of [-1, 1]) shTråd(x, [[X + sd * f * .028, y0 - f * .012], [X + sd * f * .028, y1 + f * .006]], w);
+    x.strokeStyle = "#2b2d33"; x.lineWidth = w; x.beginPath(); x.moveTo(X - f * .028, y0 - f * .012); x.lineTo(X + f * .028, y0 - f * .012); x.stroke();
+    const cy = c.y * f, cr = f * .016; x.fillStyle = "rgba(0,0,0,.4)"; x.beginPath(); x.arc(X + cr * .25, cy + cr * .35, cr, 0, 7); x.fill();
+    const gk = x.createRadialGradient(X - cr * .35, cy - cr * .4, cr * .1, X, cy, cr); gk.addColorStop(0, "#ffffff"); gk.addColorStop(.35, "#c9ced6"); gk.addColorStop(.8, "#5b6068"); gk.addColorStop(1, "#2a2d33");
+    x.fillStyle = gk; x.beginPath(); x.arc(X, cy, cr, 0, 7); x.fill(); }
+  // MYSTERY-innlegg ved saucer: lyser lilla når mystery er tent.
+  { const [mx, my] = P(.72, Y + .165), w = f * .1, h = f * .028, på = SH ? løp(2, 3) : B.mysteryLys ? .6 + .4 * Math.sin(t * 8) : .1 + .3 * Math.min(1, B.spinTeller / 20);
+    x.save(); x.translate(mx, my); shInnlegg(x, () => { x.beginPath(); x.roundRect(-w / 2, -h / 2, w, h, h / 2); }, [190, 120, 255], på, .9);
+    x.font = `800 ${h * .55}px "IBM Plex Sans", sans-serif`; x.textAlign = "center"; x.textBaseline = "middle"; x.fillStyle = på > .5 ? "#2a1040" : "rgba(235,220,255,.8)"; x.fillText("MYSTERY", 0, h * .04); x.restore(); }
   // Spinneren: en plate med trykk som henger under en krom-aksel og snurrer rundt den.
   { const sp = B.spinner, [x0, Ys] = P(sp.x0, sp.y), x1 = sp.x1 * f, h = f * .034, c = Math.cos(sp.a), ph = h * c, inn = f * .008;
     x.fillStyle = "rgba(0,0,0,.3)"; x.fillRect(x0 + inn + 3, Ys + 3, x1 - x0 - inn * 2, Math.abs(ph) * .9);
@@ -9502,7 +9559,7 @@ function shTegn(t) {
       x.fillStyle = `rgba(255,255,255,${.45 * d.liv})`; x.beginPath(); x.arc(d.x * f - f * .0012, d.y * f - f * .0014, f * .0011, 0, 7); x.fill();
     }
   }
-  shDelerTegn(x, f, s); shPortalTegn(x, f, s);
+  shDelerTegn(x, f, s); shBordOverTegn(x, f, s); shPortalTegn(x, f, s);
   shVaerTegn(x, f, s);
   shMotivTegn(x, f, s);
   // Skum.
