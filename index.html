@@ -628,7 +628,7 @@ body.lys #modusDeal{--farge:#0f8f6c;--glod:15,143,108}
   <div class="regel">Everything counts: Game, Peace, Scrub it 1P and 2P, every board, every level, every collection. Each board list gives up to 100 points (a Scrub it list up to 1,000): #1 gets them all, the rest their share of the top score.</div>
   <div class="sammen" id="spillere"><p class="liten">Loading players …</p></div>
   <p class="kreditt">© 2001–2026 Tarjei Krogh. All photography, music and art. <a href="https://kroghx.com" target="_blank" rel="noopener">kroghx.com</a></p>
-  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 1.38<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
+  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 1.39<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
 </section>
 
 <div class="ark" id="tidUtArk" hidden style="z-index:200001">
@@ -7151,33 +7151,28 @@ function shSkittRens(xPos) {
   s.stavSkitt = s.stavSkitt.filter(q => q.a > .05);
 }
 function shStav(x, cx, cy, w, h, vinkel, pivot, s, alfa = 1, skitt = null) {
-  // Som på et flipperspill: tykk og rund ved festet, smal mot spissen. Hvit plast med grått i, rød gummi rundt, blank bolt.
-  const fa = shStavFarger(s), venstre = pivot < cx, r1 = h * .82, r2 = h * .4, yy = cy + h * .12;
+  // Som på et flipperspill (Kroghs bilde): hvit toppflate, tykk svart gummiside under, myk mørk skygge. Avsmalnende mot spissen.
+  const venstre = pivot < cx, r1 = h * .78, r2 = h * .42, yy = cy, dyp = h * .62;
   const px = pivot + (venstre ? r1 * .7 : -r1 * .7), tx = venstre ? pivot + w - r2 : pivot - w + r2;
   x.save(); x.globalAlpha = alfa;
   x.translate(pivot, cy); x.rotate(vinkel); x.translate(-pivot, -cy);
-  const sti = new Path2D(); sti.moveTo(px, yy - r1); sti.lineTo(tx, yy - r2);
-  if (venstre) { sti.arc(tx, yy, r2, -Math.PI / 2, Math.PI / 2); sti.lineTo(px, yy + r1); sti.arc(px, yy, r1, Math.PI / 2, Math.PI * 1.5); }
-  else { sti.arc(tx, yy, r2, -Math.PI / 2, Math.PI / 2, true); sti.lineTo(px, yy + r1); sti.arc(px, yy, r1, Math.PI / 2, -Math.PI / 2, true); }
-  sti.closePath();
-  if (alfa === 1) { x.shadowColor = `rgba(${fa.glod},${.35 + .35 * s.glod})`; x.shadowBlur = 8 + 16 * s.glod; }
+  const form = dy => { const p = new Path2D(); p.moveTo(px, yy - r1 + dy); p.lineTo(tx, yy - r2 + dy);
+    if (venstre) { p.arc(tx, yy + dy, r2, -Math.PI / 2, Math.PI / 2); p.lineTo(px, yy + r1 + dy); p.arc(px, yy + dy, r1, Math.PI / 2, Math.PI * 1.5); }
+    else { p.arc(tx, yy + dy, r2, -Math.PI / 2, Math.PI / 2, true); p.lineTo(px, yy + r1 + dy); p.arc(px, yy + dy, r1, Math.PI / 2, -Math.PI / 2, true); }
+    p.closePath(); return p; };
+  const sti = form(0);
+  // Skyggen under, myk og mørk.
+  if (alfa === 1) { x.save(); x.shadowColor = "rgba(0,0,0,.55)"; x.shadowBlur = h * 1.4; x.shadowOffsetY = h * .9; x.fillStyle = "#111"; x.fill(form(dyp)); x.restore(); }
+  // Gummisiden: svart, med et svakt lysstreif nederst så den får volum.
+  for (let k = 6; k >= 1; k--) { x.fillStyle = k > 3 ? "#141416" : "#1f1f22"; x.fill(form(dyp * k / 6)); }
+  { const sg = x.createLinearGradient(0, yy, 0, yy + r1 + dyp); sg.addColorStop(0, "rgba(255,255,255,0)"); sg.addColorStop(.85, "rgba(255,255,255,.08)"); sg.addColorStop(1, "rgba(255,255,255,0)"); x.fillStyle = sg; x.fill(form(dyp)); }
+  // Toppflaten: hvit plast med svak grå toning, og en tynn mørk kant der gummien går rundt.
   const gr = x.createLinearGradient(0, yy - r1, 0, yy + r1);
-  gr.addColorStop(0, "#ffffff"); gr.addColorStop(.45, "#ecebe6"); gr.addColorStop(.8, "#c9c7c0"); gr.addColorStop(1, "#a9a69e");
-  x.fillStyle = gr; x.fill(sti); x.shadowBlur = 0;
+  gr.addColorStop(0, "#fdfdfc"); gr.addColorStop(.55, "#ecebe8"); gr.addColorStop(1, "#cfcdc8");
+  x.fillStyle = gr; x.fill(sti);
   if (alfa < 1) { x.restore(); return; }
-  // Litt grått og slitasje i plasten.
-  x.save(); x.clip(sti); x.lineCap = "round";
-  for (let j = 0; j < 5; j++) { const u = (j + .5) / 5, sx = px + (tx - px) * u, a = .1 + .08 * ((j * 7) % 3);
-    x.strokeStyle = `rgba(110,108,100,${a})`; x.lineWidth = Math.max(.6, h * .05); x.beginPath(); x.moveTo(sx - h * .3, yy - r1 * .2 + (j % 2) * h * .15); x.lineTo(sx + h * .45, yy + r1 * .25 - (j % 3) * h * .1); x.stroke(); }
-  x.fillStyle = "rgba(255,255,255,.75)"; x.beginPath(); x.ellipse((px + tx) / 2, yy - r1 * .45, Math.abs(tx - px) * .42, r2 * .22, 0, 0, 7); x.fill();
-  x.restore();
-  // Rød gummi rundt, med en mørk ytterkant og et lite glansstrøk.
-  x.strokeStyle = "#c41230"; x.lineWidth = Math.max(1.5, h * .24); x.lineJoin = "round"; x.stroke(sti);
-  x.strokeStyle = "rgba(80,0,12,.55)"; x.lineWidth = Math.max(.8, h * .06); x.stroke(sti);
-  x.strokeStyle = "rgba(255,150,160,.55)"; x.lineWidth = Math.max(.6, h * .05); x.beginPath(); x.moveTo(px, yy - r1 - h * .06); x.lineTo(tx, yy - r2 - h * .06); x.stroke();
-  // Bolten i festet.
-  { const br = r1 * .42, bg = x.createRadialGradient(px - br * .3, yy - br * .3, br * .1, px, yy, br); bg.addColorStop(0, "#ffffff"); bg.addColorStop(.5, "#a9adb3"); bg.addColorStop(1, "#4b4f55");
-    x.fillStyle = bg; x.beginPath(); x.arc(px, yy, br, 0, 7); x.fill(); x.strokeStyle = "rgba(30,30,35,.7)"; x.lineWidth = Math.max(.8, br * .22); x.beginPath(); x.moveTo(px - br * .55, yy); x.lineTo(px + br * .55, yy); x.stroke(); }
+  x.strokeStyle = "#18181a"; x.lineWidth = Math.max(1.2, h * .14); x.lineJoin = "round"; x.stroke(sti);
+  x.fillStyle = "rgba(255,255,255,.8)"; x.beginPath(); x.ellipse(px + (tx - px) * .45, yy - r1 * .4, Math.abs(tx - px) * .38, r2 * .2, Math.atan2(r1 - r2, tx - px) * .5 * (venstre ? 1 : -1), 0, 7); x.fill();
   if (skitt && skitt.length) {
     // Gjørme på flipperen: klumper med lys kant, og dråper som henger under. Lyset blinker gjennom.
     const [m1, m2, m3] = s.jord.mork, [l1, l2, l3] = s.jord.lys;
@@ -7822,20 +7817,14 @@ function shTegn(t) {
       x.fillText("P1", .06 * f, (SH_PY + .06) * f); x.restore();
     }
     const kjF = Math.max(0, s.kjempe || 0), w = s.padW * f, h = 0.02 * f * (1 + 2.2 * kjF), cy = shPadTopp(s) * f + h / 2, fa = shStavFarger(s);
-    if (kjF > .03) { x.save(); x.globalCompositeOperation = "lighter"; const gr = w * .75, gg = x.createRadialGradient(s.padX * f, cy, 0, s.padX * f, cy, gr); gg.addColorStop(0, `rgba(255,95,210,${.32 * kjF})`); gg.addColorStop(.6, `rgba(120,200,255,${.12 * kjF})`); gg.addColorStop(1, "rgba(120,200,255,0)"); x.fillStyle = gg; x.fillRect(s.padX * f - gr, cy - gr, gr * 2, gr * 2); x.restore(); }
     for (const q of s.kjDrypp || []) { x.save(); x.globalAlpha = Math.min(1, q.liv * 1.5); x.fillStyle = "#ff8ae0"; x.shadowColor = "#ff5fd2"; x.shadowBlur = 8; x.beginPath(); x.ellipse(q.x * f, q.y * f, q.r * f * .8, q.r * f * (1 + q.vy * 2), 0, 0, 7); x.fill(); x.restore(); }
-    // Lyset fra staven faller oppover i feltet.
-    x.globalCompositeOperation = "lighter";
-    const lr = w * 1.1, lg = x.createRadialGradient(s.padX * f, cy, 0, s.padX * f, cy, lr);
-    lg.addColorStop(0, `rgba(${fa.glod},${.16 + .2 * s.glod})`); lg.addColorStop(1, `rgba(${fa.glod},0)`);
-    x.fillStyle = lg; x.fillRect(s.padX * f - lr, cy - lr, lr * 2, lr);
-    x.globalCompositeOperation = "source-over";
+
     const iOverg = s.sopp > 0 && s.soppOverg < 1, iTilbake = !(s.sopp > 0) && s.soppTilbake < 1;
     if (s.sopp > 0 || iTilbake) {
       // Soppen: flipperen glir opp til veggen og legger seg på tvers. Etterpå glir den tilbake ned.
       const u = iOverg ? s.soppOverg : iTilbake ? 1 - s.soppTilbake : 1, e = u * u * (3 - 2 * u);
       const vx0 = (s.soppSide < 0 ? .055 : .945) * f, Y = s.padY * f, mål = s.soppSide < 0 ? Math.PI / 2 : -Math.PI / 2;
-      const halv = w / 2 - f * .004, vl = shFlipVinkel(s.flip[0].t), vr = shFlipVinkel(s.flip[1].t);
+      const halv = w / 2 + f * .014, vl = shFlipVinkel(s.flip[0].t), vr = shFlipVinkel(s.flip[1].t);
       const skitt = side => s.stavSkitt.filter(q => side ? q.u >= 0 : q.u < 0).map(q => ({ x: q.u * w / 2, r: q.r * f, a: q.a, fase: q.fase }));
       const flippere = (uu, alfa) => {
         const ee = uu * uu * (3 - 2 * uu), X = s.padX * f + (vx0 - s.padX * f) * ee, YY = cy + (Y - cy) * ee - Math.sin(Math.PI * uu) * f * .25;
@@ -7865,19 +7854,11 @@ function shTegn(t) {
       }
     } else {
       // To flippere med ledd ytterst. Gjørme som har landet på dem blir sittende en stund.
-      const halv = w / 2 - f * .004;
+      const halv = w / 2 + f * .014;
       const vl = shFlipVinkel(s.flip[0].t), vr = shFlipVinkel(s.flip[1].t);
       const skitt = side => s.stavSkitt.filter(q => side ? q.u >= 0 : q.u < 0).map(q => ({ x: (s.padX + q.u * s.padW / 2) * f, r: q.r * f, a: q.a, fase: q.fase }));
       shStav(x, s.padX * f - w / 2 + halv / 2, cy, halv, h * 1.15, vl, s.padX * f - w / 2, s, 1, skitt(0));
       shStav(x, s.padX * f + w / 2 - halv / 2, cy, halv, h * 1.15, -vr, s.padX * f + w / 2, s, 1, skitt(1));
-      // Et lag såpeskum på toppen av flipperne.
-      x.save();
-      for (let j = 0; j < 18; j++) {
-        const u = (j + .5) / 18, bx = s.padX * f - w / 2 + u * w, by = cy - h * .55 - Math.abs(Math.sin(j * 2.3)) * h * .25 + Math.sin(s.tid * 3 + j) * h * .08, br = h * (.16 + .12 * Math.abs(Math.sin(j * 1.7 + s.tid * .7)));
-        x.fillStyle = "rgba(245,250,255,.32)"; x.beginPath(); x.arc(bx, by, br, 0, 7); x.fill();
-        x.strokeStyle = `hsla(${(s.tid * 60 + j * 30) % 360},80%,85%,.55)`; x.lineWidth = .8; x.stroke();
-      }
-      x.restore();
     }
   }
   // Bombene: små, mørke kuler med en lunte som gnistrer fortere og fortere, og et smell når de går av.
