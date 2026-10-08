@@ -81,13 +81,23 @@ h1 .tittel span{color:var(--signal)}
 .hm-av{display:flex;flex-direction:column;align-items:flex-start;justify-content:center;font-family:var(--brod);font-weight:400;font-size:11px;line-height:1.25;letter-spacing:.08em;color:var(--demp);text-decoration:none;opacity:.8;white-space:nowrap;flex:none}
 .hm-av b{font-family:var(--display);font-weight:800;letter-spacing:.1em;font-size:11px}
 .hm-av:hover{opacity:1}
+/* Krogh: logoen er like bred som PIECE IT – UNWRAP IT. «by KROGHX» står på høykant til høyre, grå med et skjær i fargen til modusen. */
+.hm-logo{align-items:flex-end;gap:10px}
+.hm-navn span{letter-spacing:.2em}
+.hm-logo .hm-av{display:block;writing-mode:vertical-rl;transform:rotate(180deg);font-size:13px;letter-spacing:.3em;line-height:1;opacity:.9;color:var(--demp);text-shadow:0 0 8px var(--hmGlod),0 0 18px var(--hmGlod);transition:text-shadow 1.1s ease,color 1.1s ease;padding-bottom:.15em}
+.hm-logo .hm-av b{font-size:1em;margin-inline-start:.55em}
+body{--hmGlod:rgba(255,162,26,.45)}
+body.lys .hm-logo .hm-av{color:#c23a78;text-shadow:0 0 8px rgba(255,255,255,.9),0 0 16px rgba(255,255,255,.6)}
+body.rosa .hm-logo .hm-av{color:#b0305f}
 /* Spillene under logoen: PIECE IT rosa, BUBBLE IT oransje. Det som ikke er valgt, er svakt og gjennomsiktig. */
 .moduser{font-family:var(--display);font-weight:800;font-size:30px;margin-top:16px;gap:.8em!important;max-width:100%}
 #modusPuslespill,#modusScrub{--farge:#ff5fa2;--glod:255,95,162}
 #modusScrub{--farge:#ffa21a;--glod:255,162,26}
 body.lys #modusPuslespill{--farge:#e23d84;--glod:226,61,132}
 body.lys #modusScrub{--farge:#e07800;--glod:224,120,0}
-#modusPuslespill .tittel,#modusScrub .tittel{color:var(--farge)!important;font-size:1em!important;letter-spacing:.08em!important;line-height:1;white-space:nowrap}
+#modusUnwrap{--farge:#ff7aa8;--glod:255,122,168}
+body.lys #modusUnwrap{--farge:#c2386f;--glod:194,56,111}
+#modusPuslespill .tittel,#modusScrub .tittel,#modusUnwrap .tittel{color:var(--farge)!important;font-size:1em!important;letter-spacing:.08em!important;line-height:1;white-space:nowrap}
 .moduser .modus{opacity:.38;border-bottom:3px solid transparent;padding:.1em .15em .14em}
 .moduser .modus:hover{opacity:.6}
 .moduser .modus[aria-selected="true"],body.lys .moduser .modus[aria-selected="true"]{opacity:1;border-bottom-color:var(--farge);text-shadow:0 0 12px rgba(var(--glod),.6),0 0 30px rgba(var(--glod),.35);background:radial-gradient(ellipse at 50% 60%,rgba(var(--glod),.14),rgba(var(--glod),0) 70%)}
@@ -507,6 +517,10 @@ body:has(.resultat.vis) #spill .linje{opacity:0;pointer-events:none;transition:o
 .faner{display:flex;gap:8px;flex-wrap:wrap;margin-top:22px}
 .faner button{border:1px solid var(--strek);border-radius:999px;padding:8px 14px;font-size:13px;color:var(--demp);text-align:left}
 .faner button b{font-family:var(--display);color:var(--tekst);margin-left:6px}
+.faner{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.faner button{display:flex;flex-direction:column;align-items:flex-start;border-radius:12px;padding:7px 10px 8px;min-width:0;line-height:1.25}
+.faner button b{margin-left:0!important;font-size:13px;overflow-wrap:break-word;hyphens:auto;-webkit-hyphens:auto}
+@media (max-width:420px){.faner button{padding:6px 8px 7px}.faner button b{font-size:12.5px}}
 .faner button.skjult-fane{border-color:#a874ff;color:#d6b4ff;background:linear-gradient(90deg,rgba(168,116,255,.14),rgba(255,120,220,.1))}
 .faner button.skjult-fane b{color:#e9dcff}
 .faner button[aria-selected="true"]{border-color:var(--signal);color:var(--signal);background:rgba(255,176,0,.08)}
@@ -650,7 +664,7 @@ body.lys #modusDeal{--farge:#0f8f6c;--glod:15,143,108}
   <div class="regel">Everything counts: Game, Peace, Bubble it 1P and 2P, every board, every level, every collection. Each board list gives up to 100 points (a Bubble it list up to 1,000): #1 gets them all, the rest their share of the top score.</div>
   <div class="sammen" id="spillere"><p class="liten">Loading players …</p></div>
   <p class="kreditt">© 2001–2026 Tarjei Krogh. All photography, music and art. <a href="https://kroghx.com" target="_blank" rel="noopener">kroghx.com</a></p>
-  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 1.59<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
+  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 1.60<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
 </section>
 
 <div class="ark" id="tidUtArk" hidden style="z-index:200001">
@@ -913,13 +927,25 @@ function plasserVariant() { const vr = $("variant"), valgt = $(modus === "pusle"
 function tilpassLogo() {
   const meny = $("meny"); if (!meny || meny.hidden) return;
   const cs = getComputedStyle(meny), bredde = meny.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
-  const pass = (el, maks, ekstra) => { el.style.fontSize = maks + "px"; const w = el.scrollWidth + ekstra; if (w > bredde) el.style.fontSize = Math.max(12, Math.floor(maks * bredde / w * 0.98)) + "px"; };
-  const navn = document.querySelector(".hm-navn"), av = document.querySelector(".hm-av");
-  // HIDDEN og MOTIVES får hver sin størrelse, så begge linjene blir like brede (HIDDEN får litt større skrift).
-  if (navn) { const mål = Math.min(bredde - av.offsetWidth - 16 - 50, 420);
-    for (const l of navn.children) { l.style.fontSize = "100px"; l.style.fontSize = Math.floor(100 * mål / l.offsetWidth * 10) / 10 + "px"; } }
-  const m = document.querySelector(".moduser"); if (m) pass(m, 34, 0);
+  const navn = document.querySelector(".hm-navn"), av = document.querySelector(".hm-av"), m = document.querySelector(".moduser"), logo = document.querySelector(".hm-logo");
+  // Modusraden må gi plass til «by KROGHX» og tannhjulet til høyre for logoen, siden logoen blir like bred som raden.
+  // På telefon flyttes tannhjulet ned i raden under modusene, så logoen og modusene får hele bredden.
+  const smal = bredde < 560, gear = $("tannhjul"), vr = $("variant");
+  const plass = bredde - (av ? av.offsetWidth + 10 : 0) - (smal ? 0 : 50);
+  if (m) { m.style.fontSize = "34px"; const w = m.scrollWidth; if (w > plass) m.style.fontSize = Math.max(12, Math.floor(34 * plass / w * 0.98)) + "px"; }
+  // Fra venstre kant av PIECE IT til høyre kant av den siste synlige modusen (uten bokstavluften etter siste bokstav).
+  const tit = [...document.querySelectorAll(".moduser .modus:not([hidden]) .tittel")], x0 = logo.getBoundingClientRect().left;
+  if (!tit.length || !navn) return plasserVariant();
+  const a = tit[0].getBoundingClientRect(), siste = tit[tit.length - 1], b = siste.getBoundingClientRect();
+  const L = a.left - x0, R = b.right - (parseFloat(getComputedStyle(siste).letterSpacing) || 0) - x0, W = R - L;
+  navn.style.marginLeft = L + "px";
+  // HIDDEN og MOTIVES får hver sin størrelse, så begge linjene blir nøyaktig like brede som modusraden.
+  let størst = 0;
+  for (const l of navn.children) { l.style.fontSize = "100px"; const ls = parseFloat(getComputedStyle(l).letterSpacing) || 0, fs = Math.floor(100 * W / (l.offsetWidth - ls) * 10) / 10; l.style.fontSize = fs + "px"; l.style.marginRight = -ls * fs / 100 + "px"; størst = Math.max(størst, fs); }
+  if (av) av.style.fontSize = Math.round(Math.max(12, Math.min(17, størst * .15))) + "px";
+  $("faner").style.maxWidth = R + "px";
   plasserVariant();
+  if (gear) gear.style.top = smal && vr ? Math.round(vr.getBoundingClientRect().top - gear.offsetParent.getBoundingClientRect().top + (vr.offsetHeight - gear.offsetHeight) / 2) + "px" : "";
 }
 addEventListener("resize", tilpassLogo); document.fonts?.ready.then(tilpassLogo); setTimeout(tilpassLogo, 50);
 $("modusPuslespill").onclick = () => velgModus("pusle");
