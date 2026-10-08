@@ -175,6 +175,7 @@ h1 .signatur{font-size:.55em;letter-spacing:.06em;white-space:nowrap}
 .res-stjerner b{font-size:28px;line-height:1;font-weight:400;color:rgba(255,255,255,.14);transition:color .3s,text-shadow .3s}
 .res-stjerner span.ja{transform:scale(1.12);color:#f0c75a}
 .res-stjerner span.ja b{color:#f0b323;text-shadow:0 0 14px rgba(240,179,35,.75)}
+.uw-stjerner{justify-content:center;margin:10px 0 12px}
 .brett.laast::after{content:"Solve the previous board first";position:absolute;inset:0;display:grid;place-items:center;background:rgba(10,9,8,.72);color:var(--demp);font-size:13px}
 .brett:not(.laast):hover{border-color:var(--signal)}
 .neste{display:grid;place-items:center;aspect-ratio:auto;min-height:120px;border:1px dashed var(--strek);border-radius:6px;color:var(--demp);text-align:center;padding:16px;font-size:13px}
@@ -676,7 +677,7 @@ body.lys #modusDeal{--farge:#0f8f6c;--glod:15,143,108}
   <div class="regel">Everything counts: Game, Peace, Bubble it 1P and 2P, every board, every level, every collection. Each board list gives up to 100 points (a Bubble it list up to 1,000): #1 gets them all, the rest their share of the top score.</div>
   <div class="sammen" id="spillere"><p class="liten">Loading players …</p></div>
   <p class="kreditt">© 2001–2026 Tarjei Krogh. All photography, music and art. <a href="https://kroghx.com" target="_blank" rel="noopener">kroghx.com</a></p>
-  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 1.66<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
+  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 1.67<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
 </section>
 
 <div class="ark" id="tidUtArk" hidden style="z-index:200001">
@@ -1023,6 +1024,7 @@ async function tegnMeny() {
     const beste = besteLokal(b.id);
     const pf = peaceBeste(b.id);
     st.textContent = iPeace() ? (pf ? pf.poeng.toLocaleString("en") + " pts" : "") : erLost(b.id) ? (beste ? beste.poeng.toLocaleString("en") + " pts" : fremdrift[b.id]?.scrub ? "Bubbled" : "Solved") : "";
+    if (modus === "unwrap" && fremdrift[b.id]?.unwrapS) st.textContent = "★".repeat(fremdrift[b.id].unwrapS) + "☆".repeat(3 - fremdrift[b.id].unwrapS);
     if (modus === "scrub" && fremdrift[b.id]?.scrubS) st.textContent = "★".repeat(fremdrift[b.id].scrubS) + "☆".repeat(3 - fremdrift[b.id].scrubS);
     st.className = "status";
     merke.append(nr, st); kort.appendChild(merke);
@@ -1215,6 +1217,9 @@ function plingLyd(andel, b) {
   tone(f * ins.sprang, 0.04, 0.16, st, ins.form, tørr, våt);
   tone(f * ins.sprang * ins.klang / 2, 0.04, 0.08, st * ins.klangSt, "sine", tørr, våt);
   if (ins.tsj) tsjing(0.035, st * ins.tsj, tørr, våt, ins.tsjF);
+  // Rytme: brikker i en rask rekke får en ekstra lys tone som stiger for hver brikke.
+  const rk = spill && !spill.peace ? Math.min(5, spill.rekke || 0) : 0;
+  if (rk) tone(f * 2 * Math.pow(2, [0, 2, 4, 7, 9, 12][rk] / 12), 0.07, 0.12, st * 0.35, "triangle", tørr, våt);
   lydPos = null;
 }
 // Ferdiglyden: fem myntslag oppover, i brettets toneart, som vandrer fra venstre til høyre.
@@ -8443,7 +8448,7 @@ function uwHud() {
 function uwSkitt(x0, y0, x1, y1) { for (const l of uw.lagS) l.skitten = l.skitten ? { x0: Math.min(l.skitten.x0, x0), y0: Math.min(l.skitten.y0, y0), x1: Math.max(l.skitten.x1, x1), y1: Math.max(l.skitten.y1, y1) } : { x0, y0, x1, y1 }; }
 function uwMelding(tittel, tekst, knapper) {
   const m = $("uwMelding"); if (!tittel) { m.hidden = true; return; }
-  m.hidden = false; $("uwTittel").textContent = tittel; $("uwTekst").textContent = tekst || ""; const k = $("uwKnapper"); k.replaceChildren();
+  m.hidden = false; $("uwTittel").textContent = tittel; $("uwTekst").textContent = tekst || ""; const k = $("uwKnapper"); k.replaceChildren(); m.querySelectorAll(".uw-stjerner").forEach(e => e.remove());
   for (const [navn, fn, hoved] of knapper || []) { const b = document.createElement("button"); b.className = hoved ? "hoved" : "sekundar"; b.textContent = navn; b.onclick = fn; k.appendChild(b); }
 }
 // Cellene: celle = ytre papir (0 = papir, 1 = revet), indre = papiret under (1 = papir), merket = streken du skjærer nå.
@@ -8568,7 +8573,7 @@ function uwFlak(liste, farge) {
 }
 function uwTekst(txt, x, y) { uw.tekster.push({ txt, x, y, t: 0 }); }
 function uwMistet() {
-  const u = uw; uwAvbryt(); u.kø = []; u.låst = true; u.slipp = false; u.liv--; u.usårbar = 1.5; uwHud();
+  const u = uw; uwAvbryt(); u.kø = []; u.låst = true; u.slipp = false; u.liv--; u.mistet = (u.mistet || 0) + 1; u.usårbar = 1.5; uwHud();
   if (lydPa) { tone(220, 0, .3, .05, "sawtooth", .6, .3); tone(140, .1, .4, .04, "sine", .6, .3); }
   if (u.liv <= 0) { u.tilstand = "over"; uwMelding("Out of knives", "Start the board again. " + Math.floor(uwSynlig(u) * 100) + " % unwrapped.", [["Try again", () => uwStart(u.i), true], ["Menu", uwAvslutt]]); }
   else uwTekst(u.liv === 1 ? "CUT! LAST KNIFE" : "CUT! " + u.liv + " KNIVES LEFT", .5, .45);
@@ -8580,12 +8585,16 @@ function uwVunnet() {
   const rest = []; for (let j = 0; j < G * G; j++) if (u.celle[j] !== 1 || (u.indre && u.indre[j])) { rest.push(j); u.celle[j] = 1; if (u.indre) u.indre[j] = 0; } if (rest.length) { uwFlak(rest, u.stil.bunn[0]); uwFlak(rest, (u.stil2 || u.stil).bunn[0]); } uwSkitt(0, 0, G - 1, G - 1); u.spor = []; u.linje = []; u.merket.fill(0);
   if (!u.sløyfe.av) u.sløyfe.av = { vx: .2, vy: -.5, rot: 0, spinn: 3, t: 0 };
   if (u.hage) { u.hage.nett = []; u.hage.hauger = []; u.hage.edd = null; u.hage.mv = null; u.dekket = 0; } u.lapper = [];
-  const b = BRETT[u.i]; fremdrift[b.id] = fremdrift[b.id] || {}; const før = fremdrift[b.id].unwrap || 0; if (u.poeng > før) fremdrift[b.id].unwrap = u.poeng; skrivLokal(fremdrift);
+  // Tre stjerner, som i BUBBLE IT: pakket opp, minst en tredjedel av tida igjen, ingen kniv mistet.
+  const stj = [true, u.frist - u.tid >= u.frist / 3, !u.mistet];
+  const b = BRETT[u.i]; fremdrift[b.id] = fremdrift[b.id] || {}; const før = fremdrift[b.id].unwrap || 0; if (u.poeng > før) fremdrift[b.id].unwrap = u.poeng; fremdrift[b.id].unwrapS = Math.max(fremdrift[b.id].unwrapS || 0, stj.filter(Boolean).length); skrivLokal(fremdrift);
   const neste = nesteIRekke(u.i);
   if (lydPa) [0, 4, 7, 12, 16].forEach((st, j) => tone(523.25 * Math.pow(2, st / 12), j * .09, .5, .03, "triangle", .5, 1));
   setTimeout(() => { if (uw !== u) return; uwHud();
     uwMelding("Unwrapped!", u.poeng.toLocaleString("en") + " points · " + prosent + " % · time bonus " + tidBonus.toLocaleString("en") + (u.poeng > før && før ? " · New best!" : før ? " · Best " + før.toLocaleString("en") : ""),
-      [[neste >= 0 ? "Next: " + BRETT[neste].navn + " →" : "Menu", () => neste >= 0 ? uwStart(neste) : uwAvslutt(), true], ["Menu", uwAvslutt]]); }, 1600);
+      [[neste >= 0 ? "Next: " + BRETT[neste].navn + " →" : "Menu", () => neste >= 0 ? uwStart(neste) : uwAvslutt(), true], ["Menu", uwAvslutt]]);
+    const rs = document.createElement("div"); rs.className = "res-stjerner uw-stjerner"; ["UNWRAPPED", "FAST", "NO CUT"].forEach(t => { const el = document.createElement("span"), st = document.createElement("b"); st.textContent = "★"; el.append(st, t); rs.appendChild(el); });
+    $("uwKnapper").before(rs); stj.forEach((ja, j) => { if (ja) setTimeout(() => { if (uw !== u) return; rs.children[j].classList.add("ja"); if (lydPa) tone(880 * Math.pow(2, j * 4 / 12), 0, .35, .04, "triangle", .6, 1); }, 400 + j * 450); }); }, 1600);
 }
 function uwLoop(t) {
   if (!uw) return; const dt = Math.min(.05, (t - uwSist) / 1000); uwSist = t;
