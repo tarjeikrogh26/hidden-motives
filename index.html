@@ -132,6 +132,7 @@ h1 .signatur{font-size:.55em;letter-spacing:.06em;white-space:nowrap}
 .under{color:var(--demp);max-width:46ch;margin:10px 0 0}
 .samlingsnavn{font-family:var(--tall);font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--demp);margin:30px 0 12px}
 .rutenett{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(46%,200px),1fr));gap:14px}
+.rutenett.ni{grid-template-columns:repeat(3,minmax(0,1fr));width:100%;max-width:860px;box-sizing:border-box}
 .brett{position:relative;aspect-ratio:1/1;border-radius:6px;overflow:hidden;background:var(--flate);border:1px solid var(--strek);text-align:left;display:block;width:100%}
 .brett canvas,.brett img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;image-rendering:pixelated}
 .brett .merke{position:absolute;left:0;bottom:0;right:0;padding:24px 10px 9px;display:flex;justify-content:space-between;align-items:end;gap:8px;font-family:var(--tall);font-size:12px;text-shadow:0 1px 3px #000;background:linear-gradient(transparent,rgba(10,9,8,.75))}
@@ -527,17 +528,17 @@ h1{font-weight:300;letter-spacing:.14em;line-height:1.02}
   </div>
   <div class="faner" id="faner" role="tablist"></div>
   <div class="samlingsnavn samling-tittel" id="samlingTittel"></div>
-  <div class="rutenett" id="brettliste"></div>
+  <div class="rutenett ni" id="brettliste"></div>
   <div class="samlingsnavn">Next collection</div>
   <div class="rutenett"><div class="neste" id="samling2"><div></div></div></div>
   <div class="samlingsnavn" id="sammenTittel"></div>
-  <div class="regel"><b>The race:</b> Your best score on each of the ten boards is added up. Two classes: Normal + Harder, and Chaos + Insane (iPad). Every Sunday at midnight the list locks: the best player who has played all ten boards and beats the house names wins the next collection for free. One win per player, and one winner per race each week. <span id="ukeTekst"></span> Points: Normal gives 10,000, Harder 15,000, Chaos 20,000 and Insane 25,000 at normal speed. Be fast and you get up to double.</div>
+  <div class="regel"><b>The race:</b> Your best score on each board in the collection is added up. Two classes: Normal + Harder, and Chaos + Insane (iPad). Every Sunday at midnight the list locks: the best player who has played every board and beats the house names wins the next collection for free. One win per player, and one winner per race each week. <span id="ukeTekst"></span> Points: Normal gives 10,000, Harder 15,000, Chaos 20,000 and Insane 25,000 at normal speed. Be fast and you get up to double.</div>
   <div class="sammen" id="sammen"><p class="liten">Loading standings …</p></div>
   <div class="samlingsnavn">Top 100 players · motive points</div>
   <div class="regel">Everything counts: Game, Peace, Scrub it 1P and 2P, every board, every level, every collection. Each board list gives up to 100 points (a Scrub it list up to 1,000): #1 gets them all, the rest their share of the top score.</div>
   <div class="sammen" id="spillere"><p class="liten">Loading players …</p></div>
   <p class="kreditt">© 2001–2026 Tarjei Krogh. All photography, music and art. <a href="https://kroghx.com" target="_blank" rel="noopener">kroghx.com</a></p>
-  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 1.28<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
+  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 1.29<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
 </section>
 
 <div class="ark" id="tidUtArk" hidden style="z-index:200001">
@@ -672,16 +673,19 @@ const NAVN_SAMLING = [
   ["Don't Turn Around", "A Small Dog Owns This Moon", "Too Many Ways to Look", "Smile for the Teeth", "Say Cheese, Mean It",
    "Bedtime for Giants", "Landed Softly, Probably", "He Came for the View", "Talking With His Mouth Full", "The Cherry on Top"]];
 // Samlinger: mappe med bilder og id-prefiks (samling 1 beholder gamle id-er, så rekordene står).
-const SAMLINGER = [{ nr: "01", mappe: "bilder/", pre: "b" }, { nr: "02", mappe: "bilder02/", pre: "c2b" }, { nr: "03", mappe: "bilder03/", pre: "c3b" }, { nr: "04", mappe: "bilder04/", pre: "c4b" }, { nr: "05", mappe: "bilder05/", pre: "c5b" }];
+const SAMLINGER = [{ nr: "01", mappe: "bilder/", pre: "b" }, { nr: "02", mappe: "bilder02/", pre: "c2b" }, { nr: "03", mappe: "bilder03/", pre: "c3b" }, { nr: "04", mappe: "bilder04/", pre: "c4b" }, { nr: "05", mappe: "bilder05/", pre: "c5b" }, { nr: "06" }];
+// Ni brett per sesong (rutenett 3 × 3). Sesong 6 er Mixed Media: ett brett fra hver av de fem første. Krogh finner flere.
+const _ni = (s, ut) => [1, 2, 3, 4, 5, 6, 7, 8, 9, 10].filter(n => n !== ut).map(n => [s, n]);
+const SESONG_BRETT = [_ni(0, 10), _ni(1, 9), _ni(2, 10), _ni(3, 7), _ni(4, 2), [[0, 10], [1, 9], [2, 10], [3, 7], [4, 2]]];
 let aktiv = 0;
 let SAMLING = "01";
 // Kryptiske samlingsnavn, brukes i rekkefølge: /01, /02, /03 …
 const SAMLINGSNAVN = ["The Velvet Asylum", "Teeth in the Garden", "Creature Kingdom", "Dark City", "A Museum of Small Lies",
-  "The Lantern Cult", "Weather for Ghosts", "The Hollow Parade", "Sugar for the Wolves", "The Last Polite Society", "Quiet Riot Hotel"];
+  "Mixed Media", "The Lantern Cult", "Weather for Ghosts", "The Hollow Parade", "Sugar for the Wolves", "The Last Polite Society", "Quiet Riot Hotel"];
 let BRETT = [];
 function velgSamling(j) {
   aktiv = j; const sm = SAMLINGER[j]; SAMLING = sm.nr;
-  BRETT = [1,2,3,4,5,6,7,8,9,10].map((n, i) => ({ id: sm.pre + n, src: sm.mappe + n + ".jpg", navn: NAVN_SAMLING[j][i] }));
+  BRETT = SESONG_BRETT[j].map(([s, n]) => ({ id: SAMLINGER[s].pre + n, src: SAMLINGER[s].mappe + n + ".jpg", navn: NAVN_SAMLING[s][n - 1], s }));
   try { localStorage.setItem("sm-samling", String(j)); } catch {}
 }
 try { velgSamling(Math.min(SAMLINGER.length - 1, +localStorage.getItem("sm-samling") || 0)); } catch { velgSamling(0); }
@@ -749,18 +753,18 @@ function tegnFaner() {
     const b = document.createElement("button"); b.setAttribute("role", "tab"); b.setAttribute("aria-selected", String(j === aktiv));
     b.append("/" + sm.nr); const n = document.createElement("b"); n.textContent = SAMLINGSNAVN[j]; b.append(n);
     if (!sesongApen(j)) { b.classList.add("laast"); b.prepend("🔒 "); }
-    b.onclick = () => { if (!sesongApen(j)) { banner("LOCKED", "WIN A WEEKLY RACE IN /" + SAMLINGER[j - 1].nr + " · OR BUY IT WHEN ALL 10 BOARDS ARE PLAYED", "#ffd27a", 3000); return; } velgSamling(j); tegnMeny(); };
+    b.onclick = () => { if (!sesongApen(j)) { banner("LOCKED", "WIN A WEEKLY RACE IN /" + SAMLINGER[j - 1].nr + " · OR BUY IT WHEN ALL BOARDS ARE PLAYED", "#ffd27a", 3000); return; } velgSamling(j); tegnMeny(); };
     f.appendChild(b);
   });
-  const t = $("samlingTittel"); t.replaceChildren("/" + SAMLING + " "); const bb = document.createElement("b"); bb.textContent = SAMLINGSNAVN[aktiv]; const an = document.createElement("span"); an.className = "antall"; an.textContent = "10 boards"; t.append(bb, an);
+  const t = $("samlingTittel"); t.replaceChildren("/" + SAMLING + " "); const bb = document.createElement("b"); bb.textContent = SAMLINGSNAVN[aktiv]; const an = document.createElement("span"); an.className = "antall"; an.textContent = BRETT.length + " boards"; t.append(bb, an);
 
   const nr = String(aktiv + 2).padStart(2, "0"), s2 = $("samling2");
   s2.classList.toggle("apen", !!fremdrift["samling" + (aktiv + 2)]);
   s2.firstElementChild.innerHTML = "";
   const nb = document.createElement("b"); nb.textContent = "/" + nr + " " + (SAMLINGSNAVN[aktiv + 1] || "");
-  const regel = "Win it: be #1 in one of this week's races in /" + SAMLING + " when the week locks (Sunday at midnight). Or buy it when all 10 are played.";
+  const regel = "Win it: be #1 in one of this week's races in /" + SAMLING + " when the week locks (Sunday at midnight). Or buy it when all " + BRETT.length + " are played.";
   s2.firstElementChild.append(nb, fremdrift["samling" + (aktiv + 2)] ? "You won it for free by being #1." : sesongKjopt(aktiv + 1) ? "Yours." : (SAMLINGER[aktiv + 1] ? (BETA ? "Open for beta testers. " : "") + regel : "Coming soon. " + regel));
-  if (!BETA && !sesongApen(aktiv + 1) && SAMLINGER[aktiv + 1]) { const kb = document.createElement("button"); kb.className = "sekundar"; kb.textContent = sesongSpilt() ? "Buy /" + nr + " · coming at launch" : "Play all 10 boards to buy /" + nr; kb.disabled = true; s2.firstElementChild.append(kb); }
+  if (!BETA && !sesongApen(aktiv + 1) && SAMLINGER[aktiv + 1]) { const kb = document.createElement("button"); kb.className = "sekundar"; kb.textContent = sesongSpilt() ? "Buy /" + nr + " · coming at launch" : "Play all " + BRETT.length + " boards to buy /" + nr; kb.disabled = true; s2.firstElementChild.append(kb); }
 }
 // To måter å spille på: pusle eller vaske. Løser du et brett i ett av dem, åpnes neste.
 let modus = "pusle";
@@ -1572,7 +1576,7 @@ const PEACE_LÅTER = [
 // Inntil Krogh har sendt en låt per brett, går de låtene som finnes på rundgang over alle brett.
 const LÅTER = ["b1", "b2", "b3", "b4", "b5"].map(k => MUSIKK[k]);
 function musikkFor(id) {
-  if (iPeace()) { const i = Math.max(0, BRETT.findIndex(b => b.id === id)); return PEACE_LÅTER[(i + aktiv * 10) % PEACE_LÅTER.length]; }
+  if (iPeace()) { const i = Math.max(0, BRETT.findIndex(b => b.id === id)); return PEACE_LÅTER[(i + aktiv * 9) % PEACE_LÅTER.length]; }
   if (aktiv === 0 && MUSIKK[id]) return MUSIKK[id];
   const i = BRETT.findIndex(b => b.id === id); return i < 0 ? null : LÅTER[(i + aktiv) % LÅTER.length];
 }
@@ -3730,7 +3734,7 @@ const SH_INN = {
   fiende: { levende: 1, galaga: 2, sabot: 3, krabbe: 4, boss: 6, hopper: 7 } };
 const SH_NYNAVN = { kjøp: { tilt: "TILT", orm: "WORM", magnet: "VACUMA", trip: "TRIP", bombe: "BOMBS", missil: "MISSILES", laser: "BEAM", alien: "ALIEN" },
   fiende: { levende: "THE ART WAKES UP", galaga: "SPACESHIPS", sabot: "SABOTEURS", krabbe: "MUD CRAWLER", boss: "THE BOSS", hopper: "PARATROOPER" } };
-function shHar(type, navn, i = sh?.i ?? 0) { return BETA || aktiv * 10 + i >= (SH_INN[type][navn] ?? 0); }
+function shHar(type, navn, i = sh?.i ?? 0) { return BETA || aktiv * 9 + i >= (SH_INN[type][navn] ?? 0); }
 // Velger en power-up blant dem som er åpnet (vektet etter hvor vanlige de er, eller helt jevnt).
 function shKapselValg(vektet = true) {
   const lov = KAPSLER.filter(q => shHar("kapsel", q.t)); if (!lov.length) return KAPSLER[0];
@@ -4088,7 +4092,7 @@ async function shatterStart(i, poeng = 0, liv = 3) {
   $("shNiva").textContent = kode(i) + " · " + BRETT[i].navn;
   spillMusikk(BRETT[i].id);
   shMelding("Tap to launch", "Drag anywhere to move the light, or hold the left or right side. Wash off the mud, and catch what falls out of it.");
-  if (!BETA) { const G = aktiv * 10 + i, nye = [];
+  if (!BETA) { const G = aktiv * 9 + i, nye = [];
     for (const type in SH_INN) for (const navn in SH_INN[type]) if (SH_INN[type][navn] === G && !(toP && type === "kjøp"))
       nye.push(type === "kapsel" ? "NEW POWER-UP · " + KAPSLER.find(q => q.t === navn).navn : type === "kjøp" ? "NEW TO BUY · " + SH_NYNAVN.kjøp[navn] : "NEW · " + SH_NYNAVN.fiende[navn]);
     nye.slice(0, 4).forEach((t, j) => sh.tekster.push({ txt: t, x: .5, y: SH_TOPP + .2 + j * .055, liv: 6, fade: 1.5, farge: "#ffd23a", liten: true })); }
@@ -4911,7 +4915,7 @@ function spriteTone(sp, farge) {
   x.drawImage(sp, 0, 0); x.globalCompositeOperation = "source-atop"; x.fillStyle = farge; x.fillRect(0, 0, c.width, c.height); return c;
 }
 function shFigurer() {
-  const sett = SH_FIGURER[aktiv] || SH_FIGURER[0];
+  const sett = SH_FIGURER[BRETT[sh?.i]?.s ?? aktiv] || SH_FIGURER[0];
   const last = (n, farge) => hentBilde("figurer/" + n + ".webp").then(img => shFigurKant(img, farge)).catch(() => null);
   return Promise.all([Promise.all(sett.m.map(n => last(n, "rgba(120,230,255,.95)"))), Promise.all(sett.b.map(n => last(n, "rgba(255,80,80,.95)")))])
     .then(([m, b]) => ({ m: m.filter(Boolean), b: b.filter(Boolean) }));
