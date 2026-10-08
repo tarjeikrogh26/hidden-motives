@@ -704,7 +704,7 @@ body.lys #modusDeal{--farge:#0f8f6c;--glod:15,143,108}
   <div class="regel">Everything counts: Game, Peace, Bubble it 1P and 2P, every board, every level, every collection. Each board list gives up to 100 points (a Bubble it list up to 1,000): #1 gets them all, the rest their share of the top score.</div>
   <div class="sammen" id="spillere"><p class="liten">Loading players …</p></div>
   <p class="kreditt">© 2001–2026 Tarjei Krogh. All photography, music and art. <a href="https://kroghx.com" target="_blank" rel="noopener">kroghx.com</a></p>
-  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 1.78<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
+  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 1.79<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
 </section>
 
 <div class="ark" id="tidUtArk" hidden style="z-index:200001">
@@ -4462,7 +4462,7 @@ const SH_INN = {
   kjøp: { tilt: 0, orm: 2, magnet: 4, trip: 6, bombe: 8, missil: 10, laser: 20, alien: 30, boble: 0, voks: 0 },
   fiende: { levende: 1, galaga: 2, sabot: 3, krabbe: 4, boss: 6, hopper: 7, fugl: 9, snø: 5, mørke: 4, deler: 3 } };
 const SH_NYNAVN = { kjøp: { tilt: "TILT", orm: "WORM", magnet: "VACUMA", trip: "TRIP", bombe: "BOMBS", missil: "MISSILES", laser: "BEAM", alien: "ALIEN", boble: "EXTRA BUBBLE", voks: "MEGA BUBBLE" },
-  fiende: { levende: "THE ART WAKES UP", galaga: "SPACESHIPS", sabot: "SABOTEURS", krabbe: "MUD CRAWLER", boss: "THE BOSS", hopper: "PARATROOPER", fugl: "SEED BIRD", snø: "SNOW", mørke: "STORM", deler: "PINBALL PARTS" } };
+  fiende: { levende: "THE ART WAKES UP", galaga: "SPACESHIPS", sabot: "SABOTEURS", krabbe: "MUD CRAWLER", boss: "THE BOSS", hopper: "PARATROOPER", fugl: "SEED BIRD", snø: "SNOW", mørke: "BLACKOUT", deler: "PINBALL PARTS" } };
 function shHar(type, navn, i = sh?.i ?? 0) { return BETA || aktiv * 9 + i >= (SH_INN[type][navn] ?? 0); }
 // Velger en power-up blant dem som er åpnet (vektet etter hvor vanlige de er, eller helt jevnt).
 function shKapselValg(vektet = true) {
@@ -6656,7 +6656,7 @@ function shVaerP(p) { const s = sh; s.vaerP = s.vaerP || []; if (s.vaerP.length 
 function shMørkeStart() {
   const s = sh; s.mørke = { t: 0, varighet: 14, lynT: 2 + Math.random() * 1.5, lyn: [], tordenT: null };
   s.tekster = s.tekster.filter(tk => !tk.kapsel && !tk.vaer);
-  s.tekster.push({ txt: "STORM!", x: .5, y: SH_TOPP + .42, liv: 2.8, fade: 1.4, farge: "#c9d6ff", vaer: true }, { txt: "THE LIGHTNING WASHES THE MUD", x: .5, y: SH_TOPP + .48, liv: 3.2, fade: 1.4, farge: "#e6ecff", liten: true, kapsel: true });
+  s.tekster.push({ txt: "BLACKOUT!", x: .5, y: SH_TOPP + .42, liv: 2.8, fade: 1.4, farge: "#c9d6ff", vaer: true }, { txt: "ONLY THE BUBBLE GIVES LIGHT", x: .5, y: SH_TOPP + .48, liv: 3.2, fade: 1.4, farge: "#e6ecff", liten: true, kapsel: true });
   shRegnStart(); s.regn.varighet = Math.max(s.regn.varighet, 15);
   if (lydPa) { shGlid(220, 40, .7, .05, "sawtooth", .5, .3); shSus(.5, "lowpass", 400, .04, 1, .6, .3); }
 }
@@ -6667,7 +6667,7 @@ function shMørkeSteg(dt) {
   const inn = Math.min(1, M.t / 1), ut = M.t < M.varighet ? 1 : Math.max(0, 1 - (M.t - M.varighet) / 1.4), flimmer = M.t > M.varighet && M.t < M.varighet + 1 ? (Math.sin(M.t * 45) > .2 ? .35 : 1) : 1;
   M.I = inn * ut * flimmer;
   M.lynT -= dt;
-  if (M.lynT <= 0 && M.t < M.varighet - 1) { M.lynT = 1.6 + Math.random() * 1.8; const L = { t: 0, x: .1 + Math.random() * .8, ned: [] };
+  if (M.lynT <= 0 && M.t < M.varighet - 1) { M.lynT = Math.random() < .5 ? .25 + Math.random() * .35 : .9 + Math.random() * 1.1; const L = { t: 0, x: .1 + Math.random() * .8, ned: [] };
     // Ett til tre nedslag. Der lynet slår ned, går jorda bort.
     for (let n = 1 + Math.floor(Math.random() * 3); n > 0; n--) { const px = .08 + Math.random() * .84, py = SH_TOPP + .12 + Math.random() * .7; L.ned.push([px, py]); shVask(px, py, .055, 2, "syre"); shStov(px, py, 26, "220,235,255", .3); }
     M.lyn.push(L); s.rist = Math.max(s.rist || 0, .35); M.tordenT = .25 + Math.random() * .5; }
@@ -6682,7 +6682,7 @@ function shMørkeTegn(x, f, s) {
   const I = M.I * (1 - lys * .92); if (I <= .01) { if (lys > 0) { x.fillStyle = `rgba(220,230,255,${.12 * lys})`; x.fillRect(0, 0, f, SH_H * f); } return; }
   const c = x.canvas, oc = s.mørkCv && s.mørkCv.width === c.width && s.mørkCv.height === c.height ? s.mørkCv : (s.mørkCv = Object.assign(document.createElement("canvas"), { width: c.width, height: c.height })), o = oc.getContext("2d");
   o.setTransform(1, 0, 0, 1, 0, 0); o.clearRect(0, 0, oc.width, oc.height); o.setTransform(x.getTransform());
-  o.globalCompositeOperation = "source-over"; o.fillStyle = `rgba(3,5,12,${.62 * I})`; o.fillRect(-2, -2, f + 4, SH_H * f + 4);
+  o.globalCompositeOperation = "source-over"; o.fillStyle = `rgba(3,5,12,${.95 * I})`; o.fillRect(-2, -2, f + 4, SH_H * f + 4);
   // Hull i mørket der det lyser.
   o.globalCompositeOperation = "destination-out";
   const hull = (X, Y, R, a = 1) => { const g = o.createRadialGradient(X, Y, 0, X, Y, R); g.addColorStop(0, `rgba(0,0,0,${a})`); g.addColorStop(.45, `rgba(0,0,0,${a * .75})`); g.addColorStop(1, "rgba(0,0,0,0)"); o.fillStyle = g; o.fillRect(X - R, Y - R, R * 2, R * 2); };
@@ -6698,10 +6698,7 @@ function shMørkeTegn(x, f, s) {
       while (ly < my - f * .04) { r = (r * 9301 + 49297) % 233280; const u = Math.min(1, ly / my); lx += (mx - lx) * .25 * u + (r / 233280 - .5) * f * .07; ly += f * (.03 + (r % 7) * .006); x.lineTo(lx, Math.min(ly, my)); }
       x.lineTo(mx, my); x.stroke(); }
     x.restore(); }
-  // Hele brettet lyser opp, og sterkest der lynet slår ned.
-  if (lys > 0) { x.save(); x.globalCompositeOperation = "lighter"; x.fillStyle = `rgba(200,215,255,${.2 * lys})`; x.fillRect(0, 0, f, SH_H * f);
-    for (const L of M.lyn) if (L.t < .3) for (const [px, py] of L.ned) { const R = f * .3, g = x.createRadialGradient(px * f, py * f, 0, px * f, py * f, R); g.addColorStop(0, `rgba(235,242,255,${.55 * lys})`); g.addColorStop(1, "rgba(235,242,255,0)"); x.fillStyle = g; x.fillRect(px * f - R, py * f - R, R * 2, R * 2); }
-    x.restore(); }
+  if (lys > 0) { x.fillStyle = `rgba(220,230,255,${.1 * lys})`; x.fillRect(0, 0, f, SH_H * f); }
 }
 // FLIPPERDELER under gjørma: to bumpere, tre lamper og en jackpot-lampe ligger gjemt i bildet.
 // Vaskes de fram, virker de: bumperne sparker boblen, lampene tennes når boblen ruller over,
