@@ -699,7 +699,7 @@ body.lys #modusDeal{--farge:#0f8f6c;--glod:15,143,108}
   <div class="regel">Everything counts: Game, Peace, Bubble it 1P and 2P, every board, every level, every collection. Each board list gives up to 100 points (a Bubble it list up to 1,000): #1 gets them all, the rest their share of the top score.</div>
   <div class="sammen" id="spillere"><p class="liten">Loading players …</p></div>
   <p class="kreditt">© 2001–2026 Tarjei Krogh. All photography, music and art. <a href="https://kroghx.com" target="_blank" rel="noopener">kroghx.com</a></p>
-  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 1.70<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
+  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 1.71<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
 </section>
 
 <div class="ark" id="tidUtArk" hidden style="z-index:200001">
@@ -6786,7 +6786,7 @@ function shDelerTegn(x, f, s) {
 //   Høyre: en saucer som sluker boblen, holder den litt og spytter den ut mot flipperne, og en spinner som snurrer.
 //   Venstre side: tre drop targets. Alle nede: bonus, og de reiser seg igjen.
 const SH_BORD_ORD = ["B", "U", "B", "B", "L", "E"];
-function shBordPå(s) { return !s.toP && aktiv === 0 && s.i < 3; }
+function shBordPå(s) { return !s.toP; } // Flipperbordet er på alle brett (ikke 2P).
 function shBaneGlatt(pk, n = 10) {
   // Catmull-Rom gjennom punktene, så banen blir en jevn kurve.
   const ut = [];
@@ -6825,10 +6825,10 @@ function shLagBord() {
 const shFri = (x, y) => !shKlossVed(x, y);
 function shBordSteg(dt) {
   const s = sh; if (!shBordPå(s)) return;
-  if (!s.bord) s.bord = shLagBord();
+  if (!s.bord) { s.bord = shLagBord(); shBordUtvid(s.bord); }
   const B = s.bord; B.t += dt; B.ordBlink = Math.max(0, B.ordBlink - dt); if (B.show) { B.show.t += dt; if (B.show.t > B.show.d) B.show = null; }
   // DOUBLE SCORE: alt du har fått siden forrige bilde, får du én gang til.
-  { const d = s.poeng - (B.sistPoeng ?? s.poeng); if (B.dobbel > 0 && d > 0 && !s.bytte && s.tilstand === "spill") { s.poeng += d; shHud(); } B.sistPoeng = s.poeng; B.dobbel = Math.max(0, B.dobbel - dt); }
+  { const d = s.poeng - (B.sistPoeng ?? s.poeng); const ekstra = (B.dobbel > 0 ? 1 : 0) + (B.modus?.navn === "wizard" ? 2 : 0); if (ekstra && d > 0 && !s.bytte && s.tilstand === "spill") { s.poeng += d * ekstra; shHud(); } B.sistPoeng = s.poeng; B.dobbel = Math.max(0, B.dobbel - dt); }
   // HURRY-UP: jackpoten teller ned. Saucer tar den.
   if (B.hurry) { B.hurry.v -= 2000 * dt; B.hurry.t += dt; if (B.hurry.v <= 0) { B.hurry = null; if (lydPa) tone(196, 0, .4, .04, "sawtooth", .5, .3); } }
   // Captive ball: kula i kanalen faller tilbake ned.
@@ -6843,6 +6843,7 @@ function shBordSteg(dt) {
   const sp = B.spinner; sp.w *= Math.exp(-dt * 1.6); if (Math.abs(sp.w) < .3) sp.w = 0; sp.a += sp.w * dt;
   const halv = Math.floor(sp.a / Math.PI); if (halv !== sp.halv) { sp.halv = halv; if (!s.bytte) s.poeng += 100; shHud(); if (++B.spinTeller >= 20 && !B.mysteryLys) { B.mysteryLys = true; B.spinTeller = 0; s.tekster.push({ txt: "MYSTERY IS LIT", x: .78, y: SH_TOPP + .14, liv: 1.3, farge: "#c9a2ff", liten: true }); if (lydPa) tone(1318, 0, .2, .03, "triangle", .5, .8); } if (lydPa) tone(2200 + Math.random() * 200, 0, .025, .018, "square", .4, .15); }
   if (B.målReisT > 0) { B.målReisT -= dt; if (B.målReisT <= 0) { for (const q of B.mål) { q.nede = false; q.t = 0; } if (lydPa) tone(330, 0, .12, .04, "square", .5, .3); } }
+  shBord2Steg(dt, s, B);
   // Første gang en del kommer fram: et glimt og en lyd, ingen tekst.
   const vis = (navn, x, y) => { if (B.avslørt[navn] || !shFri(x, y)) return; B.avslørt[navn] = true; shLyd("glimt"); shStov(x, y, 24, "255,230,150", .22); };
   vis("orbit", B.inngang.x, B.inngang.y); vis("saucer", B.saucer.x, B.saucer.y); vis("spinner", (sp.x0 + sp.x1) / 2, sp.y);
@@ -6861,28 +6862,29 @@ function shBordTreff(b) {
   const s = sh, B = s.bord; if (!B || b.fast || b.parkert || b.bane) return;
   const R = shRad(b), fy = b.forrigeY ?? b.y; b.forrigeY = b.y;
   const tekst = (txt, x, y, farge = "#ffe27a", stor = false) => s.tekster.push(stor ? { txt, x: .5, y, liv: 2.4, fade: 1.1, farge, stor: true } : { txt, x: shClamp(x, .18, .82), y, liv: 1.2, farge, liten: true });
-  const gi = p => { if (!s.bytte) s.poeng += p; shHud(); };
+  const gi = p => { if (!s.bytte) s.poeng += p + (B.modus?.navn === "frenzy" ? 1000 : 0); shHud(); };
+  if (shBord2Treff(b, s, B, gi, tekst)) return;
   // Baneguidene øverst.
   for (const g of B.guider) if (shFri(g.x, (g.y0 + g.y1) / 2)) shKapselStøt(b, g.x, g.y0, g.x, g.y1, .007, .3);
   // Rullebanene: ruller boblen inn i en bane, tennes bokstaven.
   const Y = SH_TOPP;
   if (b.y > Y + .035 && b.y < Y + .12) B.baner.forEach((q, k) => { if (b.x > q.x0 + .008 && b.x < q.x1 - .008 && b.iBane !== k && shFri(q.cx, Y + .075)) { b.iBane = k;
     q.lys = 1; if (!B.ord[k]) { B.ord[k] = true; gi(250); if (lydPa) tone(1318.5, 0, .14, .03, "square", .4, .5); }
-    if (B.ord.every(Boolean)) { gi(10000); B.ordBlink = 2.2; B.show = { t: 0, d: 2.4 }; shHurryStart();
+    if (B.ord.every(Boolean)) { gi(10000); B.ordBlink = 2.2; B.show = { t: 0, d: 2.4 }; shHurryStart(); if (SESONG_ORD[aktiv] && !bokstavHar(aktiv, s.i)) { s.bokstav = null; bokstavFunn(aktiv, s.i); }
       // Som på et ekte flipperspill: hele ordet gir en ekstra ball. Er alle plassene fulle, kommer den rett i spill.
       const fullt = s.liv >= (s.plasser || 3); if (!fullt) s.liv++; else { const n = shBall(.5, Y + .14, 0, s.fart, false); n.boost = 1.2; s.baller.push(n); } shHud();
       tekst("B U B B L E · EXTRA BUBBLE", 0, Y + .2, "#7fe8ff", true); s.tekster.push({ txt: "+10,000", x: .5, y: Y + .26, liv: 2, farge: "#ffffff", liten: true }); if (lydPa) [0, 4, 7, 12, 16, 19, 24].forEach((st, j) => tone(523.25 * Math.pow(2, st / 12), j * .07, .35, .03, "square", .4, 1));
       shVask(.5, Y + .08, .14, 1, "syre"); setTimeout(() => { if (s.bord === B) B.ord = B.ord.map(() => false); }, 2200); } } });
   if (b.y > Y + .13 || b.y < Y + .03) b.iBane = -1;
   // Bumperne.
-  for (const q of B.bumpere) { if (!shFri(q.x, q.y)) continue; const BR = .042, dx = b.x - q.x, dy = b.y - q.y, d = Math.hypot(dx, dy) || 1e-6;
+  for (const q of B.bumpere) { if (!shFri(q.x, q.y)) continue; const BR = B.modus?.navn === "jets" ? .056 : .042, dx = b.x - q.x, dy = b.y - q.y, d = Math.hypot(dx, dy) || 1e-6;
     if (d < BR + R) { const nx = dx / d, ny = dy / d, v = Math.max(Math.hypot(b.vx, b.vy), s.fart * 1.35), dot = b.vx * nx + b.vy * ny;
       if (dot < 0 || s.tid - q.sistT > .15) { b.vx = nx * v; b.vy = ny * v; b.x = q.x + nx * (BR + R + .002); b.y = q.y + ny * (BR + R + .002); b.boost = Math.max(b.boost || 1, 1.4); shStot(b, nx, ny, .7);
-        if (s.tid - q.sistT > .15) { q.sistT = s.tid; q.lys = 1; gi(100); shDelerLyd("bumper"); s.rist = Math.max(s.rist || 0, .12); } } } }
+        if (s.tid - q.sistT > .15) { q.sistT = s.tid; q.lys = 1; gi(B.modus?.navn === "jets" ? 2500 : 100); shDelerLyd("bumper"); s.rist = Math.max(s.rist || 0, .12); } } } }
   // Drop targets.
   for (const q of B.mål) { if (q.nede || !shFri((q.ax + q.bx) / 2, (q.ay + q.by) / 2)) continue;
     if (shKapselStøt(b, q.ax, q.ay, q.bx, q.by, .009, .5)) { q.nede = true; q.t = 0; q.lys = 1; gi(500); if (lydPa) { tone(196, 0, .08, .05, "square", .5, .2); tone(98, .03, .12, .04, "sine", .5, .2); }
-      if (B.mål.every(z => z.nede)) { gi(5000); B.show = { t: 0, d: 1.6 }; tekst("TARGETS · +5,000", q.ax, q.ay - .03, "#ffd23a"); B.målReisT = 3; if (lydPa) [0, 7, 12].forEach((st, j) => tone(659.25 * Math.pow(2, st / 12), j * .08, .3, .03, "triangle", .5, 1)); } } }
+      if (B.mål.every(z => z.nede)) { if (B.modus?.navn === "mål") { gi(25000); B.modus.ok = true; B.modus.t = B.modus.d; tekst("TARGET ATTACK · +25,000", .5, SH_TOPP + .4, "#a6ff7a"); } else if (!B.modus) B.modusLys = true; gi(5000); B.show = { t: 0, d: 1.6 }; tekst("TARGETS · +5,000", q.ax, q.ay - .03, "#ffd23a"); B.målReisT = 3; if (lydPa) [0, 7, 12].forEach((st, j) => tone(659.25 * Math.pow(2, st / 12), j * .08, .3, .03, "triangle", .5, 1)); } } }
   // Captive ball: kanalen har to krom-vegger; boblen dytter kula opp.
   { const c = B.fange; if (shFri(c.x, (c.y0 + c.y1) / 2)) { shKapselStøt(b, c.x - .028, c.y0 - .012, c.x - .028, c.y1 + .006, .005, .3); shKapselStøt(b, c.x + .028, c.y0 - .012, c.x + .028, c.y1 + .006, .005, .3);
       const cr = .016, dx = b.x - c.x, dy = b.y - c.y, d = Math.hypot(dx, dy) || 1e-6; if (d < R + cr) { const nx = dx / d, ny = dy / d, dot = b.vx * nx + b.vy * ny; b.x = c.x + nx * (R + cr + .001); b.y = c.y + ny * (R + cr + .001);
@@ -6894,6 +6896,8 @@ function shBordTreff(b) {
     b.bane = { type: "saucer", t: 0, fraX: b.x, fraY: b.y }; sc.holder = b; gi(3000); B.lås = (B.lås || 0) + 1; shBordSkudd();
     if (B.hurry) { const v = Math.max(1000, Math.round(B.hurry.v / 100) * 100); gi(v); B.hurry = null; B.show = { t: 0, d: 1.6 }; tekst("HURRY-UP · +" + v.toLocaleString("en"), 0, SH_TOPP + .36, "#ff9a3c", true); if (lydPa) [0, 7, 12, 19].forEach((st, j) => tone(659 * Math.pow(2, st / 12), j * .07, .3, .03, "square", .4, 1)); }
     if (B.mysteryLys) { B.mysteryLys = false; shMystery(); }
+    if (B.modus?.navn === "wizard") { gi(50000); tekst("WIZARD JACKPOT · +50,000", 0, SH_TOPP + .36, "#d6b4ff", true); }
+    else if (B.modusLys && !B.modus) shModusStart(s, B);
     if (B.lås >= 3) { B.lås = 0; b.bane.multi = true; B.show = { t: 0, d: 3 }; shHurryStart(); tekst("MULTIBALL!", 0, SH_TOPP + .42, "#ff7ae0", true); s.tekster.push({ txt: "+3,000", x: sc.x, y: sc.y - .05, liv: 1.2, farge: "#ffe27a", liten: true }); }
     else tekst("LOCK " + B.lås + " · +3,000", sc.x, sc.y - .05); if (lydPa) { tone(110, 0, .2, .07, "sine", .6, .3); tone(220, .05, .12, .03, "square", .5, .2); } return; }
   // Orbit: inngangen nede til venstre, bare på vei opp.
@@ -6932,6 +6936,7 @@ function shBordOverTegn(x, f, s) {
 // Boblen på en bane (orbit) eller i saucerens hull: flyttes av bordet, ikke av fysikken.
 function shBaneSteg(b, dt) {
   const s = sh, B = s.bord, bn = b.bane; if (!B) { b.bane = null; return; }
+  if (shBord2Bane(b, dt, s, B)) return;
   if (bn.type === "orbit") {
     bn.d += s.fart * 1.7 * dt; const p = shBanePunkt(B.orbit, Math.min(bn.d, B.orbit.tot)); b.x = p.x; b.y = p.y;
     if (Math.random() < dt * 12) shStov(b.x, b.y, 2, "220,235,255", .08);
@@ -6950,6 +6955,143 @@ function shBaneSteg(b, dt) {
   }
 }
 // ---------- Tegning ----------
+// ---------- Flipperbordet, del 2: sesongleke, magnet, spinnende skive, mini-flipper, ball save, moduser og wizard ----------
+// Sesongleka: et hode som åpner munnen. Treffer du munnen mens den er åpen, sluker den boblen, tygger og spytter den ut.
+// Hver sesong har sitt eget hode.
+const SH_LEKE = [
+  { navn: "THE PATIENT", hud: ["#e9dcf2", "#8a6aa0"], munn: "#5a0f2a", tann: "#fff8ec", øye: "#2a0a3a", ord: "SWALLOWED!" },
+  { navn: "FLYTRAP", hud: ["#9be06a", "#2f7a2a"], munn: "#a8143a", tann: "#f6ffe0", øye: null, ord: "EATEN!", plante: true },
+  { navn: "THE BEAST", hud: ["#ff9a3c", "#b04a10"], munn: "#3a0808", tann: "#fffbe8", øye: "#1a0a00", ord: "CHOMP!", horn: true },
+  { navn: "UNIT 7", hud: ["#c9d2dc", "#4a5562"], munn: "#081018", tann: "#7fe8ff", øye: "#7fe8ff", ord: "PROCESSED!", robot: true },
+  { navn: "THE BUST", hud: ["#f4f1ea", "#a8a296"], munn: "#2a2620", tann: "#fffdf6", øye: "#6a6458", ord: "ACQUIRED!", laurbær: true },
+  { navn: "COLLAGE", hud: ["#ff6fa5", "#3a6aff"], munn: "#1a1a1a", tann: "#fff", øye: "#111", ord: "PASTED!", lapper: true }];
+function shBordUtvid(B) {
+  const Y = SH_TOPP;
+  Object.assign(B, {
+    munn: { x: .29, y: Y + .53, åpen: 0, t: Math.random() * 3, holder: null, tygg: 0, leke: SH_LEKE[aktiv % SH_LEKE.length] },
+    magnet: { x: .55, y: Y + .57, holder: null, t: 0, kjøl: 0, spinn: 0 },
+    skive: { x: .76, y: Y + .6, r: .06, a: 0, lys: 0 },
+    mini: { x: .93, y: Y + .68, t: 1 },
+    modusNr: 0, modus: null, modusLys: false, fullført: [], saveTil: 0, varFast: true });
+}
+const SH_MODUSER = [{ navn: "frenzy", tittel: "FRENZY", d: 20, hva: "EVERY HIT +1,000" }, { navn: "jets", tittel: "SUPER JETS", d: 20, hva: "BIG BUMPERS · 2,500 EACH" }, { navn: "mål", tittel: "TARGET ATTACK", d: 15, hva: "ALL 3 TARGETS IN 15 s · 25,000" }];
+function shModusStart(s, B) {
+  const m = SH_MODUSER[B.modusNr % 3]; B.modus = { ...m, t: 0, ok: m.navn !== "mål" }; B.modusLys = false; B.show = { t: 0, d: 1.4 };
+  if (m.navn === "mål") for (const q of B.mål) { q.nede = false; q.t = 0; }
+  s.tekster.push({ txt: m.tittel, x: .5, y: SH_TOPP + .42, liv: 2.4, fade: 1.1, farge: "#ffb84a", stor: true }, { txt: m.hva, x: .5, y: SH_TOPP + .48, liv: 2.4, farge: "#ffffff", liten: true });
+  if (lydPa) [0, 5, 7, 12].forEach((st, j) => tone(392 * Math.pow(2, st / 12), j * .08, .3, .03, "square", .4, .8));
+}
+function shModusSlutt(s, B) {
+  const m = B.modus; B.modus = null;
+  if (m.navn === "wizard") { B.fullført = []; s.tekster.push({ txt: "WIZARD MODE OVER", x: .5, y: SH_TOPP + .45, liv: 1.6, farge: "#d6b4ff", liten: true }); return; }
+  if (m.ok && !B.fullført.includes(m.navn)) B.fullført.push(m.navn);
+  B.modusNr++;
+  if (B.fullført.length >= 3) { // Alle tre: WIZARD MODE.
+    B.modus = { navn: "wizard", tittel: "WIZARD MODE", t: 0, d: 25 }; B.show = { t: 0, d: 25 };
+    for (const da of [-.6, .6]) { if (s.baller.length >= 4) break; const n = shBall(B.saucer.x, B.saucer.y + .04, Math.sin(da) * s.fart, s.fart * .8, false); n.boost = 1.4; n.forrigeY = n.y; s.baller.push(n); }
+    s.tekster.push({ txt: "WIZARD MODE", x: .5, y: SH_TOPP + .42, liv: 3, fade: 1.4, farge: "#d6b4ff", stor: true }, { txt: "3 BUBBLES · EVERYTHING ×3 · SAUCER 50,000", x: .5, y: SH_TOPP + .48, liv: 3, farge: "#ffffff", liten: true });
+    s.rist = Math.max(s.rist || 0, .8); if (lydPa) [0, 4, 7, 11, 14, 19, 23, 26].forEach((st, j) => tone(261.6 * Math.pow(2, st / 12), j * .07, .5, .03, "square", .4, 1.2));
+  } else s.tekster.push({ txt: m.tittel + (m.ok ? " COMPLETE" : " OVER"), x: .5, y: SH_TOPP + .45, liv: 1.6, farge: m.ok ? "#a6ff7a" : "#cccccc", liten: true });
+}
+// Kalles fra shBordSteg.
+function shBord2Steg(dt, s, B) {
+  // Ball save: de første 10 sekundene etter at boblen er skutt ut.
+  const nåFast = s.baller.some(b => b.fast); if (B.varFast && !nåFast && s.tilstand === "spill") B.saveTil = s.tid + 10; B.varFast = nåFast;
+  // Munnen åpner og lukker seg: 3 s lukket, 2,5 s åpen.
+  const M = B.munn; M.t += dt; M.tygg = Math.max(0, M.tygg - dt);
+  if (!M.holder) { const fase = M.t % 5.5; M.åpen = fase < 3 ? Math.max(0, M.åpen - dt * 3) : Math.min(1, M.åpen + dt * 3); }
+  const G = B.magnet; G.kjøl = Math.max(0, G.kjøl - dt); G.spinn += dt * (G.holder ? 14 : 2);
+  const D = B.skive; D.a += dt * 4; D.lys = Math.max(0, D.lys - dt * 2);
+  B.mini.t = Math.min(1, B.mini.t + dt * 4);
+  if (B.modus) { B.modus.t += dt; if (B.modus.t >= B.modus.d) shModusSlutt(s, B); }
+}
+// Kalles fra shBordTreff for hver boble.
+function shBord2Treff(b, s, B, gi, tekst) {
+  const R = shRad(b);
+  // Munnen.
+  const M = B.munn; if (!M.holder && M.åpen > .6 && shFri(M.x, M.y) && Math.hypot(b.x - M.x, b.y - (M.y + .012)) < .04 + R * .4) {
+    M.holder = b; b.bane = { type: "munn", t: 0, fraX: b.x, fraY: b.y }; gi(5000); tekst(M.leke.ord + " +5,000", M.x, M.y - .07, "#ff9ad0"); shBordSkudd();
+    if (lydPa) { tone(90, 0, .25, .08, "sawtooth", .5, .3); shSus(.3, "lowpass", 500, .07, 1, .8, .3); } return true; }
+  // Magneten.
+  const G = B.magnet; if (!G.holder && G.kjøl <= 0 && shFri(G.x, G.y) && Math.hypot(b.x - G.x, b.y - G.y) < .035) {
+    G.holder = b; b.bane = { type: "magnet", t: 0, fraX: b.x, fraY: b.y }; gi(500); tekst("MAGNET!", G.x, G.y - .05, "#ff6a6a"); if (lydPa) tone(60, 0, .5, .06, "sawtooth", .6, .2); return true; }
+  // Spinnende skive: snur farten mens boblen er på den.
+  const D = B.skive; if (shFri(D.x, D.y) && Math.hypot(b.x - D.x, b.y - D.y) < D.r) { const a = 4 / 60, c = Math.cos(a), sn = Math.sin(a), vx = b.vx * c - b.vy * sn, vy = b.vx * sn + b.vy * c; b.vx = vx; b.vy = vy;
+    if (D.lys <= 0) { gi(50); if (lydPa) tone(700 + Math.random() * 200, 0, .05, .015, "triangle", .4, .3); } D.lys = .6; }
+  // Mini-flipperen til høyre slår boblen opp mot saucer når den kommer ned langs siden.
+  const F = B.mini; if (F.t >= 1 && shFri(F.x - .03, F.y) && b.vy > 0 && Math.hypot(b.x - (F.x - .035), b.y - F.y) < .045) {
+    F.t = 0; const mx = B.saucer.x - .05, my = B.saucer.y + .02, d = Math.hypot(mx - b.x, my - b.y); b.vx = (mx - b.x) / d * s.fart; b.vy = (my - b.y) / d * s.fart; b.boost = Math.max(b.boost || 1, 1.5);
+    gi(100); if (lydPa) tone(180, 0, .06, .05, "square", .5, .2); }
+  return false;
+}
+function shBord2Bane(b, dt, s, B) {
+  const bn = b.bane;
+  if (bn.type === "munn") { const M = B.munn, u = Math.min(1, (bn.t += dt) / .15); b.x = bn.fraX + (M.x - bn.fraX) * u; b.y = bn.fraY + (M.y + .01 - bn.fraY) * u; b.vx = b.vy = 0; b.skala = 1 - .6 * u; M.åpen = bn.t < .2 ? 1 : .15 + .15 * Math.abs(Math.sin(bn.t * 14)); M.tygg = 1;
+    if (bn.t > 1.4) { b.bane = null; M.holder = null; M.t = 0; M.åpen = 1; b.skala = 1; b.x = M.x + .02; b.y = M.y + .045; b.vx = s.fart * .35; b.vy = s.fart * .94; b.boost = 1.5; b.forrigeY = b.y; s.rist = Math.max(s.rist || 0, .3); shStov(M.x, M.y + .04, 20, "255,180,220", .25);
+      if (lydPa) tone(140, 0, .15, .08, "square", .6, .2); } return true; }
+  if (bn.type === "magnet") { const G = B.magnet, u = Math.min(1, (bn.t += dt) / .12); b.x = bn.fraX + (G.x - bn.fraX) * u + Math.cos(G.spinn) * .006; b.y = bn.fraY + (G.y - bn.fraY) * u + Math.sin(G.spinn) * .006; b.vx = b.vy = 0;
+    if (bn.t > .8) { b.bane = null; G.holder = null; G.kjøl = 5; const a = -Math.PI / 2 + (Math.random() - .5) * 1.1; b.vx = Math.cos(a) * s.fart; b.vy = Math.sin(a) * s.fart; b.boost = 1.6; b.forrigeY = b.y; shStov(G.x, G.y, 16, "255,120,120", .2);
+      if (lydPa) tone(320, 0, .12, .05, "square", .5, .3); } return true; }
+  return false;
+}
+// ---------- Tegning ----------
+function shLekeTegn(x, f, s, B) {
+  const M = B.munn, L = M.leke, X = M.x * f, Y = M.y * f, R = f * .06, å = M.åpen, t = B.t;
+  x.save(); x.translate(X, Y);
+  x.fillStyle = "rgba(0,0,0,.4)"; x.beginPath(); x.ellipse(R * .15, R * .9, R * 1.05, R * .35, 0, 0, 7); x.fill();
+  if (L.plante) { // To grønne lober med tenner, som åpner seg.
+    for (const sd of [-1, 1]) { x.save(); x.rotate(sd * (.15 + å * .55)); const g = x.createLinearGradient(0, -R, 0, R); g.addColorStop(0, L.hud[0]); g.addColorStop(1, L.hud[1]);
+      x.fillStyle = g; x.beginPath(); x.ellipse(0, sd * R * .35, R * .95, R * .5, 0, 0, 7); x.fill(); x.fillStyle = L.munn; x.beginPath(); x.ellipse(0, sd * R * .35, R * .7, R * .3, 0, 0, 7); x.fill();
+      x.fillStyle = L.tann; for (let k = -4; k <= 4; k++) { x.beginPath(); x.moveTo(k * R * .18 - R * .05, sd * R * .05); x.lineTo(k * R * .18, -sd * R * .18); x.lineTo(k * R * .18 + R * .05, sd * R * .05); x.fill(); } x.restore(); }
+    x.strokeStyle = "#2f7a2a"; x.lineWidth = R * .12; x.beginPath(); x.moveTo(0, R * .6); x.quadraticCurveTo(R * .2, R * 1.1, 0, R * 1.3); x.stroke(); x.restore(); return; }
+  const g = x.createRadialGradient(-R * .3, -R * .4, R * .1, 0, 0, R * 1.1); g.addColorStop(0, L.hud[0]); g.addColorStop(1, L.hud[1]);
+  if (L.lapper) { x.save(); x.beginPath(); x.ellipse(0, 0, R, R * 1.05, 0, 0, 7); x.clip(); const f6 = ["#ff6fa5", "#3a6aff", "#ffd23a", "#2ec27e", "#ff8a3c", "#f4efe6"]; for (let k = 0; k < 9; k++) { x.fillStyle = f6[k % 6]; x.fillRect(-R + (k % 3) * R * .7, -R + Math.floor(k / 3) * R * .7, R * .72, R * .72); } x.restore(); }
+  else { x.fillStyle = g; if (L.robot) { x.beginPath(); x.roundRect(-R, -R, R * 2, R * 2.05, R * .25); x.fill(); } else { x.beginPath(); x.ellipse(0, 0, R, R * 1.05, 0, 0, 7); x.fill(); } }
+  if (L.horn) { x.fillStyle = "#f4e6c8"; for (const sd of [-1, 1]) { x.beginPath(); x.moveTo(sd * R * .55, -R * .75); x.quadraticCurveTo(sd * R * 1.2, -R * 1.2, sd * R * .9, -R * 1.55); x.quadraticCurveTo(sd * R * .8, -R * 1.05, sd * R * .3, -R * .9); x.fill(); } }
+  if (L.laurbær) { x.fillStyle = "#c9a23c"; for (let k = 0; k < 7; k++) { const a = Math.PI + .3 + k * .37; x.beginPath(); x.ellipse(Math.cos(a) * R * .95, Math.sin(a) * R * .95, R * .16, R * .07, a + 1.2, 0, 7); x.fill(); } }
+  // Øyne som følger boblen.
+  const b0 = s.baller[0], ser = b0 ? Math.atan2(b0.y - M.y, b0.x - M.x) : 0;
+  for (const sd of [-1, 1]) { const ex = sd * R * .38, ey = -R * .3; x.fillStyle = L.robot ? "#0a1018" : "#fff"; x.beginPath(); x.ellipse(ex, ey, R * .2, R * (M.tygg > 0 ? .06 : .22), 0, 0, 7); x.fill();
+    if (L.øye && M.tygg <= 0) { x.fillStyle = L.øye; if (L.robot) { x.shadowColor = L.øye; x.shadowBlur = 8; } x.beginPath(); x.arc(ex + Math.cos(ser) * R * .07, ey + Math.sin(ser) * R * .08, R * .09, 0, 7); x.fill(); x.shadowBlur = 0; } }
+  // Munnen: overkjeve og underkjeve med tenner. Lyser rundt når den er åpen og klar.
+  const mh = R * (.08 + å * .5), my = R * .38;
+  x.fillStyle = L.munn; x.beginPath(); x.ellipse(0, my, R * .55, mh, 0, 0, 7); x.fill();
+  x.fillStyle = L.tann; for (let k = -3; k <= 3; k++) { const tx = k * R * .14; x.beginPath(); x.moveTo(tx - R * .06, my - mh * .9); x.lineTo(tx + R * .06, my - mh * .9); x.lineTo(tx, my - mh * .9 + R * .12); x.fill();
+    x.beginPath(); x.moveTo(tx - R * .06, my + mh * .9); x.lineTo(tx + R * .06, my + mh * .9); x.lineTo(tx, my + mh * .9 - R * .12); x.fill(); }
+  if (å > .6 && !M.holder) { x.globalCompositeOperation = "lighter"; const gl = x.createRadialGradient(0, my, R * .2, 0, my, R * 1.2); gl.addColorStop(0, `rgba(255,120,200,${.35 * (.5 + .5 * Math.sin(t * 10))})`); gl.addColorStop(1, "rgba(255,120,200,0)"); x.fillStyle = gl; x.fillRect(-R * 1.3, my - R * 1.3, R * 2.6, R * 2.6); x.globalCompositeOperation = "source-over"; }
+  x.restore();
+  x.save(); x.font = `700 ${Math.max(7, f * .014)}px "IBM Plex Sans", sans-serif`; x.textAlign = "center"; x.fillStyle = "rgba(255,230,245,.85)"; x.shadowColor = "rgba(0,0,0,.8)"; x.shadowBlur = 3; x.fillText(L.navn, X, Y + R * 1.55); x.restore();
+}
+function shBord2Tegn(x, f, s, B, løp) {
+  // Spinnende skive: krom-ring og en plate med spiral som roterer.
+  { const D = B.skive, X = D.x * f, Y = D.y * f, R = D.r * f; x.save(); x.fillStyle = "rgba(0,0,0,.35)"; x.beginPath(); x.arc(X + 3, Y + 4, R * 1.05, 0, 7); x.fill();
+    x.fillStyle = shKrom(x, X - R, Y - R, X + R, Y + R); x.beginPath(); x.arc(X, Y, R, 0, 7); x.fill(); x.fillStyle = "#14161c"; x.beginPath(); x.arc(X, Y, R * .9, 0, 7); x.fill();
+    x.translate(X, Y); x.rotate(D.a); for (let k = 0; k < 6; k++) { x.rotate(Math.PI / 3); x.fillStyle = k % 2 ? `rgba(80,200,255,${.5 + D.lys * .5})` : `rgba(255,90,200,${.5 + D.lys * .5})`; x.beginPath(); x.moveTo(0, 0); x.quadraticCurveTo(R * .5, -R * .15, R * .88, R * .05); x.lineTo(R * .88, R * .35); x.quadraticCurveTo(R * .4, R * .2, 0, 0); x.fill(); }
+    x.fillStyle = shKrom(x, -R * .15, -R * .15, R * .15, R * .15); x.beginPath(); x.arc(0, 0, R * .14, 0, 7); x.fill(); x.restore(); }
+  // Magneten: et rundt innlegg med en hesteskomagnet; lyser når den er klar.
+  { const G = B.magnet, X = G.x * f, Y = G.y * f, R = f * .035, klar = G.kjøl <= 0; x.save(); x.translate(X, Y);
+    shInnlegg(x, () => { x.beginPath(); x.arc(0, 0, R, 0, 7); }, [255, 80, 80], løp(1, 3) ?? (klar ? .45 + .25 * Math.sin(B.t * 4) : .1), .8);
+    x.lineWidth = R * .28; x.lineCap = "butt"; x.strokeStyle = "#c81e2e"; x.beginPath(); x.arc(0, -R * .05, R * .45, Math.PI, 0); x.stroke(); x.strokeStyle = "#e8eaef"; x.beginPath(); x.moveTo(-R * .45, -R * .05); x.lineTo(-R * .45, R * .35); x.moveTo(R * .45, -R * .05); x.lineTo(R * .45, R * .35); x.stroke();
+    if (G.holder) { x.strokeStyle = "rgba(255,150,150,.7)"; x.lineWidth = 1.5; for (let k = 0; k < 3; k++) { x.beginPath(); x.arc(0, 0, R * (1.2 + k * .35 + (G.spinn % 1) * .3), 0, 7); x.stroke(); } } x.restore(); }
+  // Mini-flipperen til høyre.
+  { const F = B.mini, X = F.x * f, Y = F.y * f, L = f * .06, a = Math.PI + .5 - (1 - Math.min(1, F.t * 3)) * .9; x.save(); x.translate(X, Y); x.rotate(a);
+    x.fillStyle = "rgba(0,0,0,.35)"; x.beginPath(); x.roundRect(2, -L * .1 + 3, L, L * .2, L * .1); x.fill();
+    const g = x.createLinearGradient(0, -L * .12, 0, L * .12); g.addColorStop(0, "#ffffff"); g.addColorStop(1, "#c9ccd2"); x.fillStyle = g; x.beginPath(); x.roundRect(0, -L * .1, L, L * .2, L * .1); x.fill();
+    x.fillStyle = "#c8102e"; x.fillRect(L * .1, -L * .1, L * .8, L * .05); x.fillStyle = shKrom(x, -5, -5, 5, 5); x.beginPath(); x.arc(0, 0, L * .12, 0, 7); x.fill(); x.restore(); }
+  // Modus-innleggene: FRENZY · JETS · TARGETS. Tent når klart, blinker når de er i gang, alle blinker når en modus kan startes.
+  SH_MODUSER.forEach((m, k) => { const [X, Y] = [(.4 + k * .13) * f, (SH_TOPP + .445) * f], w = f * .11, h = f * .026, nå = B.modus?.navn === m.navn, ferdig = B.fullført.includes(m.navn);
+    const på = løp(k, 3) ?? (nå ? (Math.sin(B.t * 12) > 0 ? 1 : .3) : ferdig ? .9 : B.modusLys ? .3 + .3 * Math.sin(B.t * 6 + k) : .08);
+    x.save(); x.translate(X, Y); shInnlegg(x, () => { x.beginPath(); x.roundRect(-w / 2, -h / 2, w, h, h / 2); }, [255, 170, 60], på, .8);
+    x.font = `800 ${h * .5}px "IBM Plex Sans", sans-serif`; x.textAlign = "center"; x.textBaseline = "middle"; x.fillStyle = på > .5 ? "#3a1c00" : "rgba(255,230,200,.8)"; x.fillText(["FRENZY", "JETS", "TARGETS"][k], 0, h * .04); x.restore(); });
+  shLekeTegn(x, f, s, B);
+}
+function shBord2OverTegn(x, f, s, B) {
+  x.save(); x.textAlign = "center";
+  if (B.modus) { const igjen = Math.max(0, Math.ceil(B.modus.d - B.modus.t)); x.font = `800 ${Math.max(11, f * .026)}px "IBM Plex Sans", sans-serif`; x.shadowColor = B.modus.navn === "wizard" ? "rgba(214,180,255,.9)" : "rgba(255,184,74,.9)"; x.shadowBlur = 10;
+    x.fillStyle = B.modus.navn === "wizard" ? "#efe2ff" : "#ffe2b8"; x.fillText(B.modus.tittel + " · " + igjen + " s", .5 * f, (SH_TOPP + .93) * f); }
+  if (B.saveTil > s.tid && s.tilstand === "spill") { x.font = `700 ${Math.max(9, f * .018)}px "IBM Plex Sans", sans-serif`; x.shadowColor = "rgba(127,232,255,.9)"; x.shadowBlur = 8; x.fillStyle = Math.sin(B.t * 8) > -.4 ? "#bff3ff" : "#5fb8d0"; x.fillText("BALL SAVE", .5 * f, (SH_PY - .06) * f); }
+  x.restore();
+}
 function shKrom(x, x0, y0, x1, y1) { const g = x.createLinearGradient(x0, y0, x1, y1); g.addColorStop(0, "#ffffff"); g.addColorStop(.35, "#c3c7ce"); g.addColorStop(.6, "#5d626b"); g.addColorStop(.85, "#cfd3d9"); g.addColorStop(1, "#8a8f98"); return g; }
 function shTråd(x, pts, w) {
   // En forkrommet tråd: mørk kant, lys kjerne og et skarpt høylys.
@@ -7021,7 +7163,7 @@ function shBordTegn(x, f, s) {
     x.restore(); }
   // Bumperne: forkrommet ring, rød plasthette, hvit topp; lyser når de slår.
   B.bumpere.forEach((q, k) => { if (SH) q.lys = Math.max(q.lys, løp(k, 3) > .5 ? .7 : 0); });
-  for (const q of B.bumpere) { const [X, Yb] = P(q.x, q.y), R = .042 * f;
+  for (const q of B.bumpere) { const [X, Yb] = P(q.x, q.y), R = (B.modus?.navn === "jets" ? .056 : .042) * f;
     x.fillStyle = "rgba(0,0,0,.42)"; x.beginPath(); x.ellipse(X + R * .18, Yb + R * .38, R * 1.08, R * .92, 0, 0, 7); x.fill();
     x.fillStyle = shKrom(x, X - R, Yb - R, X + R, Yb + R); x.beginPath(); x.arc(X, Yb, R, 0, 7); x.fill();
     x.fillStyle = "#1c1c1c"; x.beginPath(); x.arc(X, Yb, R * .86, 0, 7); x.fill();
@@ -7064,6 +7206,7 @@ function shBordTegn(x, f, s) {
       x.font = `800 ${h * .46}px "IBM Plex Sans", sans-serif`; x.textAlign = "center"; x.textBaseline = "middle"; x.fillStyle = "#fff"; x.fillText("SPIN", 0, h * .02); x.restore(); }
     x.strokeStyle = shKrom(x, 0, Ys - 3, 0, Ys + 3); x.lineWidth = Math.max(2, f * .006); x.beginPath(); x.moveTo(x0, Ys); x.lineTo(x1, Ys); x.stroke();
     shStolpe(x, x0, Ys, f * .009); shStolpe(x, x1, Ys, f * .009); }
+  shBord2Tegn(x, f, s, B, løp);
   if (SH) { x.globalCompositeOperation = "lighter"; x.fillStyle = `rgba(255,225,160,${.07 * (1 + Math.sin(SH.t * 28)) * (1 - SH.t / SH.d)})`; x.fillRect(0, Y * f, f, f); x.globalCompositeOperation = "source-over"; }
   x.restore();
 }
@@ -8215,7 +8358,10 @@ function shOppdater(dt) {
   }
   if (s.tilstand !== "spill") return;
   s.baller = s.baller.filter(b => !b.borte);
-  if (!s.baller.length && !s.ormer?.length) { shMistetLiv(); return; }
+  if (!s.baller.length && !s.ormer?.length) {
+    // Ball save: mistet innen 10 s etter utskyting? Du får den tilbake.
+    if (s.bord && s.bord.saveTil > s.tid) { s.bord.saveTil = 0; const n = shBall(s.padX, SH_PY - SH_R - .012, 0, -s.fart, false); n.boost = 1.3; s.baller.push(n); s.tekster.push({ txt: "BALL SAVED", x: .5, y: SH_TOPP + .5, liv: 1.6, fade: .8, farge: "#7fe8ff", stor: true }); if (lydPa) [0, 7].forEach((st, j) => tone(660 * Math.pow(2, st / 12), j * .08, .25, .03, "triangle", .5, .6)); return; }
+    shMistetLiv(); return; }
   if (s.toP) s.flip2.forEach((fl, side) => { fl.t += dt; if (fl.t < .45) return;
     for (const b of s.baller) { if (b.fast2 || b.vy >= 0 || (b.x < s.pad2X ? 0 : 1) !== side || Math.abs(b.x - s.pad2X) > s.pad2W / 2 + shRad(b)) continue;
       const tid = (b.y - shRad(b) - SH_P2Y) / -b.vy; if (tid > 0 && tid < fl.ledd) { fl.t = 0; fl.ledd = .02 + Math.random() * .14; shLyd("flipper"); break; } } });
@@ -9689,7 +9835,7 @@ function shTegn(t) {
       x.fillStyle = `rgba(255,255,255,${.45 * d.liv})`; x.beginPath(); x.arc(d.x * f - f * .0012, d.y * f - f * .0014, f * .0011, 0, 7); x.fill();
     }
   }
-  shDelerTegn(x, f, s); shBordOverTegn(x, f, s); shPortalTegn(x, f, s);
+  shDelerTegn(x, f, s); shBordOverTegn(x, f, s); if (s.bord) shBord2OverTegn(x, f, s, s.bord); shPortalTegn(x, f, s);
   shVaerTegn(x, f, s);
   shMotivTegn(x, f, s);
   // Skum.
