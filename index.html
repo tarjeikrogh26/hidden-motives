@@ -522,7 +522,7 @@ h1{font-weight:300;letter-spacing:.14em;line-height:1.02}
   <div class="regel">Everything counts: Game, Peace, Scrub it 1P and 2P, every board, every level, every collection. Each board list gives up to 100 points (a Scrub it list up to 1,000): #1 gets them all, the rest their share of the top score.</div>
   <div class="sammen" id="spillere"><p class="liten">Loading players …</p></div>
   <p class="kreditt">© 2001–2026 Tarjei Krogh. All photography, music and art. <a href="https://kroghx.com" target="_blank" rel="noopener">kroghx.com</a></p>
-  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 1.17<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
+  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 1.18<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
 </section>
 
 <div class="ark" id="tidUtArk" hidden style="z-index:200001">
@@ -1008,7 +1008,7 @@ function ferdigLyd() {
 let festRAF = 0, pad = null;
 function startFest() {
   if (!matchMedia("(prefers-reduced-motion: reduce)").matches) gullstov();
-  setTimeout(() => { if (spill && spill.slutt) startPad(); }, 900);
+  setTimeout(() => { if (spill && spill.slutt && !spill.peace) startPad(); }, 900);
 }
 // Når resultatpanelet kommer inn, krymper og flytter bildet seg så hele bildet synes ved siden av.
 function vikForPanel() {
@@ -1542,9 +1542,16 @@ const MUSIKK = {
   b3: { fil: "musikk/blume.mp4", tittel: "Blume", takt: 16 * 240 / 95, spotify: "https://open.spotify.com/track/4pNfudlyzaRlv5eN5t2WyB" },
   b4: { fil: "musikk/piranha.mp4", tittel: "Piranha", takt: 32 * 240 / 83, spotify: "https://open.spotify.com/track/5hFuIO5ukC1Ls1vM1vWaiz" },
 };
+// Peace: Kroghs chill-looper (laget som perfekte looper i Ableton), på rundgang over alle brett til det kommer flere.
+// xfade: AAC smører kantene litt, så skjøten får en usynlig overtoning på 60 ms.
+const PEACE_LÅTER = [
+  { fil: "musikk/peace-decompression-giants.mp4", tittel: "Decompression Giants", takt: 96, xfade: .06 },
+  { fil: "musikk/peace-mu-cephei.mp4", tittel: "Mu Cephei", takt: 64, xfade: .06 },
+  { fil: "musikk/peace-theme-for-john-giants.mp4", tittel: "Theme for John Giants", takt: 51.2, xfade: .06 }];
 // Inntil Krogh har sendt en låt per brett, går de låtene som finnes på rundgang over alle brett.
 const LÅTER = ["b1", "b2", "b3", "b4"].map(k => MUSIKK[k]);
 function musikkFor(id) {
+  if (iPeace()) { const i = Math.max(0, BRETT.findIndex(b => b.id === id)); return PEACE_LÅTER[(i + aktiv * 10) % PEACE_LÅTER.length]; }
   if (aktiv === 0 && MUSIKK[id]) return MUSIKK[id];
   const i = BRETT.findIndex(b => b.id === id); return i < 0 ? null : LÅTER[(i + aktiv) % LÅTER.length];
 }
@@ -1570,6 +1577,13 @@ async function spillMusikk(id) {
     const kilde = c.createBufferSource(), g = c.createGain();
     // Glatt skjøt: de første 50 ms blandes fra det som naturlig følger etter loopens slutt, så hoppet ikke høres.
     const L = Math.round(m.takt * buf.sampleRate), N = Math.round(.05 * buf.sampleRate);
+    let løkke = L;
+    if (m.xfade) {
+      // Begynnelsen blandes med slutten (likeeffekt-kurve), og loopen slutter like før: da går slutten rett over i starten.
+      const p = buf.length >= L + 2112 ? 2112 : Math.max(0, Math.min(st, buf.length - L)), X = Math.round(m.xfade * buf.sampleRate);
+      if (!buf.sømløs) { for (let ch = 0; ch < buf.numberOfChannels; ch++) { const k = buf.getChannelData(ch); for (let i = 0; i < X; i++) { const w = i / X * Math.PI / 2; k[p + i] = k[p + i] * Math.sin(w) + k[p + L - X + i] * Math.cos(w); } } buf.sømløs = true; }
+      st = p; løkke = L - X;
+    }
     if (!buf.sømløs && st + L + N < buf.length) {
       for (let ch = 0; ch < buf.numberOfChannels; ch++) { const k = buf.getChannelData(ch); for (let i = 0; i < N; i++) { const w = i / N; k[st + i] = k[st + L + i] * (1 - w) + k[st + i] * w; } }
       buf.sømløs = true;
@@ -1580,7 +1594,7 @@ async function spillMusikk(id) {
       buf.sømløs = true;
     }
     kilde.buffer = buf; kilde.loop = true;
-    kilde.loopStart = st / buf.sampleRate; kilde.loopEnd = Math.min(buf.duration, (st + L) / buf.sampleRate);
+    kilde.loopStart = st / buf.sampleRate; kilde.loopEnd = Math.min(buf.duration, (st + løkke) / buf.sampleRate);
     g.gain.setValueAtTime(0, c.currentTime); g.gain.linearRampToValueAtTime(.32, c.currentTime + 1.5);
     kilde.connect(g).connect(musikkUt(c)); kilde.start(0, kilde.loopStart);
     musikk = { kilde, g, id, fil: m.fil };
@@ -1611,7 +1625,7 @@ function visSpor(id) {
   }
 }
 function visLydKnapp() { const k = $("lydKnapp"); k.textContent = $("veggLyd").textContent = lydPa ? "Sound on" : "Sound off"; k.setAttribute("aria-pressed", String(lydPa)); }
-$("lydKnapp").onclick = () => { lydPa = !lydPa; try { localStorage.setItem("sm-lyd", lydPa ? "på" : "av"); } catch {} visLydKnapp(); if (lydPa) { plingLyd(0); if (spill?.slutt || spill?.peace) startPad(); if (spill && !spill.peace) spillMusikk(BRETT[spill.brett].id); låsOppLyd(); } else { stoppPad(); stoppMusikk(.3); if (stilleLyd) stilleLyd.pause(); } visLydStatus(); };
+$("lydKnapp").onclick = () => { lydPa = !lydPa; try { localStorage.setItem("sm-lyd", lydPa ? "på" : "av"); } catch {} visLydKnapp(); if (lydPa) { plingLyd(0); if (spill?.slutt && !spill.peace) startPad(); if (spill) spillMusikk(BRETT[spill.brett].id); låsOppLyd(); } else { stoppPad(); stoppMusikk(.3); if (stilleLyd) stilleLyd.pause(); } visLydStatus(); };
 // Trykk på lydstatusen i menyen for å slå lyden av og på.
 $("lydStatus").onclick = () => $("lydKnapp").click();
 function visInnst() {
@@ -1679,7 +1693,7 @@ async function startSpill(i, n, gjenoppta) {
   spill = { brett: i, n: o.n, k: o.k, r: o.r, img, biter, start: gjenoppta?.start ? Date.now() - gjenoppta.start : 0, slutt: 0, lagt: biter.filter(b => b.ferdig).length, ztopp: biter.length, straff: gjenoppta?.straff || 0 };
   $("hudKode").textContent = kode(i); $("hudNavn").textContent = BRETT[i].navn; settBildeKant(img);
   spill.peace = iPeace(); document.body.classList.toggle("peace-modus", spill.peace);
-  if (spill.peace) { stoppMusikk(.6); stoppPad(); setTimeout(() => { if (spill?.peace && !spill.slutt) startPad(); }, 700); peaceBg(i); $("veggNavn").textContent = BRETT[i].navn; }
+  if (spill.peace) { stoppPad(); spillMusikk(BRETT[i].id); peaceBg(i); $("veggNavn").textContent = BRETT[i].navn; }
   else if (!gjenoppta || musikkØnske !== BRETT[i].id) spillMusikk(BRETT[i].id);
   if (!spill.peace) peaceBg(-1);
   spill.hint = HINT_ANTALL; visHintKnapp();
@@ -6840,7 +6854,7 @@ function shSteg(t) {
 }
 addEventListener("resize", () => { if (sh) shOppsett(); });
 // Bare for automatisk testing lokalt (?autotest).
-if (location.search.includes("autotest")) { window.__sh = () => sh; window.__shOppdater = dt => { shOppdater(dt); if (sh) { sh.tid += dt; shPartikler(dt); } }; window.__shTreff = shTreff; window.__shGalaga = shGalagaStart; window.__shSopp = shSopp; window.__shBytte = shByttetStart; window.__shOrm = shOrmStart; window.__levende = levendeStart; window.__gn = () => ({ gnister, raf: gnistRAF }); window.__hendelse = t => t === "tilt" ? tilt(true) : t === "vokse" ? vokseBrikke() : t === "break" ? puzzleBreak() : t === "speilX" ? speilStart("x") : t === "speilY" ? speilStart("y") : lynnedslag(); window.__shSprekk = shSprekk; window.__shP2 = () => ({ pad2X: sh.pad2X, P2Y: SH_P2Y, TOPP: SH_TOPP, H: SH_H }); window.__shTegn = () => { shRens(); shTegn(performance.now()); }; window.__spill = () => spill; window.__banner = banner; window.__kast = kast; window.__gratisPeace = async () => sjekkGratis(await hentSammen("P")); window.__fremdrift = () => fremdrift; window.__sammenP = async () => ({ lok: minLokaleSum("P"), f: fremdrift.b1, liste: (await hentSammen("P")).slice(0, 2) }); window.__shKrabbe = () => shKrabbeStart(); window.__shHopper = () => shHopperStart(); window.__shSlipp = () => shSlipp(); window.__shPY = () => SH_PY; window.__shKapsel = shKapsel; window.__lyd = () => { const c = lydCtx; return c ? { musikk: musikkUt(c).gain.value, effekt: effektUt(c).gain.value } : null; }; window.__speilSlutt = speilSlutt; window.__falskMusikk = () => { lydCtx = lydCtx || { currentTime: 0 }; const nei = () => {}; musikk = { kilde: { stop: nei, playbackRate: { v: 1, setTargetAtTime(r) { this.v = r; } } }, g: { gain: { value: .3, cancelScheduledValues: nei, setValueAtTime: nei, linearRampToValueAtTime: nei, setTargetAtTime: nei } } }; }; window.__musikkFart = () => musikk?.kilde?.playbackRate?.v ?? null; window.__geo = () => geo; window.__plasser = plasser; window.__skjermPkt = skjermPkt; }
+if (location.search.includes("autotest")) { window.__sh = () => sh; window.__shOppdater = dt => { shOppdater(dt); if (sh) { sh.tid += dt; shPartikler(dt); } }; window.__shTreff = shTreff; window.__shGalaga = shGalagaStart; window.__shSopp = shSopp; window.__shBytte = shByttetStart; window.__shOrm = shOrmStart; window.__levende = levendeStart; window.__gn = () => ({ gnister, raf: gnistRAF }); window.__hendelse = t => t === "tilt" ? tilt(true) : t === "vokse" ? vokseBrikke() : t === "break" ? puzzleBreak() : t === "speilX" ? speilStart("x") : t === "speilY" ? speilStart("y") : lynnedslag(); window.__shSprekk = shSprekk; window.__shP2 = () => ({ pad2X: sh.pad2X, P2Y: SH_P2Y, TOPP: SH_TOPP, H: SH_H }); window.__shTegn = () => { shRens(); shTegn(performance.now()); }; window.__spill = () => spill; window.__banner = banner; window.__kast = kast; window.__gratisPeace = async () => sjekkGratis(await hentSammen("P")); window.__fremdrift = () => fremdrift; window.__sammenP = async () => ({ lok: minLokaleSum("P"), f: fremdrift.b1, liste: (await hentSammen("P")).slice(0, 2) }); window.__shKrabbe = () => shKrabbeStart(); window.__shHopper = () => shHopperStart(); window.__shSlipp = () => shSlipp(); window.__shPY = () => SH_PY; window.__shKapsel = shKapsel; window.__lyd = () => { const c = lydCtx; return c ? { musikk: musikkUt(c).gain.value, effekt: effektUt(c).gain.value } : null; }; window.__speilSlutt = speilSlutt; window.__falskMusikk = () => { lydCtx = lydCtx || { currentTime: 0 }; const nei = () => {}; musikk = { kilde: { stop: nei, playbackRate: { v: 1, setTargetAtTime(r) { this.v = r; } } }, g: { gain: { value: .3, cancelScheduledValues: nei, setValueAtTime: nei, linearRampToValueAtTime: nei, setTargetAtTime: nei } } }; }; window.__musikkFart = () => musikk?.kilde?.playbackRate?.v ?? null; window.__musikkFor = id => musikkFor(id)?.fil; window.__geo = () => geo; window.__plasser = plasser; window.__skjermPkt = skjermPkt; }
 
 
 
