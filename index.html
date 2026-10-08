@@ -10,7 +10,7 @@
 <title>Hidden Motives</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pacifico&family=Syne:wght@600;800&family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@300;500&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@300;500&display=swap">
 <style>
 /* Layout: ett mørkt galleri-rom. Brettet til venstre, løse biter rundt. Samme mørke i begge tema, valgt med vilje. */
 :root{
@@ -23,7 +23,7 @@
   --demp:#a39b91;
   --signal:#ffb000;     /* gult fra bildene, brukt sparsomt */
   --godt:#7fd1a8;
-  --display:"Syne","Arial Black",system-ui,sans-serif;
+  --display:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
   --brod:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
   --tall:"IBM Plex Mono",ui-monospace,Menlo,monospace;
   color-scheme:dark;
@@ -479,6 +479,22 @@ body:has(.resultat.vis) #spill .linje{opacity:0;pointer-events:none;transition:o
 .rad.meg{background:rgba(255,176,0,.09)}
 .rad.meg .n{color:var(--signal)}
 @media (prefers-reduced-motion:reduce){#avslor,.resultat{transition:none}#avslor.bolge,#ramme.neon,.resultat .rad.meg{animation:none}}
+/* Én stil gjennom hele spillet (Krogh): IBM Plex som i Peace. Tynt for titler og navn, små versaler med luft
+   for overskrifter og knapper, tynn Plex Mono for tall. Fargene er de samme som før i hvert spill. */
+h1{font-weight:300;letter-spacing:.14em;line-height:1.02}
+.hm-navn{line-height:1.02;gap:.1em}
+.hm-av b,.av-linje .signatur{font-weight:600;letter-spacing:.24em}
+.moduser{font-weight:300;letter-spacing:.14em}
+.brett .navn{font-weight:300;letter-spacing:.01em;line-height:1.15}
+.neste b,.samling-tittel b,.faner button b{font-weight:400;letter-spacing:.02em}
+.ark-boks h2,.resultat h2,.sh-melding b,.snu b{font-weight:300;letter-spacing:.02em}
+.hud-brett b{font-weight:500;letter-spacing:.04em}
+.sh-venstre b,.shatter-knapp b,.butikk h3{font-weight:600;letter-spacing:.24em}
+.ark-hode{font-weight:600;letter-spacing:.32em;font-size:14px}
+#startark:not(.peace) .hoved{font-weight:500;letter-spacing:.22em;font-size:16px}
+.hendelse{font-weight:600;letter-spacing:.16em;line-height:1.08}
+.flaks{font-weight:600;letter-spacing:.14em}
+#kraftLinje button,#shKraftLinje button{font-weight:500}
 </style>
 
 <section id="meny" class="skjerm" aria-label="Collections">
@@ -506,7 +522,7 @@ body:has(.resultat.vis) #spill .linje{opacity:0;pointer-events:none;transition:o
   <div class="regel">Everything counts: Game, Peace, Scrub it 1P and 2P, every board, every level, every collection. Each board list gives up to 100 points (a Scrub it list up to 1,000): #1 gets them all, the rest their share of the top score.</div>
   <div class="sammen" id="spillere"><p class="liten">Loading players …</p></div>
   <p class="kreditt">© 2001–2026 Tarjei Krogh. All photography, music and art. <a href="https://kroghx.com" target="_blank" rel="noopener">kroghx.com</a></p>
-  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 1.16<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
+  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 1.17<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
 </section>
 
 <div class="ark" id="tidUtArk" hidden style="z-index:200001">
@@ -1937,9 +1953,9 @@ function tegnBit(b) {
     ctx.drawImage(img, t + (bw - iw * sk) / 2, t + (bh - ih * sk) / 2, iw * sk, ih * sk);
     // Logoen, svakt trykt, så det er tydelig at dette er baksiden.
     ctx.globalCompositeOperation = "source-over"; ctx.globalAlpha = .7; ctx.fillStyle = "#6a3f14"; ctx.strokeStyle = "rgba(255,240,215,.75)"; ctx.lineJoin = "round"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
-    const fs = Math.max(6, Math.min(bw, bh) * .15); ctx.font = `800 ${fs}px "Syne", sans-serif`;
+    const fs = Math.max(6, Math.min(bw, bh) * .15); ctx.font = `600 ${fs}px "IBM Plex Sans", sans-serif`;
     ctx.save(); ctx.translate(t + bw / 2, t + bh / 2); ctx.rotate(-.12);
-    ctx.font = `800 ${fs * 1.25}px "Syne", sans-serif`; ctx.lineWidth = Math.max(1.5, fs * .22);
+    ctx.font = `600 ${fs * 1.25}px "IBM Plex Sans", sans-serif`; ctx.lineWidth = Math.max(1.5, fs * .22);
     for (const [ord, y] of [["PIECE", -fs * .6], ["IT", fs * .7]]) { ctx.strokeText(ord, 0, y); ctx.fillText(ord, 0, y); } ctx.restore();
     ctx.globalCompositeOperation = "source-over"; ctx.globalAlpha = 1;
   } else ctx.drawImage(img, t - b.c * bw, t - b.r * bh, bredde, hoyde);
@@ -4901,8 +4917,8 @@ function shByttetTegn(x, f, s) {
   const dekket = s.igjen / s.klosser.length, tx = shClamp(X, f * .33, f * .67), ty = Y + R * 1.35;
   const alfa = Math.max(.22, 1 - Math.max(0, B.tekstT - 5) / 6);
   x.save(); x.textAlign = "center"; x.globalAlpha = alfa; x.shadowColor = "#3dff7a"; x.shadowBlur = 18; x.fillStyle = "#b9ffc9";
-  x.font = `800 ${.058 * f}px "Syne", sans-serif`; x.fillText("YOU ARE THE BOSS", tx, ty);
-  x.shadowBlur = 10; x.fillStyle = "#6dff8a"; x.font = `700 ${.028 * f}px "Syne", sans-serif`; x.fillText("COVER THE PAINTING · BEAT THE FLIPPER", tx, ty + f * .042);
+  x.font = `600 ${.054 * f}px "IBM Plex Sans", sans-serif`; x.fillText("YOU ARE THE BOSS", tx, ty);
+  x.shadowBlur = 10; x.fillStyle = "#6dff8a"; x.font = `500 ${.028 * f}px "IBM Plex Sans", sans-serif`; x.fillText("COVER THE PAINTING · BEAT THE FLIPPER", tx, ty + f * .042);
   x.restore();
   const bw = f * .44, bx = tx - bw / 2, by = ty + f * .062;
   x.fillStyle = "rgba(0,0,0,.5)"; x.fillRect(bx, by, bw, f * .012);
@@ -6668,7 +6684,7 @@ function shTegn(t) {
         const puls = .55 + .45 * Math.sin(s.tid * 8), px = vx0 + (s.soppSide < 0 ? 1 : -1) * f * .07, ps = f * .045;
         x.save(); x.globalAlpha = puls * Math.min(1, s.soppOverg * 2); x.fillStyle = "#e9b8ff"; x.shadowColor = "#b46bff"; x.shadowBlur = 12;
         for (const r of [-1, 1]) { const ay = Y + r * (w / 2 + ps * 1.6); x.beginPath(); x.moveTo(px, ay + r * ps * .6); x.lineTo(px - ps * .6, ay - r * ps * .4); x.lineTo(px + ps * .6, ay - r * ps * .4); x.closePath(); x.fill(); }
-        x.font = `800 ${.036 * f}px "Syne", sans-serif`; x.textAlign = "center"; x.fillText("STEER UP & DOWN", f / 2, (SH_PY + .02) * f);
+        x.font = `600 ${.034 * f}px "IBM Plex Sans", sans-serif`; x.textAlign = "center"; x.fillText("STEER UP & DOWN", f / 2, (SH_PY + .02) * f);
         x.restore(); x.globalAlpha = 1;
       }
     } else {
@@ -6712,8 +6728,8 @@ function shTegn(t) {
     const lang = tk.stor || tk.kapsel;
     tk.y -= (tk.liv > 1 ? 0.0012 : 0.004) * tdt * 60 * (lang ? .25 : 1); tk.liv -= (lang ? .62 : 1.2) * tdt; x.globalAlpha = Math.max(0, Math.min(1, tk.liv / (tk.fade || 1)));
     let fs = (tk.stor ? .075 : tk.liten ? (tk.kapsel ? .042 : .032) : .042) * f; const lett = tk.liten && tk.kapsel;
-    x.font = lett ? `600 ${fs}px "IBM Plex Sans", sans-serif` : `800 ${fs}px "Syne", sans-serif`; x.textAlign = "center"; x.lineJoin = "round";
-    if (!lett) { const bw = x.measureText(tk.txt).width, mx = f * (tk.stor ? .78 : .9); if (bw > mx) { fs *= mx / bw; x.font = `800 ${fs}px "Syne", sans-serif`; } }
+    x.font = lett ? `600 ${fs}px "IBM Plex Sans", sans-serif` : `600 ${fs}px "IBM Plex Sans", sans-serif`; x.textAlign = "center"; x.lineJoin = "round";
+    if (!lett) { const bw = x.measureText(tk.txt).width, mx = f * (tk.stor ? .78 : .9); if (bw > mx) { fs *= mx / bw; x.font = `600 ${fs}px "IBM Plex Sans", sans-serif`; } }
     const linjer = tk.kapsel && tk.liten ? shBrytTekst(x, tk.txt, f * .86) : [tk.txt], lh = fs * 1.2, y1 = tk.y * f + (tk.kapsel && tk.liten ? fs * .4 : 0);
     if (tk.kapsel && tk.liten) { const bw = Math.max(...linjer.map(l => x.measureText(l).width)) + fs * 1.2, bh = lh * linjer.length + fs * .5; x.fillStyle = "rgba(12,8,4,.55)"; x.beginPath(); if (x.roundRect) x.roundRect(tk.x * f - bw / 2, y1 - fs * 1.05, bw, bh, fs * .45); else x.rect(tk.x * f - bw / 2, y1 - fs * 1.05, bw, bh); x.fill(); }
     linjer.forEach((l, j) => {
