@@ -628,7 +628,7 @@ body.lys #modusDeal{--farge:#0f8f6c;--glod:15,143,108}
   <div class="regel">Everything counts: Game, Peace, Scrub it 1P and 2P, every board, every level, every collection. Each board list gives up to 100 points (a Scrub it list up to 1,000): #1 gets them all, the rest their share of the top score.</div>
   <div class="sammen" id="spillere"><p class="liten">Loading players …</p></div>
   <p class="kreditt">© 2001–2026 Tarjei Krogh. All photography, music and art. <a href="https://kroghx.com" target="_blank" rel="noopener">kroghx.com</a></p>
-  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 1.37<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
+  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 1.38<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
 </section>
 
 <div class="ark" id="tidUtArk" hidden style="z-index:200001">
@@ -5005,18 +5005,20 @@ const shErP2 = e => !!sh?.toP && !!shG && e.clientY < shG.fy + (SH_TOPP + .5) * 
 function shPek(e) {
   if (!sh || !shG) return;
   if (sh.sopp > 0) { sh.padYMål = shClamp((e.clientY - shG.fy) / shG.fw, SH_TOPP + sh.padW / 2, SH_H - sh.padW / 2); if (e.pointerType !== "mouse" && shPekr) shPekr.dratt = true; return; }
-  if (e.pointerType === "mouse") { sh.padMål = shClamp((e.clientX - shG.fx) / shG.fw, sh.padW / 2, 1 - sh.padW / 2); return; }
+  if (e.pointerType === "mouse") { sh.padMål = shClamp((e.clientX - shG.fx) / shG.fw, sh.padW / 2, 1 - sh.padW / 2); if (sh.bytte) sh.bossMål = shClamp((e.clientX - shG.fx) / shG.fw, .03, .97); return; }
   if (shPekr2 && e.pointerId === shPekr2.id) { if (Math.abs(e.clientX - shPekr2.x) > 8) shPekr2.dratt = true; if (shPekr2.dratt) sh.pad2Mål = shClamp(shPekr2.pad + (e.clientX - shPekr2.x) / shG.fw * 1.3, sh.pad2W / 2, 1 - sh.pad2W / 2); shPekr2.sistX = e.clientX; return; }
   if (!shPekr || e.pointerId !== shPekr.id) return;
   if (Math.abs(e.clientX - shPekr.x) > 8) shPekr.dratt = true;
   if (shPekr.dratt) sh.padMål = shClamp(shPekr.pad + (e.clientX - shPekr.x) / shG.fw * 1.3, sh.padW / 2, 1 - sh.padW / 2);
+  // Som bossen: egen styring, helt ut til kantene, regnet fra der bossen var da du satte ned fingeren.
+  if (shPekr.dratt && sh.bytte) sh.bossMål = shClamp((shPekr.boss ?? sh.bytte.x) + (e.clientX - shPekr.x) / shG.fw * 1.3, .03, .97);
   shPekr.sistX = e.clientX;
 }
 $("shCanvas").addEventListener("pointermove", shPek);
 $("shCanvas").addEventListener("pointerdown", e => {
   e.preventDefault(); ctx();
   if (sh && e.pointerType !== "mouse" && shErP2(e)) { sh.pad2Mål = null; shPekr2 = { id: e.pointerId, x: e.clientX, sistX: e.clientX, pad: sh.pad2X, dratt: false, t0: performance.now() }; shSlipp(); return; }
-  if (sh && e.pointerType !== "mouse") { sh.padMål = null; shPekr = { id: e.pointerId, x: e.clientX, sistX: e.clientX, pad: sh.padX, dratt: false, t0: performance.now() }; }
+  if (sh && e.pointerType !== "mouse") { sh.padMål = null; shPekr = { id: e.pointerId, x: e.clientX, sistX: e.clientX, pad: sh.padX, boss: sh.bytte?.x, dratt: false, t0: performance.now() }; }
   shPek(e); shSlipp();
 });
 const shPekSlutt = e => { if (shPekr && e.pointerId === shPekr.id) shPekr = null; if (shPekr2 && e.pointerId === shPekr2.id) shPekr2 = null; };
@@ -5655,8 +5657,10 @@ function shSoppTreff(b, R, vx0, side) {
 }
 // ALIEN SWITCH: du er bossen øverst og slipper store gjørmebomber. Flipperen spiller av seg selv og prøver å vaske.
 function shByttetStart() {
-  const s = sh; s.byttePlan = false; s.sopp = 0;
-  s.bytte = { x: .5, bomber: [], bombeT: .3, figur: (Math.random() * 9) | 0, mål: .85, tekstT: 0, smørT: 0, sprut: [] };
+  const s = sh; s.byttePlan = false; s.sopp = 0; s.bossMål = null;
+  // Ingen hjelpere eller parkerte bobler på flipperne mens du er bossen.
+  s.wingmen = []; s.galaga = null; for (const b of s.baller) { b.parkert = false; b.friGalaga = false; }
+  s.bytte = { x: .5, bomber: [], bombeT: .3, figur: (Math.random() * 9) | 0, mål: Math.min(.97, Math.max(.85, s.igjen / s.klosser.length + .25)), tekstT: 0, smørT: 0, sprut: [] };
   s.tekster.push({ txt: "ALIEN SWITCH!", x: .5, y: .7, liv: 2, farge: "#6dff8a" });
   // Ingen power-ups for flipperen mens du er bossen, og de den hadde, forsvinner.
   s.eff = { W: 0, B: 0, G: 0, A: 0, F: 0, K: 0 }; s.kapsler = []; s.smaa = []; s.skudd = [];
@@ -5668,8 +5672,8 @@ function shByttetSteg(dt) {
   const s = sh, B = s.bytte;
   B.poeng0 ??= s.poeng; s.poeng = B.poeng0;
   // Du styrer bossen med samme bevegelse som flipperen. Flipperen følger ballen av seg selv.
-  const mål = s.padMål ?? (shPekr && !shPekr.dratt ? (shPekr.sistX - shG.fx) / shG.fw : B.x);
-  B.x += shClamp(shClamp(mål, .08, .92) - B.x, -1.4 * dt, 1.4 * dt);
+  const mål = s.bossMål ?? (shPekr && !shPekr.dratt ? (shPekr.sistX - shG.fx) / shG.fw : B.x);
+  B.x += shClamp(shClamp(mål, .03, .97) - B.x, -1.4 * dt, 1.4 * dt);
   B.yT = (B.yT || 0) - dt; if (B.yT <= 0) { B.yT = 1.5 + Math.random() * 2; B.yMål = .07 + Math.random() * .12; }
   B.y = (B.y ?? .1) + ((B.yMål ?? .1) - (B.y ?? .1)) * Math.min(1, dt * 1.2) + Math.sin((B.alder || 0) * 2.3) * .004;
   const lav = s.baller.filter(b => !b.fast).reduce((a, b) => !a || b.y > a.y ? b : a, null);
