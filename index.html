@@ -502,7 +502,7 @@ body:has(.resultat.vis) #spill .linje{opacity:0;pointer-events:none;transition:o
   <div class="regel">Everything counts: Game, Peace, Scrub it 1P and 2P, every board, every level, every collection. Each board list gives up to 100 points (a Scrub it list up to 1,000): #1 gets them all, the rest their share of the top score.</div>
   <div class="sammen" id="spillere"><p class="liten">Loading players …</p></div>
   <p class="kreditt">© 2001–2026 Tarjei Krogh. All photography, music and art. <a href="https://kroghx.com" target="_blank" rel="noopener">kroghx.com</a></p>
-  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 1.13<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
+  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 1.14<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
 </section>
 
 <div class="ark" id="tidUtArk" hidden style="z-index:200001">
@@ -4930,6 +4930,7 @@ function shTilt() {
 }
 // WORM: hver boble blir en orm som spiser gjørma i ni sekunder, og så en boble igjen. Med flere bobler: flere ormer.
 function shOrmFraBaller() {
+  hentKattHode();
   const s = sh; s.ormFase = true;
   s.ormer = s.baller.filter(b => !b.fanget).map(b => ({ x: b.x, y: Math.min(b.y, SH_TOPP + .98), a: Math.atan2(b.vy, b.vx) || -Math.PI / 2, v: .36, kropp: [{ x: b.x, y: b.y }], spist: 0, t: 0, bitT: 0, målT: 0, mål: null, tilstand: "spis", hue: 175 + Math.random() * 40, tygg: 0, type: "ball" }));
   s.baller = []; s.ormSpyttT = 1;
@@ -4963,7 +4964,7 @@ function shMagnetSprekk(b) {
   shLyd("sprekk", 2); b.masse = 0; b.magnet = 0; b.vokse = 0; b.liten = true;
 }
 function shOrmStart() {
-  sh.ormSett = true;
+  sh.ormSett = true; hentKattHode();
   const s = sh, x0 = s.sopp > 0 ? .5 : s.padX, y0 = SH_PY - .03, a = -Math.PI / 2 + (Math.random() - .5) * .9;
   s.orm = { x: x0, y: y0, a, v: .34, kropp: [{ x: x0, y: y0 }], spist: 0, t: 0, bitT: 0, målT: 0, mål: null, tilstand: "spis", hue: 110 + Math.random() * 40, tygg: 0 };
   shLyd("power"); shStov(x0, y0, 40, "125,255,106", .3);
@@ -5024,6 +5025,7 @@ function shOrmEn(O, dt) {
   } else {
     O.vy += (O.tilstand === "skutt" ? .7 : .55) * dt; O.x += O.vx * dt; O.y += O.vy * dt;
     if (O.x < O.r || O.x > 1 - O.r) { O.x = shClamp(O.x, O.r, 1 - O.r); O.vx *= -.8; }
+    if (O.tilstand === "klump" && Math.random() < .35) shStov(O.x + (Math.random() - .5) * O.r, O.y + O.r * .6, 1, s.jord.mork.join(","), .04);
     if (O.tilstand === "klump" && O.vy > 0 && s.sopp <= 0 && O.y > SH_PY - O.r && O.y < SH_PY + .02 && Math.abs(O.x - s.padX) < s.padW / 2 + O.r * .6) {
       // Tatt med flipperne: skutt opp en siste gang.
       O.tilstand = "skutt"; O.vy = -1.15; O.vx = (O.x - s.padX) * 3; shLyd("power"); s.glod = 1;
@@ -5288,11 +5290,124 @@ function shKrabbeTegn(x, f, s) {
   for (const sd of [-1, 1]) { const ox = (K.x + ex * K.tykk * .45 + px * sd * K.tykk * .45) * f, oy = (K.y + ey * K.tykk * .45 + py * sd * K.tykk * .45) * f;
     x.fillStyle = "#ffe066"; x.beginPath(); x.arc(ox, oy, R * .28, 0, 7); x.fill(); x.fillStyle = "#1a0d05"; x.beginPath(); x.arc(ox + ex * R * .08, oy + ey * R * .08, R * .13, 0, 7); x.fill(); }
 }
+// Kattehodet: klippes fra Kroghs bilde (serie 3, brett 10). Ansikt og ører får en myk kant, resten forsvinner.
+// Utsnitt i bildet: x .34–1.0, y .12–.82. Ansiktets midte ligger på (.394, .686) i utsnittet.
+let kattHode = null, kattLaster = false;
+function hentKattHode() {
+  if (kattHode || kattLaster) return kattHode; kattLaster = true;
+  const img = new Image(); img.crossOrigin = "anonymous";
+  img.onload = () => {
+    const W = 300, H = Math.round(300 * .70 / .66), c = document.createElement("canvas"); c.width = W; c.height = H;
+    const x = c.getContext("2d"), iw = img.naturalWidth, ih = img.naturalHeight;
+    x.drawImage(img, .34 * iw, .12 * ih, .66 * iw, .70 * ih, 0, 0, W, H);
+    // Masken: ansiktet (ellipse) og to ører, tegnet med skyggeuskarphet så kanten blir myk.
+    const m = document.createElement("canvas"); m.width = W; m.height = H; const mx = m.getContext("2d");
+    const P = (u, v) => [(u - .34) / .66 * W, (v - .12) / .70 * H];
+    mx.shadowColor = "#000"; mx.shadowBlur = 10; mx.fillStyle = "#000";
+    mx.beginPath(); { const [cx, cy] = P(.605, .595); mx.ellipse(cx, cy, .205 / .66 * W, .2 / .70 * H, 0, 0, 7); } mx.fill();
+    for (const øre of [[[.37, .47], [.42, .16], [.5, .17], [.58, .42]], [[.68, .43], [.93, .29], [.985, .31], [.83, .58]]]) {
+      mx.beginPath(); øre.forEach(([u, v], j) => { const [px, py] = P(u, v); j ? mx.lineTo(px, py) : mx.moveTo(px, py); }); mx.closePath(); mx.fill(); }
+    x.globalCompositeOperation = "destination-in"; x.drawImage(m, 0, 0);
+    kattHode = c;
+  };
+  img.src = SAMLINGER[2].mappe + "10.jpg";
+  return null;
+}
+// Kroppen: rynkete, rosa hud som katten, i runde ledd med lys fra venstre, skygge under og litt jord på.
+function ormLedd(x, X, Y, r, dx, dy, i, s) {
+  x.fillStyle = "rgba(20,10,6,.28)"; x.beginPath(); x.ellipse(X + r * .18, Y + r * .32, r * 1.02, r * .9, 0, 0, 7); x.fill();
+  const g = x.createRadialGradient(X - r * .38, Y - r * .42, r * .08, X, Y, r);
+  g.addColorStop(0, "#ffe9e0"); g.addColorStop(.45, "#eab4a6"); g.addColorStop(.85, "#c7837a"); g.addColorStop(1, "#8f5552");
+  x.fillStyle = g; x.beginPath(); x.arc(X, Y, r, 0, 7); x.fill();
+  // Rynker på tvers av kroppen.
+  if (i % 6 === 1) { const L = Math.hypot(dx, dy) || 1, nx = -dy / L, ny = dx / L;
+    x.strokeStyle = "rgba(120,60,58,.3)"; x.lineWidth = Math.max(.8, r * .1);
+    for (const k of [-.3, .25]) { x.beginPath(); x.moveTo(X + nx * r * .85 + dx / L * r * k, Y + ny * r * .85 + dy / L * r * k); x.quadraticCurveTo(X + dx / L * r * (k + .22), Y + dy / L * r * (k + .22), X - nx * r * .85 + dx / L * r * k, Y - ny * r * .85 + dy / L * r * k); x.stroke(); } }
+  // Jordflekker.
+  const [m1, m2, m3] = s.jord.mork;
+  for (let k = 0; k < 3; k++) { const a = i * 2.39 + k * 2.1, d = r * (.25 + ((i * 7 + k * 3) % 5) * .12); x.fillStyle = `rgba(${m1},${m2},${m3},${.35 + (k % 2) * .2})`; x.beginPath(); x.arc(X + Math.cos(a) * d, Y + Math.sin(a) * d, r * (.07 + (k % 3) * .04), 0, 7); x.fill(); }
+}
+// Jordklumpen: en tung ball av fuktig jord med klumper, småstein og sprekker. Den ruller mens den flyr.
+function ormKlump(x, X, Y, R, s, O) {
+  const [m1, m2, m3] = s.jord.mork, [l1, l2, l3] = s.jord.lys, rot = (O.x * 9 + s.tid * .6);
+  x.fillStyle = "rgba(0,0,0,.35)"; x.beginPath(); x.ellipse(X + R * .15, Y + R * .9, R * .9, R * .28, 0, 0, 7); x.fill();
+  x.save(); const omriss = new Path2D();
+  for (let j = 0; j <= 28; j++) { const a = j / 28 * Math.PI * 2, rr = R * (1 + .07 * Math.sin(a * 5 + rot * 2) + .05 * Math.sin(a * 11 - rot)); j ? omriss.lineTo(X + Math.cos(a) * rr, Y + Math.sin(a) * rr) : omriss.moveTo(X + Math.cos(a) * rr, Y + Math.sin(a) * rr); }
+  omriss.closePath();
+  const g = x.createRadialGradient(X - R * .35, Y - R * .4, R * .1, X, Y, R * 1.1);
+  g.addColorStop(0, `rgb(${l1 + 30},${l2 + 24},${l3 + 18})`); g.addColorStop(.55, `rgb(${l1},${l2},${l3})`); g.addColorStop(1, `rgb(${m1},${m2},${m3})`);
+  x.fillStyle = g; x.fill(omriss);
+  // Smuler som stikker ut langs kanten, så den ser løs og smuldrete ut.
+  for (let j = 0; j < 16; j++) { const a = j / 16 * Math.PI * 2 + rot * .5 + (j % 3) * .2, d = R * (.9 + (j % 4) * .05), rr = R * (.1 + (j % 3) * .05);
+    const sx = X + Math.cos(a) * d, sy = Y + Math.sin(a) * d, lys = Math.cos(a + 2.3) > 0;
+    x.fillStyle = lys ? `rgb(${l1 + 18},${l2 + 14},${l3 + 10})` : `rgb(${m1 + 6},${m2 + 4},${m3 + 2})`; x.beginPath(); x.ellipse(sx, sy, rr, rr * .8, a, 0, 7); x.fill(); }
+  x.clip(omriss);
+  // Fint korn i jorda.
+  for (let j = 0; j < 70; j++) { const a = j * 2.39996 + rot, d = R * Math.sqrt(((j * 53) % 70) / 70); x.fillStyle = j % 2 ? `rgba(${m1},${m2},${m3},.7)` : `rgba(${l1 + 50},${l2 + 44},${l3 + 34},.45)`; x.fillRect(X + Math.cos(a) * d, Y + Math.sin(a) * d, R * .05, R * .05); }
+  for (let j = 0; j < 22; j++) { const a = j * 2.4 + rot, d = R * (.15 + .8 * ((j * 37) % 22) / 22), lys = j % 3 === 0;
+    const cx = X + Math.cos(a) * d, cy = Y + Math.sin(a) * d * .95, rr = R * (.08 + (j % 4) * .04);
+    x.fillStyle = lys ? `rgba(${l1 + 40},${l2 + 34},${l3 + 26},.55)` : `rgba(${m1},${m2},${m3},.6)`; x.beginPath(); x.ellipse(cx, cy, rr, rr * .8, a, 0, 7); x.fill(); }
+  for (let j = 0; j < 6; j++) { const a = j * 1.9 + rot * 1.3, d = R * (.3 + .1 * j); x.fillStyle = j % 2 ? "rgba(170,165,155,.8)" : "rgba(120,116,108,.8)"; x.beginPath(); x.ellipse(X + Math.cos(a) * d, Y + Math.sin(a) * d, R * .07, R * .05, a, 0, 7); x.fill(); }
+  x.strokeStyle = `rgba(${m1 * .5 | 0},${m2 * .5 | 0},${m3 * .5 | 0},.3)`; x.lineWidth = Math.max(.6, R * .03);
+  for (let j = 0; j < 4; j++) { const a = j * 1.6 + rot * .7; x.beginPath(); x.moveTo(X + Math.cos(a) * R * .1, Y + Math.sin(a) * R * .1); x.lineTo(X + Math.cos(a + .3) * R * .55, Y + Math.sin(a + .3) * R * .55); x.lineTo(X + Math.cos(a + .1) * R * .95, Y + Math.sin(a + .1) * R * .95); x.stroke(); }
+  // Mørkere nede til høyre, som en ekte kule.
+  const sk = x.createRadialGradient(X - R * .4, Y - R * .45, R * .4, X, Y, R * 1.15); sk.addColorStop(0, "rgba(0,0,0,0)"); sk.addColorStop(1, "rgba(0,0,0,.55)");
+  x.fillStyle = sk; x.fillRect(X - R * 1.2, Y - R * 1.2, R * 2.4, R * 2.4);
+  // Fuktig glans øverst til venstre.
+  x.fillStyle = "rgba(255,250,235,.16)"; x.beginPath(); x.ellipse(X - R * .38, Y - R * .45, R * .34, R * .18, -.6, 0, 7); x.fill();
+  x.restore();
+}
+let vingeSprite = null;
+function hentVinge() {
+  if (vingeSprite) return vingeSprite;
+  const W = 220, H = 80, c = document.createElement("canvas"); c.width = W; c.height = H; const x = c.getContext("2d");
+  const form = () => { x.beginPath(); x.moveTo(4, H * .5); x.bezierCurveTo(W * .25, H * .02, W * .75, H * .0, W - 4, H * .32); x.bezierCurveTo(W * .9, H * .7, W * .45, H * .95, 4, H * .5); x.closePath(); };
+  form(); const g = x.createLinearGradient(0, 0, W, 0); g.addColorStop(0, "rgba(210,225,240,.55)"); g.addColorStop(1, "rgba(235,245,255,.22)"); x.fillStyle = g; x.fill();
+  x.save(); form(); x.clip(); x.globalCompositeOperation = "source-atop";
+  const ir = x.createLinearGradient(W * .2, 0, W, H); ["rgba(255,80,200,.28)", "rgba(80,220,255,.28)", "rgba(140,255,120,.24)", "rgba(255,220,90,.26)", "rgba(180,90,255,.28)"].forEach((f, j, a) => ir.addColorStop(j / (a.length - 1), f));
+  x.fillStyle = ir; x.fillRect(0, 0, W, H);
+  // Årer fra roten og ut, med tverrårer.
+  x.globalCompositeOperation = "source-over"; x.strokeStyle = "rgba(40,30,30,.55)"; x.lineCap = "round";
+  const årer = [[.18, .08], [.36, .02], [.58, .04], [.82, .2], [.95, .38], [.7, .72], [.42, .82]];
+  årer.forEach(([u, v], j) => { x.lineWidth = j < 2 ? 1.8 : 1.1; x.beginPath(); x.moveTo(4, H * .5); x.quadraticCurveTo(W * u * .55, H * (.5 + (v - .5) * .4), W * u, H * v + (v < .5 ? 6 : -6)); x.stroke(); });
+  x.lineWidth = .7; x.strokeStyle = "rgba(40,30,30,.35)";
+  for (let j = 0; j < 9; j++) { const u = .2 + j * .08; x.beginPath(); x.moveTo(W * u, H * (.2 + (j % 3) * .05)); x.quadraticCurveTo(W * (u + .03), H * .45, W * (u - .02), H * (.72 - (j % 2) * .06)); x.stroke(); }
+  // Lys glans langs forkanten.
+  const gl = x.createLinearGradient(0, 0, 0, H * .4); gl.addColorStop(0, "rgba(255,255,255,.55)"); gl.addColorStop(1, "rgba(255,255,255,0)"); x.fillStyle = gl; x.fillRect(0, 0, W, H * .4);
+  x.restore();
+  form(); x.strokeStyle = "rgba(30,24,24,.7)"; x.lineWidth = 1.6; x.stroke();
+  return (vingeSprite = c);
+}
+// Tegner fire vinger (to på hver side). slag går fra −.35 til .35: vingene løftes, senkes og forkortes i perspektiv.
+function tegnVinger(x, X, Y, R, slag, rosa) {
+  const v = hentVinge(), fase = slag / .35;
+  for (const side of [-1, 1]) for (const [lengde, vinkel, forskj] of [[2.6, -.38, 0], [2, .12, .15]]) {
+    const a = vinkel - fase * .55 + (forskj ? fase * .1 : 0), kort = .28 + .72 * Math.abs(Math.cos(fase * 1.2 + forskj));
+    x.save(); x.translate(X + side * R * .28, Y - R * .12); x.scale(side, 1); x.rotate(a);
+    x.globalAlpha = .92; x.shadowColor = rosa ? "rgba(255,90,200,.35)" : "rgba(90,200,255,.35)"; x.shadowBlur = R * .25;
+    x.drawImage(v, 0, -R * .42 * kort, R * lengde, R * .84 * kort);
+    x.restore();
+  }
+}
 function shOrmTegn(x, f, s) {
   if (s.orm) shOrmTegnEn(x, f, s, s.orm);
   for (const O of s.ormer || []) shOrmTegnEn(x, f, s, O);
 }
 function shOrmTegnEn(x, f, s, O) {
+  const katt = hentKattHode();
+  if (katt && (O.tilstand === "spis" || O.tilstand === "mett")) {
+    // Katteslangen: rosa, rynkete kropp fra halen og fram, og kattehodet med tunga ute foran.
+    x.save();
+    const n = O.kropp.length, R = O.tykk * f;
+    for (let i = n - 1; i >= 1; i -= 2) { const p = O.kropp[i], q = O.kropp[Math.max(0, i - 2)], u = i / Math.max(1, n - 1);
+      ormLedd(x, p.x * f, p.y * f, Math.max(1.5, R * (1 - .6 * u) * (1 + .07 * Math.sin(i * .7 + s.tid * 3))), (q.x - p.x) * f, (q.y - p.y) * f, i, s); }
+    const X = O.x * f, Y = O.y * f, B = R * 4.6, H = B * katt.height / katt.width, tygg = 1 + .07 * O.tygg * Math.sin(s.tid * 22);
+    x.translate(X, Y); x.rotate(Math.max(-.45, Math.min(.45, Math.cos(O.a) * .4)) + Math.sin(s.tid * 3) * .05); x.scale(1, tygg);
+    x.shadowColor = "rgba(0,0,0,.45)"; x.shadowBlur = R * .8; x.shadowOffsetY = R * .25;
+    x.drawImage(katt, -B * .394, -H * .686, B, H);
+    x.restore(); return;
+  }
+  if (katt && O.tilstand !== "spis" && O.tilstand !== "mett") { x.save(); ormKlump(x, O.x * f, O.y * f, O.r * f, s, O); x.restore(); return; }
   x.save(); x.globalCompositeOperation = "lighter";
   if (O.tilstand === "spis" || O.tilstand === "mett") {
     const n = O.kropp.length, R = O.tykk * f;
@@ -6185,7 +6300,7 @@ function shBuleMål(s) {
 let buleLerret = null;
 // Å tegne et lerret oppå seg selv tvinger nettleseren til å kopiere hele lerretet for hvert kall. Bølgene tok
 // 26 + 26 slike kall per bilde. Nå kopieres lerretet én gang per pass, og stripene leses fra kopien.
-let kopiLerret = null;
+let kopiLerret = null, ekkoLerret = null;
 function lerretKopi(c) {
   if (!kopiLerret) kopiLerret = document.createElement("canvas");
   if (kopiLerret.width !== c.width || kopiLerret.height !== c.height) { kopiLerret.width = c.width; kopiLerret.height = c.height; }
@@ -6379,8 +6494,8 @@ function shTegn(t) {
     const tegnFigur = (sp, X, Y, R, rot, vinger, rosa, slag) => {
       x.save(); if (rot) { x.translate(X, Y); x.rotate(rot); x.translate(-X, -Y); }
       if (vinger) {
-        x.save(); x.globalCompositeOperation = "lighter"; x.fillStyle = rosa ? "rgba(255,90,200,.7)" : "rgba(90,220,255,.7)";
-        for (const side of [-1, 1]) { x.beginPath(); x.moveTo(X + side * R * .5, Y - R * .1); x.lineTo(X + side * R * (1.8 + slag * .3), Y - R * (.6 + slag)); x.lineTo(X + side * R * 1.4, Y + R * .5); x.closePath(); x.fill(); }
+        tegnVinger(x, X, Y, R, slag, rosa);
+        x.save(); x.globalCompositeOperation = "lighter";
         const fl = x.createRadialGradient(X, Y + R * 1.05, 0, X, Y + R * 1.05, R * .6); fl.addColorStop(0, "rgba(255,230,150,.85)"); fl.addColorStop(1, "rgba(255,120,40,0)");
         x.fillStyle = fl; x.fillRect(X - R, Y + R * .45, R * 2, R * 1.2); x.restore();
       }
@@ -6574,6 +6689,11 @@ function shTegn(t) {
     });
   }
   s.tekster = s.tekster.filter(tk => tk.liv > 0); x.globalAlpha = 1;
+  // TRIP på grafikkortet: fargene glir rundt fargehjulet og blir mettere, og hele feltet puster og vugger.
+  { const st = s.eff.T > 0 ? Math.min(1, s.eff.T, SH_TRIP - s.eff.T) : 0;
+    if (st > 0) { c.style.filter = `hue-rotate(${Math.round(110 * st * Math.sin(s.tid * .45))}deg) saturate(${(1 + .55 * st + .25 * st * Math.sin(s.tid * 1.9)).toFixed(2)}) contrast(${(1 + .08 * st).toFixed(2)})`;
+      c.style.transform = `scale(${(1 + .03 * st + .015 * st * Math.sin(s.tid * .8)).toFixed(4)}) rotate(${(.7 * st * Math.sin(s.tid * .53)).toFixed(3)}deg)`; }
+    else if (c.style.filter) { c.style.filter = ""; c.style.transform = ""; } }
   // Måler hvor raskt bildene kommer. Går TRIP under ca. 33 bilder i sekundet, blir den lettere resten av TRIP:
   // bare én bølgeretning, ingen fargeslør, tåke eller neonskyer, og færre partikler. Bulingen og strålene blir.
   { const nå = performance.now(); if (s.sistTegn) s.tegnSnitt = (s.tegnSnitt ?? 16) * .92 + Math.min(100, nå - s.sistTegn) * .08; s.sistTegn = nå;
@@ -6614,6 +6734,16 @@ function shTegn(t) {
       x.globalAlpha = a * .9; x.drawImage(shNeon(q.hue), px - r, py - r, r * 2, r * 2);
       if (q.jord) { x.globalCompositeOperation = "source-over"; x.globalAlpha = a * .85; x.fillStyle = `rgb(${s.jord.mork[0] * .7 | 0},${s.jord.mork[1] * .7 | 0},${s.jord.mork[2] * .7 | 0})`; x.beginPath(); x.ellipse(px, py, r * .28, r * .22, q.hue, 0, 7); x.fill(); x.globalCompositeOperation = "lighter"; } }
     // Neonpuls som fanger et romskip.
+    // Ekko: forrige bilde ligger svakt igjen. Fargekant: bildet forskjøvet litt, blandet med «difference».
+    if (st > 0 && !s.tripLett) {
+      x.save(); x.setTransform(1, 0, 0, 1, 0, 0); x.globalCompositeOperation = "source-over";
+      const kk = lerretKopi(c);
+      if (ekkoLerret && ekkoLerret.width === c.width && ekkoLerret.height === c.height) { x.globalAlpha = .42 * st; x.drawImage(ekkoLerret, 0, 0); }
+      const o = Math.round((3 + 3 * Math.sin(s.tid * 1.7)) * g.dpr); x.globalCompositeOperation = "difference"; x.globalAlpha = .2 * st; x.drawImage(kk, o, -o * .5);
+      x.restore();
+      ekkoLerret = ekkoLerret || document.createElement("canvas"); if (ekkoLerret.width !== c.width || ekkoLerret.height !== c.height) { ekkoLerret.width = c.width; ekkoLerret.height = c.height; }
+      const ek = ekkoLerret.getContext("2d"); ek.globalCompositeOperation = "copy"; ek.drawImage(kk, 0, 0);
+    }
     if (s.tripRing) { const u = s.tripRing.t / .8; x.globalAlpha = 1 - u; x.strokeStyle = `hsl(${(s.tid * 120) % 360},100%,70%)`; x.lineWidth = 3 * (1 - u) + 1; x.beginPath(); x.arc(s.tripRing.x * f, s.tripRing.y * f, (.02 + u * .12) * f, 0, 7); x.stroke(); }
     x.restore();
   }
