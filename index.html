@@ -524,7 +524,7 @@ h1{font-weight:300;letter-spacing:.14em;line-height:1.02}
   <div class="regel">Everything counts: Game, Peace, Scrub it 1P and 2P, every board, every level, every collection. Each board list gives up to 100 points (a Scrub it list up to 1,000): #1 gets them all, the rest their share of the top score.</div>
   <div class="sammen" id="spillere"><p class="liten">Loading players …</p></div>
   <p class="kreditt">© 2001–2026 Tarjei Krogh. All photography, music and art. <a href="https://kroghx.com" target="_blank" rel="noopener">kroghx.com</a></p>
-  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 1.20<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
+  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 1.21<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
 </section>
 
 <div class="ark" id="tidUtArk" hidden style="z-index:200001">
@@ -1542,6 +1542,7 @@ const MUSIKK = {
   b1: { fil: "musikk/poetrigger.mp4", tittel: "Poetrigger", takt: 32 * 240 / 130, spotify: "https://open.spotify.com/track/34PGffFCkwW0vsxZ48rzD5" },
   b2: { fil: "musikk/the-light.mp4", tittel: "The Light", takt: 32 * 240 / 140, spotify: "https://open.spotify.com/track/5KuO7xGRZ94LRDvHF6lZvA" },
   b3: { fil: "musikk/blume.mp4", tittel: "Blume", takt: 16 * 240 / 95, spotify: "https://open.spotify.com/track/4pNfudlyzaRlv5eN5t2WyB" },
+  b5: { fil: "musikk/sax-lovers.mp4", tittel: "Sax Lovers", takt: 24 * 240 / 122, xfade: .06 },
   b4: { fil: "musikk/piranha.mp4", tittel: "Piranha", takt: 32 * 240 / 83, spotify: "https://open.spotify.com/track/5hFuIO5ukC1Ls1vM1vWaiz" },
 };
 // Peace: Kroghs chill-looper (laget som perfekte looper i Ableton), på rundgang over alle brett til det kommer flere.
@@ -1551,7 +1552,7 @@ const PEACE_LÅTER = [
   { fil: "musikk/peace-mu-cephei.mp4", tittel: "Mu Cephei", takt: 64, xfade: .06 },
   { fil: "musikk/peace-theme-for-john-giants.mp4", tittel: "Theme for John Giants", takt: 51.2, xfade: .06 }];
 // Inntil Krogh har sendt en låt per brett, går de låtene som finnes på rundgang over alle brett.
-const LÅTER = ["b1", "b2", "b3", "b4"].map(k => MUSIKK[k]);
+const LÅTER = ["b1", "b2", "b3", "b4", "b5"].map(k => MUSIKK[k]);
 function musikkFor(id) {
   if (iPeace()) { const i = Math.max(0, BRETT.findIndex(b => b.id === id)); return PEACE_LÅTER[(i + aktiv * 10) % PEACE_LÅTER.length]; }
   if (aktiv === 0 && MUSIKK[id]) return MUSIKK[id];
