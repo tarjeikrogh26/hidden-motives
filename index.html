@@ -105,6 +105,8 @@ body.peace-modus #veggMeny{display:flex;position:fixed;z-index:262;top:max(6px,e
 #veggMeny button{font-family:var(--brod);font-weight:400;font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:#7a7a7a;background:none;border:0;padding:9px 8px}
 /* Knappene er enkle, runde brytere på veggen, med vanlig skrift under. */
 #kraftLinje.peace{gap:0 30px}
+#kraftLinje.peace{align-items:start}
+#kraftLinje.peace #kraftHint .pris{display:block;margin-top:-4px;font-family:var(--brod);font-size:9px;letter-spacing:.14em;color:#9a9a9a;text-transform:uppercase}
 body.peace-modus .bunke-tall{font-family:var(--brod);font-size:10.5px;letter-spacing:.18em;color:#555;background:rgba(255,255,255,.85);border:1px solid rgba(0,0,0,.12);box-shadow:0 1px 4px rgba(0,0,0,.08)}
 #kraftLinje.peace button{flex-direction:column;align-items:center;gap:7px;padding:0;border:0;border-radius:0;background:none;box-shadow:none;text-shadow:none;
   font-family:var(--brod);font-weight:400;font-size:10.5px;letter-spacing:.2em;color:#4a4a4a!important;min-width:44px}
@@ -466,7 +468,7 @@ body:has(.resultat.vis) #spill .linje{opacity:0;pointer-events:none;transition:o
   <div class="regel"><b>The race:</b> Your best score on each of the ten boards in a collection is added up. Finish #1 overall and you get the next collection for free. Anyone who takes first place later gets it too. Points: Easy (25 pieces) gives 10,000, Medium (49) 15,000, Hard (100) 20,000 and Chaos (144) 25,000 at normal speed. Be fast and you get up to double.</div>
   <div class="sammen" id="sammen"><p class="liten">Loading standings …</p></div>
   <p class="kreditt">© 2001–2026 Tarjei Krogh. All photography, music and art. <a href="https://kroghx.com" target="_blank" rel="noopener">kroghx.com</a></p>
-  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 1.08<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
+  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 1.09<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
 </section>
 
 <div class="ark" id="tidUtArk" hidden style="z-index:200001">
@@ -1595,6 +1597,7 @@ async function startSpill(i, n, gjenoppta) {
   spill.hint = HINT_ANTALL; visHintKnapp();
   spill.tilt = 2; visTilt();
   // Beta: Krogh skal alltid kunne prøve TILT, MAGNET og HINT to ganger hver (2×2 + 2×3 + 2×1 = 12). Ved lansering: fjernes.
+  spill.gratisHint = 1;
   if (BETA) settCredits(Math.max(credits(), 22)); spill.hendelser = spill.peace ? [] : gjestekort(o.n); spill.brann = null; if (spill.peace) { spill.tilt = 0; spill.hint = 999; }
   spill.liste = husListe(i, o.n);
   hentListe(i, o.n).then(l => { if (spill && spill.brett === i && spill.n === o.n) spill.liste = l; });
@@ -2266,6 +2269,7 @@ function visKraftLinje() {
   const H = innerHeight, w = el.offsetWidth || 300; el.style.left = Math.min(innerWidth - w / 2 - 8, Math.max(w / 2 + 8, geo.x0 + geo.bredde / 2)) + "px";
   el.style.top = (geo.staaende ? H - BAR + 6 : spill.peace ? Math.min(H - 54, geo.y0 + geo.hoyde + geo.RT + 10) : Math.min(H - BAR + 8, geo.y0 + geo.hoyde + 12)) + "px";
   $("kraftMagnet").classList.toggle("aktiv", (spill.magnetTil || 0) > performance.now());
+  { const p = $("kraftHint").querySelector(".pris"); p.textContent = (spill.gratisHint || 0) > 0 ? "free" : "◆ " + KRAFT.hint.pris; }
   $("kraftLim").classList.toggle("aktiv", !!spill.limBrukt); $("kraftLim").disabled = !!spill.limBrukt;
   visCredits();
 }
@@ -2334,13 +2338,15 @@ function limBrikker() {
 }
 function brukKraft(type) {
   if (!spill || spill.slutt || spill.tapt) return false;
-  const k = KRAFT[type], har = credits(), gratis = !!spill.peace;
-  if (gratis && !["tilt", "hint", "familie"].includes(type)) return false;
+  const k = KRAFT[type], har = credits(), gratisHint = type === "hint" && (spill.gratisHint || 0) > 0, gratis = gratisHint || (!!spill.peace && type !== "hint");
+  if (spill.peace && !["tilt", "hint", "familie"].includes(type)) return false;
   if (!gratis && har < k.pris) { åpneButikk(k.pris); return false; }
   if (type === "hint" && !nesteHint()) return false;
   if (type === "lim" && (spill.limBrukt || !spill.biter.some(b => b.ferdig))) return false;
   if (type === "familie" && (spill.familieGaar || !familieSted())) return false;
   if (!gratis) { settCredits(har - k.pris); spill.trekk = (spill.trekk || 0) + k.trekk; spill.brukteKraft = true; }
+  // Hint trekker alltid poeng, også det gratis og også i Peace.
+  if (gratisHint) { spill.gratisHint--; spill.trekk = (spill.trekk || 0) + k.trekk; }
   if (!spill.start) spill.start = Date.now();
   if (lydPa) { tone(660, 0, .12, .04, "sine", .7, .6); tone(990, .06, .14, .03, "sine", .7, .6); }
   if (type === "tilt") { tilt(false); spill.tiltMagnetTil = performance.now() + 8000; }
@@ -2992,19 +2998,19 @@ async function ferdig() {
   if (!spill.peace) { const sp = spill; setTimeout(() => { if (spill === sp && !$("resultat").classList.contains("vis")) { magiStart(sp.img, { x: geo.x0, y: geo.y0, w: geo.bredde, h: geo.hoyde }, 2.6); const R = { x: geo.x0, y: geo.y0, w: geo.bredde, h: geo.hoyde }; if (!feiringStart(sp.img, R, BRETT[sp.brett].id, 2.55, () => +getComputedStyle($("avslor")).opacity || 0)) { $("avslor").classList.add("magisk"); setTimeout(() => $("avslor").classList.remove("magisk"), 2300); } } }, 250); }
   if (!spill.peace) startFest(); // Galleriet er stille: ingen konfetti.
   if (spill.peace) {
-    const id = b.id, k = "peace_" + spill.n, gml = fremdrift[id]?.[k], pp = regnPoeng(spill.n, sEkte), ny = !gml || pp > gml.poeng, før = gml?.tid;
-    fremdrift[id] = fremdrift[id] || {}; if (ny) fremdrift[id][k] = { poeng: pp, tid: sEkte }; skrivLokal(fremdrift);
+    const id = b.id, k = "peace_" + spill.n, gml = fremdrift[id]?.[k], pp = regnPoeng(spill.n, s), ny = !gml || pp > gml.poeng, før = gml?.tid;
+    fremdrift[id] = fremdrift[id] || {}; if (ny) fremdrift[id][k] = { poeng: pp, tid: s }; skrivLokal(fremdrift);
     const neste = nesteIRekke(spill.brett), sp = spill;
     $("nesteKnapp").textContent = neste >= 0 ? "Next: " + BRETT[neste].navn + " →" : "Menu"; $("nesteKnapp").disabled = false;
     $("resTittel").textContent = BRETT[spill.brett].navn; $("resPoeng").textContent = "0 points";
-    $("resInfo").textContent = kode(spill.brett) + " · Peace · " + spill.n + " pieces · time " + fmt(sEkte);
+    $("resInfo").textContent = kode(spill.brett) + " · Peace · " + spill.n + " pieces · time " + fmt(sEkte) + (trekk ? " · hints −" + Math.round(trekk * 100) + " %" : "");
     $("resRekord").textContent = ny ? (gml ? "New Peace best! Before: " + gml.poeng.toLocaleString("en") + "." : "First time on this board in Peace.") : "Your Peace best is " + gml.poeng.toLocaleString("en") + ".";
     $("resRekord").classList.toggle("ny-rekord", ny && !!før);
     ark = { tema: "pusle", peaceLook: true, img: sp.img, fra: { x: geo.x0, y: geo.y0, w: geo.bredde }, poeng: pp, sluttT: sp.sluttT, gyldig: () => spill === sp && !!sp.slutt,
       neste: () => { if (spill !== sp) return; valgtAntall = sp.n; tilMeny(); if (neste >= 0) visStartark(neste); }, meny: tilMeny };
     setTimeout(() => { if (spill === sp) sp.biter.forEach(b => { b.el.style.opacity = 0; }); }, 1900);
     arkTimere.push(setTimeout(visArkade, 3200));
-    await lagreRekord(id + "P", spill.n, pp, sEkte); await visToppliste();
+    await lagreRekord(id + "P", spill.n, pp, s); await visToppliste();
     if (await sjekkGratis(await hentSammen("P"))) $("resRekord").textContent += gratisTekst();
     return;
   }
