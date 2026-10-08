@@ -10,11 +10,12 @@
 <title>Hidden Motives</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pacifico&family=Syne:wght@600;800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pacifico&family=Syne:wght@600;800&family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@300;500&display=swap">
 <style>
 /* Layout: ett mørkt galleri-rom. Brettet til venstre, løse biter rundt. Samme mørke i begge tema, valgt med vilje. */
 :root{
   --sv:env(safe-area-inset-left,0px);
+  --st:env(safe-area-inset-top,0px);
   --rom:#141312;        /* galleriveggen */
   --flate:#1f1d1b;      /* kort og ark */
   --strek:#3a3633;      /* rammer */
@@ -86,21 +87,32 @@ body.lys #modusScrub{--farge:#e07800;--glod:224,120,0}
 .variant.v-scrub{--vg:224,120,0}
 .resultat.peace .ark-hoyre{display:none}
 #kraftLinje.peace #kraftMagnet,#kraftLinje.peace #kraftLim,#kraftLinje.peace #lommebok,#kraftLinje.peace .pris{display:none}
-#kraftLinje.peace button{font-family:"Pacifico",cursive;font-weight:400;font-size:16px;letter-spacing:.02em;text-transform:lowercase;color:#fff;padding:5px 18px 8px;border:0;
-  background:radial-gradient(ellipse at 35% 25%,#ffd3ea 0%,#ff9fcf 45%,#f27bb5 100%);box-shadow:inset 0 -4px 8px rgba(160,30,90,.35),inset 0 3px 6px rgba(255,255,255,.65),0 5px 14px rgba(120,30,80,.35);
-  text-shadow:1px 0 0 #a8306a,-1px 0 0 #a8306a,0 1px 0 #a8306a,0 -1px 0 #a8306a,.7px .7px 0 #a8306a,-.7px .7px 0 #a8306a,.7px -.7px 0 #a8306a,-.7px -.7px 0 #a8306a,0 2px 3px rgba(120,20,70,.5)}
-#kraftLinje.peace button:active{transform:scale(.95)}
-#kraftLinje.peace button::first-letter{text-transform:uppercase}
 body.peace-modus #hintKnapp{display:none!important}
-body.peace-modus #ramme{box-shadow:0 0 0 10px #f7f0e6,0 0 0 11px rgba(60,40,20,.25),0 22px 60px rgba(0,0,0,.5)}
 body.peace-modus #spill{z-index:1}
 #ramme::after{content:"";position:absolute;inset:-1px;border:1px solid var(--kant1,#111);box-shadow:0 0 0 1px var(--kant2,transparent);pointer-events:none;z-index:5}
 #peaceBg{position:fixed;inset:0;z-index:0;pointer-events:none}
-#timeglass{display:none;width:110px;height:66px}
-body.peace-modus #timeglass{display:block}
-.resultat.peace-look .poeng{color:#ff5fa2}
-.resultat.peace .poeng{color:#ff5fa2}
 #resRekord.ny-rekord{color:#ff5fa2;font-weight:700}
+/* Peace: et stort, hvitt galleri, tett på. Bildet henger i en tykk ramme (rammen tegnes i oppsett()). Navn og klokke står på veggen. */
+body.peace-modus #spill .linje{display:none}
+body.peace-modus #ramme,body.peace-modus.lys #ramme{background:#ecebe6;border-color:transparent;border-radius:0}
+body.peace-modus #ramme.neon{animation:none}
+#veggSkilt,#veggMeny{display:none}
+body.peace-modus #veggSkilt{display:flex;position:absolute;z-index:1;align-items:baseline;justify-content:space-between;gap:14px;height:24px;pointer-events:none}
+#veggNavn{font-family:var(--brod);font-weight:300;font-size:17px;letter-spacing:.03em;color:#111;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+#veggKlokke{font-family:var(--tall);font-weight:300;font-size:16px;letter-spacing:.06em;color:#5f5f5f;font-variant-numeric:tabular-nums;transition:color 1.5s ease,text-shadow 1.5s ease}
+#veggKlokke.neon{color:#ff2a8a;text-shadow:0 0 3px rgba(255,42,138,.85),0 0 10px rgba(255,42,138,.55),0 0 24px rgba(255,42,138,.35)}
+body.peace-modus #veggMeny{display:flex;position:fixed;z-index:262;top:max(6px,env(safe-area-inset-top,0px));right:max(8px,env(safe-area-inset-right,0px));gap:2px}
+#veggMeny button{font-family:var(--brod);font-weight:400;font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:#7a7a7a;background:none;border:0;padding:9px 8px}
+/* Knappene er enkle, runde brytere på veggen, med vanlig skrift under. */
+#kraftLinje.peace{gap:0 30px}
+body.peace-modus .bunke-tall{font-family:var(--brod);font-size:10.5px;letter-spacing:.18em;color:#555;background:rgba(255,255,255,.85);border:1px solid rgba(0,0,0,.12);box-shadow:0 1px 4px rgba(0,0,0,.08)}
+#kraftLinje.peace button{flex-direction:column;align-items:center;gap:7px;padding:0;border:0;border-radius:0;background:none;box-shadow:none;text-shadow:none;
+  font-family:var(--brod);font-weight:400;font-size:10.5px;letter-spacing:.2em;color:#4a4a4a!important;min-width:44px}
+#kraftLinje.peace button::before{content:"";width:28px;height:28px;border-radius:50%;background:radial-gradient(circle at 42% 36%,#fff 0%,#f1efea 60%,#e2dfd8 100%);
+  box-shadow:0 0 0 1px rgba(0,0,0,.08),0 2px 5px rgba(0,0,0,.16),inset 0 -1px 2px rgba(0,0,0,.05);transition:transform .1s ease}
+#kraftLinje.peace button:active{transform:none}
+#kraftLinje.peace button:active::before{transform:scale(.92);box-shadow:0 0 0 1px rgba(0,0,0,.1),inset 0 2px 4px rgba(0,0,0,.16)}
+#kraftLinje.peace button:disabled{opacity:.35}
 body.peace-modus #tid,body.peace-modus #mal,body.peace-modus #tiltKnapp{display:none!important}
 .eller{font-family:var(--brod);font-weight:400;font-size:max(12px,.3em);color:var(--demp);letter-spacing:.08em;text-transform:lowercase}
 .av-linje{font-family:var(--brod);color:var(--demp);margin:10px 0 0;font-size:14px}
@@ -342,6 +354,25 @@ body:has(.resultat.vis) #spill .linje{opacity:0;pointer-events:none;transition:o
 .resultat.tema-scrub .poeng{color:#7fd6ff}
 .poeng{font-family:var(--tall);font-size:34px;color:var(--signal);line-height:1;font-variant-numeric:tabular-nums;display:inline-block;transform-origin:left center}
 .poeng.dunk{animation:dunk .14s ease-out}
+.resultat.peace-look{inset:max(34px,calc(env(safe-area-inset-top,0px) + 26px)) 30px max(34px,calc(env(safe-area-inset-bottom,0px) + 26px));margin:auto;max-width:780px;max-height:860px;
+  padding:18px 20px;background:#fff;color:#111;
+  box-shadow:0 0 0 1px #d9d6cf,0 0 0 2px #2b2927,0 0 0 16px #121110,0 0 0 17px #000,0 12px 26px 16px rgba(0,0,0,.2),0 0 0 100vmax rgba(242,241,237,.94)}
+.resultat.peace-look::after{display:none}
+.resultat.peace-look h2{color:#111;font-family:var(--brod);font-weight:300;letter-spacing:.02em}
+.resultat.peace-look .poeng{color:#111;font-weight:300}
+.resultat.peace-look .liten{color:#555}
+.resultat.peace-look #resRekord.ny-rekord{color:#d4141c;font-weight:600}
+.resultat.peace-look .ark-hode{font-family:var(--brod);font-weight:600;font-size:13px;letter-spacing:.32em;color:#111;text-shadow:none;text-align:left;border-bottom:2px solid #111;padding-bottom:7px;margin-top:0}
+.resultat.peace-look .ark-hode span{color:#d4141c;text-shadow:none}
+.resultat.peace-look .rad,.resultat.peace-look .rad:nth-child(n){color:#555;text-shadow:none;animation:none;background:none;border-bottom:1px solid #ececec;border-radius:0}
+.resultat.peace-look .rad .r,.resultat.peace-look .rad .t{color:#9a9a9a;opacity:1}
+.resultat.peace-look .rad.hus{opacity:1}
+.resultat.peace-look .rad.meg,.resultat.peace-look .rad.meg .n,.resultat.peace-look .rad.meg .r,.resultat.peace-look .rad.meg .t{color:#d4141c;font-weight:600}
+.resultat.peace-look .rad input{color:#d4141c;border-bottom-color:#d4141c}
+.resultat.peace-look .rad input::placeholder{color:rgba(212,20,28,.45)}
+.resultat.peace-look .hoved{background:#111;color:#fff;border-radius:0;font-family:var(--brod);font-weight:500;letter-spacing:.08em}
+.resultat.peace-look .sekundar{background:#fff;color:#111;border:1px solid #111;border-radius:0}
+.resultat.peace-look #arkBilde{box-shadow:0 0 0 1px #111;border-radius:0}
 @keyframes dunk{50%{transform:scale(1.08);text-shadow:0 0 14px rgba(255,190,60,.8)}}
 .shatter-knapp{display:flex;flex-direction:column;align-items:flex-start;gap:2px;margin-top:14px;padding:12px 16px;border-radius:10px;border:1px solid rgba(255,176,0,.5);
   background:linear-gradient(110deg,rgba(255,64,96,.16),rgba(255,176,0,.14) 45%,rgba(54,224,224,.12));text-align:left;width:min(100%,420px)}
@@ -413,7 +444,7 @@ body:has(.resultat.vis) #spill .linje{opacity:0;pointer-events:none;transition:o
   <div class="regel"><b>The race:</b> Your best score on each of the ten boards in a collection is added up. Finish #1 overall and you get the next collection for free. Anyone who takes first place later gets it too. Points: Easy (25 pieces) gives 10,000, Medium (49) 15,000, Hard (100) 20,000 and Chaos (144) 25,000 at normal speed. Be fast and you get up to double.</div>
   <div class="sammen" id="sammen"><p class="liten">Loading standings …</p></div>
   <p class="kreditt">© 2001–2026 Tarjei Krogh. All photography, music and art. <a href="https://kroghx.com" target="_blank" rel="noopener">kroghx.com</a></p>
-  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 1.06<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
+  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 1.07<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
 </section>
 
 <div class="ark" id="tidUtArk" hidden style="z-index:200001">
@@ -445,7 +476,6 @@ body:has(.resultat.vis) #spill .linje{opacity:0;pointer-events:none;transition:o
   <div class="linje">
     <div class="hud-brett"><span id="hudKode">/01/01</span><b id="hudNavn"></b><span class="spor" id="hudSpor"></span></div>
     <span class="tid" id="tid">0:00</span>
-    <canvas id="timeglass" aria-label="Hourglass"></canvas>
     <span class="teller" id="teller">0 / 25</span>
     <span class="mal" id="mal" aria-live="off"></span>
     <div class="hud-knapper">
@@ -456,11 +486,13 @@ body:has(.resultat.vis) #spill .linje{opacity:0;pointer-events:none;transition:o
     </div>
   </div>
   <div id="bord">
+    <div id="veggSkilt"><span id="veggNavn"></span><span id="veggKlokke" aria-label="Time left">0:00</span></div>
     <div id="ramme"><canvas id="omriss"></canvas></div>
     <canvas id="avslor"></canvas>
     <canvas id="gnistLag"></canvas>
     <div id="mal-plass"></div>
   </div>
+  <div id="veggMeny"><button id="veggLyd">Sound on</button><button id="veggUt">Menu</button></div>
   <canvas id="fest"></canvas>
   <div class="bunke-tall" id="bunkeTall" hidden></div>
   <div id="kraftLinje" hidden>
@@ -585,7 +617,7 @@ function hentBilde(src) {
 // ---------- meny ----------
 // Et brett klart i Peace teller ikke for å åpne nye brett (Peace åpner ingenting, det spiller det du har).
 function erLost(id) { return !!fremdrift[id] && Object.keys(fremdrift[id]).some(k => !k.startsWith("peace") && k !== "p2"); }
-const PEACE_TID = 1.35; // Peace har romsligere tid (men den vises bare som et timeglass).
+const PEACE_TID = 1.35; // Peace har romsligere tid. Den vises som en rolig klokke på galleri-veggen.
 const peaceBeste = id => { const f = fremdrift[id] || {}; let b = null; for (const k in f) if (k.startsWith("peace_") && (!b || f[k].poeng > b.poeng)) b = f[k]; return b; };
 let variant = { pusle: "game", scrub: "1p" };
 try { const v = JSON.parse(localStorage.getItem("sm-variant") || "null"); if (v) variant = { ...variant, ...v }; } catch {}
@@ -657,7 +689,7 @@ function tegnModus() {
   $("modusPuslespill").setAttribute("aria-selected", String(modus === "pusle"));
   $("modusScrub").setAttribute("aria-selected", String(modus === "scrub"));
   $("modusTekst").textContent = modus === "pusle"
-    ? (iPeace() ? "Piece it in peace. No fire, no surprises. Just the pieces, calm music and an hourglass. Beat the sand, and climb the Peace list."
+    ? (iPeace() ? "Piece it in peace. No fire, no surprises. Just the pieces, calm music and a quiet clock in a white gallery. Beat the clock, and climb the Peace list."
       : "You never see the picture until it's done. Place the pieces before the clock runs out, and the image reveals itself.")
     : variant.scrub === "2p" ? "Two players, one screen. A flipper at each end: wash the picture clean together. No shop, only what the mud gives you."
     : "The art is buried in mud. Wash it off with soap bubbles. Clear a board in either game and the next one opens.";
@@ -1189,7 +1221,7 @@ function sprengBilde() {
   const lx = liten.getContext("2d"); lx.drawImage(kanv, 0, 0, nx, ny);
   const px = lx.getImageData(0, 0, nx, ny).data;
   const cx = r.left + r.width / 2, cy = r.top + r.height / 2, maks = Math.hypot(r.width, r.height) / 2;
-  const gull = [[255, 214, 106], [255, 190, 40], [255, 243, 196], [255, 255, 255], [214, 226, 240]];
+  const gull = $("resultat").classList.contains("peace-look") ? [[17, 17, 17], [212, 20, 28], [110, 110, 110], [190, 190, 190]] : [[255, 214, 106], [255, 190, 40], [255, 243, 196], [255, 255, 255], [214, 226, 240]];
   const biter = [];
   for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) {
     const k = (j * nx + i) * 4, bx = r.left + (i + .5) * cw, by = r.top + (j + .5) * ch, d = Math.hypot(bx - cx, by - cy);
@@ -1450,8 +1482,8 @@ function visSpor(id) {
     else el.textContent = "♪ " + m.tittel;
   }
 }
-function visLydKnapp() { const k = $("lydKnapp"); k.textContent = lydPa ? "Sound on" : "Sound off"; k.setAttribute("aria-pressed", String(lydPa)); }
-$("lydKnapp").onclick = () => { lydPa = !lydPa; try { localStorage.setItem("sm-lyd", lydPa ? "på" : "av"); } catch {} visLydKnapp(); if (lydPa) { plingLyd(0); if (spill?.slutt) startPad(); if (spill) spillMusikk(BRETT[spill.brett].id); låsOppLyd(); } else { stoppPad(); stoppMusikk(.3); if (stilleLyd) stilleLyd.pause(); } visLydStatus(); };
+function visLydKnapp() { const k = $("lydKnapp"); k.textContent = $("veggLyd").textContent = lydPa ? "Sound on" : "Sound off"; k.setAttribute("aria-pressed", String(lydPa)); }
+$("lydKnapp").onclick = () => { lydPa = !lydPa; try { localStorage.setItem("sm-lyd", lydPa ? "på" : "av"); } catch {} visLydKnapp(); if (lydPa) { plingLyd(0); if (spill?.slutt || spill?.peace) startPad(); if (spill && !spill.peace) spillMusikk(BRETT[spill.brett].id); låsOppLyd(); } else { stoppPad(); stoppMusikk(.3); if (stilleLyd) stilleLyd.pause(); } visLydStatus(); };
 // Trykk på lydstatusen i menyen for å slå lyden av og på.
 $("lydStatus").onclick = () => $("lydKnapp").click();
 function visInnst() {
@@ -1519,7 +1551,7 @@ async function startSpill(i, n, gjenoppta) {
   spill = { brett: i, n: o.n, k: o.k, r: o.r, img, biter, start: gjenoppta?.start ? Date.now() - gjenoppta.start : 0, slutt: 0, lagt: biter.filter(b => b.ferdig).length, ztopp: biter.length, straff: gjenoppta?.straff || 0 };
   $("hudKode").textContent = kode(i); $("hudNavn").textContent = BRETT[i].navn; settBildeKant(img);
   spill.peace = iPeace(); document.body.classList.toggle("peace-modus", spill.peace);
-  if (spill.peace) { stoppMusikk(.6); stoppPad(); setTimeout(() => { if (spill?.peace && !spill.slutt) startPad(); }, 700); timeglassStart(); peaceBg(i); }
+  if (spill.peace) { stoppMusikk(.6); stoppPad(); setTimeout(() => { if (spill?.peace && !spill.slutt) startPad(); }, 700); peaceBg(i); $("veggNavn").textContent = BRETT[i].navn; }
   else if (!gjenoppta || musikkØnske !== BRETT[i].id) spillMusikk(BRETT[i].id);
   if (!spill.peace) peaceBg(-1);
   spill.hint = HINT_ANTALL; visHintKnapp();
@@ -1717,22 +1749,24 @@ function oppsett() {
   const sv = getComputedStyle(document.documentElement);
   const venstre = parseFloat(sv.getPropertyValue("--sv")) || 0;
   const forhold = spill.img.naturalWidth && spill.img.naturalHeight ? spill.img.naturalWidth / spill.img.naturalHeight : 1;
-  const staaende = H > W;
+  const staaende = H > W, peace = !!spill.peace, st = parseFloat(sv.getPropertyValue("--st")) || 0;
+  // Peace: bildet henger i en tykk ramme på veggen (passepartout + svart tre). RT er hele tykkelsen.
+  const RT = peace ? Math.round(Math.max(20, Math.min(40, Math.min(W, H) * .066))) : 0;
   let x0, y0, bredde, hoyde, hoyreKant, toppKant;
   if (staaende) {
     // Stående: stripe øverst, brettet i full bredde under, bitene i rommet nederst.
-    toppKant = panel.height ? panel.bottom : 0; hoyreKant = W;
-    const plassBunke = (H - BAR - toppKant - marg - 58) / (1 + 1.6 / spill.r);
-    bredde = Math.min(W - 2 * marg, (H - toppKant) * 0.62 * forhold, plassBunke * forhold);
+    toppKant = peace ? st + 62 : panel.height ? panel.bottom : 0; hoyreKant = W;
+    const plassBunke = (H - BAR - toppKant - marg - 58 - 2 * RT) / (1 + 1.6 / spill.r);
+    bredde = Math.min(W - 2 * marg - 2 * RT, (H - toppKant) * 0.62 * forhold, plassBunke * forhold);
     hoyde = bredde / forhold;
-    x0 = (W - bredde) / 2; y0 = toppKant + marg;
+    x0 = (W - bredde) / 2; y0 = toppKant + marg + RT;
   } else {
     // Liggende: brettet til venstre, kolonnen helt til høyre, bitene imellom.
-    toppKant = 0; hoyreKant = panel.width ? panel.left : W;
-    const venstreKant = Math.max(16, W * 0.04, venstre + 8);
-    hoyde = Math.min(H - 2 * marg - BAR, (W * 0.6) / forhold, (hoyreKant - venstreKant - 12) * 0.62 / forhold);
+    toppKant = peace ? st + 40 : 0; hoyreKant = panel.width ? panel.left : W;
+    const venstreKant = Math.max(16, W * 0.04, venstre + 8) + RT;
+    hoyde = Math.min(H - 2 * marg - BAR - (peace ? 2 * RT + 34 : 0), (W * 0.6) / forhold, (hoyreKant - venstreKant - 12 - RT) * 0.62 / forhold);
     bredde = hoyde * forhold;
-    x0 = venstreKant; y0 = (H - BAR - hoyde) / 2;
+    x0 = venstreKant; y0 = peace ? Math.max(st + 34 + RT, (H - BAR - hoyde) / 2 + 14) : (H - BAR - hoyde) / 2;
   }
   const bw = bredde / spill.k, bh = hoyde / spill.r, t = Math.min(bw, bh) * 0.25;
   const dpr = Math.min(devicePixelRatio || 1, 2);
@@ -1741,10 +1775,14 @@ function oppsett() {
   const minX = (-x0 + t + 6) / bredde, maxX = (hoyreKant - x0 - bw - t - 6) / bredde;
   const minY = (toppKant + t + 8 - y0) / hoyde, maxY = (H - BAR - y0 - bh - t - 6) / hoyde;
   // p: luft rundt hver brikke, med plass til skyggen som tegnes inn i den.
-  geo = { x0, y0, bredde, hoyde, bw, bh, t, p: t + 10, dpr, minX, maxX, minY, maxY, staaende };
+  geo = { x0, y0, bredde, hoyde, bw, bh, t, p: t + 10, dpr, minX, maxX, minY, maxY, staaende, RT };
   setTimeout(visKraftLinje, 0);
   const ramme = $("ramme");
   Object.assign(ramme.style, { left: x0 + "px", top: y0 + "px", width: bredde + "px", height: hoyde + "px" });
+  // Fine-art-ramme: hvitt passepartout, en tynn fas, bred svart list og en myk skygge på veggen.
+  const M = Math.round(RT * .45);
+  ramme.style.boxShadow = peace ? `0 0 0 ${M}px #fbfaf6,0 0 0 ${M + 1}px #d6d3cc,0 0 0 ${M + 2}px #2b2927,0 0 0 ${RT}px #121110,0 0 0 ${RT + 1}px #000,0 ${RT * .6}px ${RT * 1.4}px ${RT * .7}px rgba(0,0,0,.2),0 1px 3px ${RT}px rgba(0,0,0,.3)` : "";
+  if (peace) Object.assign($("veggSkilt").style, { left: x0 - RT + "px", width: bredde + 2 * RT + "px", top: y0 - RT - 32 + "px" });
   const av = $("avslor");
   Object.assign(av.style, { left: x0 + "px", top: y0 + "px", width: bredde + "px", height: hoyde + "px" });
   av.width = Math.round(bredde * dpr); av.height = Math.round(hoyde * dpr);
@@ -1752,7 +1790,7 @@ function oppsett() {
   // Et svakt omriss av alle brikkene på brettet, så du ser hvor de skal.
   const om = $("omriss"); om.width = Math.round(bredde * dpr); om.height = Math.round(hoyde * dpr);
   const ox = om.getContext("2d"); ox.setTransform(dpr, 0, 0, dpr, 0, 0); ox.clearRect(0, 0, bredde, hoyde);
-  ox.lineWidth = 1; ox.strokeStyle = document.body.classList.contains("lys") ? "rgba(70,50,30,.2)" : "rgba(255,255,255,.11)"; ox.lineJoin = "round";
+  ox.lineWidth = 1; ox.strokeStyle = document.body.classList.contains("lys") || spill.peace ? "rgba(70,50,30,.2)" : "rgba(255,255,255,.11)"; ox.lineJoin = "round";
   for (const b of spill.biter) { bitSti(ox, b.c * bw, b.r * bh, bw, bh, b.kanter); ox.stroke(); }
   const gl = $("gnistLag"); gl.width = Math.round(W * dpr); gl.height = Math.round(H * dpr); gl.style.width = W + "px"; gl.style.height = H + "px";
   spill.biter.forEach(b => { tegnBit(b); plasser(b); });
@@ -2188,7 +2226,7 @@ function visKraftLinje() {
   el.hidden = !vis; if (!vis) return;
   el.classList.toggle("peace", !!spill.peace);
   const H = innerHeight, w = el.offsetWidth || 300; el.style.left = Math.min(innerWidth - w / 2 - 8, Math.max(w / 2 + 8, geo.x0 + geo.bredde / 2)) + "px";
-  el.style.top = (geo.staaende ? H - BAR + 6 : Math.min(H - BAR + 8, geo.y0 + geo.hoyde + 12)) + "px";
+  el.style.top = (geo.staaende ? H - BAR + 6 : spill.peace ? Math.min(H - 54, geo.y0 + geo.hoyde + geo.RT + 10) : Math.min(H - BAR + 8, geo.y0 + geo.hoyde + 12)) + "px";
   $("kraftMagnet").classList.toggle("aktiv", (spill.magnetTil || 0) > performance.now());
   $("kraftLim").classList.toggle("aktiv", !!spill.limBrukt); $("kraftLim").disabled = !!spill.limBrukt;
   visCredits();
@@ -2291,78 +2329,30 @@ $("kraftLim").onclick = () => brukKraft("lim");
 $("kraftFamilie").onclick = () => brukKraft("familie");
 for (const id of ["kraftLinje", "shKraftLinje", "butikk", "innstillinger"]) document.body.appendChild($(id));
 for (const id of ["kraftLinje", "shKraftLinje", "butikk"]) $(id).addEventListener("pointerdown", e => e.stopPropagation());
-// Timeglass: sanden renner. De siste 30 sekundene får det en rolig, rosa aura (ikke blink).
-let glassRAF = 0;
-function timeglassStart() {
-  const c = $("timeglass"), dpr = Math.min(devicePixelRatio || 1, 2); c.width = 110 * dpr; c.height = 66 * dpr; const x = c.getContext("2d");
-  cancelAnimationFrame(glassRAF);
-  // 22 fjær i en haug. Etter hvert som tiden går, løfter én og én seg og blåser bort. De siste 30 sekundene: rolig rosa aura.
-  const N = 18, fjær = Array.from({ length: N }, (_, j) => ({ x: 55 + Math.sin(j * 2.4) * (10 + (j % 5) * 5), y: 58 - (j / N) * 26 - Math.abs(Math.cos(j * 1.7)) * 4, a: Math.sin(j * 3.1) * .55, l: 22 + (j % 4) * 3, fase: j * 1.3, borte: false, fly: null }));
-  const tegnFjær = (fx, fy, a, l, alfa) => { x.save(); x.translate(fx, fy); x.rotate(a); x.globalAlpha = alfa;
-    const g = x.createLinearGradient(-l / 2, 0, l / 2, 0); g.addColorStop(0, "#ffffff"); g.addColorStop(1, "#ffd9ec");
-    // Myk, bred fjær: dunete kant, svak skygge, en tynn fjærstilk og fine fjærstråler.
-    x.shadowColor = "rgba(150,60,110,.35)"; x.shadowBlur = 3; x.shadowOffsetY = 1;
-    x.fillStyle = g; x.beginPath(); x.moveTo(-l / 2, 0); x.bezierCurveTo(-l * .3, -l * .42, l * .25, -l * .4, l / 2, -l * .04); x.bezierCurveTo(l * .2, l * .3, -l * .3, l * .3, -l / 2, 0); x.fill();
-    x.shadowColor = "transparent";
-    x.strokeStyle = "rgba(255,255,255,.9)"; x.lineWidth = .5; for (let k = -3; k <= 3; k++) { x.beginPath(); x.moveTo(k * l * .11, 0); x.quadraticCurveTo(k * l * .11 + l * .06, -l * .14, k * l * .11 + l * .1, -l * .26); x.stroke(); x.beginPath(); x.moveTo(k * l * .11, 0); x.quadraticCurveTo(k * l * .11 + l * .05, l * .1, k * l * .11 + l * .09, l * .19); x.stroke(); }
-    x.strokeStyle = "rgba(190,110,150,.8)"; x.lineWidth = .9; x.beginPath(); x.moveTo(-l / 2 - 3, l * .04); x.quadraticCurveTo(0, -l * .02, l / 2, -l * .04); x.stroke();
-    x.restore(); };
-  const steg = t => {
-    if (!spill?.peace || spill.slutt) { glassRAF = 0; return; }
-    const frist = Math.round(tidsfrist(spill.brett, spill.n) * PEACE_TID), s = sekunder(), u = spill.start ? Math.min(1, s / frist) : 0, igjen = frist - s;
-    x.setTransform(dpr, 0, 0, dpr, 0, 0); x.clearRect(0, 0, 110, 66);
-    if (spill.start && igjen <= 30) { const a = .3 + .2 * Math.sin(t / 900); const g = x.createRadialGradient(55, 48, 2, 55, 48, 52); g.addColorStop(0, `rgba(255,140,200,${a})`); g.addColorStop(1, "rgba(255,140,200,0)"); x.fillStyle = g; x.fillRect(0, 0, 110, 66); }
-    // Fjærene øverst i haugen blåser først.
-    const igjenAntall = Math.ceil(N * (1 - u));
-    for (let j = N - 1; j >= igjenAntall; j--) { const f = fjær[j]; if (!f.fly) f.fly = { x: f.x, y: f.y, vx: 10 + Math.random() * 14, vy: -8 - Math.random() * 8, a: f.a, liv: 1 }; }
-    for (const f of fjær) { if (f.fly) { const q = f.fly; if (q.liv <= 0) continue; q.x += q.vx / 60; q.y += (q.vy + Math.sin(t / 300 + f.fase) * 10) / 60; q.a += Math.sin(t / 250 + f.fase) * .03; q.liv -= 1 / 150; tegnFjær(q.x, q.y, q.a, f.l, Math.max(0, q.liv)); }
-      else tegnFjær(f.x + Math.sin(t / 1400 + f.fase) * .6, f.y, f.a + Math.sin(t / 1600 + f.fase) * .04, f.l, 1); }
-    glassRAF = requestAnimationFrame(steg);
-  };
-  glassRAF = requestAnimationFrame(steg);
-}
 let bgRAF = 0;
 function peaceBg(i) {
-  cancelAnimationFrame(bgRAF); bgRAF = 0; let c = $("peaceBg");
+  clearTimeout(bgRAF); bgRAF = 0; let c = $("peaceBg");
   if (i < 0) { if (c) c.remove(); return; }
   if (!c) { c = document.createElement("canvas"); c.id = "peaceBg"; document.body.prepend(c); }
-  const scene = ["strand", "aaker", "fjell", "skyer"][i % 4], dpr = Math.min(devicePixelRatio || 1, 2);
-  const frø = i * 97 + 13, rnd = (n) => { const v = Math.sin(frø * 12.9898 + n * 78.233) * 43758.5; return v - Math.floor(v); };
-  const stjerner = Array.from({ length: 160 }, (_, n) => ({ x: rnd(n), y: rnd(n + 500) * .62, r: .4 + rnd(n + 900) * 1.3, f: rnd(n + 1300) * 6 }));
-  const siv = Array.from({ length: 70 }, (_, n) => ({ x: rnd(n + 2000), h: .12 + rnd(n + 2100) * .2, f: rnd(n + 2200) * 6, b: .6 + rnd(n + 2300) }));
-  const skyer = Array.from({ length: 9 }, (_, n) => ({ x: rnd(n + 3000), y: .08 + rnd(n + 3100) * .5, s: .15 + rnd(n + 3200) * .25, v: .004 + rnd(n + 3300) * .008 }));
-  const steg = t => {
+  // Galleri-veggen: hvit, tett på. Et mykt lys fra en spot i taket faller på bildet. Tegnes bare på nytt når noe flytter seg.
+  const dpr = Math.min(devicePixelRatio || 1, 2); let sist = "";
+  const korn = document.createElement("canvas"); korn.width = korn.height = 128;
+  { const kx = korn.getContext("2d"), d = kx.createImageData(128, 128); for (let n = 0; n < d.data.length; n += 4) { const v = Math.random() * 255; d.data[n] = d.data[n + 1] = d.data[n + 2] = v; d.data[n + 3] = 7; } kx.putImageData(d, 0, 0); }
+  const steg = () => {
     if (!c.isConnected) return;
-    const W = innerWidth, H = innerHeight; if (c.width !== Math.round(W * dpr)) { c.width = Math.round(W * dpr); c.height = Math.round(H * dpr); c.style.width = W + "px"; c.style.height = H + "px"; }
-    const x = c.getContext("2d"); x.setTransform(dpr, 0, 0, dpr, 0, 0); const tt = t / 1000;
-    const himmel = (stopp) => { const g = x.createLinearGradient(0, 0, 0, H); stopp.forEach(([o, f]) => g.addColorStop(o, f)); x.fillStyle = g; x.fillRect(0, 0, W, H); };
-    const stjernehimmel = () => { for (const s of stjerner) { x.globalAlpha = .45 + .45 * Math.sin(tt * 1.3 + s.f); x.fillStyle = "#fff"; x.beginPath(); x.arc(s.x * W, s.y * H, s.r, 0, 7); x.fill(); } x.globalAlpha = 1; };
-    const sivrad = (bunn, farge, skala) => { x.strokeStyle = farge; x.lineCap = "round"; for (const s of siv) { const bx = s.x * W, by = bunn, h = s.h * H * skala, sv = Math.sin(tt * (.35 + s.b * .15) + s.f) * h * .07;
-      x.lineWidth = 1.6 * s.b; x.beginPath(); x.moveTo(bx, by); x.quadraticCurveTo(bx + sv * .4, by - h * .6, bx + sv, by - h); x.stroke();
-      if (s.b > 1.2) { x.fillStyle = farge; x.beginPath(); x.ellipse(bx + sv, by - h - 6, 2.5, 8, sv * .01, 0, 7); x.fill(); } } };
-    if (scene === "strand") {
-      himmel([[0, "#f6c8b8"], [.45, "#fbe3c9"], [.55, "#bfe0e6"], [1, "#e9d6b4"]]);
-      const hav = H * .55; x.fillStyle = "#86c3cf"; x.fillRect(0, hav, W, H * .13);
-      for (let j = 0; j < 6; j++) { x.strokeStyle = `rgba(255,255,255,${.35 - j * .04})`; x.lineWidth = 1.2; x.beginPath(); for (let px = 0; px <= W; px += 8) x.lineTo(px, hav + 8 + j * 9 + Math.sin(px * .02 + tt * (.6 + j * .1) + j) * 2.5); x.stroke(); }
-      x.fillStyle = "#ead7b0"; x.fillRect(0, hav + H * .13, W, H);
-      const sk = x.createRadialGradient(W * .78, H * .3, 0, W * .78, H * .3, H * .12); sk.addColorStop(0, "rgba(255,240,215,.95)"); sk.addColorStop(1, "rgba(255,240,215,0)"); x.fillStyle = sk; x.fillRect(0, 0, W, H);
-      sivrad(H, "rgba(120,110,70,.75)", 1.1);
-    } else if (scene === "aaker") {
-      himmel([[0, "#0b1030"], [.6, "#27305e"], [.7, "#3b3a5a"], [1, "#1b1a26"]]); stjernehimmel();
-      x.fillStyle = "#1c1b2a"; x.beginPath(); x.moveTo(0, H * .68); for (let px = 0; px <= W; px += 20) x.lineTo(px, H * .68 - Math.sin(px * .006) * 12); x.lineTo(W, H); x.lineTo(0, H); x.fill();
-      sivrad(H, "rgba(210,190,130,.5)", .9);
-    } else if (scene === "fjell") {
-      himmel([[0, "#070b22"], [.55, "#1d2a55"], [1, "#3c3f63"]]); stjernehimmel();
-      const måne = x.createRadialGradient(W * .25, H * .18, 0, W * .25, H * .18, 60); måne.addColorStop(0, "rgba(255,250,235,.95)"); måne.addColorStop(.25, "rgba(255,250,235,.9)"); måne.addColorStop(.3, "rgba(255,250,235,.15)"); måne.addColorStop(1, "rgba(255,250,235,0)"); x.fillStyle = måne; x.fillRect(0, 0, W, H);
-      for (const [y0, farge, amp] of [[.62, "#232a4a", .14], [.72, "#171c33", .1], [.84, "#0e1122", .07]]) { x.fillStyle = farge; x.beginPath(); x.moveTo(0, H); for (let px = 0; px <= W; px += 12) x.lineTo(px, H * y0 - Math.abs(Math.sin(px * .004 + y0 * 9)) * H * amp - Math.sin(px * .021) * 6); x.lineTo(W, H); x.fill(); }
-    } else {
-      himmel([[0, "#9fc4e8"], [.6, "#dbe9f5"], [1, "#f4ecdf"]]);
-      for (const s of skyer) { const sx = ((s.x + tt * s.v) % 1.4 - .2) * W, sy = s.y * H, r = s.s * W; x.fillStyle = "rgba(255,255,255,.75)";
-        for (let j = 0; j < 5; j++) { x.beginPath(); x.ellipse(sx + (j - 2) * r * .35, sy + Math.abs(j - 2) * r * .06, r * (.35 - Math.abs(j - 2) * .05), r * .2, 0, 0, 7); x.fill(); } }
+    const W = innerWidth, H = innerHeight, r = $("ramme").getBoundingClientRect(), nøkkel = [W, H, r.left, r.top, r.width, r.height].map(Math.round).join();
+    if (nøkkel !== sist) {
+      sist = nøkkel; c.width = Math.round(W * dpr); c.height = Math.round(H * dpr); c.style.width = W + "px"; c.style.height = H + "px";
+      const x = c.getContext("2d"); x.setTransform(dpr, 0, 0, dpr, 0, 0);
+      const g = x.createLinearGradient(0, 0, 0, H); g.addColorStop(0, "#ecebe7"); g.addColorStop(.35, "#f5f4f1"); g.addColorStop(1, "#e8e6e1"); x.fillStyle = g; x.fillRect(0, 0, W, H);
+      const cx = r.width ? r.left + r.width / 2 : W / 2, cy = r.height ? r.top + r.height * .4 : H * .4, rad = Math.max(W, H) * .75;
+      const l = x.createRadialGradient(cx, cy, 0, cx, cy, rad); l.addColorStop(0, "rgba(255,254,250,.95)"); l.addColorStop(.45, "rgba(255,253,247,.45)"); l.addColorStop(1, "rgba(255,253,247,0)"); x.fillStyle = l; x.fillRect(0, 0, W, H);
+      const v = x.createRadialGradient(W / 2, H * .45, Math.min(W, H) * .4, W / 2, H * .45, Math.hypot(W, H) * .7); v.addColorStop(0, "rgba(60,55,50,0)"); v.addColorStop(1, "rgba(60,55,50,.12)"); x.fillStyle = v; x.fillRect(0, 0, W, H);
+      x.fillStyle = x.createPattern(korn, "repeat"); x.fillRect(0, 0, W, H);
     }
-    bgRAF = requestAnimationFrame(steg);
+    bgRAF = setTimeout(steg, 400);
   };
-  bgRAF = requestAnimationFrame(steg);
+  bgRAF = setTimeout(steg, 0);
 }
 // Er bildet mørkt langs kanten? Da får det hvit strek innerst og svart utenfor (som på foto.no i gamle dager).
 function settBildeKant(img) {
@@ -2374,9 +2364,10 @@ function settBildeKant(img) {
 }
 function tikk() {
   visKraftLinje();
-  // Peace: ingen klokke å se på, bare timeglasset. Ingen hendelser. Går sanden ut, er runden over.
-  if (spill?.peace) { $("mal").replaceChildren(); const igjen = Math.round(tidsfrist(spill.brett, spill.n) * PEACE_TID) - sekunder();
-    if (spill.start && !spill.slutt && igjen <= 0) tidUt("The sand ran out", spill.lagt + " of " + spill.biter.length + " pieces placed. Take a breath and try again.");
+  // Peace: en rolig klokke på veggen. Mørk grå, neon de siste 30 sekundene. Ingen hendelser. Går tiden ut, er runden over.
+  if (spill?.peace) { $("mal").replaceChildren(); const igjen = Math.round(tidsfrist(spill.brett, spill.n) * PEACE_TID) - sekunder(), k = $("veggKlokke");
+    k.textContent = fmt(Math.max(0, igjen)); k.classList.toggle("neon", !!spill.start && igjen <= 30);
+    if (spill.start && !spill.slutt && igjen <= 0) tidUt("Time ran out", spill.lagt + " of " + spill.biter.length + " pieces placed. Take a breath and try again.");
     return; }
   const s = sekunder(), frist = spill ? tidsfrist(spill.brett, spill.n) : 0, igjen = Math.max(0, frist - s);
   $("tid").textContent = fmt(igjen);
@@ -2961,7 +2952,7 @@ async function ferdig() {
   setTimeout(() => $("avslor").classList.add("vis"), 350);
   if (!feiringKan()) $("avslor").classList.add("bolge"); $("ramme").classList.add("neon");
   { const sp = spill; setTimeout(() => { if (spill === sp && !$("resultat").classList.contains("vis")) { magiStart(sp.img, { x: geo.x0, y: geo.y0, w: geo.bredde, h: geo.hoyde }, 2.6); const R = { x: geo.x0, y: geo.y0, w: geo.bredde, h: geo.hoyde }; if (!feiringStart(sp.img, R, BRETT[sp.brett].id, 2.55, () => +getComputedStyle($("avslor")).opacity || 0)) { $("avslor").classList.add("magisk"); setTimeout(() => $("avslor").classList.remove("magisk"), 2300); } } }, 250); }
-  startFest();
+  if (!spill.peace) startFest(); // Galleriet er stille: ingen konfetti.
   if (spill.peace) {
     const id = b.id, k = "peace_" + spill.n, gml = fremdrift[id]?.[k], pp = regnPoeng(spill.n, sEkte), ny = !gml || pp > gml.poeng, før = gml?.tid;
     fremdrift[id] = fremdrift[id] || {}; if (ny) fremdrift[id][k] = { poeng: pp, tid: sEkte }; skrivLokal(fremdrift);
@@ -3179,6 +3170,8 @@ function tilMeny() {
   tegnMeny();
 }
 $("utKnapp").onclick = tilMeny;
+$("veggUt").onclick = tilMeny;
+$("veggLyd").onclick = () => $("lydKnapp").click();
 $("tilbakeKnapp").onclick = () => (ark?.meny || tilMeny)();
 $("nesteKnapp").onclick = () => ark?.neste?.();
 addEventListener("resize", () => { if (spill) oppsett(); });
