@@ -524,7 +524,7 @@ h1{font-weight:300;letter-spacing:.14em;line-height:1.02}
   <div class="regel">Everything counts: Game, Peace, Scrub it 1P and 2P, every board, every level, every collection. Each board list gives up to 100 points (a Scrub it list up to 1,000): #1 gets them all, the rest their share of the top score.</div>
   <div class="sammen" id="spillere"><p class="liten">Loading players …</p></div>
   <p class="kreditt">© 2001–2026 Tarjei Krogh. All photography, music and art. <a href="https://kroghx.com" target="_blank" rel="noopener">kroghx.com</a></p>
-  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 1.21<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
+  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 1.22<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
 </section>
 
 <div class="ark" id="tidUtArk" hidden style="z-index:200001">
@@ -3824,6 +3824,7 @@ async function shatterStart(i, poeng = 0, liv = 3) {
     for (const type in SH_INN) for (const navn in SH_INN[type]) if (SH_INN[type][navn] === G && !(toP && type === "kjøp"))
       nye.push(type === "kapsel" ? "NEW POWER-UP · " + KAPSLER.find(q => q.t === navn).navn : type === "kjøp" ? "NEW TO BUY · " + SH_NYNAVN.kjøp[navn] : "NEW · " + SH_NYNAVN.fiende[navn]);
     nye.slice(0, 4).forEach((t, j) => sh.tekster.push({ txt: t, x: .5, y: SH_TOPP + .2 + j * .055, liv: 6, fade: 1.5, farge: "#ffd23a", liten: true })); }
+  for (const [v, fil] of [["vinger3d", "vinger"], ["krabbe3d", "krabbe"]]) if (v === "vinger3d" ? !vinger3d : !krabbe3d) { const im = new Image(); im.src = "figurer/" + fil + ".webp"; if (v === "vinger3d") vinger3d = im; else krabbe3d = im; }
   shOppsett(); shLagMoekk(); shHud();
   cancelAnimationFrame(shRAF); shSist = performance.now(); shRAF = requestAnimationFrame(shSteg);
 }
@@ -5282,11 +5283,26 @@ function shVapenTegn(x, f, s) {
   // ALIEN: boblen blir et stort alien på flipperne, og de små flyr ut.
   if (v?.type === "alien" && s.tid < v.slutt) { const sp = fig.b[0] || fig.m[0], R = Math.min(.075, .02 + v.t * .12) * f, X = s.padX * f, Y = (SH_PY - .05) * f;
     if (sp) shSprite(x, sp, X, Y, R, t, 0); else { x.fillStyle = "#7dff6a"; x.beginPath(); x.arc(X, Y, R, 0, 7); x.fill(); } }
+  if (!flueBilde) { flueBilde = new Image(); flueBilde.src = "figurer/flue.webp"; }
   for (const m of s.miniAliens || []) { if (m.t < 0) continue; const sp = fig.m.length ? fig.m[m.figur % fig.m.length] : null, R = .026 * f;
-    if (sp) shSprite(x, sp, m.x * f, m.y * f, R, t, m.fase); else { x.fillStyle = "#7dff6a"; x.beginPath(); x.arc(m.x * f, m.y * f, R * .6, 0, 7); x.fill(); } }
+    if (flueBilde.complete && flueBilde.naturalWidth) {
+      // Fluen svirrer: vingene slår raskt, kroppen vipper i retningen den flyr.
+      const X = m.x * f, Y = m.y * f, sl = Math.sin(t / 22 + m.fase) * .35, w = R * 4.4, hh = w * 210 / 300;
+      tegnVinger(x, X, Y - R * .2, R * 1.1, sl, m.fase > 3);
+      x.save(); x.translate(X, Y); x.rotate(Math.max(-.5, Math.min(.5, (m.vx || 0) * 1.5)) + Math.sin(t / 140 + m.fase) * .08);
+      x.drawImage(flueBilde, -w / 2, -hh * .45, w, hh); x.restore();
+    } else if (sp) shSprite(x, sp, m.x * f, m.y * f, R, t, m.fase); else { x.fillStyle = "#7dff6a"; x.beginPath(); x.arc(m.x * f, m.y * f, R * .6, 0, 7); x.fill(); } }
+}
+// Fallskjermhopperen er laget som en 3D-modell (blank plastskjerm, grønn plastsoldat) og rendret på forhånd til
+// 16 bilder i hver av fire farger (figurer/fallskjerm-0..3.webp). Lastes først når han dukker opp.
+const fallskjermBilder = [];
+function hentFallskjerm(n) {
+  if (!fallskjermBilder[n]) { const img = new Image(); img.src = "figurer/fallskjerm-" + n + ".webp"; fallskjermBilder[n] = img; }
+  const im = fallskjermBilder[n]; return im.complete && im.naturalWidth ? im : null;
 }
 function shHopperStart() {
   const s = sh; s.hopper = { x: .2 + Math.random() * .6, y: SH_TOPP - .06, vx: 0, t: 0, brent: 0, brennT: 0, ut: 0, fase: Math.random() * 6, farge: (Math.random() * 4) | 0 };
+  hentFallskjerm(s.hopper.farge);
   s.tekster.push({ txt: "PARATROOPER!", x: .5, y: .45, liv: 1.6, farge: "#ffb36b" }); shLyd("spawn");
 }
 function shHopperSteg(dt) {
@@ -5321,6 +5337,9 @@ function shHopperTegn(x, f, s) {
   const [fr, fg, fb] = [[226, 52, 60], [40, 110, 220], [250, 200, 40], [235, 90, 170]][H.farge || 0];
   const f0 = (k, a = 1) => `rgba(${Math.min(255, fr * k) | 0},${Math.min(255, fg * k) | 0},${Math.min(255, fb * k) | 0},${a})`;
   x.save(); x.translate(X, Y); x.rotate(sv);
+  let my; const fsk = hentFallskjerm(H.farge || 0);
+  if (fsk) { const w = R * 2.56, h = w * 336 / 256, k = Math.floor(H.t * 8) % 16; x.drawImage(fsk, k * 256, 0, 256, 336, -w / 2, -h * .18, w, h); my = R * 1.95; }
+  else {
   // Skjermen: en kuppel sett litt nedenfra, med tunger langs kanten og sømmer opp til toppen.
   const N = 8, kant = j => { const a = Math.PI + j / N * Math.PI; return [Math.cos(a) * R, -Math.sin(a) * R * .22 + R * .12]; };
   const kuppel = new Path2D(); kuppel.moveTo(-R, R * .12); kuppel.bezierCurveTo(-R * 1.02, -R * 1.15, R * 1.02, -R * 1.15, R, R * .12);
@@ -5354,7 +5373,7 @@ function shHopperTegn(x, f, s) {
   x.beginPath(); x.arc(0, sy - R * .17, R * .085, 0, 7); x.fill(); x.stroke();
   x.fillStyle = "#4a6622"; x.beginPath(); x.ellipse(0, sy - R * .21, R * .11, R * .07, 0, Math.PI, 0); x.fill(); x.fillRect(-R * .12, sy - R * .22, R * .24, R * .025);
   x.fillStyle = "rgba(255,255,230,.55)"; x.beginPath(); x.ellipse(-R * .05, sy - R * .24, R * .04, R * .015, -.4, 0, 7); x.ellipse(-R * .05, sy, R * .025, R * .08, .1, 0, 7); x.fill();
-  const my = sy; x.restore();
+  my = sy; x.restore(); }
 
   if (H.brennT > 0) {
     // Gassflammen: blå kjerne og oransje tunge ned mot jorda.
@@ -5415,9 +5434,21 @@ function shKrabbeSteg(dt) {
   if (s.ormer?.some(O => O.tilstand === "spist")) { s.ormer = s.ormer.filter(O => O.tilstand !== "spist"); if (!s.ormer.length) s.ormFase = false; }
   if (går && (K.x < -.06 || K.x > 1.06)) s.krabbe = null;
 }
+let krabbe3d = null, flueBilde = null;
 function shKrabbeTegn(x, f, s) {
   const K = s.krabbe; if (!K) return;
   const n = K.kropp.length, R = K.tykk * f;
+  // Ferdig rendret 3D (figurer/krabbe.webp): 8 bilder av et ledd med bein som går, 4 bilder av hodet med kjever.
+  if (!krabbe3d) { krabbe3d = new Image(); krabbe3d.src = "figurer/krabbe.webp"; }
+  if (krabbe3d.complete && krabbe3d.naturalWidth) {
+    for (let i = n - 1; i >= 0; i -= 3) { const p = K.kropp[i], u = i / Math.max(1, n - 1), r = R * (1 - u * .55), q = K.kropp[Math.max(0, i - 2)];
+      const a = Math.atan2(q.y - p.y, q.x - p.x), k = (Math.floor(K.t * 14 + i) % 8 + 8) % 8, sz = r * 5.2;
+      x.save(); x.translate(p.x * f, p.y * f); x.rotate(a - Math.PI / 2); x.drawImage(krabbe3d, k * 128, 0, 128, 128, -sz / 2, -sz / 2, sz, sz); x.restore(); }
+    const k = Math.floor(K.t * 6) % 4, sz = R * 4.2;
+    x.save(); x.translate(K.x * f, K.y * f); x.rotate(K.a - Math.PI / 2); x.drawImage(krabbe3d, k * 128, 128, 128, 128, -sz / 2, -sz / 2, sz, sz);
+    if (K.blink > 0) { x.globalCompositeOperation = "lighter"; x.globalAlpha = K.blink * .6; x.drawImage(krabbe3d, k * 128, 128, 128, 128, -sz / 2, -sz / 2, sz, sz); }
+    x.restore(); return;
+  }
   // Kroppen: ledd i mørk, våt jordfarge med lysere rygg, tynnere mot halen. Små bein som går.
   for (let i = n - 1; i >= 0; i -= 3) { const p = K.kropp[i], u = i / Math.max(1, n - 1), r = R * (1 - u * .55);
     const q = K.kropp[Math.max(0, i - 2)], a = Math.atan2(p.y - q.y, p.x - q.x) + Math.PI / 2, ben = Math.sin(K.t * 14 + i) * r * .5;
@@ -5520,7 +5551,14 @@ function hentVinge() {
   return (vingeSprite = c);
 }
 // Tegner fire vinger (to på hver side). slag går fra −.35 til .35: vingene løftes, senkes og forkortes i perspektiv.
+let vinger3d = null;
 function tegnVinger(x, X, Y, R, slag, rosa) {
+  // Ferdig rendret 3D (figurer/vinger.webp, 12 bilder av ett vingeslag). Faller tilbake til de tegnede vingene til den er lastet.
+  if (!vinger3d) { vinger3d = new Image(); vinger3d.src = "figurer/vinger.webp"; }
+  if (vinger3d.complete && vinger3d.naturalWidth) {
+    const u = Math.max(-1, Math.min(1, slag / .35)), k = ((Math.round(Math.asin(u) / (Math.PI * 2) * 12) % 12) + 12) % 12, w = R * 7.1, h = w * 224 / 384;
+    x.drawImage(vinger3d, k * 384, 0, 384, 224, X - w / 2, Y - R * .12 - h * .63, w, h); return;
+  }
   const v = hentVinge(), fase = slag / .35;
   for (const side of [-1, 1]) for (const [lengde, vinkel, forskj] of [[2.6, -.38, 0], [2, .12, .15]]) {
     const a = vinkel - fase * .55 + (forskj ? fase * .1 : 0), kort = .28 + .72 * Math.abs(Math.cos(fase * 1.2 + forskj));
