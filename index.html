@@ -493,6 +493,8 @@ body:has(.resultat.vis) #spill .linje{opacity:0;pointer-events:none;transition:o
 .faner{display:flex;gap:8px;flex-wrap:wrap;margin-top:22px}
 .faner button{border:1px solid var(--strek);border-radius:999px;padding:8px 14px;font-size:13px;color:var(--demp);text-align:left}
 .faner button b{font-family:var(--display);color:var(--tekst);margin-left:6px}
+.faner button.skjult-fane{border-color:#a874ff;color:#d6b4ff;background:linear-gradient(90deg,rgba(168,116,255,.14),rgba(255,120,220,.1))}
+.faner button.skjult-fane b{color:#e9dcff}
 .faner button[aria-selected="true"]{border-color:var(--signal);color:var(--signal);background:rgba(255,176,0,.08)}
 .samling-tittel .antall{display:block;margin-top:5px}
 .samling-tittel b{font-family:var(--display);font-weight:800;letter-spacing:.02em;color:var(--tekst);font-size:15px;text-transform:none;margin:0 .3em}
@@ -633,7 +635,7 @@ body.lys #modusDeal{--farge:#0f8f6c;--glod:15,143,108}
   <div class="regel">Everything counts: Game, Peace, Scrub it 1P and 2P, every board, every level, every collection. Each board list gives up to 100 points (a Scrub it list up to 1,000): #1 gets them all, the rest their share of the top score.</div>
   <div class="sammen" id="spillere"><p class="liten">Loading players …</p></div>
   <p class="kreditt">© 2001–2026 Tarjei Krogh. All photography, music and art. <a href="https://kroghx.com" target="_blank" rel="noopener">kroghx.com</a></p>
-  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 1.50<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
+  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 1.51<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
 </section>
 
 <div class="ark" id="tidUtArk" hidden style="z-index:200001">
@@ -866,6 +868,8 @@ function tegnFaner() {
     b.onclick = () => { if (!sesongApen(j)) { banner("LOCKED", "WIN A WEEKLY RACE IN /" + SAMLINGER[j - 1].nr + " · OR BUY IT WHEN ALL BOARDS ARE PLAYED", "#ffd27a", 3000); return; } velgSamling(j); tegnMeny(); };
     f.appendChild(b);
   });
+  if (shSkjultÅpen()) { const b = document.createElement("button"); b.setAttribute("role", "tab"); b.className = "skjult-fane"; b.append("/??"); const n = document.createElement("b"); n.textContent = "The Hidden Season"; b.append(n);
+    b.onclick = () => banner("THE HIDDEN SEASON", "NINE BOARDS ARE BEING PAINTED · THEY OPEN SOON", "#d6b4ff", 3600); f.appendChild(b); }
   const t = $("samlingTittel"); t.replaceChildren("/" + SAMLING + " "); const bb = document.createElement("b"); bb.textContent = SAMLINGSNAVN[aktiv]; const an = document.createElement("span"); an.className = "antall"; an.textContent = BRETT.length + " boards"; t.append(bb, an);
 
   const nr = String(aktiv + 2).padStart(2, "0"), s2 = $("samling2");
@@ -6456,6 +6460,7 @@ function shDelerTreff(b) {
     if (q.type === "bumper") { const BR = .037; if (d < BR + R) {
         const nx = dx / d, ny = dy / d, v = Math.max(Math.hypot(b.vx, b.vy), s.fart * 1.35), dot = b.vx * nx + b.vy * ny;
         if (dot < 0 || s.tid - q.sistT > .15) { b.vx = nx * v; b.vy = ny * v; b.x = q.x + nx * (BR + R + .002); b.y = q.y + ny * (BR + R + .002); b.boost = Math.max(b.boost || 1, 1.4); shStot(b, nx, ny, .7);
+          if (s.eff.T > 0 && s.eff.A > 0 && !s.portal && !shSkjultÅpen()) shPortalStart(q.x, q.y);
           if (s.tid - q.sistT > .15) { q.sistT = s.tid; q.lys = 1; if (!s.bytte) s.poeng += 50; shHud(); shDelerLyd("bumper"); shVask(q.x, q.y, .05, 1, "syre"); s.tekster.push({ txt: "+50", x: q.x, y: q.y - .045, liv: .7, farge: "#ff7a7a", liten: true }); } } } }
     else if (d < .032 + R * .6 && s.tid - q.sistT > .5) { q.sistT = s.tid;
       if (q.type === "lampe" && !q.tent) { q.tent = true; q.lys = 1; if (!s.bytte) s.poeng += 100; shHud(); shDelerLyd("lampe");
@@ -6467,6 +6472,22 @@ function shDelerTreff(b) {
         shVask(q.x, q.y, .16, 2, "syre"); shStov(q.x, q.y, 120, "255,215,90", .5); s.stråler = { x: q.x, y: q.y, t: 0, a: Array.from({ length: 24 }, (_, j) => j / 24 * Math.PI * 2), l: Array.from({ length: 24 }, () => .5 + Math.random() * .5), h: Array.from({ length: 24 }, () => .85 + Math.random() * .15) };
         for (const z of s.deler) if (z.type === "lampe") z.tent = false; } }
   }
+}
+function shSkjultÅpen() { try { return localStorage.getItem("sm-skjult") === "1"; } catch { return false; } }
+function shPortalStart(x, y) {
+  const s = sh; s.portal = { x, y, t: 0 }; try { localStorage.setItem("sm-skjult", "1"); } catch {}
+  s.tekster = s.tekster.filter(tk => !tk.kapsel); s.tekster.push({ txt: "YOU FOUND A HIDDEN DOOR", x: .5, y: SH_TOPP + .42, liv: 4, fade: 1.6, farge: "#d6b4ff", stor: true, kapsel: true }, { txt: "THE HIDDEN SEASON IS OPEN · FIND IT IN THE MENU", x: .5, y: SH_TOPP + .49, liv: 4.4, fade: 1.6, farge: "#f0e6ff", liten: true, kapsel: true });
+  if (lydPa) [0, 3, 7, 10, 14, 17, 21].forEach((st, j) => tone(220 * Math.pow(2, st / 12), j * .12, 1.4, .02, "sine", .3, 1.8));
+  s.rist = Math.max(s.rist || 0, .5);
+}
+// Døra: en virvel i alle farger som åpner seg der bumperen står, og lukker seg igjen.
+function shPortalTegn(x, f, s) {
+  const P = s.portal; if (!P) return; P.t += 1 / 60; if (P.t > 4) { s.portal = null; return; }
+  const u = P.t / 4, åpen = Math.sin(Math.PI * Math.min(1, u * 1.3)), X = P.x * f, Y = P.y * f, R = f * .22 * åpen;
+  x.save(); x.globalCompositeOperation = "lighter";
+  for (let j = 0; j < 7; j++) { const r = R * (1 - j / 8), h = (s.tid * 120 + j * 50) % 360; x.strokeStyle = `hsla(${h},100%,65%,${.5 * åpen})`; x.lineWidth = Math.max(1.5, f * .006); x.beginPath(); x.ellipse(X, Y, r, r * .9, s.tid * (1 + j * .3), 0, Math.PI * 1.6); x.stroke(); }
+  const g = x.createRadialGradient(X, Y, 0, X, Y, R); g.addColorStop(0, `rgba(255,255,255,${.6 * åpen})`); g.addColorStop(.4, `rgba(190,120,255,${.35 * åpen})`); g.addColorStop(1, "rgba(80,0,160,0)"); x.fillStyle = g; x.fillRect(X - R, Y - R, R * 2, R * 2);
+  x.restore();
 }
 function shDelerLyd(type) {
   if (!lydPa) return;
@@ -6503,13 +6524,14 @@ function shDelerTegn(x, f, s) {
       if (på || q.lys > 0) { x.globalCompositeOperation = "lighter"; const gl = x.createRadialGradient(0, 0, R * .4, 0, 0, R * 3); gl.addColorStop(0, `rgba(${r},${gg},${bb},${.45 * Math.max(q.lys, på ? puls * .7 : 0)})`); gl.addColorStop(1, `rgba(${r},${gg},${bb},0)`); x.fillStyle = gl; x.fillRect(-R * 3, -R * 3, R * 6, R * 6); } }
     x.restore(); }
 }
-// SKJULTE MOTIVER: på hvert brett ligger en av Kroghs små figurer gjemt i en gullmedaljong under gjørma.
-// Vaskes den fram, har du 6 sekunder på å treffe den med boblen. Ellers graver den seg ned et annet sted.
-// Finner du alle ni i en sesong, blir flipperne gull i den sesongen.
+// RELIKVIER: på hvert brett står en liten statue i bronse, jern eller kobber gjemt under gjørma, laget av en av Kroghs figurer.
+// Vaskes den fram, må du treffe den tre ganger før den graver seg ned et annet sted. Ikke alle får det til.
+// Alle ni i en sesong: gullflippere den sesongen.
+const SH_RELIKVIE = [["BRONZE IDOL", [176, 122, 58]], ["IRON CAT", [120, 124, 130]], ["COPPER SAINT", [190, 100, 60]], ["TIN DEVIL", [160, 166, 172]], ["OLD BRASS GOD", [196, 160, 70]],
+  ["BLACK IRON BEAST", [70, 72, 78]], ["GREEN BRONZE GHOST", [96, 140, 110]], ["SILVER IMP", [200, 204, 212]], ["GOLDEN OWL", [222, 180, 70]]];
 function shMotivLagret() { try { return JSON.parse(localStorage.getItem("sm-motiver") || "{}"); } catch { return {}; } }
 function shMotivFunnet(sesong) { return (shMotivLagret()[sesong] || []).length; }
 function shMotivSted(s, frø) {
-  // Et sted med gjørme over, helst midt i bildet.
   let r = frø; const rnd = () => (r = (r * 9301 + 49297) % 233280) / 233280;
   for (let n = 0; n < 60; n++) { const x = .14 + rnd() * .72, y = SH_TOPP + .12 + rnd() * .62, k = shKlossVed(x, y); if (k && k.liv > 0) return { x, y }; }
   return null;
@@ -6519,39 +6541,61 @@ function shMotivSteg(dt) {
   if (s.motiv === undefined) {
     const funnet = shMotivLagret()[aktiv] || [];
     if (funnet.includes(s.i)) { s.motiv = null; return; }
-    const sted = shMotivSted(s, (aktiv * 9 + s.i) * 7919 + 13); s.motiv = sted ? { ...sted, tilstand: "gjemt", t: 0, figur: (aktiv * 9 + s.i) * 5 } : null; return;
+    const sted = shMotivSted(s, (aktiv * 9 + s.i) * 7919 + 13); s.motiv = sted ? { ...sted, tilstand: "gjemt", t: 0, treff: 0, hopp: 0, figur: (aktiv * 9 + s.i) * 5, type: SH_RELIKVIE[(aktiv * 9 + s.i) % 9] } : null; return;
   }
-  const M = s.motiv; if (!M) return; M.t += dt;
+  const M = s.motiv; if (!M) return; M.t += dt; M.hopp = Math.max(0, M.hopp - dt * 3);
   if (M.tilstand === "gjemt" && s.tilstand === "spill" && !shKlossVed(M.x, M.y) && !shKlossVed(M.x + .02, M.y) && !shKlossVed(M.x - .02, M.y)) {
-    M.tilstand = "fram"; M.t = 0; s.tekster.push({ txt: "A HIDDEN MOTIVE! HIT IT!", x: shClamp(M.x, .25, .75), y: M.y - .07, liv: 2, farge: "#ffd76a" }); shLyd("glimt"); shStov(M.x, M.y, 30, "255,215,110", .25);
+    M.tilstand = "fram"; M.t = 0; M.treff = 0; M.tid = 9;
+    s.tekster.push({ txt: "A RELIC! HIT IT 3 TIMES", x: shClamp(M.x, .25, .75), y: M.y - .08, liv: 2.2, farge: "#ffd76a" }); shLyd("glimt"); shStov(M.x, M.y, 30, "255,215,110", .25);
   }
   if (M.tilstand === "fram") {
-    for (const b of s.baller) if (!b.fast && Math.hypot(b.x - M.x, b.y - M.y) < shRad(b) + .045) {
+    for (const b of s.baller) { if (b.fast || s.tid - (M.sistT ?? -9) < .3) continue;
+      const dx = b.x - M.x, dy = b.y - M.y, d = Math.hypot(dx, dy) || 1e-6; if (d > shRad(b) + .045) continue;
+      // Boblen spretter av statuen, og den hopper litt.
+      const nx = dx / d, ny = dy / d, dot = b.vx * nx + b.vy * ny; if (dot < 0) { b.vx -= 2 * dot * nx; b.vy -= 2 * dot * ny; } b.x = M.x + nx * (shRad(b) + .046); b.y = M.y + ny * (shRad(b) + .046); shStot(b, nx, ny, .6);
+      M.sistT = s.tid; M.treff++; M.hopp = 1; M.tid += 1.5;
+      if (lydPa) { const fr = 1700 + M.treff * 300; tone(fr, 0, .25, .025, "triangle", .5, 1.2); tone(fr * 1.5, .01, .2, .012, "sine", .5, 1.2); }
+      shStov(M.x, M.y - .02, 14, "255,215,110", .2);
+      if (M.treff < 3) { s.tekster.push({ txt: M.treff + " / 3", x: shClamp(M.x, .15, .85), y: M.y - .06, liv: .9, farge: "#ffd76a", liten: true }); break; }
       M.tilstand = "fanget"; M.t = 0; const lagret = shMotivLagret(); lagret[aktiv] = [...new Set([...(lagret[aktiv] || []), s.i])]; try { localStorage.setItem("sm-motiver", JSON.stringify(lagret)); } catch {}
-      const n = lagret[aktiv].length; if (!s.bytte) s.poeng += 1000; shHud(); shStov(M.x, M.y, 90, "255,215,110", .45); shLyd("fang");
-      s.tekster = s.tekster.filter(tk => !tk.kapsel); s.tekster.push({ txt: "HIDDEN MOTIVE " + n + "/9", x: .5, y: SH_TOPP + .45, liv: 3, fade: 1.4, farge: "#ffd76a", stor: true, kapsel: true }, { txt: n >= 9 ? "ALL NINE! GOLDEN FLIPPERS THIS SEASON" : "+1000", x: .5, y: SH_TOPP + .51, liv: 3, fade: 1.4, farge: "#fff4d0", liten: true, kapsel: true });
+      const n = lagret[aktiv].length; if (!s.bytte) s.poeng += 1500; shHud(); shStov(M.x, M.y, 90, "255,215,110", .45); shLyd("fang");
+      s.tekster = s.tekster.filter(tk => !tk.kapsel); s.tekster.push({ txt: M.type[0] + "!", x: .5, y: SH_TOPP + .45, liv: 3, fade: 1.4, farge: "#ffd76a", stor: true, kapsel: true }, { txt: n >= 9 ? "RELIC " + n + "/9 · ALL NINE! GOLDEN FLIPPERS THIS SEASON" : "RELIC " + n + "/9 · +1500", x: .5, y: SH_TOPP + .51, liv: 3, fade: 1.4, farge: "#fff4d0", liten: true, kapsel: true });
       if (n >= 9) s.gull = true; break; }
-    if (M.tilstand === "fram" && M.t > 6) {
+    if (M.tilstand === "fram" && M.t > M.tid) {
       const ny = shMotivSted(s, Math.floor(Math.random() * 99999));
-      if (ny) { Object.assign(M, ny, { tilstand: "gjemt", t: 0 }); s.tekster.push({ txt: "IT DUG BACK IN", x: .5, y: SH_TOPP + .5, liv: 1.6, farge: "#ffd76a", liten: true }); }
-      else { M.tilstand = "borte"; s.tekster.push({ txt: "IT GOT AWAY", x: .5, y: SH_TOPP + .5, liv: 1.6, farge: "#ffd76a", liten: true }); }
+      if (ny) { Object.assign(M, ny, { tilstand: "gjemt", t: 0 }); s.tekster.push({ txt: "THE RELIC SANK BACK INTO THE MUD", x: .5, y: SH_TOPP + .5, liv: 1.8, farge: "#ffd76a", liten: true }); }
+      else { M.tilstand = "borte"; s.tekster.push({ txt: "THE RELIC IS GONE", x: .5, y: SH_TOPP + .5, liv: 1.6, farge: "#ffd76a", liten: true }); }
     }
   }
 }
+// Statuen: Kroghs figur støpt i metall (fargen fra metallet, lyset fra figuren), på en liten sokkel.
+function shRelikvieBilde(M, sp, str) {
+  const S = Math.ceil(str), a = Object.assign(document.createElement("canvas"), { width: S, height: S }), ax = a.getContext("2d");
+  shSprite(ax, sp, S / 2, S * .44, S * .36, 0, 0, false);
+  const b = Object.assign(document.createElement("canvas"), { width: S, height: S }), bx = b.getContext("2d"), [r, g, bb] = M.type[1];
+  bx.drawImage(a, 0, 0); bx.globalCompositeOperation = "color"; bx.fillStyle = `rgb(${r},${g},${bb})`; bx.fillRect(0, 0, S, S);
+  bx.globalCompositeOperation = "multiply"; bx.fillStyle = `rgb(${Math.min(255, r + 60)},${Math.min(255, g + 60)},${Math.min(255, bb + 60)})`; bx.fillRect(0, 0, S, S);
+  bx.globalCompositeOperation = "destination-in"; bx.drawImage(a, 0, 0);
+  bx.globalCompositeOperation = "source-atop"; const gl = bx.createLinearGradient(S * .2, 0, S * .8, S); gl.addColorStop(0, "rgba(255,250,230,.45)"); gl.addColorStop(.35, "rgba(255,250,230,0)"); gl.addColorStop(.7, "rgba(0,0,0,0)"); gl.addColorStop(1, "rgba(0,0,0,.35)"); bx.fillStyle = gl; bx.fillRect(0, 0, S, S);
+  // Sokkel.
+  bx.globalCompositeOperation = "destination-over"; const sg = bx.createLinearGradient(0, S * .8, 0, S * .95); sg.addColorStop(0, `rgb(${r * .8 | 0},${g * .8 | 0},${bb * .8 | 0})`); sg.addColorStop(1, `rgb(${r * .35 | 0},${g * .35 | 0},${bb * .35 | 0})`);
+  bx.fillStyle = sg; bx.beginPath(); bx.ellipse(S / 2, S * .9, S * .26, S * .06, 0, 0, 7); bx.fill(); bx.fillRect(S * .24, S * .8, S * .52, S * .1); bx.beginPath(); bx.ellipse(S / 2, S * .8, S * .26, S * .06, 0, 0, 7); bx.fillStyle = `rgb(${Math.min(255, r + 30)},${Math.min(255, g + 30)},${Math.min(255, bb + 30)})`; bx.fill();
+  return b;
+}
 function shMotivTegn(x, f, s) {
-  const M = s.motiv; if (!M || (M.tilstand !== "fram" && !(M.tilstand === "fanget" && M.t < .8))) return;
-  const sp = s.figurer?.m?.length ? s.figurer.m[M.figur % s.figurer.m.length] : null;
-  const ut = M.tilstand === "fanget" ? M.t / .8 : 0, X = M.x * f, Y = (M.y - ut * ut * .4) * f, opp = Math.min(1, M.t / .35), R = .042 * f * (M.tilstand === "fram" ? .5 + .5 * (1 - Math.pow(1 - opp, 3)) : 1 + ut * .5);
+  const M = s.motiv; if (!M || (M.tilstand !== "fram" && !(M.tilstand === "fanget" && M.t < .9))) return;
+  const sp = s.figurer?.m?.length ? s.figurer.m[M.figur % s.figurer.m.length] : null; if (!sp) return;
+  const str = .15 * f; if (!M.cv || Math.abs(M.cv.width - Math.ceil(str)) > 1) M.cv = shRelikvieBilde(M, sp, str);
+  const ut = M.tilstand === "fanget" ? M.t / .9 : 0, opp = Math.min(1, M.t / .45), stig = M.tilstand === "fram" ? 1 - Math.pow(1 - opp, 3) : 1;
+  const X = M.x * f, Y = (M.y - ut * ut * .35) * f - M.hopp * f * .015, sk = (M.tilstand === "fram" ? .5 + .5 * stig : 1 + ut * .4);
   x.save(); x.globalAlpha = 1 - ut;
-  const gl = x.createRadialGradient(X, Y, R * .8, X, Y, R * 2.2); gl.addColorStop(0, `rgba(255,215,110,${.35 + .2 * Math.sin(s.tid * 6)})`); gl.addColorStop(1, "rgba(255,215,110,0)"); x.fillStyle = gl; x.fillRect(X - R * 2.2, Y - R * 2.2, R * 4.4, R * 4.4);
-  const ring = x.createLinearGradient(X - R, Y - R, X + R, Y + R); ring.addColorStop(0, "#fff1b0"); ring.addColorStop(.4, "#e2a52a"); ring.addColorStop(.75, "#8a5a08"); ring.addColorStop(1, "#f2cd62");
-  x.fillStyle = ring; x.beginPath(); x.arc(X, Y, R, 0, 7); x.fill();
-  const inn = x.createRadialGradient(X, Y - R * .3, R * .1, X, Y, R * .8); inn.addColorStop(0, "#3a2a52"); inn.addColorStop(1, "#120a1c"); x.fillStyle = inn; x.beginPath(); x.arc(X, Y, R * .8, 0, 7); x.fill();
-  if (sp && shTegnFigur) { x.save(); x.beginPath(); x.arc(X, Y, R * .78, 0, 7); x.clip(); shTegnFigur(sp, X, Y + R * .05, R * .62, Math.sin(s.tid * 2) * .1, false, false, 0); x.restore(); }
-  x.fillStyle = "rgba(255,255,255,.5)"; x.beginPath(); x.ellipse(X - R * .4, Y - R * .55, R * .3, R * .1, -.5, 0, 7); x.fill();
-  // Tiden som er igjen: en lys bue rundt medaljongen.
-  if (M.tilstand === "fram") { x.strokeStyle = "rgba(255,250,230,.9)"; x.lineWidth = Math.max(1.5, f * .004); x.lineCap = "round"; x.beginPath(); x.arc(X, Y, R * 1.18, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * Math.max(0, 1 - M.t / 6)); x.stroke(); }
+  const gl = x.createRadialGradient(X, Y, str * .1, X, Y, str * .9); gl.addColorStop(0, `rgba(255,215,110,${.22 + .12 * Math.sin(s.tid * 5)})`); gl.addColorStop(1, "rgba(255,215,110,0)"); x.fillStyle = gl; x.fillRect(X - str, Y - str, str * 2, str * 2);
+  x.fillStyle = "rgba(0,0,0,.4)"; x.beginPath(); x.ellipse(X + str * .05, Y + str * .42, str * .3, str * .07, 0, 0, 7); x.fill();
+  x.translate(X, Y); x.scale(sk, sk); x.rotate(Math.sin(s.tid * 9) * .05 * M.hopp); x.drawImage(M.cv, -str / 2, -str / 2, str, str);
   x.restore();
+  // Treffene og tiden: tre små prikker og en bue.
+  if (M.tilstand === "fram") { x.save(); for (let j = 0; j < 3; j++) { x.fillStyle = j < M.treff ? "#ffd76a" : "rgba(255,255,255,.35)"; x.beginPath(); x.arc(X + (j - 1) * str * .14, Y + str * .58, str * .035, 0, 7); x.fill(); }
+    x.strokeStyle = "rgba(255,240,200,.75)"; x.lineWidth = Math.max(1.5, f * .003); x.lineCap = "round"; x.beginPath(); x.arc(X, Y, str * .62, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * Math.max(0, 1 - M.t / M.tid)); x.stroke(); x.restore(); }
 }
 function shSnøStart() {
   const s = sh; s.snø = { t: 0, varighet: 13, fnugg: [], kald: Math.random() < .5, rest: 0 };
@@ -7804,7 +7848,7 @@ function shFerdig() {
   visResNiva(false);
   $("resTittel").textContent = BRETT[s.i].navn; $("resPoeng").textContent = "0 points";
   $("resInfo").textContent = kode(s.i) + " · SCRUB IT · time " + fmt(Math.round(s.tid)) + " · time left " + fmt(tidIgjen) + (trekk ? " · power-ups −" + Math.round(trekk * 100) + " %" : "");
-  $("resRekord").textContent = (nesteI >= 0 ? "All clean!" : "All clean! Every board in this collection is clean.") + (s.toP ? "" : " Hidden motives this season: " + shMotivFunnet(aktiv) + "/9" + (s.motiv && s.motiv.tilstand !== "fanget" ? " (this one got away)." : "."));
+  $("resRekord").textContent = (nesteI >= 0 ? "All clean!" : "All clean! Every board in this collection is clean.") + (s.toP ? "" : " Relics this season: " + shMotivFunnet(aktiv) + "/9" + (s.motiv && s.motiv.tilstand !== "fanget" ? " (this one is still in the mud)." : "."));
   $("nesteKnapp").textContent = nesteI >= 0 ? "Next: " + BRETT[nesteI].navn + " →" : "Menu"; $("nesteKnapp").disabled = false;
   shLagreRekord(s.poeng, s.toP).then(() => shArkListe(s.poeng, s.toP)).then(async liste => {
   });
@@ -8403,7 +8447,7 @@ function shTegn(t) {
       x.fillStyle = `rgba(255,255,255,${.45 * d.liv})`; x.beginPath(); x.arc(d.x * f - f * .0012, d.y * f - f * .0014, f * .0011, 0, 7); x.fill();
     }
   }
-  shDelerTegn(x, f, s);
+  shDelerTegn(x, f, s); shPortalTegn(x, f, s);
   shVaerTegn(x, f, s);
   shMotivTegn(x, f, s);
   // Skum.
