@@ -185,6 +185,27 @@ h1 .signatur{font-size:.55em;letter-spacing:.06em;white-space:nowrap}
 .sammen .rad{grid-template-columns:2.2em 26px 1fr auto 3.4em}
 #spillere .rad{grid-template-columns:2.2em 26px 1fr auto 4.8em}
 #spillere .rad .t{white-space:nowrap;text-align:right}
+/* Glimt av neste sesong: første bilde, uskarpt, bak teksten. */
+.neste{position:relative;overflow:hidden}.neste>div{position:relative;z-index:1}
+.neste.glimt::before,.album-side.glimt::before{content:"";position:absolute;inset:-14px;background:var(--glimt) center/cover;filter:blur(10px) saturate(1.2);opacity:.38;z-index:0}
+/* Album */
+.album-knapp{display:block;margin:12px 0 0;border:1px solid var(--strek);border-radius:999px;padding:8px 14px;font-family:var(--tall);font-size:12px;letter-spacing:.12em;color:var(--tekst);background:transparent;cursor:pointer}
+#album{overflow-y:auto;touch-action:pan-y;padding:20px max(16px,4vw) 40px;background:var(--rom)}
+.album-topp{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}.album-topp b{font-family:var(--tall);letter-spacing:.3em;font-size:14px;color:var(--signal)}
+.album-side{position:relative;overflow:hidden;border:1px solid var(--strek);border-radius:12px;padding:12px;margin:0 0 14px;max-width:640px}
+.album-side>*{position:relative;z-index:1}.album-side.laast{opacity:.75}.album-side.skjult{border-color:#a874ff;background:linear-gradient(90deg,rgba(168,116,255,.12),rgba(255,120,220,.08))}
+.album-hode{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:8px}.album-hode b{font-family:var(--display);font-weight:400;font-size:16px}.album-hode span{font-family:var(--tall);font-size:12px;color:var(--signal)}
+.album-ord{display:flex;flex-wrap:wrap;gap:4px;align-items:center;margin-bottom:10px}
+.album-ord .rute{width:26px;height:34px;border:1px solid var(--strek);border-radius:6px;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(0,0,0,.25)}
+.album-ord .rute b{font-family:var(--display);font-size:15px;line-height:1;color:var(--demp)}.album-ord .rute.har{border-color:#e7c25a;background:linear-gradient(#f8e39a,#c9982c)}.album-ord .rute.har b{color:#3a2808}
+.album-ord .rute i{font:600 7px var(--tall);font-style:normal;margin-top:2px;opacity:.8}.album-ord .rute.har i{display:none}
+.sp-p{color:#e23d84}.sp-b{color:#ff9a1a}.sp-u{color:#ff6f9f}
+.album-nokkel{margin-left:6px;font:700 10px var(--tall);letter-spacing:.2em;padding:6px 9px;border-radius:999px;border:1px dashed var(--strek);color:var(--demp)}.album-nokkel.har{border:1px solid #e7c25a;color:#3a2808;background:linear-gradient(#f8e39a,#c9982c)}
+.album-rutenett{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.album-kort{position:relative;border-radius:6px;overflow:hidden;border:1px solid var(--strek)}.album-kort canvas{display:block;width:100%;aspect-ratio:1}.album-kort.komplett{border-color:#e7c25a;box-shadow:0 0 10px rgba(231,194,90,.4)}
+.album-merker{position:absolute;left:4px;right:4px;bottom:4px;display:flex;gap:2px;align-items:center}
+.album-merker i{width:13px;height:13px;border-radius:50%;border:1px solid rgba(255,255,255,.5);font:600 7px/11px var(--tall);font-style:normal;text-align:center;color:rgba(255,255,255,.7);background:rgba(0,0,0,.4)}
+.album-merker i.ja{border-color:transparent;color:#fff;background:var(--sf)}.album-merker em{margin-left:auto;font-style:normal;font-size:9px;color:#ffd23a;text-shadow:0 1px 2px #000}
 .neste.apen{border-style:solid;border-color:var(--signal);color:var(--tekst)}
 .neste b{display:block;font-family:var(--display);color:var(--tekst);font-size:18px;margin-bottom:4px}
 
@@ -666,6 +687,7 @@ body.lys #modusDeal{--farge:#0f8f6c;--glod:15,143,108}
     </div>
   </div>
   <div class="faner" id="faner" role="tablist"></div>
+  <button class="album-knapp" id="albumKnapp">ALBUM</button>
   <div class="samlingsnavn samling-tittel" id="samlingTittel"></div>
   <div class="rutenett ni" id="brettliste"></div>
   <div class="samlingsnavn">Next collection</div>
@@ -677,7 +699,7 @@ body.lys #modusDeal{--farge:#0f8f6c;--glod:15,143,108}
   <div class="regel">Everything counts: Game, Peace, Bubble it 1P and 2P, every board, every level, every collection. Each board list gives up to 100 points (a Bubble it list up to 1,000): #1 gets them all, the rest their share of the top score.</div>
   <div class="sammen" id="spillere"><p class="liten">Loading players …</p></div>
   <p class="kreditt">© 2001–2026 Tarjei Krogh. All photography, music and art. <a href="https://kroghx.com" target="_blank" rel="noopener">kroghx.com</a></p>
-  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 1.68<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
+  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 1.69<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
 </section>
 
 <div class="ark" id="tidUtArk" hidden style="z-index:200001">
@@ -796,6 +818,7 @@ body.lys #modusDeal{--farge:#0f8f6c;--glod:15,143,108}
   <canvas id="shCanvas"></canvas>
   <div class="sh-melding" id="shMelding" hidden><b id="shTittel"></b><span id="shTekst"></span><div class="sh-liste" id="shListe" hidden></div><div class="knapper" id="shKnapper"></div></div>
 </section>
+<section id="album" class="skjerm" hidden aria-label="Album"><div class="album-topp"><b>ALBUM</b><button class="sekundar" id="albumUt">Back</button></div><div id="albumSider"></div></section>
 <section id="unwrap" class="skjerm" hidden aria-label="Unwrap it">
   <div class="sh-hud" id="uwHud">
     <div class="sh-venstre"><b>UNWRAP IT</b><span id="uwNiva"></span><span class="sh-rival" id="uwRival"></span></div>
@@ -881,6 +904,107 @@ function hentBilde(src) {
 
 // ---------- meny ----------
 // Et brett klart i Peace teller ikke for å åpne nye brett (Peace åpner ingenting, det spiller det du har).
+// BOKSTAVJAKT: hvert brett gjemmer én bokstav, i ett av de tre spillene (det skifter fra brett til brett).
+// Alle bokstavene i en sesong staver et ord. Fullt ord gir en nøkkel til et rom i den skjulte sesongen.
+//   PIECE IT: bokstaven står i bildet når du har lagt det ferdig.
+//   BUBBLE IT: en gullbrikke med bokstaven ligger under gjørma. Vask den fram og treff den.
+//   UNWRAP IT: bokstaven er malt på bildet under papiret. Riv vekk papiret over den.
+const SESONG_ORD = ["NIGHTMARE", "OVERGROWN", "MENAGERIE", "NIGHTFALL", "FORGERIES", "PATCH"];
+const BOKSTAV_SPILL = ["p", "b", "u"], BOKSTAV_NAVN = { p: "PIECE IT", b: "BUBBLE IT", u: "UNWRAP IT" };
+const bokstavSpill = (j, i) => BOKSTAV_SPILL[(i + j) % 3];
+function bokstavLagret() { try { return JSON.parse(localStorage.getItem("sm-bokstaver") || "{}"); } catch { return {}; } }
+function nøklerLagret() { try { return JSON.parse(localStorage.getItem("sm-nokler") || "[]"); } catch { return []; } }
+function bokstavHar(j, i) { return (bokstavLagret()[j] || []).includes(i); }
+function ordVis(j) { const o = SESONG_ORD[j] || "", f = bokstavLagret()[j] || []; return [...o].map((c, i) => f.includes(i) ? c : "_").join(" "); }
+// Kalles når en bokstav er funnet. Gir banner, og nøkkel når ordet er fullt.
+function bokstavFunn(j, i) {
+  if (!SESONG_ORD[j] || bokstavHar(j, i)) return false;
+  const lag = bokstavLagret(); (lag[j] = lag[j] || []).push(i); try { localStorage.setItem("sm-bokstaver", JSON.stringify(lag)); } catch {}
+  const ord = SESONG_ORD[j], ferdig = lag[j].length >= Math.min(ord.length, SESONG_BRETT[j].length);
+  if (lydPa) [0, 4, 7].forEach((st, k) => tone(880 * Math.pow(2, st / 12), k * .07, .3, .03, "triangle", .5, 1));
+  banner("LETTER " + ord[i], ordVis(j), "#ffd76a", 3200);
+  if (ferdig) {
+    const n = nøklerLagret(); if (!n.includes(j)) { n.push(j); try { localStorage.setItem("sm-nokler", JSON.stringify(n)); } catch {} }
+    setTimeout(() => { banner(ord + " · YOU FOUND A KEY", "IT OPENS ROOM " + (j + 1) + " IN THE HIDDEN SEASON", "#d6b4ff", 4200);
+      if (lydPa) [0, 3, 7, 10, 14, 17].forEach((st, k) => tone(220 * Math.pow(2, st / 12), k * .1, 1.2, .02, "sine", .3, 1.8)); }, 3400);
+  }
+  return true;
+}
+// ---------- BUBBLE IT ----------
+function shBokstavSteg(dt) {
+  const s = sh; if (s.toP || s.bokstav === null) return;
+  if (s.bokstav === undefined) {
+    if (bokstavSpill(aktiv, s.i) !== "b" || bokstavHar(aktiv, s.i) || !SESONG_ORD[aktiv]) { s.bokstav = null; return; }
+    let r = (aktiv * 9 + s.i) * 4421 + 77; const rnd = () => (r = (r * 9301 + 49297) % 233280) / 233280;
+    s.bokstav = { x: .15 + rnd() * .7, y: SH_TOPP + .18 + rnd() * .5, t: 0, synlig: false, tegn: SESONG_ORD[aktiv][s.i] }; return;
+  }
+  const B = s.bokstav; B.t += dt;
+  if (!B.synlig && !shKlossVed(B.x, B.y)) { B.synlig = true; shLyd("glimt"); shStov(B.x, B.y, 26, "255,215,110", .24); }
+}
+function shBokstavTreff(b) {
+  const s = sh, B = s.bokstav; if (!B || !B.synlig || b.fast || b.bane) return;
+  if (Math.hypot(b.x - B.x, b.y - B.y) < shRad(b) + .028) { s.bokstav = null; bokstavFunn(aktiv, s.i); shStov(B.x, B.y, 60, "255,215,110", .4); s.glod = 1; }
+}
+function shBokstavTegn(x, f, s) {
+  const B = s.bokstav; if (!B) return; const X = B.x * f, Y = B.y * f, R = f * .032, puls = .5 + .5 * Math.sin(B.t * 3);
+  x.save(); x.fillStyle = "rgba(0,0,0,.4)"; x.beginPath(); x.roundRect(X - R + 3, Y - R + 4, R * 2, R * 2, R * .3); x.fill();
+  const g = x.createLinearGradient(X - R, Y - R, X + R, Y + R); g.addColorStop(0, "#fff1b0"); g.addColorStop(.45, "#e2b23c"); g.addColorStop(1, "#8a5a10");
+  x.fillStyle = g; x.beginPath(); x.roundRect(X - R, Y - R, R * 2, R * 2, R * .3); x.fill();
+  x.strokeStyle = "rgba(255,250,220,.8)"; x.lineWidth = 1.5; x.stroke();
+  x.fillStyle = "#3a2608"; x.font = `800 ${R * 1.25}px "IBM Plex Sans", sans-serif`; x.textAlign = "center"; x.textBaseline = "middle"; x.fillText(B.tegn, X, Y + R * .06);
+  if (B.synlig) { x.globalCompositeOperation = "lighter"; const gl = x.createRadialGradient(X, Y, R * .5, X, Y, R * 2.6); gl.addColorStop(0, `rgba(255,210,90,${.35 * puls})`); gl.addColorStop(1, "rgba(255,200,60,0)"); x.fillStyle = gl; x.fillRect(X - R * 3, Y - R * 3, R * 6, R * 6); }
+  x.restore();
+}
+// ---------- UNWRAP IT ----------
+function uwBokstavStart(u) {
+  if (bokstavSpill(aktiv, u.i) !== "u" || bokstavHar(aktiv, u.i) || !SESONG_ORD[aktiv]) return null;
+  let r = (aktiv * 9 + u.i) * 7307 + 31; const rnd = () => (r = (r * 9301 + 49297) % 233280) / 233280;
+  const x = .15 + rnd() * .7, y = .15 + rnd() * .7; return { x, y, j: Math.floor(y * UW_G) * UW_G + Math.floor(x * UW_G), tegn: SESONG_ORD[aktiv][u.i], funnet: false };
+}
+// Malt på bildet, under papiret: synes først når papiret over er revet bort.
+function uwBokstavTegn(x, P, f) {
+  const B = uw.bokstav; if (!B || B.funnet) return; const [X, Y] = P(B.x, B.y), R = f * .035;
+  x.save(); x.fillStyle = "rgba(20,10,0,.55)"; x.beginPath(); x.arc(X, Y, R * 1.25, 0, 7); x.fill();
+  x.strokeStyle = "#ffd76a"; x.lineWidth = Math.max(1.5, R * .1); x.beginPath(); x.arc(X, Y, R * 1.1, 0, 7); x.stroke();
+  x.fillStyle = "#ffd76a"; x.shadowColor = "rgba(255,200,80,.9)"; x.shadowBlur = 10; x.font = `800 ${R * 1.4}px "IBM Plex Sans", sans-serif`; x.textAlign = "center"; x.textBaseline = "middle"; x.fillText(B.tegn, X, Y + R * .06); x.restore();
+}
+function uwBokstavSjekk() {
+  const u = uw, B = u.bokstav; if (!B || B.funnet) return;
+  if (uwHeltÅpen(B.j)) { B.funnet = true; bokstavFunn(aktiv, u.i); uwTekst("LETTER " + B.tegn + "!", B.x, B.y - .05);
+    for (let k = 0; k < 18; k++) { const a = Math.random() * 6.28; u.flak.push({ x: B.x, y: B.y, vx: Math.cos(a) * .25, vy: Math.sin(a) * .25 - .1, r: .005 + Math.random() * .006, rot: a, spinn: 6, liv: .8, farge: "#ffd76a", form: [1, .5, 1, .5, 1, .5, 1] }); } }
+}
+// ---------- Samlealbum ----------
+function sesongBrett(j) { return SESONG_BRETT[j].map(([s, n]) => ({ id: SAMLINGER[s].pre + n, src: SAMLINGER[s].mappe + n + ".jpg", navn: NAVN_SAMLING[s][n - 1] })); }
+function sesongProsent(j) {
+  const brett = sesongBrett(j); let har = 0, av = 0;
+  brett.forEach((b, i) => { const st = stempler(b.id); har += st.p + st.b + st.u + bokstavHar(j, i); av += 4; });
+  av++; if (nøklerLagret().includes(j)) har++; return Math.round(har / av * 100);
+}
+function visAlbum() {
+  const el = $("albumSider"); el.replaceChildren(); $("meny").hidden = true; $("album").hidden = false; $("album").scrollTop = 0; oppdaterTema();
+  const nøkler = nøklerLagret();
+  SAMLINGER.forEach((sm, j) => { if (!SESONG_BRETT[j]) return; const åpen = sesongApen(j), brett = sesongBrett(j), side = document.createElement("div"); side.className = "album-side" + (åpen ? "" : " laast");
+    const h = document.createElement("div"); h.className = "album-hode"; const t = document.createElement("b"); t.textContent = "/" + sm.nr + " " + SAMLINGSNAVN[j]; const p = document.createElement("span"); p.textContent = åpen ? sesongProsent(j) + " %" : "LOCKED"; h.append(t, p); side.appendChild(h);
+    // Ordet: funne bokstaver, og hvilket spill de manglende gjemmer seg i.
+    const ord = document.createElement("div"); ord.className = "album-ord";
+    [...(SESONG_ORD[j] || "")].slice(0, brett.length).forEach((c, i) => { const r = document.createElement("span"), har = bokstavHar(j, i), sp = bokstavSpill(j, i); r.className = "rute" + (har ? " har" : ""); r.innerHTML = `<b>${har ? c : "?"}</b><i class="sp-${sp}">${sp.toUpperCase()}</i>`; r.title = har ? "" : "Hidden in " + BOKSTAV_NAVN[sp]; ord.appendChild(r); });
+    const n = document.createElement("span"); n.className = "album-nokkel" + (nøkler.includes(j) ? " har" : ""); n.textContent = "KEY"; ord.appendChild(n); side.appendChild(ord);
+    const g = document.createElement("div"); g.className = "album-rutenett";
+    brett.forEach((b, i) => { const k = document.createElement("div"); k.className = "album-kort"; const c = document.createElement("canvas"); c.width = c.height = 120; k.appendChild(c);
+      const st = stempler(b.id), f = fremdrift[b.id] || {}, m = document.createElement("div"); m.className = "album-merker";
+      m.innerHTML = [["p", "P", "#e23d84"], ["b", "B", "#ff9a1a"], ["u", "U", "#ff6f9f"]].map(([q, l, fa]) => `<i style="--sf:${fa}" class="${st[q] ? "ja" : ""}">${l}</i>`).join("") +
+        `<em>${f.scrubS ? "★".repeat(f.scrubS) : ""}${f.unwrapS ? " " + "★".repeat(f.unwrapS) : ""}</em>`;
+      k.appendChild(m); if (st.p && st.b && st.u) k.classList.add("komplett"); g.appendChild(k);
+      if (åpen) hentBilde(b.src).then(img => { const x = c.getContext("2d"); if (erLost(b.id)) x.drawImage(img, 0, 0, 120, 120); else { const t2 = document.createElement("canvas"); t2.width = t2.height = 6; t2.getContext("2d").drawImage(img, 0, 0, 6, 6); x.imageSmoothingEnabled = false; x.drawImage(t2, 0, 0, 120, 120); } }).catch(() => {}); });
+    side.appendChild(g);
+    if (!åpen) { const l = document.createElement("p"); l.className = "liten"; l.textContent = "Win a weekly race in the season before, or buy it when all boards there are played."; side.appendChild(l);
+      hentBilde(brett[0].src).then(img => { side.style.setProperty("--glimt", `url("${img.src}")`); side.classList.add("glimt"); }).catch(() => {}); }
+    el.appendChild(side); });
+  // Den skjulte sesongen: ett rom per nøkkel.
+  const sk = document.createElement("div"); sk.className = "album-side skjult"; sk.innerHTML = `<div class="album-hode"><b>/?? The Hidden Season</b><span>${nøkler.length} / 9 KEYS</span></div><p class="liten">Every season hides a word, one letter per board. A full word is a key. Each key opens a room here when the paintings are ready.</p>`;
+  el.appendChild(sk);
+}
+function lukkAlbum() { $("album").hidden = true; tilMeny(); }
 // Stemplene: klart i PIECE IT (Game eller Peace), BUBBLE IT og UNWRAP IT.
 function stempler(id) { const f = fremdrift[id] || {}; return { p: Object.keys(f).some(k => +k || k.startsWith("peace_")), b: !!f.scrub, u: !!f.unwrap }; }
 // Alle tre stemplene på et brett: gullkant på kortet og +5 credits, én gang per brett.
@@ -931,8 +1055,9 @@ function tegnFaner() {
     b.onclick = () => { if (!sesongApen(j)) { banner("LOCKED", "WIN A WEEKLY RACE IN /" + SAMLINGER[j - 1].nr + " · OR BUY IT WHEN ALL BOARDS ARE PLAYED", "#ffd27a", 3000); return; } velgSamling(j); tegnMeny(); };
     f.appendChild(b);
   });
-  if (shSkjultÅpen()) { const b = document.createElement("button"); b.setAttribute("role", "tab"); b.className = "skjult-fane"; b.append("/??"); const n = document.createElement("b"); n.textContent = "The Hidden Season"; b.append(n);
-    b.onclick = () => banner("THE HIDDEN SEASON", "NINE BOARDS ARE BEING PAINTED · THEY OPEN SOON", "#d6b4ff", 3600); f.appendChild(b); }
+  if (shSkjultÅpen() || nøklerLagret().length) { const b = document.createElement("button"); b.setAttribute("role", "tab"); b.className = "skjult-fane"; b.append("/??"); const n = document.createElement("b"); n.textContent = "The Hidden Season"; b.append(n);
+    b.onclick = () => banner("THE HIDDEN SEASON", nøklerLagret().length + " OF 9 KEYS · NINE BOARDS ARE BEING PAINTED · THEY OPEN SOON", "#d6b4ff", 3600); f.appendChild(b); }
+  $("albumKnapp").textContent = "ALBUM · " + sesongProsent(aktiv) + " % · " + ordVis(aktiv);
   const t = $("samlingTittel"); t.replaceChildren("/" + SAMLING + " "); const bb = document.createElement("b"); bb.textContent = SAMLINGSNAVN[aktiv]; const an = document.createElement("span"); an.className = "antall"; an.textContent = BRETT.length + " boards"; t.append(bb, an);
 
   const nr = String(aktiv + 2).padStart(2, "0"), s2 = $("samling2");
@@ -940,6 +1065,7 @@ function tegnFaner() {
   s2.firstElementChild.innerHTML = "";
   const nb = document.createElement("b"); nb.textContent = "/" + nr + " " + (SAMLINGSNAVN[aktiv + 1] || "");
   const regel = "Win it: be #1 in one of this week's races in /" + SAMLING + " when the week locks (Sunday at midnight). Or buy it when all " + BRETT.length + " are played.";
+  s2.classList.remove("glimt"); if (SESONG_BRETT[aktiv + 1]) hentBilde(sesongBrett(aktiv + 1)[0].src).then(img => { s2.style.setProperty("--glimt", `url("${img.src}")`); s2.classList.add("glimt"); }).catch(() => {});
   s2.firstElementChild.append(nb, fremdrift["samling" + (aktiv + 2)] ? "You won it for free by being #1." : sesongKjopt(aktiv + 1) ? "Yours." : (SAMLINGER[aktiv + 1] ? (BETA ? "Open for beta testers. " : "") + regel : "Coming soon. " + regel));
   if (!BETA && !sesongApen(aktiv + 1) && SAMLINGER[aktiv + 1]) { const kb = document.createElement("button"); kb.className = "sekundar"; kb.textContent = sesongSpilt() ? "Buy /" + nr + " · coming at launch" : "Play all " + BRETT.length + " boards to buy /" + nr; kb.disabled = true; s2.firstElementChild.append(kb); }
 }
@@ -974,7 +1100,8 @@ function tilpassLogo() {
 addEventListener("resize", tilpassLogo); document.fonts?.ready.then(tilpassLogo); setTimeout(tilpassLogo, 50);
 $("modusPuslespill").onclick = () => velgModus("pusle");
 $("modusScrub").onclick = () => { ctx(); velgModus("scrub"); };
-$("modusUnwrap").onclick = () => { ctx(); velgModus("unwrap"); };
+$("modusUnwrap").onclick = () => { ctx(); velgModus("unwrap"); }
+$("albumKnapp").onclick = visAlbum; $("albumUt").onclick = lukkAlbum;;
 // Lys vegg i HIDDEN MOTIVES (menyen og brettet), mørk i BUBBLE IT.
 function oppdaterTema() { const meny = !$("meny").hidden; document.body.classList.toggle("lys", !$("spill").hidden || (meny && (modus === "pusle" || modus === "unwrap"))); document.body.classList.toggle("rosa", meny && modus === "unwrap"); }
 function tegnModus() {
@@ -3773,7 +3900,8 @@ async function ferdig() {
     await new Promise(ok => { const steg = t => { if (spill !== sp) return ok(); const u = Math.min(1, (t - t0) / varighet); for (const [b, v] of start) { b.svidd = v * (1 - u); tegnBit(b); plasser(b); } if (u < 1) requestAnimationFrame(steg); else ok(); }; requestAnimationFrame(steg); });
     if (spill !== sp) return;
   }
-  spill.slutt = spill.slutt || Date.now(); spill.sluttT = performance.now(); $("bunkeTall").hidden = true; visTilt();
+  spill.slutt = spill.slutt || Date.now(); spill.sluttT = performance.now();
+  { const sp = spill, j = aktiv; if (bokstavSpill(j, sp.brett) === "p" && !bokstavHar(j, sp.brett)) setTimeout(() => bokstavFunn(j, sp.brett), 2600); } $("bunkeTall").hidden = true; visTilt();
   if (spill.biter.some(b => b.svidd > 0)) { const av = $("avslor"), ax = av.getContext("2d"); ax.drawImage(spill.img, 0, 0, av.width, av.height); brannMerker(ax, av.width, av.height); } clearInterval(timer); tikk(); dempMusikk();
   const sEkte = sekunder(), trekk = Math.min(.6, spill.trekk || 0), s = trekk ? Math.round((sEkte + spill.n * 5) / (1 - trekk) - spill.n * 5) : sEkte, p = regnPoeng(spill.n, s), b = BRETT[spill.brett];
   $("kraftLinje").hidden = true;
@@ -7123,7 +7251,7 @@ function shVaerSteg(dt) {
     R.lydT -= dt; if (I > .05 && R.lydT <= 0 && lydPa) { R.lydT = .55; shSus(1.3, "highpass", 2600, .02 * I, .6, .4, .8); shSus(1.3, "bandpass", 900, .012 * I, .5, .4, .6); }
     if (R.t > R.varighet && !R.dråper.length && !R.plask.length) s.regn = null;
   }
-  shMørkeSteg(dt); shDelerSteg(dt); shBordSteg(dt); shMotivSteg(dt);
+  shMørkeSteg(dt); shDelerSteg(dt); shBordSteg(dt); shBokstavSteg(dt); shMotivSteg(dt);
   // Strømmen går av og til, én gang i løpet av et brett.
   if (!s.mørke && !s.mørkeFerdig && !s.toP && shHar("fiende", "mørke") && aktiv && !s.finale && shRolig(s)) {
     if (s.mørkeVent == null) s.mørkeVent = 35 + Math.random() * 60;
@@ -8082,6 +8210,7 @@ function shOppdater(dt) {
     for (let j = 0; j < n && !b.borte && !b.fast && s.tilstand === "spill"; j++) shBevegBall(b, dt * sakte / n);
     if (!b.borte) shDelerTreff(b);
     if (!b.borte) shBordTreff(b);
+    if (!b.borte) shBokstavTreff(b);
   }
   if (s.tilstand !== "spill") return;
   s.baller = s.baller.filter(b => !b.borte);
@@ -8487,7 +8616,7 @@ async function uwStart(i) {
   uw = { i, img, stil, stil2, celle: new Uint8Array(G * G), indre: toLag ? new Uint8Array(G * G).fill(1) : null, merket: new Uint8Array(G * G), lagNr: 0, orden: new Int32Array(G * G), støy, åpne: 0, best: fremdrift[b.id]?.unwrap || 0, lagS: [{}, {}], kniv: null, gc: null, kø: [], spor: [], linje: [], strekStart: 0, teller: 0,
     liv: 3, poeng: 0, tid: 0, frist: toLag ? 240 : 180, tilstand: "spill", fiender, flak: [], tekster: [], figurer: null, usårbar: 0, krav: .8,
     bånd: { x: bx, y: by }, sløyfe: { x: bx, y: by, r: .085, av: null }, revet: 0, slipp: false, låst: false, sjekkT: 0 };
-  uwSkitt(0, 0, G - 1, G - 1); if (toLag) uwTekst("A GIFT INSIDE A GIFT", .5, .5);
+  uwSkitt(0, 0, G - 1, G - 1); uw.bokstav = uwBokstavStart(uw); if (toLag) uwTekst("A GIFT INSIDE A GIFT", .5, .5);
   shFigurer().then(f => { if (uw) uw.figurer = f; }).catch(() => {});
   $("uwNiva").textContent = kode(i) + " · " + b.navn; uwMelding(); uwHud();
   if (lydPa) spillMusikk(b.id);
@@ -8601,7 +8730,7 @@ function uwSjekkRiv() {
   const pap = q => M[q] || ok(q), åpen = u.spor.map(s => { const x = s % G, y = (s / G) | 0; return x === 0 || y === 0 || x === G - 1 || y === G - 1 || !pap(s - 1) || !pap(s + 1) || !pap(s - G) || !pap(s + G); });
   u.spor.forEach((s, k) => { M[s] = 0; if (åpen[k]) { riv1(s); n++; } boks(s); });
   let helt = 0; for (let j = 0; j < G * G; j++) if (C[j] === 1 && !(I && I[j])) helt++; u.åpne = helt; u.revet++;
-  uwSkitt(x0, y0, x1, y1); uwLappSjekk();
+  uwSkitt(x0, y0, x1, y1); uwLappSjekk(); uwBokstavSjekk();
   // Figurer og maur i en bit som ble revet av, er fanget.
   const fanget = u.fiender.filter(e => e.type !== "møll" && rivNr.has(merke[Math.min(G - 1, Math.floor(e.y * G)) * G + Math.min(G - 1, Math.floor(e.x * G))]));
   for (const e of fanget) { const p = e.type === "maur" ? 400 : 2000; u.poeng += p; uwFjern(e); uwTekst(e.type === "maur" ? "+400" : "CAUGHT! +2000", e.x, e.y); }
@@ -8970,7 +9099,7 @@ function uwTegn() {
   if (c.width !== Math.round(innerWidth * dpr) || c.height !== Math.round(innerHeight * dpr)) { c.width = Math.round(innerWidth * dpr); c.height = Math.round(innerHeight * dpr); c.style.width = innerWidth + "px"; c.style.height = innerHeight + "px"; }
   const x = c.getContext("2d"); x.setTransform(dpr, 0, 0, dpr, 0, 0); x.clearRect(0, 0, innerWidth, innerHeight);
   const { f, x0, y0 } = L, P = (fx, fy) => [x0 + fx * f, y0 + fy * f];
-  x.drawImage(u.img, x0, y0, f, f);
+  x.drawImage(u.img, x0, y0, f, f); uwBokstavTegn(x, P, f);
   const SL = Math.min(u.indre ? 1100 : 1400, Math.round(f * dpr));
   if (u.indre) x.drawImage(uwLag(SL, 1), x0, y0, f, f);
   x.drawImage(uwLag(SL, 0), x0, y0, f, f);
@@ -9524,7 +9653,7 @@ function shTegn(t) {
   }
   x.globalCompositeOperation = "source-over";
   if (s.levende) shLevTegn(x, f, s);
-  shBordTegn(x, f, s);
+  shBordTegn(x, f, s); shBokstavTegn(x, f, s);
   if (s.moekk?.gl) { shGLTegn(s); x.drawImage(s.moekk.gl.cv, 0, iy, f, f); shBrentTegn(x, f, s); shKantTegn(x, f, s, iy + f); }
   else if (s.moekk) { x.imageSmoothingEnabled = true; x.imageSmoothingQuality = "low"; x.drawImage(s.moekk.cv, 0, iy, f, f); shKantTegn(x, f, s, iy + f); }
   // Skittent vann renner nedover, såpesyre gløder.
