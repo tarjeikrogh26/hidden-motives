@@ -635,7 +635,7 @@ body.lys #modusDeal{--farge:#0f8f6c;--glod:15,143,108}
   <div class="regel">Everything counts: Game, Peace, Scrub it 1P and 2P, every board, every level, every collection. Each board list gives up to 100 points (a Scrub it list up to 1,000): #1 gets them all, the rest their share of the top score.</div>
   <div class="sammen" id="spillere"><p class="liten">Loading players …</p></div>
   <p class="kreditt">© 2001–2026 Tarjei Krogh. All photography, music and art. <a href="https://kroghx.com" target="_blank" rel="noopener">kroghx.com</a></p>
-  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 1.51<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
+  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 1.52<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
 </section>
 
 <div class="ark" id="tidUtArk" hidden style="z-index:200001">
@@ -6045,7 +6045,7 @@ function shBrukKraft(type) {
   if (har < k.pris) { åpneButikk(k.pris); return; }
   if (type === "orm" && (s.ormer?.length || !s.baller.length)) return;
   if (type === "trip" && (s.eff.T > 0 || s.tripKjopt)) return;
-  if ((type === "missil" || type === "laser") && s.vapen?.type === type && s.vapen.nivå >= 3) return;
+  if ((type === "missil" || type === "laser") && s.vapenAlle?.[type]?.nivå >= 3) return;
   if (type === "laser" && s.laserBall) return;
   settCredits(har - k.pris); s.trekk = (s.trekk || 0) + k.trekk;
   s.kjoptT = Math.max(s.kjoptT || 0, s.tid + ({ tilt: 3, orm: 12, magnet: 8, trip: SH_TRIP, bombe: 9, missil: 7, laser: 7, alien: 9, boble: 0 }[type] ?? 5));
@@ -6230,7 +6230,8 @@ function shOrmEn(O, dt) {
 // Møter den en mark: den tykkeste spiser den andre.
 // ---------- Kjøpte våpen ----------
 function shVapen(type) {
-  const s = sh, v = s.vapen?.type === type ? s.vapen : (s.vapen = { type, nivå: 0, t: 0 });
+  // Flere våpen kan virke samtidig: hvert har sin egen tid og sitt eget nivå.
+  const s = sh, A = s.vapenAlle = s.vapenAlle || {}, v = A[type] || (A[type] = { type, nivå: 0, t: 0 }); s.vapen = v;
   v.nivå++; v.slutt = s.tid + (type === "alien" ? 9 : 7); s.missiler = s.missiler || []; s.miniAliens = s.miniAliens || [];
   // Boblen suges ned til flipperne. Ekstra bobler forsvinner i en sky.
   s.baller.forEach((b, j) => { if (j > 0) { b.borte = true; shStov(b.x, b.y, 12, "200,240,255", .2); } else if (!b.fast) { b.hent = true; b.fanget = null; } });
@@ -6261,11 +6262,11 @@ function shVapenTreff(m) {
   shLyd("innkapsle");
 }
 function shVapenSteg(dt) {
-  const s = sh, v = s.vapen;
-  if (v) {
+  const s = sh, A = s.vapenAlle || {}; let noeFerdig = false;
+  for (const v of Object.values(A)) {
     v.t += dt;
-    const ferdig = s.tid > v.slutt && !s.laserBall && !(s.miniAliens || []).length;
-    if (ferdig) { s.vapen = null; for (const b of s.baller) if (b.fast && s.tilstand === "spill") { const a = (Math.random() - .5) * .6; b.vx = s.fart * Math.sin(a); b.vy = -s.fart * Math.cos(a); b.fast = false; } }
+    const ferdig = s.tid > v.slutt && !(v.type === "laser" && s.laserBall) && !(v.type === "alien" && (s.miniAliens || []).length);
+    if (ferdig) { delete A[v.type]; noeFerdig = true; }
     // MISSILES: ut fra flipperkantene, annenhver side.
     else if (v.type === "missil" && s.tid < v.slutt) { v.skuddT = (v.skuddT || 0) - dt;
       if (v.skuddT <= 0) { v.skuddT = v.nivå >= 3 ? .26 : .18; v.side = -(v.side || 1); const a = (Math.random() - .5) * 1.1;
@@ -6282,6 +6283,8 @@ function shVapenSteg(dt) {
         for (const st of v.stråler) { if (st.k) { shTreff(st.k, 1, "syre"); s.smuler = s.smuler || []; for (let n = 0; n < 3; n++) s.smuler.push({ x: st.x + (Math.random() - .5) * .02, y: st.topp, vx: (Math.random() - .5) * .08, vy: Math.random() * .05, r: .0012 + Math.random() * .0025, tone: Math.random(), stor: false, støv: n === 0, rot: Math.random() * 6, t: 0 }); }
           const m = shVapenMål(st.x, st.topp); if (m && Math.abs(m.x - st.x) < (m.t === "boss" ? .12 : .03) && m.y > st.topp - .02 && s.tid - (v.treffT || 0) > .3) { v.treffT = s.tid; shVapenTreff(m); } } } }
   }
+  s.vapen = Object.values(A)[0] || null;
+  if (noeFerdig && !s.vapen) for (const b of s.baller) if (b.fast && s.tilstand === "spill") { const a = (Math.random() - .5) * .6; b.vx = s.fart * Math.sin(a); b.vy = -s.fart * Math.cos(a); b.fast = false; }
   // Missilene flyr, søker mål fra nivå 2, og eksploderer i jorda.
   for (const q of s.missiler || []) {
     q.t += dt;
@@ -6299,7 +6302,7 @@ function shVapenSteg(dt) {
   if (L) { L.t += dt; L.y += L.vy * dt; L.r = Math.min(.12, L.r + dt * .06); L.x += (s.padX - L.x) * 0; shVask(L.x, L.y, L.r * .9, 1, "syre");
     if (L.y < SH_TOPP + .06) { shVask(L.x, L.y, .17, 3); shStov(L.x, L.y, 80, "255,120,200", .5); s.rist = Math.max(s.rist || 0, .6); shLyd("sprekk", 2.5);
       for (let j = 0; j < 18; j++) { const a = j / 18 * Math.PI * 2; s.missiler.push({ x: L.x, y: L.y, vx: Math.cos(a) * 1.1, vy: Math.sin(a) * 1.1, nivå: 1, t: 0, laser: true }); }
-      s.laserBall = null; if (s.vapen) s.vapen.slutt = s.tid + .5; } }
+      s.laserBall = null; if (s.vapenAlle?.laser) s.vapenAlle.laser.slutt = s.tid + .5; } }
   // Små aliens: jakter fiender, og spiser gjørme når det ikke er fiender. Etter litt flyr de ut av skjermen.
   for (const m of s.miniAliens || []) {
     m.t += dt; if (m.t < 0) continue;
@@ -6315,7 +6318,7 @@ function shVapenSteg(dt) {
   if (s.miniAliens) s.miniAliens = s.miniAliens.filter(m => !m.borte);
 }
 function shVapenTegn(x, f, s) {
-  const v = s.vapen, t = s.tid, fig = s.figurer || { m: [], b: [] };
+  const v = s.vapenAlle?.laser, t = s.tid, fig = s.figurer || { m: [], b: [] };
   if (s.finale) shFinaleTegn(x, f, s);
   if (s.fyr) shFyrTegn(x, f, s);
   // BEAM: en sverm av selvlysende partikler (stjernestøv og alger) som strømmer opp fra flipperne, med glorier.
@@ -7826,7 +7829,7 @@ function shFerdig() {
   if (tidBonus) trinn.push({ navn: "TIME LEFT " + fmt(tidIgjen), verdi: tidBonus });
   if (bonus) trinn.push({ navn: "SPARE BUBBLES", verdi: bonus });
   if (trekk) trinn.push({ navn: "POWER-UPS −" + Math.round(trekk * 100) + " %", verdi: s.poeng - førTrekk });
-  const baller0 = s.baller.slice(); s.baller = []; s.fugl = null; s.frø = []; s.kapsler = []; s.smaa = []; s.skudd = []; s.galaga = null; s.sabot = []; s.orm = null; s.ormer = []; s.ormFase = false; s.skumFlekk = []; s.tripB = []; s.tripS = []; s.sug = []; s.syre = []; s.tripP = []; s.smaaBomber = []; s.smell = []; s.krabbe = null; s.hopper = null; s.brentFlekk = []; s.vapen = null; s.missiler = []; s.miniAliens = []; s.laserBall = null;
+  const baller0 = s.baller.slice(); s.baller = []; s.fugl = null; s.frø = []; s.kapsler = []; s.smaa = []; s.skudd = []; s.galaga = null; s.sabot = []; s.orm = null; s.ormer = []; s.ormFase = false; s.skumFlekk = []; s.tripB = []; s.tripS = []; s.sug = []; s.syre = []; s.tripP = []; s.smaaBomber = []; s.smell = []; s.krabbe = null; s.hopper = null; s.brentFlekk = []; s.vapen = null; s.vapenAlle = {}; s.missiler = []; s.miniAliens = []; s.laserBall = null;
   for (const k of s.klosser) k.glans = 0;
   // Overgangen: ikke tomt med en gang. Boblene sprekker med glitter, og fyrverkeri skytes opp fra flipperne.
   for (const b of baller0) { shStov(b.x, b.y, 34, "220,240,255", .3); for (let n = 0; n < 6; n++) shStjerne(b.x + (Math.random() - .5) * .05, b.y + (Math.random() - .5) * .05, .8); }
