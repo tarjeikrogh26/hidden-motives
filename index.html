@@ -676,7 +676,7 @@ body.lys #modusDeal{--farge:#0f8f6c;--glod:15,143,108}
   <div class="regel">Everything counts: Game, Peace, Bubble it 1P and 2P, every board, every level, every collection. Each board list gives up to 100 points (a Bubble it list up to 1,000): #1 gets them all, the rest their share of the top score.</div>
   <div class="sammen" id="spillere"><p class="liten">Loading players …</p></div>
   <p class="kreditt">© 2001–2026 Tarjei Krogh. All photography, music and art. <a href="https://kroghx.com" target="_blank" rel="noopener">kroghx.com</a></p>
-  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 1.62<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
+  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 1.63<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
 </section>
 
 <div class="ark" id="tidUtArk" hidden style="z-index:200001">
@@ -6558,7 +6558,7 @@ function shLagDeler() {
   return ut;
 }
 function shDelerSteg(dt) {
-  const s = sh; if (s.toP || !shHar("fiende", "deler")) return;
+  const s = sh; if (s.toP || !shHar("fiende", "deler") || shBordPå(s)) return;
   if (!s.deler) s.deler = shLagDeler();
   for (const q of s.deler) {
     q.lys = Math.max(0, q.lys - dt * 2.5);
@@ -6640,6 +6640,222 @@ function shDelerTegn(x, f, s) {
       else { x.beginPath(); for (let j = 0; j < 10; j++) { const a = -Math.PI / 2 + j * Math.PI / 5, rr = R * (j % 2 ? .22 : .5); j ? x.lineTo(Math.cos(a) * rr, Math.sin(a) * rr) : x.moveTo(Math.cos(a) * rr, Math.sin(a) * rr); } x.closePath(); x.fill(); }
       if (på || q.lys > 0) { x.globalCompositeOperation = "lighter"; const gl = x.createRadialGradient(0, 0, R * .4, 0, 0, R * 3); gl.addColorStop(0, `rgba(${r},${gg},${bb},${.45 * Math.max(q.lys, på ? puls * .7 : 0)})`); gl.addColorStop(1, `rgba(${r},${gg},${bb},0)`); x.fillStyle = gl; x.fillRect(-R * 3, -R * 3, R * 6, R * 6); } }
     x.restore(); }
+}
+// FLIPPERBORD under gjørma (skisse, brett 1–3 i første sesong): deler fra et ekte flipperspill ligger malt og montert
+// oppå bildet, og vaskes fram sammen med det. Ingenting står langt nede, så boblen ikke spretter rett tilbake.
+//   Øverst: seks rullebaner med bokstavene B U B B L E. Alle tente: stor bonus.
+//   Venstre: en orbit-bane i krom. Treffer boblen inngangen på vei opp, kjører den hele banen og slippes ut over bokstavene.
+//   Midten: tre bumpere i et reir under banene.
+//   Høyre: en saucer som sluker boblen, holder den litt og spytter den ut mot flipperne, og en spinner som snurrer.
+//   Venstre side: tre drop targets. Alle nede: bonus, og de reiser seg igjen.
+const SH_BORD_ORD = ["B", "U", "B", "B", "L", "E"];
+function shBordPå(s) { return !s.toP && aktiv === 0 && s.i < 3; }
+function shBaneGlatt(pk, n = 10) {
+  // Catmull-Rom gjennom punktene, så banen blir en jevn kurve.
+  const ut = [];
+  for (let i = 0; i < pk.length - 1; i++) { const p0 = pk[Math.max(0, i - 1)], p1 = pk[i], p2 = pk[i + 1], p3 = pk[Math.min(pk.length - 1, i + 2)];
+    for (let k = 0; k < n; k++) { const t = k / n, t2 = t * t, t3 = t2 * t;
+      ut.push([.5 * (2 * p1[0] + (-p0[0] + p2[0]) * t + (2 * p0[0] - 5 * p1[0] + 4 * p2[0] - p3[0]) * t2 + (-p0[0] + 3 * p1[0] - 3 * p2[0] + p3[0]) * t3),
+        .5 * (2 * p1[1] + (-p0[1] + p2[1]) * t + (2 * p0[1] - 5 * p1[1] + 4 * p2[1] - p3[1]) * t2 + (-p0[1] + 3 * p1[1] - 3 * p2[1] + p3[1]) * t3)]); } }
+  ut.push(pk[pk.length - 1]);
+  const L = [0]; for (let i = 1; i < ut.length; i++) L.push(L[i - 1] + Math.hypot(ut[i][0] - ut[i - 1][0], ut[i][1] - ut[i - 1][1]));
+  return { p: ut, L, tot: L[L.length - 1] };
+}
+function shBanePunkt(sti, d) {
+  const L = sti.L; let i = 1; while (i < L.length - 1 && L[i] < d) i++;
+  const a = sti.p[i - 1], b = sti.p[i], u = Math.min(1, Math.max(0, (d - L[i - 1]) / ((L[i] - L[i - 1]) || 1e-9)));
+  return { x: a[0] + (b[0] - a[0]) * u, y: a[1] + (b[1] - a[1]) * u, tx: (b[0] - a[0]) / ((L[i] - L[i - 1]) || 1), ty: (b[1] - a[1]) / ((L[i] - L[i - 1]) || 1) };
+}
+function shLagBord() {
+  const Y = SH_TOPP, v = sh.i % 3; // tre små varianter av samme bord
+  const gx = Array.from({ length: 7 }, (_, k) => .14 + k * (.74 / 6));
+  const B = {
+    t: 0, ord: SH_BORD_ORD.map(() => false), ordBlink: 0, orbitT: -9, orbitRekke: 0, sistUt: -9, avslørt: {},
+    guider: gx.map(x => ({ x, y0: Y + .03, y1: Y + .115 })),
+    baner: gx.slice(0, 6).map((x, k) => ({ x0: x, x1: gx[k + 1], cx: (x + gx[k + 1]) / 2, lys: 0 })),
+    bumpere: [[.42, .25], [.64, .25], [.53, .355]].map(([x, y]) => ({ x: x + (v - 1) * .02, y: Y + y, lys: 0, sistT: -9 })),
+    orbit: shBaneGlatt([[.052, Y + .66], [.046, Y + .48], [.05, Y + .26], [.07, Y + .1], [.12, Y + .035], [.2, Y + .012], [.3, Y + .016], [.36, Y + .028]]),
+    inngang: { x: .052, y: Y + .63 },
+    saucer: { x: .83, y: Y + .215 + v * .015, lys: 0, holder: null },
+    spinner: { x0: .855, x1: .955, y: Y + .45, a: 0, w: 0, halv: 0 },
+    mål: [0, 1, 2].map(k => { const ax = .14 + k * .02, ay = Y + .19 + k * .066; return { ax, ay, bx: ax + .017, by: ay + .054, nede: false, t: 1, lys: 0, nr: k + 1 }; }),
+    målReisT: 0,
+  };
+  return B;
+}
+// Er stedet vasket fram? Da virker delen.
+const shFri = (x, y) => !shKlossVed(x, y);
+function shBordSteg(dt) {
+  const s = sh; if (!shBordPå(s)) return;
+  if (!s.bord) s.bord = shLagBord();
+  const B = s.bord; B.t += dt; B.ordBlink = Math.max(0, B.ordBlink - dt);
+  for (const q of B.bumpere) q.lys = Math.max(0, q.lys - dt * 3);
+  for (const q of B.baner) q.lys = Math.max(0, q.lys - dt * 2);
+  for (const q of B.mål) { q.lys = Math.max(0, q.lys - dt * 2); q.t = Math.min(1, q.t + dt * 5); }
+  B.saucer.lys = Math.max(0, B.saucer.lys - dt); if (B.saucer.holder && !s.baller.includes(B.saucer.holder)) B.saucer.holder = null;
+  const sp = B.spinner; sp.w *= Math.exp(-dt * 1.6); if (Math.abs(sp.w) < .3) sp.w = 0; sp.a += sp.w * dt;
+  const halv = Math.floor(sp.a / Math.PI); if (halv !== sp.halv) { sp.halv = halv; if (!s.bytte) s.poeng += 100; shHud(); if (lydPa) tone(2200 + Math.random() * 200, 0, .025, .018, "square", .4, .15); }
+  if (B.målReisT > 0) { B.målReisT -= dt; if (B.målReisT <= 0) { for (const q of B.mål) { q.nede = false; q.t = 0; } if (lydPa) tone(330, 0, .12, .04, "square", .5, .3); } }
+  // Første gang en del kommer fram: et glimt og en lyd, ingen tekst.
+  const vis = (navn, x, y) => { if (B.avslørt[navn] || !shFri(x, y)) return; B.avslørt[navn] = true; shLyd("glimt"); shStov(x, y, 24, "255,230,150", .22); };
+  vis("orbit", B.inngang.x, B.inngang.y); vis("saucer", B.saucer.x, B.saucer.y); vis("spinner", (sp.x0 + sp.x1) / 2, sp.y);
+  B.bumpere.forEach((q, k) => vis("b" + k, q.x, q.y)); B.baner.forEach((q, k) => vis("l" + k, q.cx, SH_TOPP + .075)); B.mål.forEach((q, k) => vis("m" + k, (q.ax + q.bx) / 2, (q.ay + q.by) / 2));
+}
+function shKapselStøt(b, ax, ay, bx, by, r, kraft = .4) {
+  const R = shRad(b), dx = bx - ax, dy = by - ay, L2 = dx * dx + dy * dy || 1e-9; let t = ((b.x - ax) * dx + (b.y - ay) * dy) / L2; t = t < 0 ? 0 : t > 1 ? 1 : t;
+  const px = ax + dx * t, py = ay + dy * t, ex = b.x - px, ey = b.y - py, d = Math.hypot(ex, ey) || 1e-6;
+  if (d >= R + r) return false; const nx = ex / d, ny = ey / d, dot = b.vx * nx + b.vy * ny;
+  b.x = px + nx * (R + r + .001); b.y = py + ny * (R + r + .001);
+  if (dot < 0) { b.vx -= 2 * dot * nx; b.vy -= 2 * dot * ny; shStot(b, nx, ny, kraft); }
+  return true;
+}
+// Kalles for hver boble etter at den har flyttet seg.
+function shBordTreff(b) {
+  const s = sh, B = s.bord; if (!B || b.fast || b.parkert || b.bane) return;
+  const R = shRad(b), fy = b.forrigeY ?? b.y; b.forrigeY = b.y;
+  const tekst = (txt, x, y, farge = "#ffe27a", stor = false) => s.tekster.push(stor ? { txt, x: .5, y, liv: 2.4, fade: 1.1, farge, stor: true } : { txt, x: shClamp(x, .18, .82), y, liv: 1.2, farge, liten: true });
+  const gi = p => { if (!s.bytte) s.poeng += p; shHud(); };
+  // Baneguidene øverst.
+  for (const g of B.guider) if (shFri(g.x, (g.y0 + g.y1) / 2)) shKapselStøt(b, g.x, g.y0, g.x, g.y1, .007, .3);
+  // Rullebanene: ruller boblen inn i en bane, tennes bokstaven.
+  const Y = SH_TOPP;
+  if (b.y > Y + .035 && b.y < Y + .12) B.baner.forEach((q, k) => { if (b.x > q.x0 + .008 && b.x < q.x1 - .008 && b.iBane !== k && shFri(q.cx, Y + .075)) { b.iBane = k;
+    q.lys = 1; if (!B.ord[k]) { B.ord[k] = true; gi(250); if (lydPa) tone(1318.5, 0, .14, .03, "square", .4, .5); }
+    if (B.ord.every(Boolean)) { gi(10000); B.ordBlink = 2.2; tekst("B U B B L E · +10,000", 0, Y + .2, "#7fe8ff", true); if (lydPa) [0, 4, 7, 12, 16, 19, 24].forEach((st, j) => tone(523.25 * Math.pow(2, st / 12), j * .07, .35, .03, "square", .4, 1));
+      shVask(.5, Y + .08, .14, 1, "syre"); setTimeout(() => { if (s.bord === B) B.ord = B.ord.map(() => false); }, 2200); } } });
+  if (b.y > Y + .13 || b.y < Y + .03) b.iBane = -1;
+  // Bumperne.
+  for (const q of B.bumpere) { if (!shFri(q.x, q.y)) continue; const BR = .042, dx = b.x - q.x, dy = b.y - q.y, d = Math.hypot(dx, dy) || 1e-6;
+    if (d < BR + R) { const nx = dx / d, ny = dy / d, v = Math.max(Math.hypot(b.vx, b.vy), s.fart * 1.35), dot = b.vx * nx + b.vy * ny;
+      if (dot < 0 || s.tid - q.sistT > .15) { b.vx = nx * v; b.vy = ny * v; b.x = q.x + nx * (BR + R + .002); b.y = q.y + ny * (BR + R + .002); b.boost = Math.max(b.boost || 1, 1.4); shStot(b, nx, ny, .7);
+        if (s.tid - q.sistT > .15) { q.sistT = s.tid; q.lys = 1; gi(100); shDelerLyd("bumper"); s.rist = Math.max(s.rist || 0, .12); } } } }
+  // Drop targets.
+  for (const q of B.mål) { if (q.nede || !shFri((q.ax + q.bx) / 2, (q.ay + q.by) / 2)) continue;
+    if (shKapselStøt(b, q.ax, q.ay, q.bx, q.by, .009, .5)) { q.nede = true; q.t = 0; q.lys = 1; gi(500); if (lydPa) { tone(196, 0, .08, .05, "square", .5, .2); tone(98, .03, .12, .04, "sine", .5, .2); }
+      if (B.mål.every(z => z.nede)) { gi(5000); tekst("TARGETS · +5,000", q.ax, q.ay - .03, "#ffd23a"); B.målReisT = 3; if (lydPa) [0, 7, 12].forEach((st, j) => tone(659.25 * Math.pow(2, st / 12), j * .08, .3, .03, "triangle", .5, 1)); } } }
+  // Spinneren: boblen går gjennom porten og den snurrer etter farten.
+  const sp = B.spinner; if (shFri((sp.x0 + sp.x1) / 2, sp.y) && b.x > sp.x0 && b.x < sp.x1 && (fy - sp.y) * (b.y - sp.y) < 0) { sp.w = Math.sign(b.vy || 1) * (18 + Math.abs(b.vy) * 40); if (lydPa) shSus(.08, "highpass", 3000, .02, 1, .8, .1); }
+  // Saucer: sluker boblen.
+  const sc = B.saucer; if (!sc.holder && shFri(sc.x, sc.y) && s.tid - B.sistUt > 1 && Math.hypot(b.x - sc.x, b.y - sc.y) < .028) {
+    b.bane = { type: "saucer", t: 0, fraX: b.x, fraY: b.y }; sc.holder = b; gi(3000); tekst("SAUCER · +3,000", sc.x, sc.y - .05); if (lydPa) { tone(110, 0, .2, .07, "sine", .6, .3); tone(220, .05, .12, .03, "square", .5, .2); } return; }
+  // Orbit: inngangen nede til venstre, bare på vei opp.
+  const ig = B.inngang; if (b.vy < 0 && shFri(ig.x, ig.y) && Math.hypot(b.x - ig.x, b.y - ig.y) < .045) {
+    b.bane = { type: "orbit", d: 0 }; B.orbitRekke = s.tid - B.orbitT < 6 ? B.orbitRekke + 1 : 1; B.orbitT = s.tid; if (lydPa) shSus(.5, "bandpass", 900, .05, 1.5, .8, .3, 0); }
+}
+// Boblen på en bane (orbit) eller i saucerens hull: flyttes av bordet, ikke av fysikken.
+function shBaneSteg(b, dt) {
+  const s = sh, B = s.bord, bn = b.bane; if (!B) { b.bane = null; return; }
+  if (bn.type === "orbit") {
+    bn.d += s.fart * 1.7 * dt; const p = shBanePunkt(B.orbit, Math.min(bn.d, B.orbit.tot)); b.x = p.x; b.y = p.y;
+    if (Math.random() < dt * 12) shStov(b.x, b.y, 2, "220,235,255", .08);
+    if (bn.d >= B.orbit.tot) { b.bane = null; b.vx = p.tx * s.fart; b.vy = p.ty * s.fart + .05; b.boost = Math.max(b.boost || 1, 1.25); b.forrigeY = b.y;
+      const m = Math.min(4, B.orbitRekke), p0 = 2000 * m; if (!s.bytte) s.poeng += p0; shHud();
+      s.tekster.push({ txt: (m > 1 ? "ORBIT ×" + m : "ORBIT") + " · +" + p0.toLocaleString("en"), x: .3, y: SH_TOPP + .06, liv: 1.3, farge: "#7fe8ff", liten: true }); if (lydPa) tone(880 * m, 0, .2, .03, "triangle", .5, .6); }
+  } else if (bn.type === "saucer") {
+    const sc = B.saucer, u = Math.min(1, (bn.t += dt) / .2); b.x = bn.fraX + (sc.x - bn.fraX) * u; b.y = bn.fraY + (sc.y - bn.fraY) * u; b.vx = b.vy = 0; sc.lys = 1;
+    if (bn.t > 1.3) { // Spytter den ut mot flipperne.
+      const mx = .4, my = SH_TOPP + .7, d = Math.hypot(mx - sc.x, my - sc.y); b.vx = (mx - sc.x) / d * s.fart; b.vy = (my - sc.y) / d * s.fart; b.x = sc.x + b.vx / s.fart * .04; b.y = sc.y + b.vy / s.fart * .04;
+      b.boost = Math.max(b.boost || 1, 1.5); b.bane = null; sc.holder = null; B.sistUt = s.tid; b.forrigeY = b.y; s.rist = Math.max(s.rist || 0, .25); shStov(sc.x, sc.y, 18, "255,240,200", .2);
+      if (lydPa) { tone(70, 0, .15, .08, "square", .6, .2); shSus(.12, "lowpass", 600, .06, 1, .8, .2); } }
+  }
+}
+// ---------- Tegning ----------
+function shKrom(x, x0, y0, x1, y1) { const g = x.createLinearGradient(x0, y0, x1, y1); g.addColorStop(0, "#ffffff"); g.addColorStop(.35, "#c3c7ce"); g.addColorStop(.6, "#5d626b"); g.addColorStop(.85, "#cfd3d9"); g.addColorStop(1, "#8a8f98"); return g; }
+function shTråd(x, pts, w) {
+  // En forkrommet tråd: mørk kant, lys kjerne og et skarpt høylys.
+  const sti = () => { x.beginPath(); x.moveTo(pts[0][0], pts[0][1]); for (const p of pts) x.lineTo(p[0], p[1]); };
+  x.lineCap = x.lineJoin = "round";
+  sti(); x.strokeStyle = "rgba(0,0,0,.35)"; x.lineWidth = w * 1.6; x.save(); x.translate(w * .5, w * .9); x.stroke(); x.restore();
+  sti(); x.strokeStyle = "#3d4048"; x.lineWidth = w; x.stroke();
+  sti(); x.strokeStyle = "#a9aeb7"; x.lineWidth = w * .62; x.stroke();
+  x.save(); x.translate(-w * .14, -w * .18); sti(); x.strokeStyle = "rgba(255,255,255,.9)"; x.lineWidth = w * .22; x.stroke(); x.restore();
+}
+function shStolpe(x, X, Y, r) {
+  x.fillStyle = "rgba(0,0,0,.4)"; x.beginPath(); x.arc(X + r * .25, Y + r * .4, r * 1.15, 0, 7); x.fill();
+  x.fillStyle = "#151515"; x.beginPath(); x.arc(X, Y, r, 0, 7); x.fill();
+  x.fillStyle = shKrom(x, X - r, Y - r, X + r, Y + r); x.beginPath(); x.arc(X, Y, r * .62, 0, 7); x.fill();
+  x.fillStyle = "rgba(255,255,255,.8)"; x.beginPath(); x.arc(X - r * .22, Y - r * .25, r * .18, 0, 7); x.fill();
+}
+// Lampeinnlegg i plast, som på spillefeltet: mørkt når det er av, glødende når det er på.
+function shInnlegg(x, sti, rgb, på, glød = 1) {
+  const [r, g, b] = rgb; x.save(); sti();
+  if (på > 0) { x.shadowColor = `rgba(${r},${g},${b},${.9 * på})`; x.shadowBlur = 14 * glød; }
+  const gr = x.createLinearGradient(0, -20, 0, 20);
+  gr.addColorStop(0, `rgba(${Math.min(255, r * .45 + 255 * .55 * på) | 0},${Math.min(255, g * .45 + 255 * .55 * på) | 0},${Math.min(255, b * .45 + 255 * .55 * på) | 0},${.72 + .28 * på})`);
+  gr.addColorStop(1, `rgba(${r * (.25 + .75 * på) | 0},${g * (.25 + .75 * på) | 0},${b * (.25 + .75 * på) | 0},${.8 + .2 * på})`);
+  x.fillStyle = gr; x.fill(); x.shadowBlur = 0;
+  x.strokeStyle = `rgba(255,255,255,${.25 + .35 * på})`; x.lineWidth = 1; x.stroke();
+  x.restore();
+}
+function shBordTegn(x, f, s) {
+  const B = s.bord; if (!B) return; const Y = SH_TOPP, t = B.t, P = (px, py) => [px * f, py * f];
+  x.save();
+  // Orbit: to krom-tråder langs kurven, med brakett innimellom.
+  const ofs = .022, side = sgn => B.orbit.p.map((p, i) => { const a = B.orbit.p[Math.max(0, i - 1)], c = B.orbit.p[Math.min(B.orbit.p.length - 1, i + 1)], tx = c[0] - a[0], ty = c[1] - a[1], l = Math.hypot(tx, ty) || 1; return [(p[0] - ty / l * ofs * sgn) * f, (p[1] + tx / l * ofs * sgn) * f]; });
+  const ytre = side(1), indre = side(-1), w = Math.max(2, f * .0075);
+  for (let i = 4; i < ytre.length - 2; i += 9) { x.strokeStyle = "#2b2d33"; x.lineWidth = w * .8; x.beginPath(); x.moveTo(ytre[i][0], ytre[i][1]); x.lineTo(indre[i][0], indre[i][1]); x.stroke(); }
+  shTråd(x, ytre, w); shTråd(x, indre, w);
+  // Pil inn i orbiten: lyser i et løp når den er klar.
+  { const [ix, iy] = P(B.inngang.x + .045, B.inngang.y + .02), s2 = f * .032;
+    for (let k = 0; k < 3; k++) { const på = .5 + .5 * Math.sin(t * 6 - k * 1.1); x.save(); x.translate(ix, iy - k * s2 * .9); x.rotate(-.12);
+      shInnlegg(x, () => { x.beginPath(); x.moveTo(0, -s2 * .5); x.lineTo(s2 * .55, s2 * .2); x.lineTo(s2 * .2, s2 * .2); x.lineTo(s2 * .2, s2 * .45); x.lineTo(-s2 * .2, s2 * .45); x.lineTo(-s2 * .2, s2 * .2); x.lineTo(-s2 * .55, s2 * .2); x.closePath(); }, [60, 200, 255], Math.max(0, på)); x.restore(); }
+    x.save(); x.font = `700 ${Math.max(8, f * .018)}px "IBM Plex Sans", sans-serif`; x.textAlign = "center"; x.fillStyle = "rgba(230,245,255,.85)"; x.shadowColor = "rgba(0,0,0,.8)"; x.shadowBlur = 3; x.translate(ix + f * .03, iy + f * .03); x.rotate(-Math.PI / 2); x.fillText("ORBIT", 0, 0); x.restore(); }
+  // Rullebanene: plastguider med gummi-stolper, og bokstavinnlegg.
+  for (const g of B.guider) { const [gx, g0] = P(g.x, g.y0), g1 = g.y1 * f, bw = f * .012;
+    x.fillStyle = "rgba(0,0,0,.35)"; x.beginPath(); x.roundRect(gx - bw / 2 + bw * .4, g0 + bw * .6, bw, g1 - g0, bw / 2); x.fill();
+    const pg = x.createLinearGradient(gx - bw / 2, 0, gx + bw / 2, 0); pg.addColorStop(0, "#7a0f22"); pg.addColorStop(.4, "#e8344f"); pg.addColorStop(.6, "#ff6b80"); pg.addColorStop(1, "#8c1428");
+    x.fillStyle = pg; x.beginPath(); x.roundRect(gx - bw / 2, g0, bw, g1 - g0, bw / 2); x.fill();
+    x.fillStyle = "rgba(255,255,255,.55)"; x.fillRect(gx - bw * .18, g0 + bw, bw * .14, g1 - g0 - bw * 2);
+    shStolpe(x, gx, g0, f * .009); shStolpe(x, gx, g1, f * .009); }
+  B.baner.forEach((q, k) => { const [cx, cy] = P(q.cx, Y + .078), s2 = f * .062, på = B.ord[k] ? (B.ordBlink > 0 ? (Math.sin(t * 20) > 0 ? 1 : .2) : .9) : q.lys * .6;
+    x.save(); x.translate(cx, cy);
+    shInnlegg(x, () => { x.beginPath(); x.moveTo(0, s2 * .55); x.bezierCurveTo(s2 * .5, s2 * .1, s2 * .45, -s2 * .5, 0, -s2 * .5); x.bezierCurveTo(-s2 * .45, -s2 * .5, -s2 * .5, s2 * .1, 0, s2 * .55); x.closePath(); }, [255, 200, 40], på);
+    x.font = `800 ${s2 * .52}px "IBM Plex Sans", sans-serif`; x.textAlign = "center"; x.textBaseline = "middle"; x.fillStyle = på > .5 ? "#3a2400" : "rgba(255,240,200,.75)"; x.fillText(SH_BORD_ORD[k], 0, -s2 * .02); x.restore(); });
+  // Drop targets: en bank med tre gule plastmål med nummer. Nede er de bare en mørk spalte.
+  { const m0 = B.mål[0], m2 = B.mål[2], [ax, ay] = P(m0.ax, m0.ay), [bx, by] = P(m2.bx, m2.by), a = Math.atan2(by - ay, bx - ax), L = Math.hypot(bx - ax, by - ay), tk = f * .02;
+    x.save(); x.translate(ax, ay); x.rotate(a);
+    x.fillStyle = "rgba(0,0,0,.45)"; x.beginPath(); x.roundRect(-tk * .3 + 3, -tk * .9 + 4, L + tk * .6, tk * 1.8, tk * .4); x.fill();
+    x.fillStyle = shKrom(x, 0, -tk, 0, tk); x.beginPath(); x.roundRect(-tk * .3, -tk * .9, L + tk * .6, tk * 1.8, tk * .4); x.fill();
+    x.fillStyle = "#0e0e10"; x.beginPath(); x.roundRect(-tk * .1, -tk * .62, L + tk * .2, tk * 1.24, tk * .25); x.fill(); x.restore(); }
+  for (const q of B.mål) { const [ax, ay] = P(q.ax, q.ay), [bx, by] = P(q.bx, q.by), a = Math.atan2(by - ay, bx - ax), L = Math.hypot(bx - ax, by - ay), tk = f * .02;
+    x.save(); x.translate(ax, ay); x.rotate(a);
+    if (!q.nede) { const h = .35 + .65 * q.t, w = tk * h;
+      const gg = x.createLinearGradient(0, -w / 2, 0, w / 2); gg.addColorStop(0, "#fff6b8"); gg.addColorStop(.45, "#ffcc22"); gg.addColorStop(1, "#a86f00");
+      x.fillStyle = gg; x.beginPath(); x.roundRect(L * .04, -w / 2, L * .92, w, w * .2); x.fill();
+      x.strokeStyle = "rgba(0,0,0,.5)"; x.lineWidth = 1; x.stroke();
+      x.fillStyle = "#c8102e"; x.beginPath(); x.arc(L / 2, 0, w * .34, 0, 7); x.fill();
+      x.save(); x.translate(L / 2, 0); x.rotate(-a); x.fillStyle = "#fff"; x.font = `800 ${w * .45}px "IBM Plex Sans", sans-serif`; x.textAlign = "center"; x.textBaseline = "middle"; x.fillText(q.nr, 0, w * .02); x.restore();
+      if (q.lys > 0) { x.globalCompositeOperation = "lighter"; x.fillStyle = `rgba(255,220,90,${.6 * q.lys})`; x.fillRect(-tk, -tk, L + tk * 2, tk * 2); } }
+    x.restore(); }
+  // Bumperne: forkrommet ring, rød plasthette, hvit topp; lyser når de slår.
+  for (const q of B.bumpere) { const [X, Yb] = P(q.x, q.y), R = .042 * f;
+    x.fillStyle = "rgba(0,0,0,.42)"; x.beginPath(); x.ellipse(X + R * .18, Yb + R * .38, R * 1.08, R * .92, 0, 0, 7); x.fill();
+    x.fillStyle = shKrom(x, X - R, Yb - R, X + R, Yb + R); x.beginPath(); x.arc(X, Yb, R, 0, 7); x.fill();
+    x.fillStyle = "#1c1c1c"; x.beginPath(); x.arc(X, Yb, R * .86, 0, 7); x.fill();
+    const h = x.createRadialGradient(X - R * .25, Yb - R * .3, R * .05, X, Yb, R * .78); h.addColorStop(0, q.lys > 0 ? "#fff8f0" : "#ff9a8a"); h.addColorStop(.5, q.lys > 0 ? "#ff6040" : "#e3281c"); h.addColorStop(1, "#6a0a06");
+    x.fillStyle = h; x.beginPath(); x.arc(X, Yb, R * .76, 0, 7); x.fill();
+    x.fillStyle = "#f4efe6"; x.beginPath(); x.arc(X, Yb, R * .34, 0, 7); x.fill(); x.fillStyle = "#c8102e"; x.font = `800 ${R * .3}px "IBM Plex Sans", sans-serif`; x.textAlign = "center"; x.textBaseline = "middle"; x.fillText("100", X, Yb + R * .02);
+    x.fillStyle = "rgba(255,255,255,.75)"; x.beginPath(); x.ellipse(X - R * .35, Yb - R * .4, R * .24, R * .1, -.6, 0, 7); x.fill();
+    if (q.lys > 0) { x.save(); x.globalCompositeOperation = "lighter"; const g = x.createRadialGradient(X, Yb, R * .5, X, Yb, R * 2.4); g.addColorStop(0, `rgba(255,120,80,${.55 * q.lys})`); g.addColorStop(1, "rgba(255,80,40,0)"); x.fillStyle = g; x.fillRect(X - R * 2.4, Yb - R * 2.4, R * 4.8, R * 4.8); x.restore(); } }
+  // Saucer: en metallkopp med mørkt hull, og lys rundt som løper når den holder boblen.
+  { const sc = B.saucer, [X, Ys] = P(sc.x, sc.y), R = .034 * f;
+    for (let k = 0; k < 6; k++) { const a = -Math.PI / 2 + k * Math.PI / 3, på = sc.holder ? (Math.floor(t * 14) % 6 === k ? 1 : .3) : .3 + .2 * Math.sin(t * 2 + k);
+      x.save(); x.translate(X + Math.cos(a) * R * 1.7, Ys + Math.sin(a) * R * 1.7); shInnlegg(x, () => { x.beginPath(); x.arc(0, 0, R * .28, 0, 7); }, [255, 90, 200], på, .6); x.restore(); }
+    x.fillStyle = "rgba(0,0,0,.45)"; x.beginPath(); x.arc(X + R * .15, Ys + R * .3, R * 1.12, 0, 7); x.fill();
+    x.fillStyle = shKrom(x, X - R, Ys - R, X + R, Ys + R); x.beginPath(); x.arc(X, Ys, R, 0, 7); x.fill();
+    const hg = x.createRadialGradient(X + R * .15, Ys + R * .2, 0, X, Ys, R * .78); hg.addColorStop(0, "#000"); hg.addColorStop(.7, "#15161a"); hg.addColorStop(1, "#4a4d55");
+    x.fillStyle = hg; x.beginPath(); x.arc(X, Ys, R * .76, 0, 7); x.fill();
+    x.save(); x.font = `700 ${Math.max(8, f * .016)}px "IBM Plex Sans", sans-serif`; x.textAlign = "center"; x.fillStyle = "rgba(255,225,245,.85)"; x.shadowColor = "rgba(0,0,0,.8)"; x.shadowBlur = 3; x.fillText("SAUCER", X, Ys + R * 2.6); x.restore(); }
+  // Spinneren: en plate med trykk som henger under en krom-aksel og snurrer rundt den.
+  { const sp = B.spinner, [x0, Ys] = P(sp.x0, sp.y), x1 = sp.x1 * f, h = f * .034, c = Math.cos(sp.a), ph = h * c, inn = f * .008;
+    x.fillStyle = "rgba(0,0,0,.3)"; x.fillRect(x0 + inn + 3, Ys + 3, x1 - x0 - inn * 2, Math.abs(ph) * .9);
+    const gg = x.createLinearGradient(0, Ys, 0, Ys + ph); gg.addColorStop(0, c > 0 ? "#f4f6f8" : "#7a8088"); gg.addColorStop(1, c > 0 ? "#a8aeb6" : "#4a4f57");
+    x.fillStyle = gg; x.fillRect(x0 + inn, Math.min(Ys, Ys + ph), x1 - x0 - inn * 2, Math.abs(ph));
+    if (c > .25) { x.save(); x.translate((x0 + x1) / 2, Ys + ph / 2); x.scale(1, c); x.fillStyle = "#c8102e"; x.fillRect(-(x1 - x0) / 2 + inn * 1.6, -h * .32, x1 - x0 - inn * 3.2, h * .64);
+      x.font = `800 ${h * .46}px "IBM Plex Sans", sans-serif`; x.textAlign = "center"; x.textBaseline = "middle"; x.fillStyle = "#fff"; x.fillText("SPIN", 0, h * .02); x.restore(); }
+    x.strokeStyle = shKrom(x, 0, Ys - 3, 0, Ys + 3); x.lineWidth = Math.max(2, f * .006); x.beginPath(); x.moveTo(x0, Ys); x.lineTo(x1, Ys); x.stroke();
+    shStolpe(x, x0, Ys, f * .009); shStolpe(x, x1, Ys, f * .009); }
+  x.restore();
 }
 // RELIKVIER: på hvert brett står en liten statue i bronse, jern eller kobber gjemt under gjørma, laget av en av Kroghs figurer.
 // Vaskes den fram, må du treffe den tre ganger før den graver seg ned et annet sted. Ikke alle får det til.
@@ -6826,7 +7042,7 @@ function shVaerSteg(dt) {
     R.lydT -= dt; if (I > .05 && R.lydT <= 0 && lydPa) { R.lydT = .55; shSus(1.3, "highpass", 2600, .02 * I, .6, .4, .8); shSus(1.3, "bandpass", 900, .012 * I, .5, .4, .6); }
     if (R.t > R.varighet && !R.dråper.length && !R.plask.length) s.regn = null;
   }
-  shMørkeSteg(dt); shDelerSteg(dt); shMotivSteg(dt);
+  shMørkeSteg(dt); shDelerSteg(dt); shBordSteg(dt); shMotivSteg(dt);
   // Strømmen går av og til, én gang i løpet av et brett.
   if (!s.mørke && !s.mørkeFerdig && !s.toP && shHar("fiende", "mørke") && aktiv && !s.finale && shRolig(s)) {
     if (s.mørkeVent == null) s.mørkeVent = 35 + Math.random() * 60;
@@ -7745,6 +7961,7 @@ function shOppdater(dt) {
     if (!s.galaga && b.friGalaga) b.friGalaga = false;
     // Under aliens og boss er boblen fortsatt i spill. Bare en ny boble etter en miss ligger fast; trykk for å skyte den opp.
     if (b.parkert) { b.parkert = false; const a = (Math.random() - .5) * .6; b.vx = s.fart * Math.sin(a); b.vy = -s.fart * Math.cos(a); }
+    if (b.bane) { shBaneSteg(b, dt); continue; }
     if (b.fanget) {
       const h = b.fanget, u = Math.min(1, (b.fangT += dt) / .25);
       b.x = b.fraX + (h.x - b.fraX) * u; b.y = b.fraY + (h.fy - b.fraY) * u; b.skala = 1 - .85 * u;
@@ -7783,6 +8000,7 @@ function shOppdater(dt) {
     }
     for (let j = 0; j < n && !b.borte && !b.fast && s.tilstand === "spill"; j++) shBevegBall(b, dt * sakte / n);
     if (!b.borte) shDelerTreff(b);
+    if (!b.borte) shBordTreff(b);
   }
   if (s.tilstand !== "spill") return;
   s.baller = s.baller.filter(b => !b.borte);
@@ -9052,6 +9270,7 @@ function shTegn(t) {
   }
   x.globalCompositeOperation = "source-over";
   if (s.levende) shLevTegn(x, f, s);
+  shBordTegn(x, f, s);
   if (s.moekk?.gl) { shGLTegn(s); x.drawImage(s.moekk.gl.cv, 0, iy, f, f); shBrentTegn(x, f, s); shKantTegn(x, f, s, iy + f); }
   else if (s.moekk) { x.imageSmoothingEnabled = true; x.imageSmoothingQuality = "low"; x.drawImage(s.moekk.cv, 0, iy, f, f); shKantTegn(x, f, s, iy + f); }
   // Skittent vann renner nedover, såpesyre gløder.
@@ -9520,7 +9739,7 @@ function shSteg(t) {
 }
 addEventListener("resize", () => { if (sh) shOppsett(); });
 // Bare for automatisk testing lokalt (?autotest).
-if (location.search.includes("autotest")) { window.__sh = () => sh; window.__shFerdig = () => shFerdig(); window.__ark = () => ark; window.__shHud = () => shHud(); window.__shMistet = () => shMistetLiv(); window.__shOppdater = dt => { shOppdater(dt); if (sh) { sh.tid += dt; shPartikler(dt); } }; window.__shTreff = shTreff; window.__shGalaga = shGalagaStart; window.__shSopp = shSopp; window.__shBytte = shByttetStart; window.__shOrm = shOrmStart; window.__levende = levendeStart; window.__gn = () => ({ gnister, raf: gnistRAF }); window.__hendelse = t => t === "katt" ? kattBesøk() : t === "stov" ? støvstorm() : t === "ketchup" ? ketchup() : t === "tilt" ? tilt(true) : t === "vokse" ? vokseBrikke() : t === "break" ? puzzleBreak() : t === "speilX" ? speilStart("x") : t === "speilY" ? speilStart("y") : lynnedslag(); window.__shSprekk = shSprekk; window.__shP2 = () => ({ pad2X: sh.pad2X, P2Y: SH_P2Y, TOPP: SH_TOPP, H: SH_H }); window.__shTegn = () => { shRens(); shTegn(performance.now()); }; window.__spill = () => spill; window.__banner = banner; window.__kast = kast; window.__gratisPeace = async () => sjekkGratis(await hentSammen("P")); window.__fremdrift = () => fremdrift; window.__sammenP = async () => ({ lok: minLokaleSum("P"), f: fremdrift.b1, liste: (await hentSammen("P")).slice(0, 2) }); window.__shKrabbe = () => shKrabbeStart(); window.__shHopper = () => shHopperStart(); window.__shSlipp = () => shSlipp(); window.__shPY = () => SH_PY; window.__shKapsel = shKapsel; window.__shSnø = shSnøStart; window.__shMørke = shMørkeStart; window.__uw = () => uw; window.__uwStart = uwStart; window.__uwOppdater = dt => uwOppdater(dt); window.__uwTegn = () => uwTegn(); window.__shFrys = shFrys; window.__shPlante = shPlante; window.__myntSprites = myntSprites; window.__katt = hentKattHode; window.__pote = hentKattPote; window.__shG = () => shG; window.__tellOpp = tellOpp; window.__lyd = () => { const c = lydCtx; return c ? { musikk: musikkUt(c).gain.value, effekt: effektUt(c).gain.value } : null; }; window.__speilSlutt = speilSlutt; window.__figurKant = async (n, farge) => shFigurKant(await hentBilde("figurer/" + n + ".webp"), farge); window.__hentBilde = hentBilde; window.__falskMusikk = () => { lydCtx = lydCtx || { currentTime: 0 }; const nei = () => {}; musikk = { kilde: { stop: nei, playbackRate: { v: 1, setTargetAtTime(r) { this.v = r; } } }, g: { gain: { value: .3, cancelScheduledValues: nei, setValueAtTime: nei, linearRampToValueAtTime: nei, setTargetAtTime: nei } } }; }; window.__musikkFart = () => musikk?.kilde?.playbackRate?.v ?? null; window.__musikkFor = id => musikkFor(id)?.fil; window.__geo = () => geo; window.__plasser = plasser; window.__skjermPkt = skjermPkt; }
+if (location.search.includes("autotest")) { window.__sh = () => sh; window.__shFerdig = () => shFerdig(); window.__ark = () => ark; window.__shHud = () => shHud(); window.__shMistet = () => shMistetLiv(); window.__shOppdater = dt => { shOppdater(dt); if (sh) { sh.tid += dt; shPartikler(dt); } }; window.__shTreff = shTreff; window.__shGalaga = shGalagaStart; window.__shSopp = shSopp; window.__shBytte = shByttetStart; window.__shOrm = shOrmStart; window.__levende = levendeStart; window.__gn = () => ({ gnister, raf: gnistRAF }); window.__hendelse = t => t === "katt" ? kattBesøk() : t === "stov" ? støvstorm() : t === "ketchup" ? ketchup() : t === "tilt" ? tilt(true) : t === "vokse" ? vokseBrikke() : t === "break" ? puzzleBreak() : t === "speilX" ? speilStart("x") : t === "speilY" ? speilStart("y") : lynnedslag(); window.__shSprekk = shSprekk; window.__shP2 = () => ({ pad2X: sh.pad2X, P2Y: SH_P2Y, TOPP: SH_TOPP, H: SH_H }); window.__shTegn = () => { shRens(); shTegn(performance.now()); }; window.__spill = () => spill; window.__banner = banner; window.__kast = kast; window.__gratisPeace = async () => sjekkGratis(await hentSammen("P")); window.__fremdrift = () => fremdrift; window.__sammenP = async () => ({ lok: minLokaleSum("P"), f: fremdrift.b1, liste: (await hentSammen("P")).slice(0, 2) }); window.__shKrabbe = () => shKrabbeStart(); window.__shHopper = () => shHopperStart(); window.__shSlipp = () => shSlipp(); window.__shPY = () => SH_PY; window.__shTopp = () => SH_TOPP; window.__shKapsel = shKapsel; window.__shSnø = shSnøStart; window.__shMørke = shMørkeStart; window.__uw = () => uw; window.__uwStart = uwStart; window.__uwOppdater = dt => uwOppdater(dt); window.__uwTegn = () => uwTegn(); window.__shFrys = shFrys; window.__shPlante = shPlante; window.__myntSprites = myntSprites; window.__katt = hentKattHode; window.__pote = hentKattPote; window.__shG = () => shG; window.__tellOpp = tellOpp; window.__lyd = () => { const c = lydCtx; return c ? { musikk: musikkUt(c).gain.value, effekt: effektUt(c).gain.value } : null; }; window.__speilSlutt = speilSlutt; window.__figurKant = async (n, farge) => shFigurKant(await hentBilde("figurer/" + n + ".webp"), farge); window.__hentBilde = hentBilde; window.__falskMusikk = () => { lydCtx = lydCtx || { currentTime: 0 }; const nei = () => {}; musikk = { kilde: { stop: nei, playbackRate: { v: 1, setTargetAtTime(r) { this.v = r; } } }, g: { gain: { value: .3, cancelScheduledValues: nei, setValueAtTime: nei, linearRampToValueAtTime: nei, setTargetAtTime: nei } } }; }; window.__musikkFart = () => musikk?.kilde?.playbackRate?.v ?? null; window.__musikkFor = id => musikkFor(id)?.fil; window.__geo = () => geo; window.__plasser = plasser; window.__skjermPkt = skjermPkt; }
 
 
 
