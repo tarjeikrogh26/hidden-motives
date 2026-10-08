@@ -635,7 +635,7 @@ body.lys #modusDeal{--farge:#0f8f6c;--glod:15,143,108}
   <div class="regel">Everything counts: Game, Peace, Scrub it 1P and 2P, every board, every level, every collection. Each board list gives up to 100 points (a Scrub it list up to 1,000): #1 gets them all, the rest their share of the top score.</div>
   <div class="sammen" id="spillere"><p class="liten">Loading players …</p></div>
   <p class="kreditt">© 2001–2026 Tarjei Krogh. All photography, music and art. <a href="https://kroghx.com" target="_blank" rel="noopener">kroghx.com</a></p>
-  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 1.55<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
+  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 1.56<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
 </section>
 
 <div class="ark" id="tidUtArk" hidden style="z-index:200001">
@@ -2856,7 +2856,7 @@ function mykFlekk(farge) {
   return (smussSprites[farge] = c);
 }
 function smussStart(jobb, sek = 70) {
-  if (!spill) return; spill.smussTil = Math.max(spill.smussTil || 0, performance.now() + sek * 1000);
+  if (!spill) return; spill.smussTil = Math.max(spill.smussTil || 0, performance.now() + sek * 1000); if (sek > 0) spill.tørkFerdig = false;
   if (jobb) smussJobber.push(jobb);
   if (!smussRAF) { smussSist = performance.now(); smussRAF = requestAnimationFrame(smussSteg); }
 }
@@ -2881,7 +2881,8 @@ function smussSteg(t) {
 function tørk(e) {
   if (!spill || spill.slutt || !((spill.smussTil || 0) > performance.now()) || !geo) return;
   // Tar du en brikke (eller spyler brann), er kluten borte med en gang.
-  if (e.target?.classList?.contains("bit") || document.querySelector(".bit.drar") || spill.brann?.slange) { klut = null; tørkSist.delete(e.pointerId); return; }
+  if (e.target?.classList?.contains("bit") || document.querySelector(".bit.drar") || spill.brann?.slange) { klut = null; tørkSist.delete(e.pointerId); if (e.type === "pointerdown" && e.target?.classList?.contains("bit")) spill.tørkFerdig = true; return; }
+  if (spill.tørkFerdig) { klut = null; return; }
   const c = $("smussLag"), x = c.getContext("2d"), dpr = c.width / innerWidth, R = Math.max(geo.bw, geo.bh) * .72;
   const f = tørkSist.get(e.pointerId) || { x: e.clientX, y: e.clientY }, d = Math.hypot(e.clientX - f.x, e.clientY - f.y), n = Math.max(1, Math.ceil(d / (R * .3)));
   x.save(); x.setTransform(dpr, 0, 0, dpr, 0, 0); x.globalCompositeOperation = "destination-out";
@@ -2970,11 +2971,9 @@ function hentKattPote() {
     for (let j = 0; j < W * H; j++) { const r = d[j * 4], g = d[j * 4 + 1], b = d[j * 4 + 2], u = (j % W) / W * (u1 - u0) + u0, v = Math.floor(j / W) / H * (v1 - v0) + v0;
       let s = Math.min(1, Math.max(0, (r - b - 14) / 26)) * Math.min(1, Math.max(0, (r - 60) / 40)) * (b > r ? 0 : 1);
       if (u > .26 && v > .57) s = 0; if (u > .35 && v > .3) s = 0;
-      s *= Math.min(1, Math.max(0, (v1 - v) / .1));
       a[j] = s; }
-    const mk = document.createElement("canvas"); mk.width = W; mk.height = H; const mx = mk.getContext("2d"), md = mx.createImageData(W, H);
-    for (let j = 0; j < W * H; j++) { md.data[j * 4 + 3] = Math.round(a[j] * 255); } mx.putImageData(md, 0, 0);
-    const mb = document.createElement("canvas"); mb.width = W; mb.height = H; const bx = mb.getContext("2d"); bx.filter = "blur(1.2px)"; bx.drawImage(mk, 0, 0);
+    // Fyller hull mellom tærne, fjerner biter av vinduet, og gir en myk kant innover. Underarmen tones ut nederst.
+    const mb = maskeRydd(a, W, H, .45, 4), fade = mb.getContext("2d"); fade.globalCompositeOperation = "destination-in"; const fg = fade.createLinearGradient(0, H * .82, 0, H); fg.addColorStop(0, "#000"); fg.addColorStop(1, "rgba(0,0,0,0)"); fade.fillStyle = fg; fade.fillRect(0, 0, W, H);
     x.globalCompositeOperation = "destination-in"; x.drawImage(mb, 0, 0);
     kattPote = c;
   };
@@ -7156,6 +7155,31 @@ function shKrabbeTegn(x, f, s) {
 // Kattehodet: klippes fra Kroghs bilde (serie 3, brett 10). Ansikt og ører får en myk kant, resten forsvinner.
 // Utsnitt i bildet: x .34–1.0, y .12–.82. Ansiktets midte ligger på (.394, .686) i utsnittet.
 let kattHode = null, kattLaster = false;
+// Maskehjelp for utklipp fra foto: tetter hull, fjerner løse småbiter, og gir en myk kant innover (ingen lys glorie).
+function maskeRydd(a, W, H, terskel = .5, tett = 3) {
+  let m = new Uint8Array(W * H); for (let j = 0; j < W * H; j++) m[j] = a[j] > terskel ? 1 : 0;
+  const voks = (src, r, verdi) => { const ut = new Uint8Array(W * H); for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) { let v = src[y * W + x]; if (v !== verdi) for (let dy = -r; dy <= r && v !== verdi; dy++) for (let dx = -r; dx <= r; dx++) { const xx = x + dx, yy = y + dy; if (xx >= 0 && yy >= 0 && xx < W && yy < H && src[yy * W + xx] === verdi) { v = verdi; break; } } ut[y * W + x] = v; } return ut; };
+  m = voks(voks(m, tett, 1), tett, 0); // lukk hull
+  // Behold den største sammenhengende biten.
+  const merke = new Int32Array(W * H).fill(-1); let best = -1, bestN = 0, nr = 0;
+  for (let j = 0; j < W * H; j++) if (m[j] && merke[j] < 0) { let n = 0; const kø = [j]; merke[j] = nr;
+    while (kø.length) { const q = kø.pop(); n++; const x = q % W, y = (q / W) | 0; for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const xx = x + dx, yy = y + dy; if (xx < 0 || yy < 0 || xx >= W || yy >= H) continue; const k = yy * W + xx; if (m[k] && merke[k] < 0) { merke[k] = nr; kø.push(k); } } }
+    if (n > bestN) { bestN = n; best = nr; } nr++; }
+  for (let j = 0; j < W * H; j++) m[j] = merke[j] === best ? 1 : 0;
+  // Tett alle hull inni (mørke folder i huden), bare bakgrunn som henger sammen med kanten av bildet er bakgrunn.
+  { const ute = new Uint8Array(W * H), kø = []; for (let x = 0; x < W; x++) for (const y of [0, H - 1]) { const k = y * W + x; if (!m[k] && !ute[k]) { ute[k] = 1; kø.push(k); } }
+    for (let y = 0; y < H; y++) for (const x of [0, W - 1]) { const k = y * W + x; if (!m[k] && !ute[k]) { ute[k] = 1; kø.push(k); } }
+    while (kø.length) { const q = kø.pop(), x = q % W, y = (q / W) | 0; for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const xx = x + dx, yy = y + dy; if (xx < 0 || yy < 0 || xx >= W || yy >= H) continue; const k = yy * W + xx; if (!m[k] && !ute[k]) { ute[k] = 1; kø.push(k); } } }
+    for (let j = 0; j < W * H; j++) if (!ute[j]) m[j] = 1; }
+  m = voks(m, 1, 0); // en piksel inn, så kanten ikke tar med bakgrunn
+  const c = document.createElement("canvas"); c.width = W; c.height = H; const x = c.getContext("2d"), id = x.createImageData(W, H);
+  for (let j = 0; j < W * H; j++) id.data[j * 4 + 3] = m[j] * 255; x.putImageData(id, 0, 0);
+  const b = document.createElement("canvas"); b.width = W; b.height = H; const bx = b.getContext("2d"); bx.filter = "blur(1.4px)"; bx.drawImage(c, 0, 0);
+  // Myk kant bare innover: masken ganges med seg selv (blur gir halv styrke på kanten, ikke utenfor).
+  bx.filter = "none"; bx.globalCompositeOperation = "destination-in"; bx.drawImage(c, 0, 0);
+  return b;
+}
+function hudScore(r, g, b) { return Math.min(1, Math.max(0, (r - b - 14) / 26)) * Math.min(1, Math.max(0, (r - 60) / 40)) * (b > r ? 0 : 1); }
 function hentKattHode() {
   if (kattHode || kattLaster) return kattHode; kattLaster = true;
   const img = new Image(); img.crossOrigin = "anonymous";
@@ -7166,10 +7190,15 @@ function hentKattHode() {
     // Masken: ansiktet (ellipse) og to ører, tegnet med skyggeuskarphet så kanten blir myk.
     const m = document.createElement("canvas"); m.width = W; m.height = H; const mx = m.getContext("2d");
     const P = (u, v) => [(u - .34) / .66 * W, (v - .12) / .70 * H];
-    mx.shadowColor = "#000"; mx.shadowBlur = 10; mx.fillStyle = "#000";
-    mx.beginPath(); { const [cx, cy] = P(.605, .595); mx.ellipse(cx, cy, .205 / .66 * W, .2 / .70 * H, 0, 0, 7); } mx.fill();
-    for (const øre of [[[.37, .47], [.42, .16], [.5, .17], [.58, .42]], [[.68, .43], [.93, .29], [.985, .31], [.83, .58]]]) {
+    mx.fillStyle = "#000";
+    mx.beginPath(); { const [cx, cy] = P(.605, .595); mx.ellipse(cx, cy, .2 / .66 * W, .195 / .70 * H, 0, 0, 7); } mx.fill();
+    for (const øre of [[[.355, .48], [.415, .13], [.51, .15], [.59, .43]], [[.68, .43], [.93, .29], [.985, .31], [.83, .58]]]) {
       mx.beginPath(); øre.forEach(([u, v], j) => { const [px, py] = P(u, v); j ? mx.lineTo(px, py) : mx.moveTo(px, py); }); mx.closePath(); mx.fill(); }
+    // Venstre øre står mot et vindu: der følger masken huden, så øret får sin egen runde kant og ikke en rett strek.
+    { const md = mx.getImageData(0, 0, W, H).data, bd = x.getImageData(0, 0, W, H).data, a = new Float32Array(W * H), [ex, ey] = P(.605, .595), rx = .19 / .66 * W, ry = .185 / .70 * H;
+      for (let j = 0; j < W * H; j++) { const px = j % W, py = (j / W) | 0, inne = ((px - ex) / rx) ** 2 + ((py - ey) / ry) ** 2 < 1, venstreØre = px < P(.6, 0)[0] && py < P(0, .5)[1];
+        a[j] = md[j * 4 + 3] / 255 * (inne || !venstreØre ? 1 : hudScore(bd[j * 4], bd[j * 4 + 1], bd[j * 4 + 2]) > .3 ? 1 : 0); }
+      const ren = maskeRydd(a, W, H, .5, 2); mx.clearRect(0, 0, W, H); mx.drawImage(ren, 0, 0); }
     x.globalCompositeOperation = "destination-in"; x.drawImage(m, 0, 0);
     kattHode = c;
   };
@@ -8972,7 +9001,7 @@ function shSteg(t) {
 }
 addEventListener("resize", () => { if (sh) shOppsett(); });
 // Bare for automatisk testing lokalt (?autotest).
-if (location.search.includes("autotest")) { window.__sh = () => sh; window.__shOppdater = dt => { shOppdater(dt); if (sh) { sh.tid += dt; shPartikler(dt); } }; window.__shTreff = shTreff; window.__shGalaga = shGalagaStart; window.__shSopp = shSopp; window.__shBytte = shByttetStart; window.__shOrm = shOrmStart; window.__levende = levendeStart; window.__gn = () => ({ gnister, raf: gnistRAF }); window.__hendelse = t => t === "katt" ? kattBesøk() : t === "stov" ? støvstorm() : t === "ketchup" ? ketchup() : t === "tilt" ? tilt(true) : t === "vokse" ? vokseBrikke() : t === "break" ? puzzleBreak() : t === "speilX" ? speilStart("x") : t === "speilY" ? speilStart("y") : lynnedslag(); window.__shSprekk = shSprekk; window.__shP2 = () => ({ pad2X: sh.pad2X, P2Y: SH_P2Y, TOPP: SH_TOPP, H: SH_H }); window.__shTegn = () => { shRens(); shTegn(performance.now()); }; window.__spill = () => spill; window.__banner = banner; window.__kast = kast; window.__gratisPeace = async () => sjekkGratis(await hentSammen("P")); window.__fremdrift = () => fremdrift; window.__sammenP = async () => ({ lok: minLokaleSum("P"), f: fremdrift.b1, liste: (await hentSammen("P")).slice(0, 2) }); window.__shKrabbe = () => shKrabbeStart(); window.__shHopper = () => shHopperStart(); window.__shSlipp = () => shSlipp(); window.__shPY = () => SH_PY; window.__shKapsel = shKapsel; window.__shSnø = shSnøStart; window.__shMørke = shMørkeStart; window.__shFrys = shFrys; window.__shPlante = shPlante; window.__myntSprites = myntSprites; window.__katt = hentKattHode; window.__shG = () => shG; window.__tellOpp = tellOpp; window.__lyd = () => { const c = lydCtx; return c ? { musikk: musikkUt(c).gain.value, effekt: effektUt(c).gain.value } : null; }; window.__speilSlutt = speilSlutt; window.__figurKant = async (n, farge) => shFigurKant(await hentBilde("figurer/" + n + ".webp"), farge); window.__hentBilde = hentBilde; window.__falskMusikk = () => { lydCtx = lydCtx || { currentTime: 0 }; const nei = () => {}; musikk = { kilde: { stop: nei, playbackRate: { v: 1, setTargetAtTime(r) { this.v = r; } } }, g: { gain: { value: .3, cancelScheduledValues: nei, setValueAtTime: nei, linearRampToValueAtTime: nei, setTargetAtTime: nei } } }; }; window.__musikkFart = () => musikk?.kilde?.playbackRate?.v ?? null; window.__musikkFor = id => musikkFor(id)?.fil; window.__geo = () => geo; window.__plasser = plasser; window.__skjermPkt = skjermPkt; }
+if (location.search.includes("autotest")) { window.__sh = () => sh; window.__shOppdater = dt => { shOppdater(dt); if (sh) { sh.tid += dt; shPartikler(dt); } }; window.__shTreff = shTreff; window.__shGalaga = shGalagaStart; window.__shSopp = shSopp; window.__shBytte = shByttetStart; window.__shOrm = shOrmStart; window.__levende = levendeStart; window.__gn = () => ({ gnister, raf: gnistRAF }); window.__hendelse = t => t === "katt" ? kattBesøk() : t === "stov" ? støvstorm() : t === "ketchup" ? ketchup() : t === "tilt" ? tilt(true) : t === "vokse" ? vokseBrikke() : t === "break" ? puzzleBreak() : t === "speilX" ? speilStart("x") : t === "speilY" ? speilStart("y") : lynnedslag(); window.__shSprekk = shSprekk; window.__shP2 = () => ({ pad2X: sh.pad2X, P2Y: SH_P2Y, TOPP: SH_TOPP, H: SH_H }); window.__shTegn = () => { shRens(); shTegn(performance.now()); }; window.__spill = () => spill; window.__banner = banner; window.__kast = kast; window.__gratisPeace = async () => sjekkGratis(await hentSammen("P")); window.__fremdrift = () => fremdrift; window.__sammenP = async () => ({ lok: minLokaleSum("P"), f: fremdrift.b1, liste: (await hentSammen("P")).slice(0, 2) }); window.__shKrabbe = () => shKrabbeStart(); window.__shHopper = () => shHopperStart(); window.__shSlipp = () => shSlipp(); window.__shPY = () => SH_PY; window.__shKapsel = shKapsel; window.__shSnø = shSnøStart; window.__shMørke = shMørkeStart; window.__shFrys = shFrys; window.__shPlante = shPlante; window.__myntSprites = myntSprites; window.__katt = hentKattHode; window.__pote = hentKattPote; window.__shG = () => shG; window.__tellOpp = tellOpp; window.__lyd = () => { const c = lydCtx; return c ? { musikk: musikkUt(c).gain.value, effekt: effektUt(c).gain.value } : null; }; window.__speilSlutt = speilSlutt; window.__figurKant = async (n, farge) => shFigurKant(await hentBilde("figurer/" + n + ".webp"), farge); window.__hentBilde = hentBilde; window.__falskMusikk = () => { lydCtx = lydCtx || { currentTime: 0 }; const nei = () => {}; musikk = { kilde: { stop: nei, playbackRate: { v: 1, setTargetAtTime(r) { this.v = r; } } }, g: { gain: { value: .3, cancelScheduledValues: nei, setValueAtTime: nei, linearRampToValueAtTime: nei, setTargetAtTime: nei } } }; }; window.__musikkFart = () => musikk?.kilde?.playbackRate?.v ?? null; window.__musikkFor = id => musikkFor(id)?.fil; window.__geo = () => geo; window.__plasser = plasser; window.__skjermPkt = skjermPkt; }
 
 
 
