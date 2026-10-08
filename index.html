@@ -526,7 +526,7 @@ h1{font-weight:300;letter-spacing:.14em;line-height:1.02}
   <div class="regel">Everything counts: Game, Peace, Scrub it 1P and 2P, every board, every level, every collection. Each board list gives up to 100 points (a Scrub it list up to 1,000): #1 gets them all, the rest their share of the top score.</div>
   <div class="sammen" id="spillere"><p class="liten">Loading players …</p></div>
   <p class="kreditt">© 2001–2026 Tarjei Krogh. All photography, music and art. <a href="https://kroghx.com" target="_blank" rel="noopener">kroghx.com</a></p>
-  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 1.26<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
+  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 1.27<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
 </section>
 
 <div class="ark" id="tidUtArk" hidden style="z-index:200001">
@@ -2695,6 +2695,8 @@ function smussSteg(t) {
 // Tørk: der fingeren går, tørkes smusset bort med en myk klut.
 function tørk(e) {
   if (!spill || spill.slutt || !((spill.smussTil || 0) > performance.now()) || !geo) return;
+  // Tar du en brikke (eller spyler brann), er kluten borte med en gang.
+  if (e.target?.classList?.contains("bit") || document.querySelector(".bit.drar") || spill.brann?.slange) { klut = null; tørkSist.delete(e.pointerId); return; }
   const c = $("smussLag"), x = c.getContext("2d"), dpr = c.width / innerWidth, R = Math.max(geo.bw, geo.bh) * .72;
   const f = tørkSist.get(e.pointerId) || { x: e.clientX, y: e.clientY }, d = Math.hypot(e.clientX - f.x, e.clientY - f.y), n = Math.max(1, Math.ceil(d / (R * .3)));
   x.save(); x.setTransform(dpr, 0, 0, dpr, 0, 0); x.globalCompositeOperation = "destination-out";
@@ -4033,8 +4035,8 @@ async function shatterStart(i, poeng = 0, liv = 3) {
   const svakC = 3 + Math.floor(Math.random() * (SH_KOL - 8));
   for (const k of klosser) if (k.c >= svakC && k.c < svakC + 3 && k.r >= SH_RAD - 6 && k.liv > 1) { k.liv = 1; k.maks = 1; k.hardLeire = false; }
   // Rolig start, så farten øker litt for hvert nivå og litt underveis.
-  const fart = (0.5 + Math.min(niva, 14) * 0.03) * .98;
-  sh = { niva, i, img, klosser, igjen: klosser.length, poeng, liv, fart, grunnfart: fart, maksFart: Math.min(1.45, fart + 0.68),
+  const fart = (0.5 + Math.min(niva, 14) * 0.03) * .98 * .9; // 10 % roligere (Krogh): skal være deilig, ikke stress.
+  sh = { niva, i, img, klosser, igjen: klosser.length, poeng, liv, fart, grunnfart: fart, maksFart: Math.min(1.3, fart + 0.61),
     padX: 0.5, padW: 0.26, baller: [], kapsler: [], tekster: [], smaa: [], stov: [], stavSkitt: [], skudd: [], skuddT: 0, lamper: 0, galaga: null, galagaPause: 45, wingmen: [], galagaKommet: false, padMål: null, sopp: 0, soppSide: -1, padY: .7, soppOverg: 1, soppTilbake: 1, bytte: null, byttePlan: Math.random() < .22, sabot: [], sabotT: 14 + Math.random() * 10, drypp: [], skum: [], stjerner: [], ringer: [],
     eff: { W: 0, B: 0, G: 0, A: 0, F: 0, K: 0 }, tilstand: "klar", kombo: 0, ferdigT: 0, tid: 0, lydSist: {},
     jord: SH_JORD[j1], jord2: SH_JORD[j2], ramme: shVelgRamme(img), skitten: new Set(), milepael: 0, glimt: -9, sprekkT: 0,
@@ -4835,11 +4837,15 @@ function shFigurKant(img0, farge) {
 // Figurene lever i 3D: de snur seg rundt sin egen akse (smalere når de står på skrå, med skyggesiden mørkere og
 // glansen som glir over), vipper litt i retningen de snur, og løfter seg mot deg (større, skyggen faller lenger unna).
 // De puster og kroppen bølger svakt, som før. Mørk og lys utgave av figuren lages én gang og gjenbrukes.
+// Hvordan en figur står akkurat nå (snuing, vipping, løft). Brukes av både kroppen og armene, så de henger sammen.
+function shForm(R, tid, fase) {
+  const stor = R > 35, yaw = Math.sin(tid * (stor ? .55 : 1.05) + fase * 1.7) * (stor ? .75 : .95) + Math.sin(tid * .37 + fase) * .25;
+  const cy = Math.cos(yaw), snu = Math.max(.32, Math.abs(cy)), side = Math.sin(yaw), løft = Math.sin(tid * (stor ? .7 : 1.3) + fase * 2.3);
+  return { stor, yaw, cy, snu, side, løft, z: 1 + løft * (stor ? .09 : .07), tilt: -side * .14 + Math.sin(tid * 1.9 + fase) * .03 };
+}
 function shSprite(x, sp, X, Y, R, tid, fase, skygge = true) {
-  const stor = R > 35, sk = 2.3 * R / Math.max(sp.width, sp.height), w = sp.width * sk, h = sp.height * sk;
-  const yaw = Math.sin(tid * (stor ? .55 : 1.05) + fase * 1.7) * (stor ? .75 : .95) + Math.sin(tid * .37 + fase) * .25;
-  const cy = Math.cos(yaw), snu = Math.max(.32, Math.abs(cy)), side = Math.sin(yaw);
-  const løft = Math.sin(tid * (stor ? .7 : 1.3) + fase * 2.3), z = 1 + løft * (stor ? .09 : .07), tilt = -side * .14 + Math.sin(tid * 1.9 + fase) * .03;
+  const sk = 2.3 * R / Math.max(sp.width, sp.height), w = sp.width * sk, h = sp.height * sk;
+  const { stor, cy, snu, side, løft, z, tilt } = shForm(R, tid, fase);
   const sterk = stor ? 1.9 : 1, pust = Math.sin(tid * 2.4 + fase) + (sterk > 1 ? .4 * Math.sin(tid * 5.3 + fase * 2) : 0), sy = (1 + .05 * sterk * pust) * z, sx = (1 - .04 * sterk * pust) * z * snu;
   const Wd = w * sx, Hd = h * sy;
   if (skygge) { const a = x.globalAlpha; x.globalAlpha = a * (.32 - løft * .08); x.fillStyle = "#000"; x.beginPath(); x.ellipse(X + R * (.25 + løft * .2), Y + h * .5 + R * (.3 + løft * .25), Wd * (.3 - løft * .03), R * .13, 0, 0, 7); x.fill(); x.globalAlpha = a; }
@@ -5222,7 +5228,11 @@ function shSnittFarge(sp) {
   for (let i = 0; i < d.length; i += 4) if (d[i + 3] > 128) { r += d[i]; g += d[i + 1]; b += d[i + 2]; n++; }
   return sp._snitt = n ? [r / n | 0, g / n | 0, b / n | 0] : [180, 120, 140];
 }
-function shArmer(x, sp, X, Y, R, tid, spytt, fase = 0) {
+function shArmer(x, sp, X, Y, R, tid, spytt, fase = 0, rot = 0, spFase = null) {
+  // Armene følger kroppen: samme rotasjon, snuing (smalere på skrå, speilvendt) og løft som figuren.
+  x.save(); x.translate(X, Y); if (rot) x.rotate(rot);
+  if (spFase != null) { const F = shForm(R, tid, spFase); x.rotate(F.tilt); x.scale((F.cy < 0 ? -1 : 1) * F.snu * F.z, F.z); }
+  X = 0; Y = 0;
   let [r, g, b] = sp ? shSnittFarge(sp) : [180, 120, 140];
   { const m = (r + g + b) / 3; r = shClamp(m + (r - m) * 2.2, 30, 255); g = shClamp(m + (g - m) * 2.2, 30, 255); b = shClamp(m + (b - m) * 2.2, 30, 255); }
   const mørk = `rgb(${r * .45 | 0},${g * .45 | 0},${b * .45 | 0})`, lys = `rgb(${Math.min(255, r * 1.15) | 0},${Math.min(255, g * 1.15) | 0},${Math.min(255, b * 1.15) | 0})`;
@@ -5241,6 +5251,7 @@ function shArmer(x, sp, X, Y, R, tid, spytt, fase = 0) {
     x.fillStyle = "rgba(255,255,255,.35)";
     for (let i = 3; i < N; i += 2) { x.beginPath(); x.arc(pts[i][0], pts[i][1] + R * .03, Math.max(.8, R * .025 * (1 - i / N)), 0, 7); x.fill(); }
   }
+  x.restore();
 }
 function shSpyttTegn(x, X, Y, R, spytt, tid, jord) {
   if (spytt <= 0) return; const [m1, m2, m3] = jord.mork;
@@ -5253,7 +5264,7 @@ function shByttetTegn(x, f, s) {
   x.save(); x.globalCompositeOperation = "lighter";
   const gl = x.createRadialGradient(X, Y, R * .2, X, Y, R * 1.5); gl.addColorStop(0, "rgba(90,255,140,.35)"); gl.addColorStop(1, "rgba(90,255,140,0)");
   x.fillStyle = gl; x.fillRect(X - R * 1.5, Y - R * 1.5, R * 3, R * 3); x.restore();
-  shArmer(x, sp, X, Y, R, s.tid, B.spytt || 0);
+  shArmer(x, sp, X, Y, R, s.tid, B.spytt || 0, 0, 0, 0);
   if (sp) shSprite(x, sp, X, Y, R, s.tid, 0);
   shSpyttTegn(x, X, Y, R, B.spytt || 0, s.tid, B.stille > .35 ? SH_SEMENT : s.jord);
   if (B.stille > .35) { x.save(); x.globalCompositeOperation = "lighter"; const hg = x.createRadialGradient(X, Y + R * .6, 0, X, Y + R * .6, R * .9); hg.addColorStop(0, "rgba(255,170,90,.35)"); hg.addColorStop(1, "rgba(255,170,90,0)"); x.fillStyle = hg; x.fillRect(X - R, Y - R * .3, R * 2, R * 1.8); x.restore(); }
@@ -7069,7 +7080,7 @@ function shTegn(t) {
         x.save(); x.globalCompositeOperation = "lighter";
         const gl = x.createRadialGradient(X, Y, BR * .2, X, Y, BR * 1.5); gl.addColorStop(0, `rgba(255,60,60,${.25 + .2 * Math.sin(s.tid * 4)})`); gl.addColorStop(1, "rgba(255,60,60,0)");
         x.fillStyle = gl; x.fillRect(X - BR * 1.5, Y - BR * 1.5, BR * 3, BR * 3); x.restore();
-        shArmer(x, sp, X, Y, BR, s.tid, B.spytt || 0, 1);
+        shArmer(x, sp, X, Y, BR, s.tid, B.spytt || 0, 1, B.rot || 0, (X + Y) * .013);
         tegnFigur(sp, X, Y, BR, B.rot, false, false, 0);
         shSpyttTegn(x, X, Y, BR, B.spytt || 0, s.tid, s.jord);
         if (B.blink > 0 && sp) { x.save(); x.globalCompositeOperation = "lighter"; x.globalAlpha = B.blink * .6; tegnFigur(sp, X, Y, BR, B.rot, false, false, 0); x.restore(); x.globalAlpha = 1; }
