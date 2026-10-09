@@ -131,7 +131,7 @@ body.lys.meny-hvit::before{background:radial-gradient(ellipse 120% 85% at 50% 12
 #modusHit,body.lys #modusHit{--farge:#149a5a;--glod:20,154,90}
 #modusHit .tittel{color:var(--farge)!important;font-size:1em!important;line-height:1;white-space:nowrap}
 #modusHit[aria-selected="true"] .tittel{color:#fff!important}
-.moduser{display:grid!important;grid-template-columns:1fr 1fr;width:max-content}
+.moduser{display:flex!important;width:max-content}
 .moduser .modus,body.lys .moduser .modus{text-align:center}
 .variant button:disabled{opacity:.38;cursor:default}
 .variant.v-pusle{--vg:226,52,127}
@@ -808,7 +808,7 @@ body.lys #modusDeal{--farge:#0f8f6c;--glod:15,143,108}
   <div class="regel">Everything counts: Game, Peace, Bubble it 1P and 2P, every board, every level, every collection. Each board list gives up to 100 points (a Bubble it list up to 1,000): #1 gets them all, the rest their share of the top score.</div>
   <div class="sammen" id="spillere"><p class="liten">Loading players …</p></div>
   <p class="kreditt">© 2001–2026 Tarjei Krogh. All photography, music and art. <a href="https://kroghx.com" target="_blank" rel="noopener">kroghx.com</a></p>
-  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 2.06<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
+  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 2.07<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
 </section>
 
 <div class="ark" id="tidUtArk" hidden style="z-index:200001">
@@ -971,6 +971,8 @@ body.lys #modusDeal{--farge:#0f8f6c;--glod:15,143,108}
 <div class="snu" role="status"><div><b>Turn your phone</b>The game is made for landscape.</div></div>
 
 <script>
+// Krogh 2.07: HIT ART er et eget spill (på vent). Her er tre spill; HIT ART-bygget setter denne til true og viser bare HIT ART.
+const HIT_ALENE = false;
 (() => {
 "use strict";
 // Navnene sirkler rundt motivet uten å røpe det.
@@ -1210,8 +1212,9 @@ function tegnFaner() {
 }
 // To måter å spille på: pusle eller vaske. Løser du et brett i ett av dem, åpnes neste.
 let modus = "pusle";
-try { const m = localStorage.getItem("sm-modus"); if (m === "scrub" || m === "unwrap" || m === "hit") modus = m; } catch {}
-function velgModus(m) { modus = m; try { localStorage.setItem("sm-modus", m); } catch {} tegnMeny(); }
+try { const m = localStorage.getItem("sm-modus"); if (m === "scrub" || m === "unwrap" || (m === "hit" && HIT_ALENE)) modus = m; } catch {}
+if (HIT_ALENE) modus = "hit";
+function velgModus(m) { if (HIT_ALENE) m = "hit"; modus = m; try { localStorage.setItem("sm-modus", m); } catch {} tegnMeny(); }
 function plasserVariant() { const vr = $("variant"), valgt = $(modus === "pusle" ? "modusPuslespill" : modus === "unwrap" ? "modusUnwrap" : modus === "hit" ? "modusHit" : "modusScrub"); if (!vr || !valgt) return; vr.style.paddingLeft = ""; vr.style.marginLeft = "0px"; const plass = (vr.parentElement?.clientWidth || innerWidth) - vr.offsetWidth - 66; vr.style.marginLeft = Math.max(0, Math.min(plass, valgt.offsetLeft - vr.offsetLeft)) + "px"; }
 function tilpassLogo() {
   const meny = $("meny"); if (!meny || meny.hidden) return;
@@ -1234,7 +1237,7 @@ function tilpassLogo() {
   let størst = 0;
   for (const l of navn.children) { l.style.fontSize = "100px"; const ls = parseFloat(getComputedStyle(l).letterSpacing) || 0, fs = Math.floor(100 * W / (l.offsetWidth - ls) * 10) / 10; l.style.fontSize = fs + "px"; l.style.marginRight = -ls * fs / 100 + "px"; størst = Math.max(størst, fs); }
   if (av) av.style.fontSize = Math.round(Math.max(12, Math.min(17, størst * .15))) + "px";
-  $("faner").style.maxWidth = R + "px";
+  $("faner").style.maxWidth = HIT_ALENE ? "" : R + "px";
   plasserVariant();
   if (gear) gear.style.top = smal && vr ? Math.round(vr.getBoundingClientRect().top - gear.offsetParent.getBoundingClientRect().top + (vr.offsetHeight - gear.offsetHeight) / 2) + "px" : "";
 }
@@ -1243,6 +1246,8 @@ $("modusPuslespill").onclick = () => velgModus("pusle");
 $("modusScrub").onclick = () => { ctx(); velgModus("scrub"); };
 $("modusUnwrap").onclick = () => { ctx(); velgModus("unwrap"); }
 $("modusHit").onclick = () => { ctx(); velgModus("hit"); };
+$("modusHit").hidden = !HIT_ALENE;
+if (HIT_ALENE) { for (const id of ["modusPuslespill", "modusScrub", "modusUnwrap"]) $(id).hidden = true; document.title = "Hit Art"; document.querySelector(".hm-l1").textContent = "HIT"; document.querySelector(".hm-l2").textContent = "ART"; $("albumKnapp").style.display = "none"; }
 $("albumKnapp").onclick = visAlbum; $("albumUt").onclick = lukkAlbum;;
 // Lys vegg i HIDDEN MOTIVES (menyen og brettet), mørk i BUBBLE IT.
 function oppdaterTema() { const meny = !$("meny").hidden; document.body.classList.toggle("lys", !$("spill").hidden || meny); document.body.classList.toggle("meny-hvit", meny); document.body.classList.toggle("rosa", false); }
@@ -1292,7 +1297,7 @@ async function tegnMeny() {
     const kd = document.createElement("span"); kd.className = "kode"; kd.textContent = kode(i);
     const nv = document.createElement("span"); nv.className = "navn"; nv.textContent = b.navn;
     nr.append(kd, nv);
-    { const sf = stempler(b.id), sm = document.createElement("span"); sm.className = "stempler";
+    if (!HIT_ALENE) { const sf = stempler(b.id), sm = document.createElement("span"); sm.className = "stempler";
       for (const [k, l, f, navn] of [["p", "P", "#e23d84", "PIECE IT"], ["b", "B", "#ff9a1a", "BUBBLE IT"], ["u", "U", "#ff6f9f", "UNWRAP IT"]]) { const el = document.createElement("i"); el.textContent = l; el.title = navn; el.style.setProperty("--sf", f); if (sf[k]) el.className = "ja"; sm.appendChild(el); }
       if (sf.p && sf.b && sf.u) kort.classList.add("komplett"); nr.prepend(sm); }
     const st = document.createElement("span");
@@ -10474,7 +10479,7 @@ $("frLagre").onclick = async () => {
   if (lydPa) [0, 4, 7, 12, 16].forEach((st, j) => tone(523.25 * Math.pow(2, st / 12), j * .08, .5, .025, "triangle", .5, 1.2));
   const n = BRUKER_BRETT.length;
   frMelding("SAVED", n > BRUKER_MAKS ? "We kept your extra painting. There's only room for nine, so pick one to let go next time you open the User Season."
-    : `It's board /US/${String(n).padStart(2, "0")} in your User Season now. Play it in all four games.`, [["See it", () => frLukk("bruker"), true], ["Menu", () => frLukk()]]);
+    : `It's board /US/${String(n).padStart(2, "0")} in your User Season now. Play it in all three games.`, [["See it", () => frLukk("bruker"), true], ["Menu", () => frLukk()]]);
 };
 $("frSkip").onclick = () => frMelding("NOT SAVED", "Maybe the freeze comes back another time.", [["Unwrap again", () => frLukk("igjen"), true], ["Menu", () => frLukk()]]);
 
@@ -10550,7 +10555,7 @@ async function haStart(i, kjent) {
   // Klart før: spør om BLIND eller KNOWN (feltene og tallene på bildet).
   if (kjent === undefined && haKlart().has(i)) { cancelAnimationFrame(haRAF); ha = null; const c = $("haCanvas"); c.getContext("2d").clearRect(0, 0, c.width, c.height);
     return haMelding(b.navn.toUpperCase(), "You have cleared this board. Play it blind again, or with the points on the picture?", [["BLIND GAME", () => haStart(i, false), true], ["KNOWN GAME", () => haStart(i, true)], ["Menu", haAvslutt]]); }
-  kjent = !!kjent; haMelding("HIT ART", "Hanging up the art…", []);
+  kjent = !!kjent; haMelding("HIT ART", "Hanging up the art…", []); if (lydPa) spillMusikk(b.id);
   const bilde = await hentBilde(b.src); cancelAnimationFrame(haRAF);
   const tur = en ? 0 : Math.random() < .5 ? 0 : 1;
   ha = { i, en, bilde, ...haFelt(haHash(b.id)), kjent, poeng: en ? [HA_START1, 0] : [HA_START, HA_START], tur, tidIgjen: HA_TID, eggFunnet: 0, stormBonus: 0, skjelvA: 0, tripA: 0, trip: null, rumleT: 0, kast: 0, fase: "banner", ft: 0, f0: 0, x: .5, y: .5,
