@@ -176,6 +176,17 @@ h1 .signatur{font-size:.55em;letter-spacing:.06em;white-space:nowrap}
 .res-stjerner span.ja{transform:scale(1.12);color:#f0c75a}
 .res-stjerner span.ja b{color:#f0b323;text-shadow:0 0 14px rgba(240,179,35,.75)}
 .uw-stjerner{justify-content:center;margin:10px 0 12px}
+#uwMelding.uw-res{background:transparent;border:none;top:47%;width:min(420px,calc(100% - 28px));gap:4px}
+#uwMelding.uw-res #uwTittel{font-size:15px;letter-spacing:.32em;font-family:var(--tall);color:#fff;text-shadow:0 0 1px #000,0 0 3px #000,0 1px 10px rgba(0,0,0,.8)}
+#uwMelding.uw-res .uw-sum{font-family:var(--tall);font-size:54px;line-height:1.05;font-variant-numeric:tabular-nums;color:#fff;-webkit-text-stroke:1px rgba(0,0,0,.55);text-shadow:0 0 2px #000,0 2px 16px rgba(0,0,0,.75),0 0 30px rgba(255,120,200,.35)}
+#uwMelding.uw-res .uw-trinn{display:grid;gap:4px;margin:4px 0 2px}
+#uwMelding.uw-res .uw-trinn .trinn{display:flex;justify-content:space-between;gap:16px;font-family:var(--tall);font-size:14px;letter-spacing:.06em;color:#fff;text-shadow:0 0 1px #000,0 0 3px #000,0 1px 8px rgba(0,0,0,.85);opacity:0;transform:translateY(6px);transition:opacity .4s ease,transform .4s ease}
+#uwMelding.uw-res .uw-trinn .trinn.vis{opacity:1;transform:none}
+#uwMelding.uw-res .uw-trinn .trinn b{font-family:var(--tall);font-size:14px;font-weight:400;font-variant-numeric:tabular-nums;color:#fff}
+#uwMelding.uw-res #uwTekst{color:#fff;font-size:14px;text-shadow:0 0 1px #000,0 0 3px #000,0 1px 8px rgba(0,0,0,.85)}
+#uwMelding.uw-res .res-stjerner{color:rgba(255,255,255,.75);text-shadow:0 0 3px #000}
+#uwMelding.uw-res .res-stjerner b{color:rgba(255,255,255,.35)}
+#uwMelding.uw-res .res-stjerner span.ja b{color:#f0b323}
 .brett.laast::after{content:"Solve the previous board first";position:absolute;inset:0;display:grid;place-items:center;background:rgba(10,9,8,.72);color:var(--demp);font-size:13px}
 .brett:not(.laast):hover{border-color:var(--signal)}
 .neste{display:grid;place-items:center;aspect-ratio:auto;min-height:120px;border:1px dashed var(--strek);border-radius:6px;color:var(--demp);text-align:center;padding:16px;font-size:13px}
@@ -704,7 +715,7 @@ body.lys #modusDeal{--farge:#0f8f6c;--glod:15,143,108}
   <div class="regel">Everything counts: Game, Peace, Bubble it 1P and 2P, every board, every level, every collection. Each board list gives up to 100 points (a Bubble it list up to 1,000): #1 gets them all, the rest their share of the top score.</div>
   <div class="sammen" id="spillere"><p class="liten">Loading players …</p></div>
   <p class="kreditt">© 2001–2026 Tarjei Krogh. All photography, music and art. <a href="https://kroghx.com" target="_blank" rel="noopener">kroghx.com</a></p>
-  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 1.93<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
+  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 1.94<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
 </section>
 
 <div class="ark" id="tidUtArk" hidden style="z-index:200001">
@@ -8978,7 +8989,7 @@ function uwHud() {
 function uwSkitt(x0, y0, x1, y1) { for (const l of uw.lagS) l.skitten = l.skitten ? { x0: Math.min(l.skitten.x0, x0), y0: Math.min(l.skitten.y0, y0), x1: Math.max(l.skitten.x1, x1), y1: Math.max(l.skitten.y1, y1) } : { x0, y0, x1, y1 }; }
 function uwMelding(tittel, tekst, knapper) {
   const m = $("uwMelding"); if (!tittel) { m.hidden = true; return; }
-  m.hidden = false; $("uwTittel").textContent = tittel; $("uwTekst").textContent = tekst || ""; const k = $("uwKnapper"); k.replaceChildren(); m.querySelectorAll(".uw-stjerner").forEach(e => e.remove());
+  m.hidden = false; m.classList.remove("uw-res"); $("uwTittel").textContent = tittel; $("uwTekst").textContent = tekst || ""; const k = $("uwKnapper"); k.replaceChildren(); k.style.visibility = ""; m.querySelectorAll(".uw-stjerner,.uw-sum,.uw-trinn").forEach(e => e.remove());
   for (const [navn, fn, hoved] of knapper || []) { const b = document.createElement("button"); b.className = hoved ? "hoved" : "sekundar"; b.textContent = navn; b.onclick = fn; k.appendChild(b); }
 }
 // Cellene: celle = ytre papir (0 = papir, 1 = revet), indre = papiret under (1 = papir), merket = streken du skjærer nå.
@@ -9157,8 +9168,10 @@ function uwMistet() {
 function uwVunnet() {
   const u = uw, G = UW_G; u.tilstand = "ferdig"; uwPeker = null; const tidBonus = Math.round(Math.max(0, u.frist - u.tid) * 60), prosent = Math.floor(uwSynlig(u) * 100), ekstra = Math.max(0, prosent - 80) * 500;
   u.poeng += tidBonus + ekstra;
-  // Resten av papiret flyr av.
-  const rest = []; for (let j = 0; j < G * G; j++) if (u.celle[j] !== 1 || (u.indre && u.indre[j])) { rest.push(j); u.celle[j] = 1; if (u.indre) u.indre[j] = 0; } if (rest.length) { uwFlak(rest, u.stil.bunn[0]); uwFlak(rest, (u.stil2 || u.stil).bunn[0]); } uwSkitt(0, 0, G - 1, G - 1); u.spor = []; u.linje = []; u.merket.fill(0);
+  // Resten av papiret: tas bilde av og brytes i ujevne biter som løftes av bildet (se uwSluttTegn).
+  const biter = uwSluttBiter();
+  for (let j = 0; j < G * G; j++) { u.celle[j] = 1; if (u.indre) u.indre[j] = 0; } uwSkitt(0, 0, G - 1, G - 1); u.spor = []; u.linje = []; u.merket.fill(0);
+  u.spyBiter = []; u.ild = []; u.ildP = []; u.svidd = []; u.flak = [];
   if (!u.sløyfe.av) u.sløyfe.av = { vx: .2, vy: -.5, rot: 0, spinn: 3, t: 0 };
   if (u.hage) { u.hage.nett = []; u.hage.hauger = []; u.hage.edd = null; u.hage.mv = null; u.dekket = 0; } u.lapper = [];
   // Tre stjerner, som i BUBBLE IT: pakket opp, minst en tredjedel av tida igjen, ingen kniv mistet.
@@ -9166,11 +9179,90 @@ function uwVunnet() {
   const b = BRETT[u.i]; fremdrift[b.id] = fremdrift[b.id] || {}; const før = fremdrift[b.id].unwrap || 0; if (u.poeng > før) fremdrift[b.id].unwrap = u.poeng; fremdrift[b.id].unwrapS = Math.max(fremdrift[b.id].unwrapS || 0, stj.filter(Boolean).length); skrivLokal(fremdrift);
   const neste = nesteIRekke(u.i);
   if (lydPa) [0, 4, 7, 12, 16].forEach((st, j) => tone(523.25 * Math.pow(2, st / 12), j * .09, .5, .03, "triangle", .5, 1));
-  setTimeout(() => { if (uw !== u) return; uwHud();
-    uwMelding("Unwrapped!", u.poeng.toLocaleString("en") + " points · " + prosent + " % · time bonus " + tidBonus.toLocaleString("en") + (u.poeng > før && før ? " · New best!" : før ? " · Best " + før.toLocaleString("en") : ""),
-      [[neste >= 0 ? "Next: " + BRETT[neste].navn + " →" : "Menu", () => neste >= 0 ? uwStart(neste) : uwAvslutt(), true], ["Menu", uwAvslutt]]);
+  u.slutt = { t: 0, biter, fx: .3 + Math.random() * .4, fy: .3 + Math.random() * .4, stj, tidBonus, ekstra, prosent, før, neste, tidIgjen: Math.max(0, u.frist - u.tid) };
+  if (lydPa) shSus(2.4, "lowpass", 600, .025, 1.2, .6, .6);
+}
+// Når brettet er pakket opp: alt som ligger oppå (papir, figurer, bosser) blir vektløst, løftes mot deg
+// og glir ut til sidene (perspektiv: jo nærmere, jo større og lenger ut fra midten). Så står bildet rent
+// en liten stund, før vi zoomer inn i det, og poengene telles opp oppå.
+const UW_LØFT = 2.7, UW_RO = 2, UW_ZOOM = 1.2;
+function uwSluttBiter() {
+  const u = uw, l0 = u.lagS?.[0]?.lag; if (!l0) return [];
+  const S = l0.width, snap = Object.assign(document.createElement("canvas"), { width: S, height: S }), sx = snap.getContext("2d");
+  if (u.indre && u.lagS[1]?.lag) sx.drawImage(u.lagS[1].lag, 0, 0, S, S); sx.drawImage(l0, 0, 0, S, S);
+  const M = 64, mc = Object.assign(document.createElement("canvas"), { width: M, height: M }), mx = mc.getContext("2d", { willReadFrequently: true }); mx.drawImage(snap, 0, 0, M, M); const A = mx.getImageData(0, 0, M, M).data;
+  // Et rutenett med forskjøvne hjørner og kantpunkter, så bitene passer sammen med ujevne kanter.
+  const N = 7, R = Math.random, J = .3 / N, V = [], HM = [], VM = [];
+  for (let j = 0; j <= N; j++) for (let i = 0; i <= N; i++) V.push([i / N + (i > 0 && i < N ? (R() - .5) * 2 * J : 0), j / N + (j > 0 && j < N ? (R() - .5) * 2 * J : 0)]);
+  const v = (i, j) => V[j * (N + 1) + i];
+  for (let j = 0; j <= N; j++) for (let i = 0; i < N; i++) { const a = v(i, j), b = v(i + 1, j); HM.push([(a[0] + b[0]) / 2 + (R() - .5) * J, (a[1] + b[1]) / 2 + (j > 0 && j < N ? (R() - .5) * 1.6 * J : 0)]); }
+  for (let j = 0; j < N; j++) for (let i = 0; i <= N; i++) { const a = v(i, j), b = v(i, j + 1); VM.push([(a[0] + b[0]) / 2 + (i > 0 && i < N ? (R() - .5) * 1.6 * J : 0), (a[1] + b[1]) / 2 + (R() - .5) * J]); }
+  const biter = [];
+  for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) {
+    const pts = [v(i, j), HM[j * N + i], v(i + 1, j), VM[j * (N + 1) + i + 1], v(i + 1, j + 1), HM[(j + 1) * N + i], v(i, j + 1), VM[j * (N + 1) + i]];
+    let n = 0; for (let y = Math.floor(j / N * M); y < Math.ceil((j + 1) / N * M); y++) for (let x = Math.floor(i / N * M); x < Math.ceil((i + 1) / N * M); x++) if (A[(y * M + x) * 4 + 3] > 20) n++;
+    if (!n) continue; const cx = pts.reduce((s, q) => s + q[0], 0) / 8, cy = pts.reduce((s, q) => s + q[1], 0) / 8;
+    biter.push({ pts, cx, cy });
+  }
+  u.sluttSnap = snap; return biter;
+}
+// Hvor en ting er mens den løftes: z går fra 0 (på bildet) mot 1 (helt inntil deg).
+function uwLøft(o, x, y) {
+  const S = uw.slutt; if (o.løftD == null) { o.løftD = Math.random() * .55; o.løftA = .3 + Math.random() * .25; o.løftR = (Math.random() - .5) * 1.6; o.løftV = (x < .5 ? -1 : 1) * (.02 + Math.random() * .05); o.løftF = Math.random() * 6; }
+  const τ = S.t - o.løftD; if (τ <= 0) return { x, y, s: 1, a: 1, rot: 0, z: 0 };
+  const sv = Math.min(1, τ / .5), z = .05 * sv * sv * (3 - 2 * sv) + o.løftA * Math.max(0, τ - .35) ** 2;
+  if (z > .9) return null;
+  const s = 1 / (1 - z), dx = o.løftV * τ * τ;
+  return { x: .5 + (x - .5) * s + dx, y: .5 + (y - .5) * s - .025 * sv, s, a: z < .55 ? 1 : Math.max(0, 1 - (z - .55) / .32), rot: o.løftR * τ * τ * .5 + Math.sin(τ * 3 + o.løftF) * .04 * sv, z };
+}
+function uwSluttTegn(x, P, f, x0, y0, nå) {
+  const u = uw, S = u.slutt, t = S.t, W = innerWidth, H = innerHeight, T1 = UW_LØFT + UW_RO;
+  // Bildet. Etter roen zoomer vi inn mot et punkt i det, og det blir bakgrunnen for poengene.
+  let k = t > T1 ? Math.min(1, (t - T1) / UW_ZOOM) : 0; k = k * k * (3 - 2 * k);
+  const etter = Math.max(0, t - T1 - UW_ZOOM), F1 = Math.max(W, H) * 1.35 * (1 + etter * .008), F = f + (F1 - f) * k;
+  const px = x0 + S.fx * f, py = y0 + S.fy * f, rx = px + (W / 2 - px) * k - S.fx * F, ry = py + (H * .45 - py) * k - S.fy * F;
+  x.drawImage(u.img, rx, ry, F, F);
+  if (k > 0) { x.fillStyle = `rgba(0,0,0,${.32 * k})`; x.fillRect(0, 0, W, H); }
+  if (t > UW_LØFT + .3) return;
+  // Skyggene der bitene lå, så ser du at de løftes.
+  const snap = u.sluttSnap, løftet = [];
+  for (const b of S.biter) { const L = uwLøft(b, b.cx, b.cy); if (!L) continue; løftet.push([b, L]);
+    const [X, Y] = P(b.cx + L.z * .05, b.cy + L.z * .09); x.save(); x.globalAlpha = .3 * Math.max(0, 1 - L.z / .7) * L.a; x.fillStyle = "#000"; x.translate(X, Y); x.beginPath(); b.pts.forEach((q, j) => { const qx = (q[0] - b.cx) * f, qy = (q[1] - b.cy) * f; j ? x.lineTo(qx, qy) : x.moveTo(qx, qy); }); x.closePath(); x.fill(); x.restore(); }
+  // Figurene og papirrestene løftes også.
+  for (const e of u.fiender) { if (e.type !== "figur") continue; const L = uwLøft(e, e.x, e.y); if (!L) continue; const sp = u.figurer?.m?.length ? u.figurer.m[e.figur % u.figurer.m.length] : null; if (!sp) continue;
+    const [ex, ey] = P(L.x, L.y); x.save(); x.globalAlpha = L.a; x.translate(ex, ey); x.rotate(L.rot); shSprite(x, sp, 0, 0, .046 * f * L.s, u.tid, e.fase, true); x.restore(); }
+  for (const q of u.rester || []) { const L = uwLøft(q, q.x, q.y); if (!L) continue; const [rx2, ry2] = P(L.x, L.y), rr = q.r * f * L.s; x.save(); x.globalAlpha = L.a; x.translate(rx2, ry2); x.rotate(q.rot + L.rot);
+    x.beginPath(); q.form.forEach((v, j) => { const a = j / q.form.length * Math.PI * 2; j ? x.lineTo(Math.cos(a) * rr * v, Math.sin(a) * rr * v * .8) : x.moveTo(Math.cos(a) * rr * v, Math.sin(a) * rr * v * .8); }); x.closePath(); x.fillStyle = q.farge; x.fill(); x.restore(); }
+  // Papirbitene, nærmest sist.
+  løftet.sort((a, b) => a[1].z - b[1].z);
+  for (const [b, L] of løftet) { const [X, Y] = P(L.x, L.y); x.save(); x.globalAlpha = L.a; x.translate(X, Y); x.rotate(L.rot); x.scale(L.s, L.s);
+    x.beginPath(); b.pts.forEach((q, j) => { const qx = (q[0] - b.cx) * f, qy = (q[1] - b.cy) * f; j ? x.lineTo(qx, qy) : x.moveTo(qx, qy); }); x.closePath();
+    if (L.z > .02) { x.shadowColor = "rgba(0,0,0,.35)"; x.shadowBlur = 12 * L.z; x.shadowOffsetY = 6 * L.z; x.fillStyle = "rgba(0,0,0,.01)"; x.fill(); x.shadowColor = "transparent"; }
+    x.clip(); if (snap) x.drawImage(snap, -b.cx * f, -b.cy * f, f, f); x.restore(); }
+  // Bossene blir også vektløse og forsvinner ut.
+  for (const B of u.bosser || []) { if (!window.Boss3D?.har(B.modell)) continue; const L = uwLøft(B, B.x, B.y); if (!L) continue; const [X, Y] = P(L.x, L.y); x.save(); x.globalAlpha = L.a;
+    window.Boss3D.tegn(x, X, Y, f * B.str * L.s, { modell: B.modell, vri: shBoss3DVri(B.modell, nå) + L.rot, vipp: .1 + L.z * .5, rot: L.rot, blink: 0 }); x.restore(); }
+}
+// Poengene telles opp oppå det zoomede bildet; stjerner, beste og knapper kommer etterpå.
+function uwSluttVis() {
+  const u = uw, S = u.slutt; uwHud();
+  uwMelding("UNWRAPPED", "", [[S.neste >= 0 ? "Next: " + BRETT[S.neste].navn + " →" : "Menu", () => S.neste >= 0 ? uwStart(S.neste) : uwAvslutt(), true], ["Menu", uwAvslutt]]);
+  const m = $("uwMelding"), kn = $("uwKnapper"); m.classList.add("uw-res"); kn.style.visibility = "hidden";
+  const sum = document.createElement("div"); sum.className = "uw-sum"; sum.textContent = "0";
+  const tr = document.createElement("div"); tr.className = "uw-trinn"; $("uwTittel").after(sum, tr);
+  const mm = Math.floor(S.tidIgjen / 60), ss = Math.floor(S.tidIgjen % 60), base = u.poeng - S.tidBonus - S.ekstra;
+  const linjer = [["SCRAPED", base], ["TIME LEFT " + mm + ":" + String(ss).padStart(2, "0"), S.tidBonus]]; if (S.ekstra) linjer.push(["CLEAN · " + S.prosent + " %", S.ekstra]);
+  let mål = 0, vist = 0, sistTikk = 0;
+  const tell = ts => { if (uw !== u) return; vist += (mål - vist) * .1; if (Math.abs(mål - vist) < 1) vist = mål; sum.textContent = Math.round(vist).toLocaleString("en");
+    if (vist !== mål && lydPa && ts - sistTikk > 55) { sistTikk = ts; tone(1300 + Math.random() * 200, 0, .025, .012, "square", .4, .2); }
+    requestAnimationFrame(tell); };
+  requestAnimationFrame(tell);
+  linjer.forEach(([navn, v], j) => setTimeout(() => { if (uw !== u) return; const el = document.createElement("div"); el.className = "trinn"; const a = document.createElement("span"), bb = document.createElement("b"); a.textContent = navn; bb.textContent = (j ? "+ " : "") + v.toLocaleString("en"); el.append(a, bb); tr.appendChild(el); requestAnimationFrame(() => el.classList.add("vis")); mål += v; }, 250 + j * 520));
+  setTimeout(() => { if (uw !== u) return;
+    $("uwTekst").textContent = u.poeng > S.før && S.før ? "New best!" : S.før ? "Best " + S.før.toLocaleString("en") : "First time on this board.";
     const rs = document.createElement("div"); rs.className = "res-stjerner uw-stjerner"; ["UNWRAPPED", "FAST", "NO HIT"].forEach(t => { const el = document.createElement("span"), st = document.createElement("b"); st.textContent = "★"; el.append(st, t); rs.appendChild(el); });
-    $("uwKnapper").before(rs); stj.forEach((ja, j) => { if (ja) setTimeout(() => { if (uw !== u) return; rs.children[j].classList.add("ja"); if (lydPa) tone(880 * Math.pow(2, j * 4 / 12), 0, .35, .04, "triangle", .6, 1); }, 400 + j * 450); }); }, 1600);
+    kn.before(rs); S.stj.forEach((ja, j) => { if (ja) setTimeout(() => { if (uw !== u) return; rs.children[j].classList.add("ja"); if (lydPa) tone(880 * Math.pow(2, j * 4 / 12), 0, .35, .04, "triangle", .6, 1); }, 300 + j * 420); });
+    setTimeout(() => { if (uw === u) kn.style.visibility = ""; }, 300 + 3 * 420); }, 250 + linjer.length * 520 + 500);
 }
 function uwLoop(t) {
   if (!uw) return; const dt = Math.min(.05, (t - uwSist) / 1000); uwSist = t;
@@ -9181,6 +9273,7 @@ function uwOppdater(dt) {
   const u = uw, G = UW_G;
   for (const q of u.flak) { q.vy += .5 * dt; q.x += q.vx * dt; q.y += q.vy * dt; q.rot += q.spinn * dt; q.liv -= dt * .8; } u.flak = u.flak.filter(q => q.liv > 0);
   for (const q of u.tekster) q.t += dt; u.tekster = u.tekster.filter(q => q.t < 1.6);
+  if (u.slutt) { u.slutt.t += dt; if (!u.slutt.vist && u.slutt.t > UW_LØFT + UW_RO + .35) { u.slutt.vist = true; uwSluttVis(); } }
   const av = u.sløyfe.av; if (av) { av.t += dt; av.vy += .9 * dt; u.sløyfe.x += av.vx * dt; u.sløyfe.y += av.vy * dt; av.rot += av.spinn * dt; }
   if (u.tilstand !== "spill") return;
   u.tid += dt; u.usårbar = Math.max(0, u.usårbar - dt);
@@ -9742,6 +9835,7 @@ function uwTegn() {
   if (c.width !== Math.round(innerWidth * dpr) || c.height !== Math.round(innerHeight * dpr)) { c.width = Math.round(innerWidth * dpr); c.height = Math.round(innerHeight * dpr); c.style.width = innerWidth + "px"; c.style.height = innerHeight + "px"; }
   const x = c.getContext("2d"); x.setTransform(dpr, 0, 0, dpr, 0, 0); x.clearRect(0, 0, innerWidth, innerHeight);
   const { f, x0, y0 } = L, P = (fx, fy) => [x0 + fx * f, y0 + fy * f];
+  if (u.slutt) { uwSluttTegn(x, P, f, x0, y0, nå); return; }
   x.drawImage(u.img, x0, y0, f, f); uwBokstavTegn(x, P, f);
   const SL = Math.min(u.indre ? 1100 : 1400, Math.round(f * dpr));
   if (u.indre) x.drawImage(uwLag(SL, 1), x0, y0, f, f);
@@ -10786,7 +10880,7 @@ function shSteg(t) {
 }
 addEventListener("resize", () => { if (sh) shOppsett(); });
 // Bare for automatisk testing lokalt (?autotest).
-if (location.search.includes("autotest")) { window.__sh = () => sh; window.__boss3D = (m, a) => { if (a != null) aktiv = a; shBoss3DLast(m); }; window.__shSmåTreff = (...a) => shSmåTreff(...a); window.__shFerdig = () => shFerdig(); window.__ark = () => ark; window.__shHud = () => shHud(); window.__shMistet = () => shMistetLiv(); window.__shOppdater = dt => { shOppdater(dt); if (sh) { sh.tid += dt; shPartikler(dt); } }; window.__shTreff = shTreff; window.__shGalaga = shGalagaStart; window.__shSopp = shSopp; window.__shBytte = shByttetStart; window.__shOrm = shOrmStart; window.__levende = levendeStart; window.__gn = () => ({ gnister, raf: gnistRAF }); window.__hendelse = t => t === "katt" ? kattBesøk() : t === "stov" ? støvstorm() : t === "ketchup" ? ketchup() : t === "tilt" ? tilt(true) : t === "vokse" ? vokseBrikke() : t === "break" ? puzzleBreak() : t === "speilX" ? speilStart("x") : t === "speilY" ? speilStart("y") : lynnedslag(); window.__shSprekk = shSprekk; window.__shP2 = () => ({ pad2X: sh.pad2X, P2Y: SH_P2Y, TOPP: SH_TOPP, H: SH_H }); window.__shTegn = () => { shRens(); shTegn(performance.now()); }; window.__spill = () => spill; window.__banner = banner; window.__kast = kast; window.__gratisPeace = async () => sjekkGratis(await hentSammen("P")); window.__fremdrift = () => fremdrift; window.__sammenP = async () => ({ lok: minLokaleSum("P"), f: fremdrift.b1, liste: (await hentSammen("P")).slice(0, 2) }); window.__shKrabbe = () => shKrabbeStart(); window.__shHopper = () => shHopperStart(); window.__shSlipp = () => shSlipp(); window.__shPY = () => SH_PY; window.__shTopp = () => SH_TOPP; window.__shKapsel = shKapsel; window.__shSnø = shSnøStart; window.__shMørke = shMørkeStart; window.__uw = () => uw; window.__uwStart = uwStart; window.__uwOppdater = dt => uwOppdater(dt); window.__uwTegn = () => uwTegn(); window.__shFrys = shFrys; window.__shPlante = shPlante; window.__myntSprites = myntSprites; window.__katt = hentKattHode; window.__pote = hentKattPote; window.__shG = () => shG; window.__shStorm = () => shMørkeStart(); window.__tellOpp = tellOpp; window.__lyd = () => { const c = lydCtx; return c ? { musikk: musikkUt(c).gain.value, effekt: effektUt(c).gain.value } : null; }; window.__speilSlutt = speilSlutt; window.__figurKant = async (n, farge) => shFigurKant(await hentBilde("figurer/" + n + ".webp"), farge); window.__hentBilde = hentBilde; window.__falskMusikk = () => { lydCtx = lydCtx || { currentTime: 0 }; const nei = () => {}; musikk = { kilde: { stop: nei, playbackRate: { v: 1, setTargetAtTime(r) { this.v = r; } } }, g: { gain: { value: .3, cancelScheduledValues: nei, setValueAtTime: nei, linearRampToValueAtTime: nei, setTargetAtTime: nei } } }; }; window.__musikkFart = () => musikk?.kilde?.playbackRate?.v ?? null; window.__musikkFor = id => musikkFor(id)?.fil; window.__geo = () => geo; window.__plasser = plasser; window.__skjermPkt = skjermPkt; }
+if (location.search.includes("autotest")) { window.__sh = () => sh; window.__boss3D = (m, a) => { if (a != null) aktiv = a; shBoss3DLast(m); }; window.__shSmåTreff = (...a) => shSmåTreff(...a); window.__shFerdig = () => shFerdig(); window.__ark = () => ark; window.__shHud = () => shHud(); window.__shMistet = () => shMistetLiv(); window.__shOppdater = dt => { shOppdater(dt); if (sh) { sh.tid += dt; shPartikler(dt); } }; window.__shTreff = shTreff; window.__shGalaga = shGalagaStart; window.__shSopp = shSopp; window.__shBytte = shByttetStart; window.__shOrm = shOrmStart; window.__levende = levendeStart; window.__gn = () => ({ gnister, raf: gnistRAF }); window.__hendelse = t => t === "katt" ? kattBesøk() : t === "stov" ? støvstorm() : t === "ketchup" ? ketchup() : t === "tilt" ? tilt(true) : t === "vokse" ? vokseBrikke() : t === "break" ? puzzleBreak() : t === "speilX" ? speilStart("x") : t === "speilY" ? speilStart("y") : lynnedslag(); window.__shSprekk = shSprekk; window.__shP2 = () => ({ pad2X: sh.pad2X, P2Y: SH_P2Y, TOPP: SH_TOPP, H: SH_H }); window.__shTegn = () => { shRens(); shTegn(performance.now()); }; window.__spill = () => spill; window.__banner = banner; window.__kast = kast; window.__gratisPeace = async () => sjekkGratis(await hentSammen("P")); window.__fremdrift = () => fremdrift; window.__sammenP = async () => ({ lok: minLokaleSum("P"), f: fremdrift.b1, liste: (await hentSammen("P")).slice(0, 2) }); window.__shKrabbe = () => shKrabbeStart(); window.__shHopper = () => shHopperStart(); window.__shSlipp = () => shSlipp(); window.__shPY = () => SH_PY; window.__shTopp = () => SH_TOPP; window.__shKapsel = shKapsel; window.__shSnø = shSnøStart; window.__shMørke = shMørkeStart; window.__uw = () => uw; window.__uwStart = uwStart; window.__uwOppdater = dt => uwOppdater(dt); window.__uwTegn = () => uwTegn(); window.__uwVunnet = () => uwVunnet(); window.__shFrys = shFrys; window.__shPlante = shPlante; window.__myntSprites = myntSprites; window.__katt = hentKattHode; window.__pote = hentKattPote; window.__shG = () => shG; window.__shStorm = () => shMørkeStart(); window.__tellOpp = tellOpp; window.__lyd = () => { const c = lydCtx; return c ? { musikk: musikkUt(c).gain.value, effekt: effektUt(c).gain.value } : null; }; window.__speilSlutt = speilSlutt; window.__figurKant = async (n, farge) => shFigurKant(await hentBilde("figurer/" + n + ".webp"), farge); window.__hentBilde = hentBilde; window.__falskMusikk = () => { lydCtx = lydCtx || { currentTime: 0 }; const nei = () => {}; musikk = { kilde: { stop: nei, playbackRate: { v: 1, setTargetAtTime(r) { this.v = r; } } }, g: { gain: { value: .3, cancelScheduledValues: nei, setValueAtTime: nei, linearRampToValueAtTime: nei, setTargetAtTime: nei } } }; }; window.__musikkFart = () => musikk?.kilde?.playbackRate?.v ?? null; window.__musikkFor = id => musikkFor(id)?.fil; window.__geo = () => geo; window.__plasser = plasser; window.__skjermPkt = skjermPkt; }
 
 
 
