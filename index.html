@@ -704,7 +704,7 @@ body.lys #modusDeal{--farge:#0f8f6c;--glod:15,143,108}
   <div class="regel">Everything counts: Game, Peace, Bubble it 1P and 2P, every board, every level, every collection. Each board list gives up to 100 points (a Bubble it list up to 1,000): #1 gets them all, the rest their share of the top score.</div>
   <div class="sammen" id="spillere"><p class="liten">Loading players …</p></div>
   <p class="kreditt">© 2001–2026 Tarjei Krogh. All photography, music and art. <a href="https://kroghx.com" target="_blank" rel="noopener">kroghx.com</a></p>
-  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 1.82<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
+  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 1.83<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
 </section>
 
 <div class="ark" id="tidUtArk" hidden style="z-index:200001">
@@ -4431,7 +4431,7 @@ if (window.ResizeObserver) { let sistH = 0, sistB = 0; new ResizeObserver(([e]) 
 // ---------- SCRUB: såpebobler vasker møkka av kunstverket ----------
 // Bildet ligger under et lag med møkk. 864 små felt teller treffene, men møkka tegnes som ett sammenhengende lag.
 // SH_TOPP: tom gang over bildet, der boblen kan bli fanget og vaske ovenfra.
-const SH_KOL = 24, SH_RAD = 36, SH_R = 0.0363, SH_TYKKEST = 20;
+const SH_KOL = 24, SH_RAD = 36, SH_R = 0.04, SH_TYKKEST = 20;
 // Bildets øvre kant i feltet. I 2P ligger bildet lenger ned, så spiller 2 får plass til sin flipper øverst.
 let SH_TOPP = 0.13; const SH_P2Y = 0.1;
 // Feltets høyde følger skjermen, så staven står nær bunnen. Settes i shOppsett.
@@ -6055,7 +6055,7 @@ function shBossSteg(g, dt, levende) {
 function shBossTreff(q) {
   const s = sh, B = s.galaga.boss;
   if (!B || (B.tilstand !== "kamp" && B.tilstand !== "inn") || B.usynlig) return false;
-  if (Math.hypot(q.x - B.x, (q.y - B.y) * 1.1) > .13) return false;
+  if (Math.hypot(q.x - B.x, (q.y - B.y) * 1.1) > (window.Boss3D?.har(shBoss3DModell()) ? .117 : .13)) return false;
   B.hp--; B.blink = 1; shLyd("bossTreff"); shStov(q.x, q.y, 5, "255,120,120", .12);
   B.skumP = B.skumP || []; if (B.skumP.length < 70) for (let n = 0; n < 2; n++) B.skumP.push({ dx: q.x - B.x + (Math.random() - .5) * .03, dy: q.y - B.y + (Math.random() - .5) * .03, r: .004 + Math.random() * .006, liv: 2.5 + Math.random() });
   if (B.hp <= 0) {
@@ -8470,7 +8470,7 @@ function shOppdater(dt) {
       const sikte = shClamp(s.padV * .6, -.6, .6) + Math.sin(s.tid * 7) * .05, v = 1.4 + Math.random() * .3;
       const d1 = shDysePos(s, -1), d2 = shDysePos(s, 1), kilder = [[d1.x, d1.y], [d2.x, d2.y]].concat(s.wingmen.filter(w => w.klar).map(w => [s.padX + w.side * (s.padW / 2 + .05), SH_PY - .03]));
       s.dyseT = s.tid;
-      for (const [kx, ky] of kilder) s.skudd.push({ x: kx + (Math.random() - .5) * .006, y: ky - .004, vx: Math.sin(sikte) * v + (Math.random() - .5) * .06, vy: -Math.cos(sikte) * v, r: .0117 + Math.random() * .0081, budsjett: angrep ? 1 : 2, fase: Math.random() * 6, angrep });
+      for (const [kx, ky] of kilder) s.skudd.push({ x: kx + (Math.random() - .5) * .006, y: ky - .004, vx: Math.sin(sikte) * v + (Math.random() - .5) * .06, vy: -Math.cos(sikte) * v, r: .0105 + Math.random() * .0073, budsjett: angrep ? 1 : 2, fase: Math.random() * 6, angrep });
       shLyd("skudd");
     }
     if (s.skuddT < -.1) s.skuddT = 0;
@@ -9539,7 +9539,7 @@ function shSkittRens(xPos) {
 }
 // Dysene: to små hull nær tuppen av hver flipper. Samme mål som tegningen, så boblene kommer ut akkurat der.
 function shDysePos(s, side) {
-  const kjF = Math.max(0, s.kjempe || 0), h = .02 * (1 + 2.2 * kjF), H = h * 1.15, r2 = H * .42, cy = shPadTopp(s) + h / 2, halv = s.padW / 2 - .009;
+  const kjF = Math.max(0, s.kjempe || 0), h = .02 * (1 + 2.2 * kjF), H = h * 1.15, r2 = H * .42, cy = shPadTopp(s) + h / 2, halv = s.padW / 2 - .01035;
   const v = side < 0 ? shFlipVinkel(s.flip[0].t) : -shFlipVinkel(s.flip[1].t), piv = s.padX + side * s.padW / 2, dx = -side * (halv - r2 * 1.2), dy = -r2 * .55;
   return { x: piv + dx * Math.cos(v) - dy * Math.sin(v), y: cy + dx * Math.sin(v) + dy * Math.cos(v) };
 }
@@ -10185,7 +10185,7 @@ function shTegn(t) {
         x.fillStyle = gl; x.fillRect(X - BR * 1.5, Y - BR * 1.5, BR * 3, BR * 3); x.restore();
         if (B.usynlig) x.globalAlpha = .16;
         let lyn = 0; if (s.mørke) for (const L of s.mørke.lyn) lyn = Math.max(lyn, L.t < .07 ? 1 : L.t < .16 ? .15 : L.t < .24 ? .8 : Math.max(0, .5 - (L.t - .24) * 2));
-        const b3m = shBoss3DModell(), b3 = window.Boss3D?.har(b3m) && window.Boss3D.tegn(x, X, Y, BR * 2.9, { modell: b3m, vri: s.tid * (b3m === "hode" ? .3 : .7) + B.x * 2, vipp: .1 + Math.sin(s.tid * 1.3) * .05 + shClamp(B.vy || 0, -.3, .3) * .8, rot: (B.rot || 0) - shClamp(B.vx || 0, -.3, .3) * .8, blink: B.blink, lyn });
+        const b3m = shBoss3DModell(), b3 = window.Boss3D?.har(b3m) && window.Boss3D.tegn(x, X, Y, BR * 2.6, { modell: b3m, vri: s.tid * (b3m === "hode" ? .3 : .7) + B.x * 2, vipp: .1 + Math.sin(s.tid * 1.3) * .05 + shClamp(B.vy || 0, -.3, .3) * .8, rot: (B.rot || 0) - shClamp(B.vx || 0, -.3, .3) * .8, blink: B.blink, lyn });
         if (!b3) { shArmer(x, sp, X, Y, BR, s.tid, B.spytt || 0, 1, B.rot || 0, (X + Y) * .013); tegnFigur(sp, X, Y, BR, B.rot, false, false, 0); }
         // Skum der skuddboblene har truffet bossen.
         for (const q of B.skumP || []) { const a = Math.min(1, q.liv), qx = X + q.dx * f, qy = Y + q.dy * f, rr = q.r * f; x.fillStyle = `rgba(250,252,255,${.75 * a})`; x.beginPath(); x.arc(qx, qy, rr, 0, 7); x.fill(); x.strokeStyle = `rgba(190,225,255,${.6 * a})`; x.lineWidth = 1; x.stroke(); }
@@ -10198,7 +10198,7 @@ function shTegn(t) {
           // Livslinja: en rolig neonlinje som glir ned (og opp) med livet. Gløden puster sakte, ingen blinking.
           const mål = shClamp(B.hp / B.maks, 0, 1), dtv = Math.min(.1, Math.max(0, s.tid - (B.hpT ?? s.tid))); B.hpT = s.tid;
           B.hpVis = B.hpVis == null ? mål : B.hpVis + (mål - B.hpVis) * Math.min(1, dtv * 3.2);
-          const bw = BR * 1.7, by = Y + BR * 1.25, x0 = X - bw / 2, lw = Math.max(2, f * .0042), puls = .5 + .5 * Math.sin(s.tid * 2.1);
+          const bw = BR * 1.7, by = Y + BR * (b3 ? 1.42 : 1.25), x0 = X - bw / 2, lw = Math.max(2, f * .0042), puls = .5 + .5 * Math.sin(s.tid * 2.1);
           x.save(); x.lineCap = "round";
           x.strokeStyle = "rgba(20,0,30,.32)"; x.lineWidth = lw + 2; x.beginPath(); x.moveTo(x0, by); x.lineTo(x0 + bw, by); x.stroke();
           x.strokeStyle = "rgba(255,90,220,.18)"; x.lineWidth = lw * .6; x.beginPath(); x.moveTo(x0, by); x.lineTo(x0 + bw, by); x.stroke();
@@ -10277,7 +10277,7 @@ function shTegn(t) {
       // Soppen: flipperen glir opp til veggen og legger seg på tvers. Etterpå glir den tilbake ned.
       const u = iOverg ? s.soppOverg : iTilbake ? 1 - s.soppTilbake : 1, e = u * u * (3 - 2 * u);
       const vx0 = (s.soppSide < 0 ? .055 : .945) * f, Y = s.padY * f, mål = s.soppSide < 0 ? Math.PI / 2 : -Math.PI / 2;
-      const halv = w / 2 - f * .009, vl = shFlipVinkel(s.flip[0].t), vr = shFlipVinkel(s.flip[1].t);
+      const halv = w / 2 - f * .01035, vl = shFlipVinkel(s.flip[0].t), vr = shFlipVinkel(s.flip[1].t);
       const skitt = side => s.stavSkitt.filter(q => side ? q.u >= 0 : q.u < 0).map(q => ({ x: q.u * w / 2, r: q.r * f, a: q.a, fase: q.fase, glans: q.glans }));
       const flippere = (uu, alfa) => {
         const ee = uu * uu * (3 - 2 * uu), X = s.padX * f + (vx0 - s.padX * f) * ee, YY = cy + (Y - cy) * ee - Math.sin(Math.PI * uu) * f * .25;
@@ -10307,7 +10307,7 @@ function shTegn(t) {
       }
     } else {
       // To flippere med ledd ytterst. Gjørme som har landet på dem blir sittende en stund.
-      const halv = w / 2 - f * .009;
+      const halv = w / 2 - f * .01035;
       const vl = shFlipVinkel(s.flip[0].t), vr = shFlipVinkel(s.flip[1].t);
       const skitt = side => s.stavSkitt.filter(q => side ? q.u >= 0 : q.u < 0).map(q => ({ x: (s.padX + q.u * s.padW / 2) * f, r: q.r * f, a: q.a, fase: q.fase, glans: q.glans }));
       shStav(x, s.padX * f - w / 2 + halv / 2, cy, halv, h * 1.15, vl, s.padX * f - w / 2, s, 1, skitt(0));
