@@ -107,38 +107,66 @@ body.lys #modusUnwrap{--farge:#c2386f;--glod:194,56,111}
 .variant button[aria-checked=true]{color:#fff;background:rgba(var(--vg),.85);border-color:rgba(var(--vg),1);box-shadow:0 0 14px rgba(var(--vg),.35)}
 .variant.v-pusle{--vg:226,61,132}
 .variant.v-scrub{--vg:224,120,0}
+/* Krogh 1.95: forsiden er hvit og ren for alle tre spill. Hvert spill er en boks med sin sterke farge:
+   ikke valgt = hvit med tynn kant og farget skrift, valgt = fylt med fargen. Ingen strek under. */
+body.lys.meny-hvit{--rom:#f8f6f2;--flate:#ffffff;--strek:rgba(40,30,20,.12)}
+#modusPuslespill,body.lys #modusPuslespill{--farge:#e2347f;--glod:226,52,127}
+#modusScrub,body.lys #modusScrub{--farge:#f07400;--glod:240,116,0}
+#modusUnwrap,body.lys #modusUnwrap{--farge:#1f63ff;--glod:31,99,255}
+.moduser{gap:.32em!important}
+.moduser .modus,body.lys .moduser .modus{opacity:1;background:#fff;border:1.5px solid var(--farge);border-radius:10px;padding:.26em .42em .3em;text-shadow:none;box-shadow:none;transition:background .2s,box-shadow .2s,transform .12s}
+.moduser .modus .tittel{font-weight:600!important;letter-spacing:.06em!important}
+.moduser .modus:hover{opacity:1;background:rgba(var(--glod),.06)}
+.moduser .modus[aria-selected="true"],body.lys .moduser .modus[aria-selected="true"]{background:var(--farge);border-color:var(--farge);text-shadow:none;box-shadow:0 4px 16px rgba(var(--glod),.32)}
+#modusPuslespill[aria-selected="true"] .tittel,#modusScrub[aria-selected="true"] .tittel,#modusUnwrap[aria-selected="true"] .tittel{color:#fff!important}
+body.lys.meny-hvit::before{background:radial-gradient(ellipse 120% 85% at 50% 12%,#ffffff 0%,#fbfaf7 55%,#f2efea 100%)}
+.moduser .modus:active{transform:scale(.96);text-shadow:none;background:rgba(var(--glod),.12)}
+/* GAME/PEACE og 1P/2P: én liten boks delt i to, den valgte halvdelen fylt. */
+.variant{display:inline-flex;gap:0;width:max-content;border:1.5px solid rgba(var(--vg),.9);border-radius:9px;overflow:hidden;background:#fff}
+.variant:empty{border:0;background:none}
+.variant button{border:0;border-radius:0;padding:6px 16px;background:transparent;color:rgba(var(--vg),1);font-weight:600}
+.variant button+button{border-left:1.5px solid rgba(var(--vg),.9)}
+.variant button[aria-checked=true]{color:#fff;background:rgba(var(--vg),1);box-shadow:none}
+.variant.v-pusle{--vg:226,52,127}
+.variant.v-scrub{--vg:240,116,0}
 .resultat.peace .ark-hoyre{display:none}
 #kraftLinje.peace #kraftMagnet,#kraftLinje.peace #kraftLim,#kraftLinje.peace #lommebok,#kraftLinje.peace .pris{display:none}
 body.peace-modus #hintKnapp{display:none!important}
-body.peace-modus #spill{z-index:1}
+body.peace-modus #spill,body.galleri #spill{z-index:1}
 #ramme::after{content:"";position:absolute;inset:-1px;border:1px solid var(--kant1,#111);box-shadow:0 0 0 1px var(--kant2,transparent);pointer-events:none;z-index:5}
 #peaceBg{position:fixed;inset:0;z-index:0;pointer-events:none}
 #resRekord.ny-rekord{color:#ff5fa2;font-weight:700}
 /* Peace: et stort, hvitt galleri, tett på. Bildet henger i en tykk ramme (rammen tegnes i oppsett()). Navn og klokke står på veggen. */
-body.peace-modus #spill .linje{display:none}
-body.peace-modus #ramme,body.peace-modus.lys #ramme{background:#ecebe6;border-color:transparent;border-radius:0}
+body.peace-modus #spill .linje,body.galleri #spill .linje{display:none}
+body.peace-modus #ramme,body.peace-modus.lys #ramme,body.galleri #ramme,body.galleri.lys #ramme{background:#f0efeb;border-color:transparent;border-radius:0}
 body.peace-modus #ramme.neon{animation:none}
-body.peace-modus #avslor{transition:opacity .55s ease}
+body.peace-modus #avslor,body.galleri #avslor{transition:opacity .55s ease}
 #veggSkilt,#veggMeny{display:none}
-body.peace-modus #veggSkilt{display:contents}
-body.peace-modus #veggNavn,body.peace-modus #veggKlokke{position:absolute;z-index:1;text-align:center;pointer-events:none;line-height:24px;height:24px}
+body.peace-modus #veggSkilt,body.galleri #veggSkilt{display:contents}
+body.peace-modus #veggNavn,body.peace-modus #veggKlokke,body.galleri #veggNavn,body.galleri #veggKlokke{position:absolute;z-index:1;text-align:center;pointer-events:none;line-height:24px;height:24px}
 #veggNavn{font-family:var(--brod);font-weight:300;font-size:17px;letter-spacing:.03em;color:#111;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
 #veggKlokke{font-family:var(--tall);font-weight:300;font-size:16px;letter-spacing:.06em;color:#5f5f5f;font-variant-numeric:tabular-nums;transition:color 1.5s ease,text-shadow 1.5s ease}
 #veggKlokke.neon{color:#ff2a8a;text-shadow:0 0 3px rgba(255,42,138,.85),0 0 10px rgba(255,42,138,.55),0 0 24px rgba(255,42,138,.35)}
-body.peace-modus #veggMeny{display:flex;position:fixed;z-index:262;top:max(6px,env(safe-area-inset-top,0px));right:max(8px,env(safe-area-inset-right,0px));gap:2px}
+body.peace-modus #veggMeny,body.galleri #veggMeny{display:flex;position:fixed;z-index:262;top:max(6px,env(safe-area-inset-top,0px));right:max(8px,env(safe-area-inset-right,0px));gap:2px}
 #veggMeny button{font-family:var(--brod);font-weight:400;font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:#7a7a7a;background:none;border:0;padding:9px 8px}
 /* Knappene er enkle, runde brytere på veggen, med vanlig skrift under. */
 #kraftLinje.peace{gap:0 30px}
-#kraftLinje.peace{align-items:start}
+#kraftLinje.peace,#kraftLinje.galleri{align-items:start}
+#kraftLinje.galleri:not(.peace),#kraftLinje.galleri:not(.peace)[class]{display:flex!important;gap:0 9px!important;flex-wrap:nowrap;justify-content:center}
+#kraftLinje.galleri:not(.peace) button,#kraftLinje.galleri:not(.peace) button[class]{letter-spacing:.1em!important;font-size:9.5px!important;min-width:38px;padding:0!important}
+#kraftLinje.galleri .lommebok,#kraftLinje.galleri .lommebok:active{align-self:center;flex-direction:row;gap:4px;margin-top:-14px;padding:6px 10px!important;border:1px solid rgba(0,0,0,.14)!important;border-radius:999px!important;background:rgba(255,255,255,.8)!important;font-family:var(--tall);font-size:12px;letter-spacing:.06em;color:#4a4a4a!important;box-shadow:none}
+#kraftLinje.galleri .lommebok::before{display:none}
+#kraftLinje.galleri:not(.peace) .pris{display:block;margin-top:-4px;font-family:var(--brod);font-size:9px;letter-spacing:.14em;color:#9a9a9a;text-transform:uppercase}
+#kraftLinje.galleri button.aktiv::before{background:radial-gradient(circle at 42% 36%,#fff 0%,#ffd1e4 55%,#ff5fa2 100%)}
 #kraftLinje.peace #kraftHint .pris{display:block;margin-top:-4px;font-family:var(--brod);font-size:9px;letter-spacing:.14em;color:#9a9a9a;text-transform:uppercase}
-body.peace-modus .bunke-tall{font-family:var(--brod);font-size:10.5px;letter-spacing:.18em;color:#555;background:rgba(255,255,255,.85);border:1px solid rgba(0,0,0,.12);box-shadow:0 1px 4px rgba(0,0,0,.08)}
-#kraftLinje.peace button{flex-direction:column;align-items:center;gap:7px;padding:0;border:0;border-radius:0;background:none;box-shadow:none;text-shadow:none;
+body.peace-modus .bunke-tall,body.galleri .bunke-tall{font-family:var(--brod);font-size:10.5px;letter-spacing:.18em;color:#555;background:rgba(255,255,255,.85);border:1px solid rgba(0,0,0,.12);box-shadow:0 1px 4px rgba(0,0,0,.08)}
+#kraftLinje.peace button,#kraftLinje.galleri button{flex-direction:column;align-items:center;gap:7px;padding:0;border:0;border-radius:0;background:none;box-shadow:none;text-shadow:none;
   font-family:var(--brod);font-weight:400;font-size:10.5px;letter-spacing:.2em;color:#4a4a4a!important;min-width:44px}
-#kraftLinje.peace button::before{content:"";width:28px;height:28px;border-radius:50%;background:radial-gradient(circle at 42% 36%,#fff 0%,#f1efea 60%,#e2dfd8 100%);
+#kraftLinje.peace button::before,#kraftLinje.galleri button::before{content:"";width:28px;height:28px;border-radius:50%;background:radial-gradient(circle at 42% 36%,#fff 0%,#f1efea 60%,#e2dfd8 100%);
   box-shadow:0 0 0 1px rgba(0,0,0,.08),0 2px 5px rgba(0,0,0,.16),inset 0 -1px 2px rgba(0,0,0,.05);transition:transform .1s ease}
-#kraftLinje.peace button:active{transform:none}
-#kraftLinje.peace button:active::before{transform:scale(.92);box-shadow:0 0 0 1px rgba(0,0,0,.1),inset 0 2px 4px rgba(0,0,0,.16)}
-#kraftLinje.peace button:disabled{opacity:.35}
+#kraftLinje.peace button:active,#kraftLinje.galleri button:active{transform:none}
+#kraftLinje.peace button:active::before,#kraftLinje.galleri button:active::before{transform:scale(.92);box-shadow:0 0 0 1px rgba(0,0,0,.1),inset 0 2px 4px rgba(0,0,0,.16)}
+#kraftLinje.peace button:disabled,#kraftLinje.galleri button:disabled{opacity:.35}
 body.peace-modus #tid,body.peace-modus #mal,body.peace-modus #tiltKnapp{display:none!important}
 .eller{font-family:var(--brod);font-weight:400;font-size:max(12px,.3em);color:var(--demp);letter-spacing:.08em;text-transform:lowercase}
 .av-linje{font-family:var(--brod);color:var(--demp);margin:10px 0 0;font-size:14px}
@@ -715,7 +743,7 @@ body.lys #modusDeal{--farge:#0f8f6c;--glod:15,143,108}
   <div class="regel">Everything counts: Game, Peace, Bubble it 1P and 2P, every board, every level, every collection. Each board list gives up to 100 points (a Bubble it list up to 1,000): #1 gets them all, the rest their share of the top score.</div>
   <div class="sammen" id="spillere"><p class="liten">Loading players …</p></div>
   <p class="kreditt">© 2001–2026 Tarjei Krogh. All photography, music and art. <a href="https://kroghx.com" target="_blank" rel="noopener">kroghx.com</a></p>
-  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 1.94<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
+  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 1.95<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
 </section>
 
 <div class="ark" id="tidUtArk" hidden style="z-index:200001">
@@ -1091,7 +1119,7 @@ function tegnFaner() {
 let modus = "pusle";
 try { const m = localStorage.getItem("sm-modus"); if (m === "scrub" || m === "unwrap") modus = m; } catch {}
 function velgModus(m) { modus = m; try { localStorage.setItem("sm-modus", m); } catch {} tegnMeny(); }
-function plasserVariant() { const vr = $("variant"), valgt = $(modus === "pusle" ? "modusPuslespill" : modus === "unwrap" ? "modusUnwrap" : "modusScrub"); if (!vr || !valgt) return; vr.style.paddingLeft = Math.max(0, valgt.offsetLeft - vr.offsetLeft) + "px"; }
+function plasserVariant() { const vr = $("variant"), valgt = $(modus === "pusle" ? "modusPuslespill" : modus === "unwrap" ? "modusUnwrap" : "modusScrub"); if (!vr || !valgt) return; vr.style.paddingLeft = ""; vr.style.marginLeft = "0px"; vr.style.marginLeft = Math.max(0, valgt.offsetLeft - vr.offsetLeft) + "px"; }
 function tilpassLogo() {
   const meny = $("meny"); if (!meny || meny.hidden) return;
   const cs = getComputedStyle(meny), bredde = meny.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
@@ -1121,7 +1149,7 @@ $("modusScrub").onclick = () => { ctx(); velgModus("scrub"); };
 $("modusUnwrap").onclick = () => { ctx(); velgModus("unwrap"); }
 $("albumKnapp").onclick = visAlbum; $("albumUt").onclick = lukkAlbum;;
 // Lys vegg i HIDDEN MOTIVES (menyen og brettet), mørk i BUBBLE IT.
-function oppdaterTema() { const meny = !$("meny").hidden; document.body.classList.toggle("lys", !$("spill").hidden || (meny && (modus === "pusle" || modus === "unwrap"))); document.body.classList.toggle("rosa", meny && modus === "unwrap"); }
+function oppdaterTema() { const meny = !$("meny").hidden; document.body.classList.toggle("lys", !$("spill").hidden || meny); document.body.classList.toggle("meny-hvit", meny); document.body.classList.toggle("rosa", false); }
 function tegnModus() {
   $("modusPuslespill").setAttribute("aria-selected", String(modus === "pusle"));
   $("modusScrub").setAttribute("aria-selected", String(modus === "scrub"));
@@ -1129,7 +1157,7 @@ function tegnModus() {
   $("modusTekst").textContent = modus === "pusle"
     ? (iPeace() ? "Piece it in peace. No fire, no surprises, no power-ups to buy. Just the pieces, calm music and a quiet clock. Beat the clock, and climb the Peace list."
       : "You never see the picture until it's done. Place the pieces before the clock runs out, and the image reveals itself.")
-    : modus === "unwrap" ? "The art is wrapped as a gift. Cut anywhere with your finger: close a loop or cut across, and the smaller piece tears off. Don't let anything touch your line while you cut. Unwrap 80 % to win."
+    : modus === "unwrap" ? "The art is wrapped. Scratch the paper off with your finger and brush away the scraps. Don't let anything touch your finger while you scratch. Unwrap 80 % to win."
     : variant.scrub === "2p" ? "Two players, one screen. A flipper at each end: wash the picture clean together. No shop, only what the mud gives you."
     : "The art is buried in mud. Wash it off with soap bubbles. Clear a board in either game and the next one opens.";
   // Bryteren under spillet som er valgt (BUBBLE IT får 1P | 2P når 2P er bygget).
@@ -2108,9 +2136,10 @@ async function startSpill(i, n, gjenoppta) {
   spill = { brett: i, n: o.n, k: o.k, r: o.r, img, biter, start: gjenoppta?.start ? Date.now() - gjenoppta.start : 0, slutt: 0, lagt: biter.filter(b => b.ferdig).length, ztopp: biter.length, straff: gjenoppta?.straff || 0 };
   $("hudKode").textContent = kode(i); $("hudNavn").textContent = BRETT[i].navn; settBildeKant(img);
   spill.peace = iPeace(); document.body.classList.toggle("peace-modus", spill.peace);
-  if (spill.peace) { stoppPad(); spillMusikk(BRETT[i].id); peaceBg(i); $("veggNavn").textContent = BRETT[i].navn; }
+  // Krogh 1.95: vanlig PIECE IT har samme galleri som Peace: hvit vegg, ramme, klokke over og tittel under.
+  spill.galleri = true; document.body.classList.add("galleri"); peaceBg(i); $("veggNavn").textContent = BRETT[i].navn;
+  if (spill.peace) { stoppPad(); spillMusikk(BRETT[i].id); }
   else if (!gjenoppta || musikkØnske !== BRETT[i].id) spillMusikk(BRETT[i].id);
-  if (!spill.peace) peaceBg(-1);
   spill.hint = HINT_ANTALL; visHintKnapp();
   spill.tilt = 2; visTilt();
   // Beta: Krogh skal alltid kunne prøve TILT, MAGNET og HINT to ganger hver (2×2 + 2×3 + 2×1 = 12). Ved lansering: fjernes.
@@ -2311,7 +2340,7 @@ function oppsett() {
   const sv = getComputedStyle(document.documentElement);
   const venstre = parseFloat(sv.getPropertyValue("--sv")) || 0;
   const forhold = spill.img.naturalWidth && spill.img.naturalHeight ? spill.img.naturalWidth / spill.img.naturalHeight : 1;
-  const staaende = H > W, peace = !!spill.peace, st = parseFloat(sv.getPropertyValue("--st")) || 0;
+  const staaende = H > W, peace = !!spill.galleri, st = parseFloat(sv.getPropertyValue("--st")) || 0;
   // Peace: bildet henger i en tykk ramme på veggen (passepartout + svart tre). RT er hele tykkelsen.
   const RT = peace ? Math.round(Math.max(20, Math.min(40, Math.min(W, H) * .066))) : 0;
   let x0, y0, bredde, hoyde, hoyreKant, toppKant;
@@ -2811,8 +2840,8 @@ function visCredits() { for (const id of ["creditTall", "shCreditTall"]) { const
 function visKraftLinje() {
   const el = $("kraftLinje"), vis = !!spill && !spill.slutt && !$("spill").hidden && $("shatter").hidden && modus !== "scrub" && !!geo;
   el.hidden = !vis; if (!vis) return;
-  el.classList.toggle("peace", !!spill.peace);
-  const H = innerHeight, w = el.offsetWidth || 300, hjørne = spill.peace && !geo.staaende;
+  el.classList.toggle("peace", !!spill.peace); el.classList.toggle("galleri", !!spill.galleri);
+  const H = innerHeight, w = el.offsetWidth || 300, hjørne = spill.galleri && !geo.staaende;
   el.style.left = (hjørne ? innerWidth - w / 2 - 22 : Math.min(innerWidth - w / 2 - 8, Math.max(w / 2 + 8, geo.x0 + geo.bredde / 2))) + "px";
   // Alle knappene skal være innenfor skjermen, med luft ned til kanten (to rader på iPad også).
   const topp = geo.staaende ? H - BAR + 6 : hjørne ? H - 74 : Math.min(H - BAR + 8, geo.y0 + geo.hoyde + 12), hEl = el.offsetHeight || 34;
@@ -2940,10 +2969,10 @@ function peaceBg(i) {
     if (nøkkel !== sist) {
       sist = nøkkel; c.width = Math.round(W * dpr); c.height = Math.round(H * dpr); c.style.width = W + "px"; c.style.height = H + "px";
       const x = c.getContext("2d"); x.setTransform(dpr, 0, 0, dpr, 0, 0);
-      const g = x.createLinearGradient(0, 0, 0, H); g.addColorStop(0, "#ecebe7"); g.addColorStop(.35, "#f5f4f1"); g.addColorStop(1, "#e8e6e1"); x.fillStyle = g; x.fillRect(0, 0, W, H);
+      const g = x.createLinearGradient(0, 0, 0, H); g.addColorStop(0, "#f0efec"); g.addColorStop(.35, "#f7f6f4"); g.addColorStop(1, "#edebe7"); x.fillStyle = g; x.fillRect(0, 0, W, H);
       const cx = r.width ? r.left + r.width / 2 : W / 2, cy = r.height ? r.top + r.height * .4 : H * .4, rad = Math.max(W, H) * .75;
       const l = x.createRadialGradient(cx, cy, 0, cx, cy, rad); l.addColorStop(0, "rgba(255,254,250,.95)"); l.addColorStop(.45, "rgba(255,253,247,.45)"); l.addColorStop(1, "rgba(255,253,247,0)"); x.fillStyle = l; x.fillRect(0, 0, W, H);
-      const v = x.createRadialGradient(W / 2, H * .45, Math.min(W, H) * .4, W / 2, H * .45, Math.hypot(W, H) * .7); v.addColorStop(0, "rgba(60,55,50,0)"); v.addColorStop(1, "rgba(60,55,50,.12)"); x.fillStyle = v; x.fillRect(0, 0, W, H);
+      const v = x.createRadialGradient(W / 2, H * .45, Math.min(W, H) * .4, W / 2, H * .45, Math.hypot(W, H) * .7); v.addColorStop(0, "rgba(60,55,50,0)"); v.addColorStop(1, "rgba(60,55,50,.09)"); x.fillStyle = v; x.fillRect(0, 0, W, H);
       x.fillStyle = x.createPattern(korn, "repeat"); x.fillRect(0, 0, W, H);
     }
     bgRAF = setTimeout(steg, 400);
@@ -2967,6 +2996,7 @@ function tikk() {
     return; }
   const s = sekunder(), frist = spill ? tidsfrist(spill.brett, spill.n) : 0, igjen = Math.max(0, frist - s);
   $("tid").textContent = fmt(igjen);
+  if (spill?.galleri) { const k = $("veggKlokke"); k.textContent = fmt(igjen); k.classList.toggle("neon", !!spill.start && !spill.slutt && igjen <= 30); }
   $("tid").classList.toggle("gar", !!spill?.start && !spill.slutt);
   $("tid").classList.toggle("slutt", !!spill?.start && !spill.slutt && igjen <= 30);
   $("tid").classList.toggle("minutt", !!spill?.start && !spill.slutt && igjen <= 60 && igjen > 30);
@@ -4421,7 +4451,7 @@ setInterval(() => {
   }
 }, 100);
 function tilMeny() {
-  stoppFest(); stoppMusikk(); stoppPad(); document.body.classList.remove("peace-modus"); peaceBg(-1); $("bunkeTall").hidden = true; $("kraftLinje").hidden = true;
+  stoppFest(); stoppMusikk(); stoppPad(); document.body.classList.remove("peace-modus", "galleri"); peaceBg(-1); $("bunkeTall").hidden = true; $("kraftLinje").hidden = true;
   clearInterval(timer); spill = null;
   document.querySelectorAll(".bit").forEach(e => e.remove());
   $("spill").hidden = true; $("meny").hidden = false;
