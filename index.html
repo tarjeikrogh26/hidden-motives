@@ -4771,7 +4771,10 @@ let shBoss3DLaster = false;
 function shBoss3DLast() {
   if (shBoss3DLaster || window.Boss3D) return; shBoss3DLaster = true;
   const sc = document.createElement("script"); sc.src = "3d/boss3d.js"; sc.async = true;
-  sc.onload = () => { if (window.Boss3D) window.Boss3D.last("3d/duo.glb", Math.min(512, Math.round(240 * Math.min(devicePixelRatio || 1, 2)))); };
+  // Figuren ligger som base64 i 3d/duo.js (artifact-siden serverer ikke .glb).
+  sc.onload = () => { const d = document.createElement("script"); d.src = "3d/duo.js"; d.async = true;
+    d.onload = () => { try { const bin = atob(window.DuoGLB), u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); window.DuoGLB = null; if (window.Boss3D) window.Boss3D.last(u.buffer, Math.min(512, Math.round(240 * Math.min(devicePixelRatio || 1, 2)))); } catch {} };
+    document.head.appendChild(d); };
   sc.onerror = () => { shBoss3DLaster = false; }; document.head.appendChild(sc);
 }
 async function shatterStart(i, poeng = 0, liv = null) {
