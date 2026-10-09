@@ -600,6 +600,26 @@ body:has(.resultat.vis) #spill .linje{opacity:0;pointer-events:none;transition:o
 #mgUt{position:absolute;top:max(8px,env(safe-area-inset-top,0px));left:max(8px,env(safe-area-inset-left,0px));z-index:3}
 .variant.v-unwrap{--vg:31,99,255}
 #hit{touch-action:none;background:#14110d}
+/* FREEZE ALL ACTIVITY: bildet øverst, tolv malingsbøtter under (eller ved siden av på bred skjerm). */
+#frys{background:#14110d;color:#f4efe8;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:16px;z-index:40}
+#frys[hidden]{display:none}
+#frys .fr-topp{text-align:center;display:flex;flex-direction:column;gap:4px;animation:frInn .5s ease both}
+#frys .fr-topp b{font-family:var(--tall,monospace);font-weight:600;letter-spacing:.24em;font-size:15px;color:#9fe9ff;text-shadow:0 0 14px rgba(120,220,255,.8)}
+#frys .fr-topp span{font-size:14px;color:rgba(244,239,232,.8)}
+@keyframes frInn{from{opacity:0;transform:scale(1.15);filter:blur(4px)}to{opacity:1;transform:none;filter:none}}
+#frys .fr-midt{display:flex;flex-direction:column;align-items:center;gap:12px}
+#frys.bred .fr-midt{flex-direction:row;align-items:center;gap:20px}
+#frCanvas{touch-action:none;box-shadow:0 14px 40px rgba(0,0,0,.6);border:1px solid rgba(255,255,255,.2)}
+#frys .fr-side{display:flex;flex-direction:column;align-items:center;gap:10px;max-width:360px}
+#frys .fr-botter{display:grid;grid-template-columns:repeat(6,42px);gap:8px}
+#frys .fr-botte{width:42px;height:42px;border-radius:50%;border:2px solid rgba(255,255,255,.25);cursor:pointer;padding:0;
+  background:radial-gradient(circle at 34% 30%,rgba(255,255,255,.75) 0 9%,rgba(255,255,255,0) 30%),radial-gradient(circle at 50% 60%,var(--f) 0 62%,color-mix(in srgb,var(--f) 70%,#000) 100%);
+  box-shadow:inset 0 -4px 8px rgba(0,0,0,.35),0 3px 8px rgba(0,0,0,.4);transition:transform .12s}
+#frys .fr-botte.valgt{transform:translateY(-4px) scale(1.12);border-color:#fff;box-shadow:inset 0 -4px 8px rgba(0,0,0,.35),0 0 0 3px rgba(255,255,255,.25),0 8px 16px rgba(0,0,0,.5)}
+#frys .fr-info{margin:0;font-size:13px;color:rgba(244,239,232,.7);text-align:center}
+#frys .fr-knapper{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+#frys .fr-knapper .sekundar{color:#f4efe8;border-color:rgba(244,239,232,.5)}
+.brett .slett{position:absolute;top:6px;right:6px;z-index:2;font:600 11px/1 var(--brod,sans-serif);letter-spacing:.08em;padding:6px 8px;border-radius:6px;border:0;background:rgba(17,17,17,.85);color:#fff;cursor:pointer}
 #haCanvas{position:absolute;inset:0;touch-action:none}
 #haUt{position:absolute;top:max(8px,env(safe-area-inset-top,0px));left:max(8px,env(safe-area-inset-left,0px));z-index:3}
 .variant.v-hit{--vg:20,150,90}
@@ -788,7 +808,7 @@ body.lys #modusDeal{--farge:#0f8f6c;--glod:15,143,108}
   <div class="regel">Everything counts: Game, Peace, Bubble it 1P and 2P, every board, every level, every collection. Each board list gives up to 100 points (a Bubble it list up to 1,000): #1 gets them all, the rest their share of the top score.</div>
   <div class="sammen" id="spillere"><p class="liten">Loading players …</p></div>
   <p class="kreditt">© 2001–2026 Tarjei Krogh. All photography, music and art. <a href="https://kroghx.com" target="_blank" rel="noopener">kroghx.com</a></p>
-  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 2.04<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
+  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 2.05<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
 </section>
 
 <div class="ark" id="tidUtArk" hidden style="z-index:200001">
@@ -922,6 +942,13 @@ body.lys #modusDeal{--farge:#0f8f6c;--glod:15,143,108}
   <button class="sh-ut" id="mgUt">Menu</button>
   <div class="sh-melding aktiv" id="mgMelding" hidden><b id="mgTittel"></b><span id="mgTekst"></span><div class="knapper" id="mgKnapper"></div></div>
 </section>
+<section id="frys" class="skjerm" hidden aria-label="Freeze all activity">
+  <div class="fr-topp"><b>FREEZE ALL ACTIVITY</b><span>This looks like a good piece of art.</span></div>
+  <div class="fr-midt"><canvas id="frCanvas"></canvas>
+  <div class="fr-side"><div class="fr-botter" id="frBotter"></div><p class="fr-info" id="frInfo"></p>
+  <div class="fr-knapper"><button class="hoved" id="frLagre">SAVE TO USER SEASON</button><button class="sekundar" id="frSkip">SKIP</button></div></div></div>
+  <div class="sh-melding aktiv" id="frMelding" hidden><b id="frTittel"></b><span id="frTekst"></span><div class="knapper" id="frKnapper"></div></div>
+</section>
 <section id="hit" class="skjerm" hidden aria-label="Hit art">
   <canvas id="haCanvas"></canvas>
   <button class="sh-ut" id="haUt">Menu</button>
@@ -966,11 +993,15 @@ const _ni = (s, ut) => [1, 2, 3, 4, 5, 6, 7, 8, 9, 10].filter(n => n !== ut).map
 const SESONG_BRETT = [_ni(0, 10), _ni(1, 9), _ni(2, 10), _ni(3, 7), _ni(4, 2), [[0, 10], [1, 9], [2, 10], [3, 7], [4, 2], [5, 6], [5, 7], [5, 8], [5, 9]]];
 let aktiv = 0;
 let SAMLING = "01";
+// USER SEASON (egne malte brett) har indeksen etter de vanlige sesongene.
+const BRUKER = SAMLINGER.length, BRUKER_MAKS = 9;
+let BRUKER_BRETT = [];
 // Kryptiske samlingsnavn, brukes i rekkefølge: /01, /02, /03 …
 const SAMLINGSNAVN = ["The Velvet Asylum", "Teeth in the Garden", "Creature Kingdom", "Dark City", "A Museum of Small Lies",
   "Mixed Media", "The Lantern Cult", "Weather for Ghosts", "The Hollow Parade", "Sugar for the Wolves", "The Last Polite Society", "Quiet Riot Hotel"];
 let BRETT = [];
 function velgSamling(j) {
+  if (j === BRUKER) { aktiv = j; SAMLING = "US"; BRETT = BRUKER_BRETT.map(b => ({ ...b })); return; }
   aktiv = j; const sm = SAMLINGER[j]; SAMLING = sm.nr;
   BRETT = SESONG_BRETT[j].map(([s, n]) => ({ id: SAMLINGER[s].pre + n, src: SAMLINGER[s].mappe + n + ".jpg", navn: NAVN_SAMLING[s][n - 1], s }));
   try { localStorage.setItem("sm-samling", String(j)); } catch {}
@@ -1075,7 +1106,7 @@ function uwBokstavSjekk() {
     for (let k = 0; k < 18; k++) { const a = Math.random() * 6.28; u.flak.push({ x: B.x, y: B.y, vx: Math.cos(a) * .25, vy: Math.sin(a) * .25 - .1, r: .005 + Math.random() * .006, rot: a, spinn: 6, liv: .8, farge: "#ffd76a", form: [1, .5, 1, .5, 1, .5, 1] }); } }
 }
 // ---------- Samlealbum ----------
-function sesongBrett(j) { return SESONG_BRETT[j].map(([s, n]) => ({ id: SAMLINGER[s].pre + n, src: SAMLINGER[s].mappe + n + ".jpg", navn: NAVN_SAMLING[s][n - 1] })); }
+function sesongBrett(j) { if (!SESONG_BRETT[j]) return BRETT.map(b => ({ ...b })); return SESONG_BRETT[j].map(([s, n]) => ({ id: SAMLINGER[s].pre + n, src: SAMLINGER[s].mappe + n + ".jpg", navn: NAVN_SAMLING[s][n - 1] })); }
 function sesongProsent(j) {
   const brett = sesongBrett(j); let har = 0, av = 0;
   brett.forEach((b, i) => { const st = stempler(b.id); har += st.p + st.b + st.u + bokstavHar(j, i); av += 4; });
@@ -1158,8 +1189,13 @@ function tegnFaner() {
     b.onclick = () => { if (!sesongApen(j)) { banner("LOCKED", "WIN A WEEKLY RACE IN /" + SAMLINGER[j - 1].nr + " · OR BUY IT WHEN ALL BOARDS ARE PLAYED", "#ffd27a", 3000); return; } velgSamling(j); tegnMeny(); };
     f.appendChild(b);
   });
+  // USER SEASON: dine egne malte brett (fra FREEZE ALL ACTIVITY i UNWRAP IT).
+  if (BRUKER_BRETT.length) { const b = document.createElement("button"); b.setAttribute("role", "tab"); b.setAttribute("aria-selected", String(aktiv === BRUKER)); b.className = "bruker-fane"; b.append("/US"); const n = document.createElement("b"); n.textContent = "User Season"; b.append(n);
+    b.onclick = () => { velgSamling(BRUKER); tegnMeny(); if (BRUKER_BRETT.length > BRUKER_MAKS) banner("ONE TOO MANY", "WE KEPT YOUR EXTRA PAINTING · THERE'S ONLY ROOM FOR NINE · PICK ONE TO LET GO", "#9fe9ff", 4200); }; f.appendChild(b); }
   if (shSkjultÅpen() || nøklerLagret().length) { const b = document.createElement("button"); b.setAttribute("role", "tab"); b.className = "skjult-fane"; b.append("/??"); const n = document.createElement("b"); n.textContent = "The Hidden Season"; b.append(n);
     b.onclick = () => banner("THE HIDDEN SEASON", nøklerLagret().length + " OF 9 KEYS · NINE BOARDS ARE BEING PAINTED · THEY OPEN SOON", "#d6b4ff", 3600); f.appendChild(b); }
+  const bruker = aktiv === BRUKER; $("albumKnapp").hidden = bruker; $("samling2").hidden = bruker;
+  if (bruker) { const t = $("samlingTittel"); t.replaceChildren("/US "); const bb = document.createElement("b"); bb.textContent = "User Season"; const an = document.createElement("span"); an.className = "antall"; an.textContent = BRETT.length + (BRETT.length === 1 ? " board" : " boards") + " · painted by you · only on this device"; t.append(bb, an); return; }
   $("albumKnapp").textContent = "ALBUM · " + sesongProsent(aktiv) + " % · " + ordVis(aktiv);
   const t = $("samlingTittel"); t.replaceChildren("/" + SAMLING + " "); const bb = document.createElement("b"); bb.textContent = SAMLINGSNAVN[aktiv]; const an = document.createElement("span"); an.className = "antall"; an.textContent = BRETT.length + " boards"; t.append(bb, an);
 
@@ -1269,9 +1305,10 @@ async function tegnMeny() {
     merke.append(nr, st); kort.appendChild(merke);
     if (modus === "hit") st.textContent = haKlart().has(i) ? "Cleared" : "";
     if (åpen) kort.onclick = () => { if (modus === "hit") { ctx(); haStart(i); return; } if (modus === "scrub") { ctx(); shatterStart(i); } else if (modus === "unwrap") { ctx(); if (variant.unwrap === "mind") mgStart(i); else uwStart(i); } else visStartark(i); };
+    if (b.bruker && BRETT.length > BRUKER_MAKS) { const x = document.createElement("button"); x.className = "slett"; x.textContent = "LET GO"; x.onclick = async ev => { ev.stopPropagation(); if (!confirm("Let go of " + b.navn + "?")) return; await brukerSlett(b.id); velgSamling(BRUKER); tegnMeny(); }; kort.appendChild(x); }
     liste.appendChild(kort);
     hentBilde(b.src).then(img => {
-      if (erLost(b.id) || (iPeace() && peaceBeste(b.id))) { c.width = 400; c.height = 400; const x = c.getContext("2d"); x.drawImage(img, 0, 0, 400, 400); c.style.imageRendering = "auto"; }
+      if (b.bruker || erLost(b.id) || (iPeace() && peaceBeste(b.id))) { c.width = 400; c.height = 400; const x = c.getContext("2d"); x.drawImage(img, 0, 0, 400, 400); c.style.imageRendering = "auto"; }
       else { c.width = 7; c.height = 7; const x = c.getContext("2d"); x.drawImage(img, 0, 0, 7, 7); } // grov mosaikk: ingen fasit
     });
   });
@@ -9091,6 +9128,8 @@ async function uwStart(i) {
     liv: 3, poeng: 0, tid: 0, frist: toLag ? 240 : 180, tilstand: "spill", fiender, flak: [], tekster: [], figurer: null, usårbar: 0, krav: .8,
     bånd: { x: bx, y: by }, sløyfe: { x: bx, y: by, r: .085, av: null, ingen: true }, revet: 0, slipp: false, låst: false, sjekkT: 0 };
   uwSkitt(0, 0, G - 1, G - 1); uw.bokstav = uwBokstavStart(uw);
+  // FREEZE ALL ACTIVITY: på omtrent hvert fjerde brett, et sted mellom 25 og 60 % avpakket.
+  uw.frysPlan = Math.random() < .25 || location.search.includes("frys") ? .25 + Math.random() * .35 : 0;
   uw.knivType = "hobby"; uw.blad = { skarp: 1, biter: 0 }; uw.paneler = []; uw.form = null;
   for (let k = 0; k < 0; k++) uw.fiender.push({ type: "lim", x: .2 + Math.random() * .6, y: .72 + Math.random() * .18, a: -1.5, r: .02, fase: Math.random() * 6, hvile: 4 });
   uwVerktøyOppdater(); if (toLag) uwTekst("A GIFT INSIDE A GIFT", .5, .5);
@@ -9526,6 +9565,7 @@ function uwOppdater(dt) {
   if (u.tid >= u.frist) { u.tilstand = "over"; uwMelding("Time's up", Math.floor(uwSynlig(u) * 100) + " % unwrapped. You need 80 %.", [["Try again", () => uwStart(u.i), true], ["Menu", uwAvslutt]]); return; }
   if (u.kniv) uwKniv(dt);
   if (u.tilstand !== "spill") return;
+  uwFrysSjekk(); if (u.tilstand !== "spill") return;
   uwTripSteg(dt); uwRegnSteg(dt); uwMalingSteg(dt); uwLappSteg(dt); uwKastSteg(dt); // Hagen (edderkopp og muldvarp) er tatt ut (Krogh).
   for (const e of [...u.fiender]) {
     if (u.eff?.frys > 0) continue; // FREEZE: står stille og er ufarlig.
@@ -10280,6 +10320,116 @@ function mgMelding(tittel, tekst, knapper) {
 }
 function mgAvslutt() { cancelAnimationFrame(mgRAF); mgRAF = 0; mg = null; mgMelding(); $("mind").hidden = true; tilMeny(); }
 $("mgCanvas").addEventListener("pointerdown", mgTrykk); $("mgUt").onclick = mgAvslutt;
+
+// ---------- USER SEASON ----------
+// Krogh 2.05: dine egne brett. De lages i UNWRAP IT (FREEZE ALL ACTIVITY), lagres bare på denne enheten (IndexedDB),
+// og kan spilles i alle fire spillene. Ni plasser; et tiende maleri tas vare på til du velger hvilket som skal gå.
+function brukerDB() { return new Promise((ok, feil) => { const r = indexedDB.open("hm-bruker", 1); r.onupgradeneeded = () => r.result.createObjectStore("brett", { keyPath: "id" }); r.onsuccess = () => ok(r.result); r.onerror = () => feil(r.error); }); }
+const brukerTx = (idb, modus, fn) => new Promise((ok, feil) => { const t = idb.transaction("brett", modus), q = fn(t.objectStore("brett")); t.oncomplete = () => ok(q?.result); t.onerror = () => feil(t.error); });
+async function brukerLast() {
+  try { const idb = await brukerDB(), alle = await brukerTx(idb, "readonly", st => st.getAll()); alle.sort((a, b) => a.tid - b.tid);
+    const gamle = new Map(BRUKER_BRETT.map(b => [b.id, b.src]));
+    BRUKER_BRETT = alle.map(b => ({ id: b.id, src: gamle.get(b.id) || URL.createObjectURL(b.blob), navn: b.navn, bruker: true })); } catch { BRUKER_BRETT = []; }
+  if (aktiv === BRUKER) { if (!BRUKER_BRETT.length) velgSamling(0); else BRETT = BRUKER_BRETT.map(b => ({ ...b })); }
+}
+async function brukerLagre(blob, navn) { const idb = await brukerDB(), id = "u" + Date.now().toString(36); await brukerTx(idb, "readwrite", st => st.put({ id, blob, navn, tid: Date.now() })); await brukerLast(); return id; }
+async function brukerSlett(id) { const idb = await brukerDB(); await brukerTx(idb, "readwrite", st => st.delete(id)); await brukerLast(); }
+brukerLast().then(() => { if (!$("meny").hidden) tegnMeny(); });
+
+// ---------- FREEZE ALL ACTIVITY (i UNWRAP IT) ----------
+// Av og til, midt i et brett, stopper alt: «This looks like a good piece of art.» Du maler på bildet med fingeren fra tolv bøtter
+// og kan lagre det som ditt eget brett. Malingen er tykk og blank, og den trekkes mot fargefeltet du startet i, så den legger seg pent.
+const FR_FARGER = [["RED", "#e3172a"], ["WHITE", "#f6f3ec"], ["BLACK", "#141414"], ["ORANGE", "#ff6a00"], ["YELLOW", "#ffe100"], ["TURQUOISE", "#00d2c6"],
+  ["PINK", "#ff2d95"], ["SILVER", "#c9ced6"], ["MINT", "#8ef2c2"], ["COBALT", "#1d4dff"], ["PURPLE", "#8a2be2"], ["GOLD", "#d9a521"]];
+let fr = null, frRAF = 0;
+function uwFrysSjekk() {
+  const u = uw; if (!u.frysPlan || u.trip || u.regnUW || u.maling || u.slutt) return;
+  if (uwSynlig(u) >= u.frysPlan) uwFrys();
+}
+function uwFrys() {
+  const u = uw; u.frysPlan = 0; u.tilstand = "frys"; cancelAnimationFrame(uwRAF); uwRAF = 0;
+  // Et bilde av brettet akkurat nå: motivet, papiret som er igjen, malingen og regnet.
+  const N = 1024, c = Object.assign(document.createElement("canvas"), { width: N, height: N }), x = c.getContext("2d", { willReadFrequently: true });
+  x.drawImage(u.img, 0, 0, N, N); if (u.indre && u.lagS[1]?.lag) x.drawImage(u.lagS[1].lag, 0, 0, N, N); if (u.lagS[0]?.lag) x.drawImage(u.lagS[0].lag, 0, 0, N, N);
+  if (u.maling) x.drawImage(u.maling.c, 0, 0, N, N); if (u.regnUW) x.drawImage(u.regnUW.c, 0, 0, N, N);
+  if (lydPa) { shGlid(660, 90, 1.1, .05, "sawtooth", .5, .6); shSus(.5, "highpass", 5000, .03, .7, .4, 1); [0, 7, 12].forEach((st, j) => tone(392 * Math.pow(2, st / 12), .5 + j * .12, .9, .02, "sine", .4, 1.4)); }
+  const navn = "Frozen: " + (BRETT[u.i]?.navn || "Untitled"), i = u.i;
+  setTimeout(() => frStart(c, navn, i), 450);
+}
+function frStart(kilde, navn, i) {
+  const N = 1024, mal = Object.assign(document.createElement("canvas"), { width: N, height: N }), mx = mal.getContext("2d");
+  fr = { N, kilde, navn, i, sd: kilde.getContext("2d").getImageData(0, 0, N, N).data, mal, mx, md: mx.createImageData(N, N), farge: 0, strøk: null, skitten: true, malt: 0, tid: 0, t1: document.createElement("canvas"), t2: document.createElement("canvas") };
+  fr.t1.width = fr.t1.height = fr.t2.width = fr.t2.height = N;
+  $("frys").hidden = false; $("frMelding").hidden = true; $("frLagre").disabled = BRUKER_BRETT.length > BRUKER_MAKS;
+  $("frInfo").textContent = BRUKER_BRETT.length > BRUKER_MAKS ? "Your User Season has an extra painting waiting. Let one go there first." : "Dip your finger in a bucket and paint. Tap to throw paint. Save it, and it becomes your own board.";
+  const bt = $("frBotter"); bt.replaceChildren();
+  FR_FARGER.forEach(([navn, hex], k) => { const b = document.createElement("button"); b.className = "fr-botte" + (k === 0 ? " valgt" : ""); b.style.setProperty("--f", hex); b.setAttribute("aria-label", navn); b.title = navn;
+    b.onclick = () => { fr.farge = k; bt.querySelectorAll(".fr-botte").forEach((e, j) => e.classList.toggle("valgt", j === k)); if (lydPa) shSus(.18, "bandpass", 700 + k * 40, .05, 3, .7, .3); }; bt.appendChild(b); });
+  frLayout(); cancelAnimationFrame(frRAF); frRAF = requestAnimationFrame(frLoop);
+}
+function frLayout() { if (!fr) return; const c = $("frCanvas"), bred = innerWidth > innerHeight * 1.2, side = Math.floor(Math.max(160, bred ? Math.min(innerHeight - 130, innerWidth - 420) : Math.min(innerWidth - 32, innerHeight - 330, 760))), dpr = Math.min(devicePixelRatio || 1, 2);
+  if (c.width !== side * dpr) { c.width = c.height = side * dpr; c.style.width = c.style.height = side + "px"; fr.skitten = true; } fr.side = side; $("frys").classList.toggle("bred", bred); }
+addEventListener("resize", frLayout);
+function frLoop(t) { if (!fr) return; if (fr.skitten) { fr.skitten = false; frTegn(); } frRAF = requestAnimationFrame(frLoop); }
+// Tykk maling: skygge under, malingen, og en lys kant øverst til venstre (som et strøk som står opp fra bildet).
+function frKomponer(x, S) {
+  const { N, t1, t2, mal } = fr, a = t1.getContext("2d"), b = t2.getContext("2d");
+  a.clearRect(0, 0, N, N); a.globalCompositeOperation = "source-over"; a.drawImage(mal, 0, 0); a.globalCompositeOperation = "source-in"; a.fillStyle = "rgba(0,0,0,.6)"; a.fillRect(0, 0, N, N); a.globalCompositeOperation = "source-over";
+  b.clearRect(0, 0, N, N); b.globalCompositeOperation = "source-over"; b.drawImage(mal, 0, 0); b.globalCompositeOperation = "source-in"; b.fillStyle = "#fff"; b.fillRect(0, 0, N, N); b.globalCompositeOperation = "destination-out"; b.drawImage(mal, 4, 4); b.globalCompositeOperation = "source-over";
+  const k = S / N; x.drawImage(fr.kilde, 0, 0, S, S); x.globalAlpha = .55; x.drawImage(t1, 3 * k, 5 * k, S, S); x.globalAlpha = 1; x.drawImage(mal, 0, 0, S, S); x.globalAlpha = .5; x.drawImage(t2, 0, 0, S, S); x.globalAlpha = 1;
+}
+function frTegn() { const c = $("frCanvas"), x = c.getContext("2d"); x.setTransform(1, 0, 0, 1, 0, 0); frKomponer(x, c.width); }
+function frRgb(hex) { const v = parseInt(hex.slice(1), 16); return [v >> 16, (v >> 8) & 255, v & 255]; }
+// Ett trykk med penselen: rund klatt med ujevn kant og busteriller langs strøket. Fargen trekkes mot fargefeltet c0 (der strøket startet).
+function frStempel(px, py, r, rgb, c0, styrke, ux, uy, frø) {
+  const { N, sd, md } = fr, d = md.data, x0 = Math.max(0, Math.floor(px - r)), x1 = Math.min(N - 1, Math.ceil(px + r)), y0 = Math.max(0, Math.floor(py - r)), y1 = Math.min(N - 1, Math.ceil(py + r)), r2 = r * r;
+  for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) { const dx = x - px, dy = y - py, d2 = dx * dx + dy * dy; if (d2 > r2) continue;
+    // Tykk maling: nesten dekkende, og bustene synes som lyse og mørke riller i fargen (ikke som hull).
+    const q = Math.sqrt(d2) / r, kant = q < .84 ? 1 : (1 - q) / .16, pp = -dx * uy + dy * ux, rille = frø < 0 ? 0 : Math.sin(pp * .19 + frø) * .6 + Math.sin(pp * .61 + frø * 2.3) * .4, lys = 1 + .07 * rille + (Math.random() - .5) * .05, i = (y * N + x) * 4;
+    const cd = Math.abs(sd[i] - c0[0]) + Math.abs(sd[i + 1] - c0[1]) + Math.abs(sd[i + 2] - c0[2]), m = cd < 70 ? 1 : cd > 230 ? .16 : 1 - (cd - 70) / 160 * .84;
+    const al = kant * m * styrke; if (al <= .01) continue;
+    const A = d[i + 3] / 255, nA = A + al * (1 - A), f = al / nA; d[i] += (Math.min(255, rgb[0] * lys) - d[i]) * f; d[i + 1] += (Math.min(255, rgb[1] * lys) - d[i + 1]) * f; d[i + 2] += (Math.min(255, rgb[2] * lys) - d[i + 2]) * f; d[i + 3] = nA * 255; }
+  fr.malt++; return [x0, y0, x1, y1];
+}
+function frSkriv(bb) { if (!bb) return; const [x0, y0, x1, y1] = bb; fr.mx.putImageData(fr.md, 0, 0, x0, y0, x1 - x0 + 1, y1 - y0 + 1); fr.skitten = true; }
+const frSlå = (a, b) => !a ? b : [Math.min(a[0], b[0]), Math.min(a[1], b[1]), Math.max(a[2], b[2]), Math.max(a[3], b[3])];
+function frPunkt(e) { const r = $("frCanvas").getBoundingClientRect(); return [(e.clientX - r.left) / r.width * fr.N, (e.clientY - r.top) / r.height * fr.N]; }
+function frFargeVed(x, y) { const i = (Math.min(fr.N - 1, Math.max(0, y | 0)) * fr.N + Math.min(fr.N - 1, Math.max(0, x | 0))) * 4; return [fr.sd[i], fr.sd[i + 1], fr.sd[i + 2]]; }
+function frNed(e) { if (!fr || !$("frMelding").hidden) return; e.preventDefault(); $("frCanvas").setPointerCapture?.(e.pointerId); const [x, y] = frPunkt(e);
+  fr.strøk = { x, y, sx: x, sy: y, t: performance.now(), c0: frFargeVed(x, y), lengde: 0, frø: Math.random() * 6, susT: 0 }; }
+function frFlytt(e) {
+  const s = fr?.strøk; if (!s) return; const [x, y] = frPunkt(e), dx = x - s.x, dy = y - s.y, d = Math.hypot(dx, dy); if (d < 1) return;
+  const ux = dx / d, uy = dy / d, rgb = frRgb(FR_FARGER[fr.farge][1]), dt = Math.max(8, performance.now() - (s.tid || s.t)), fart = d / dt;
+  const r = Math.max(20, Math.min(44, 46 - fart * 9)); let bb = null;
+  for (let k = r * .22; k <= d; k += r * .22) bb = frSlå(bb, frStempel(s.x + ux * k, s.y + uy * k, r, rgb, s.c0, .75, ux, uy, s.frø));
+  frSkriv(bb); s.x = x; s.y = y; s.tid = performance.now(); s.lengde += d;
+  if (lydPa && performance.now() - s.susT > 110) { s.susT = performance.now(); shSus(.14, "bandpass", 500 + Math.random() * 500, .025, 2, .7, .2); }
+}
+function frOpp() {
+  const s = fr?.strøk; if (!s) return; fr.strøk = null;
+  // Et trykk uten å dra: kast maling (en stor klatt og sprut rundt).
+  if (s.lengde < 10 && performance.now() - s.t < 350) { const rgb = frRgb(FR_FARGER[fr.farge][1]); let bb = frStempel(s.sx, s.sy, 62 + Math.random() * 20, rgb, s.c0, 1, 1, 0, -1);
+    for (let k = 0, n = 10 + ((Math.random() * 8) | 0); k < n; k++) { const a = Math.random() * Math.PI * 2, rr = 60 + Math.random() * 120, px = s.sx + Math.cos(a) * rr, py = s.sy + Math.sin(a) * rr;
+      bb = frSlå(bb, frStempel(px, py, 5 + Math.random() * 16, rgb, frFargeVed(px, py), .95, Math.cos(a), Math.sin(a), -1));
+      if (k % 3 === 0) for (let j = 1; j < 5; j++) bb = frSlå(bb, frStempel(s.sx + Math.cos(a) * rr * j / 5, s.sy + Math.sin(a) * rr * j / 5, 4 + j, rgb, s.c0, .5, Math.cos(a), Math.sin(a), j)); }
+    frSkriv(bb); if (lydPa) { shSus(.35, "lowpass", 700, .09, 1, .8, .4); tone(90, 0, .12, .05, "sine", .8, .2); } }
+}
+{ const c = $("frCanvas"); c.addEventListener("pointerdown", frNed); c.addEventListener("pointermove", frFlytt); c.addEventListener("pointerup", frOpp); c.addEventListener("pointercancel", frOpp); }
+function frMelding(tittel, tekst, knapper) { const m = $("frMelding"); m.hidden = false; $("frTittel").textContent = tittel; $("frTekst").textContent = tekst; const k = $("frKnapper"); k.replaceChildren();
+  for (const [navn, fn, hoved] of knapper) { const b = document.createElement("button"); b.className = hoved ? "hoved" : "sekundar"; b.textContent = navn; b.onclick = fn; k.appendChild(b); } }
+function frLukk(til) { cancelAnimationFrame(frRAF); frRAF = 0; const i = fr?.i ?? 0; fr = null; $("frys").hidden = true; $("frMelding").hidden = true;
+  if (til === "igjen") { const u = uw; if (u) { uwAvslutt(); } uwStart(i); return; }
+  uwAvslutt(); if (til === "bruker" && BRUKER_BRETT.length) { velgSamling(BRUKER); tegnMeny(); } }
+$("frLagre").onclick = async () => {
+  if (!fr) return; $("frLagre").disabled = true; const N = fr.N, c = Object.assign(document.createElement("canvas"), { width: N, height: N }); frKomponer(c.getContext("2d"), N);
+  const blob = await new Promise(ok => c.toBlob(ok, "image/jpeg", .9)); if (!blob) return frMelding("COULD NOT SAVE", "Something went wrong. Try again.", [["OK", () => { $("frMelding").hidden = true; $("frLagre").disabled = false; }, true]]);
+  try { await brukerLagre(blob, fr.navn); } catch { return frMelding("COULD NOT SAVE", "There is no room on this device right now.", [["Menu", () => frLukk(), true]]); }
+  if (lydPa) [0, 4, 7, 12, 16].forEach((st, j) => tone(523.25 * Math.pow(2, st / 12), j * .08, .5, .025, "triangle", .5, 1.2));
+  const n = BRUKER_BRETT.length;
+  frMelding("SAVED", n > BRUKER_MAKS ? "We kept your extra painting. There's only room for nine, so pick one to let go next time you open the User Season."
+    : `It's board /US/${String(n).padStart(2, "0")} in your User Season now. Play it in all four games.`, [["See it", () => frLukk("bruker"), true], ["Menu", () => frLukk()]]);
+};
+$("frSkip").onclick = () => frMelding("NOT SAVED", "Maybe the freeze comes back another time.", [["Unwrap again", () => frLukk("igjen"), true], ["Menu", () => frLukk()]]);
 
 // ---------- HIT ART (fjerde spill) ----------
 // Krogh 2.02: to spillere kaster borrer på kunstbildet. Begge teller ned fra 500; først til nøyaktig 0 vinner (for mye = kastet teller ikke, turen er over).
@@ -11746,7 +11896,7 @@ function shSteg(t) {
 }
 addEventListener("resize", () => { if (sh) shOppsett(); });
 // Bare for automatisk testing lokalt (?autotest).
-if (location.search.includes("autotest")) { window.__sh = () => sh; window.__boss3D = (m, a) => { if (a != null) aktiv = a; shBoss3DLast(m); }; window.__shSmåTreff = (...a) => shSmåTreff(...a); window.__shFerdig = () => shFerdig(); window.__ark = () => ark; window.__shHud = () => shHud(); window.__shMistet = () => shMistetLiv(); window.__shOppdater = dt => { shOppdater(dt); if (sh) { sh.tid += dt; shPartikler(dt); } }; window.__shTreff = shTreff; window.__shGalaga = shGalagaStart; window.__shSopp = shSopp; window.__shBytte = shByttetStart; window.__shOrm = shOrmStart; window.__levende = levendeStart; window.__gn = () => ({ gnister, raf: gnistRAF }); window.__hendelse = t => t === "katt" ? kattBesøk() : t === "stov" ? støvstorm() : t === "ketchup" ? ketchup() : t === "tilt" ? tilt(true) : t === "vokse" ? vokseBrikke() : t === "break" ? puzzleBreak() : t === "speilX" ? speilStart("x") : t === "speilY" ? speilStart("y") : lynnedslag(); window.__shSprekk = shSprekk; window.__shP2 = () => ({ pad2X: sh.pad2X, P2Y: SH_P2Y, TOPP: SH_TOPP, H: SH_H }); window.__shTegn = () => { shRens(); shTegn(performance.now()); }; window.__spill = () => spill; window.__banner = banner; window.__kast = kast; window.__gratisPeace = async () => sjekkGratis(await hentSammen("P")); window.__fremdrift = () => fremdrift; window.__sammenP = async () => ({ lok: minLokaleSum("P"), f: fremdrift.b1, liste: (await hentSammen("P")).slice(0, 2) }); window.__shKrabbe = () => shKrabbeStart(); window.__shHopper = () => shHopperStart(); window.__shSlipp = () => shSlipp(); window.__shPY = () => SH_PY; window.__shTopp = () => SH_TOPP; window.__shKapsel = shKapsel; window.__shSnø = shSnøStart; window.__shMørke = shMørkeStart; window.__uw = () => uw; window.__uwStart = uwStart; window.__uwOppdater = dt => uwOppdater(dt); window.__uwTegn = () => uwTegn(); window.__uwVunnet = () => uwVunnet(); window.__uwMaling = () => uwMalingStart(); window.__uwTrip = () => { uw.tripT = 0; uw.revet = 1; }; window.__uwRegn = () => { uw.regnT = 0; uw.revet = 1; }; window.__uwBorst = p => uwBørst(p); window.__mg = () => mg; window.__ha = () => ha; window.__haStart = i => haStart(i); window.__haVunnet = () => haVunnet(); window.__haNesteTur = () => haNesteTur(); window.__haKast = (x, y) => haKast(x, y); window.__haHend = t => { ha.hend = { type: t, vis: false }; haHendVis(); }; window.__haG = (x, y) => haG(x, y); window.__haF = (x, y) => haF(x, y); window.__mgStart = i => mgStart(i); window.__mgRundeSlutt = () => mgRundeSlutt(); window.__mgSkjelv = () => mgSkjelvStart(); window.__mgLykke = n => { mg.lykke = { trekk: 0, n }; mgEtterTrekk(); }; window.__shFrys = shFrys; window.__shPlante = shPlante; window.__myntSprites = myntSprites; window.__katt = hentKattHode; window.__pote = hentKattPote; window.__shG = () => shG; window.__shStorm = () => shMørkeStart(); window.__tellOpp = tellOpp; window.__lyd = () => { const c = lydCtx; return c ? { musikk: musikkUt(c).gain.value, effekt: effektUt(c).gain.value } : null; }; window.__speilSlutt = speilSlutt; window.__figurKant = async (n, farge) => shFigurKant(await hentBilde("figurer/" + n + ".webp"), farge); window.__hentBilde = hentBilde; window.__falskMusikk = () => { lydCtx = lydCtx || { currentTime: 0 }; const nei = () => {}; musikk = { kilde: { stop: nei, playbackRate: { v: 1, setTargetAtTime(r) { this.v = r; } } }, g: { gain: { value: .3, cancelScheduledValues: nei, setValueAtTime: nei, linearRampToValueAtTime: nei, setTargetAtTime: nei } } }; }; window.__musikkFart = () => musikk?.kilde?.playbackRate?.v ?? null; window.__musikkFor = id => musikkFor(id)?.fil; window.__geo = () => geo; window.__plasser = plasser; window.__skjermPkt = skjermPkt; }
+if (location.search.includes("autotest")) { window.__sh = () => sh; window.__boss3D = (m, a) => { if (a != null) aktiv = a; shBoss3DLast(m); }; window.__shSmåTreff = (...a) => shSmåTreff(...a); window.__shFerdig = () => shFerdig(); window.__ark = () => ark; window.__shHud = () => shHud(); window.__shMistet = () => shMistetLiv(); window.__shOppdater = dt => { shOppdater(dt); if (sh) { sh.tid += dt; shPartikler(dt); } }; window.__shTreff = shTreff; window.__shGalaga = shGalagaStart; window.__shSopp = shSopp; window.__shBytte = shByttetStart; window.__shOrm = shOrmStart; window.__levende = levendeStart; window.__gn = () => ({ gnister, raf: gnistRAF }); window.__hendelse = t => t === "katt" ? kattBesøk() : t === "stov" ? støvstorm() : t === "ketchup" ? ketchup() : t === "tilt" ? tilt(true) : t === "vokse" ? vokseBrikke() : t === "break" ? puzzleBreak() : t === "speilX" ? speilStart("x") : t === "speilY" ? speilStart("y") : lynnedslag(); window.__shSprekk = shSprekk; window.__shP2 = () => ({ pad2X: sh.pad2X, P2Y: SH_P2Y, TOPP: SH_TOPP, H: SH_H }); window.__shTegn = () => { shRens(); shTegn(performance.now()); }; window.__spill = () => spill; window.__banner = banner; window.__kast = kast; window.__gratisPeace = async () => sjekkGratis(await hentSammen("P")); window.__fremdrift = () => fremdrift; window.__sammenP = async () => ({ lok: minLokaleSum("P"), f: fremdrift.b1, liste: (await hentSammen("P")).slice(0, 2) }); window.__shKrabbe = () => shKrabbeStart(); window.__shHopper = () => shHopperStart(); window.__shSlipp = () => shSlipp(); window.__shPY = () => SH_PY; window.__shTopp = () => SH_TOPP; window.__shKapsel = shKapsel; window.__shSnø = shSnøStart; window.__shMørke = shMørkeStart; window.__uw = () => uw; window.__uwStart = uwStart; window.__uwOppdater = dt => uwOppdater(dt); window.__uwTegn = () => uwTegn(); window.__uwVunnet = () => uwVunnet(); window.__uwMaling = () => uwMalingStart(); window.__uwTrip = () => { uw.tripT = 0; uw.revet = 1; }; window.__uwRegn = () => { uw.regnT = 0; uw.revet = 1; }; window.__uwBorst = p => uwBørst(p); window.__mg = () => mg; window.__uwFrys = () => uwFrys(); window.__fr = () => fr; window.__bruker = () => BRUKER_BRETT; window.__brukerLast = brukerLast; window.__ha = () => ha; window.__haStart = i => haStart(i); window.__haVunnet = () => haVunnet(); window.__haNesteTur = () => haNesteTur(); window.__haKast = (x, y) => haKast(x, y); window.__haHend = t => { ha.hend = { type: t, vis: false }; haHendVis(); }; window.__haG = (x, y) => haG(x, y); window.__haF = (x, y) => haF(x, y); window.__mgStart = i => mgStart(i); window.__mgRundeSlutt = () => mgRundeSlutt(); window.__mgSkjelv = () => mgSkjelvStart(); window.__mgLykke = n => { mg.lykke = { trekk: 0, n }; mgEtterTrekk(); }; window.__shFrys = shFrys; window.__shPlante = shPlante; window.__myntSprites = myntSprites; window.__katt = hentKattHode; window.__pote = hentKattPote; window.__shG = () => shG; window.__shStorm = () => shMørkeStart(); window.__tellOpp = tellOpp; window.__lyd = () => { const c = lydCtx; return c ? { musikk: musikkUt(c).gain.value, effekt: effektUt(c).gain.value } : null; }; window.__speilSlutt = speilSlutt; window.__figurKant = async (n, farge) => shFigurKant(await hentBilde("figurer/" + n + ".webp"), farge); window.__hentBilde = hentBilde; window.__falskMusikk = () => { lydCtx = lydCtx || { currentTime: 0 }; const nei = () => {}; musikk = { kilde: { stop: nei, playbackRate: { v: 1, setTargetAtTime(r) { this.v = r; } } }, g: { gain: { value: .3, cancelScheduledValues: nei, setValueAtTime: nei, linearRampToValueAtTime: nei, setTargetAtTime: nei } } }; }; window.__musikkFart = () => musikk?.kilde?.playbackRate?.v ?? null; window.__musikkFor = id => musikkFor(id)?.fil; window.__geo = () => geo; window.__plasser = plasser; window.__skjermPkt = skjermPkt; }
 
 
 
