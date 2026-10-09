@@ -704,7 +704,7 @@ body.lys #modusDeal{--farge:#0f8f6c;--glod:15,143,108}
   <div class="regel">Everything counts: Game, Peace, Bubble it 1P and 2P, every board, every level, every collection. Each board list gives up to 100 points (a Bubble it list up to 1,000): #1 gets them all, the rest their share of the top score.</div>
   <div class="sammen" id="spillere"><p class="liten">Loading players …</p></div>
   <p class="kreditt">© 2001–2026 Tarjei Krogh. All photography, music and art. <a href="https://kroghx.com" target="_blank" rel="noopener">kroghx.com</a></p>
-  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 1.81<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
+  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 1.82<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
 </section>
 
 <div class="ark" id="tidUtArk" hidden style="z-index:200001">
@@ -4767,15 +4767,19 @@ function shVelgRamme(img) {
 function shPlasser(i) { const g = aktiv * 9 + Math.max(0, i); return g >= 6 ? 5 : g >= 3 ? 4 : 3; }
 // 3D-BOSS: Kroghs figur (GLB fra Tripo) i ekte 3D. Motoren (three.js) og figuren lastes først når BUBBLE IT starter.
 // Laster den ikke, tegnes bossen som før.
-let shBoss3DLaster = false;
+// Hvilken figur er bossen: hodet i sesong 02, duoen ellers.
+const shBoss3DModell = () => aktiv === 1 ? "hode" : "duo";
+let shBoss3DMotor = null; const shBoss3DLastet = {};
 function shBoss3DLast() {
-  if (shBoss3DLaster || window.Boss3D) return; shBoss3DLaster = true;
-  const sc = document.createElement("script"); sc.src = "3d/boss3d.js"; sc.async = true;
-  // Figuren ligger som base64 i 3d/duo.js (artifact-siden serverer ikke .glb).
-  sc.onload = () => { const d = document.createElement("script"); d.src = "3d/duo.js"; d.async = true;
-    d.onload = () => { try { const bin = atob(window.DuoGLB), u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); window.DuoGLB = null; if (window.Boss3D) window.Boss3D.last(u.buffer, Math.min(512, Math.round(240 * Math.min(devicePixelRatio || 1, 2)))); } catch {} };
-    document.head.appendChild(d); };
-  sc.onerror = () => { shBoss3DLaster = false; }; document.head.appendChild(sc);
+  const navn = shBoss3DModell(); if (shBoss3DLastet[navn]) return; shBoss3DLastet[navn] = true;
+  const px = Math.min(512, Math.round(240 * Math.min(devicePixelRatio || 1, 2)));
+  const skript = src => new Promise((ok, nei) => { const sc = document.createElement("script"); sc.src = src; sc.async = true; sc.onload = ok; sc.onerror = nei; document.head.appendChild(sc); });
+  shBoss3DMotor = shBoss3DMotor || skript("3d/boss3d.js");
+  // Figuren ligger som base64 i 3d/<navn>.js (artifact-siden serverer ikke .glb).
+  Promise.all([shBoss3DMotor, skript("3d/" + navn + ".js")]).then(() => {
+    const b64 = window.Glb3D?.[navn]; if (!b64 || !window.Boss3D) return; const bin = atob(b64), u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);
+    window.Glb3D[navn] = null; window.Boss3D.last(navn, u.buffer, px);
+  }).catch(() => { shBoss3DLastet[navn] = false; });
 }
 async function shatterStart(i, poeng = 0, liv = null) {
   shBoss3DLast();
@@ -10181,7 +10185,7 @@ function shTegn(t) {
         x.fillStyle = gl; x.fillRect(X - BR * 1.5, Y - BR * 1.5, BR * 3, BR * 3); x.restore();
         if (B.usynlig) x.globalAlpha = .16;
         let lyn = 0; if (s.mørke) for (const L of s.mørke.lyn) lyn = Math.max(lyn, L.t < .07 ? 1 : L.t < .16 ? .15 : L.t < .24 ? .8 : Math.max(0, .5 - (L.t - .24) * 2));
-        const b3 = window.Boss3D?.klar && window.Boss3D.tegn(x, X, Y, BR * 2.9, { vri: s.tid * .7 + B.x * 2, vipp: .1 + Math.sin(s.tid * 1.3) * .05 + shClamp(B.vy || 0, -.3, .3) * .8, rot: (B.rot || 0) - shClamp(B.vx || 0, -.3, .3) * .8, blink: B.blink, lyn });
+        const b3m = shBoss3DModell(), b3 = window.Boss3D?.har(b3m) && window.Boss3D.tegn(x, X, Y, BR * 2.9, { modell: b3m, vri: s.tid * (b3m === "hode" ? .3 : .7) + B.x * 2, vipp: .1 + Math.sin(s.tid * 1.3) * .05 + shClamp(B.vy || 0, -.3, .3) * .8, rot: (B.rot || 0) - shClamp(B.vx || 0, -.3, .3) * .8, blink: B.blink, lyn });
         if (!b3) { shArmer(x, sp, X, Y, BR, s.tid, B.spytt || 0, 1, B.rot || 0, (X + Y) * .013); tegnFigur(sp, X, Y, BR, B.rot, false, false, 0); }
         // Skum der skuddboblene har truffet bossen.
         for (const q of B.skumP || []) { const a = Math.min(1, q.liv), qx = X + q.dx * f, qy = Y + q.dy * f, rr = q.r * f; x.fillStyle = `rgba(250,252,255,${.75 * a})`; x.beginPath(); x.arc(qx, qy, rr, 0, 7); x.fill(); x.strokeStyle = `rgba(190,225,255,${.6 * a})`; x.lineWidth = 1; x.stroke(); }
