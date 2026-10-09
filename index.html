@@ -704,7 +704,7 @@ body.lys #modusDeal{--farge:#0f8f6c;--glod:15,143,108}
   <div class="regel">Everything counts: Game, Peace, Bubble it 1P and 2P, every board, every level, every collection. Each board list gives up to 100 points (a Bubble it list up to 1,000): #1 gets them all, the rest their share of the top score.</div>
   <div class="sammen" id="spillere"><p class="liten">Loading players …</p></div>
   <p class="kreditt">© 2001–2026 Tarjei Krogh. All photography, music and art. <a href="https://kroghx.com" target="_blank" rel="noopener">kroghx.com</a></p>
-  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 1.80<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
+  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 1.81<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
 </section>
 
 <div class="ark" id="tidUtArk" hidden style="z-index:200001">
@@ -4431,7 +4431,7 @@ if (window.ResizeObserver) { let sistH = 0, sistB = 0; new ResizeObserver(([e]) 
 // ---------- SCRUB: såpebobler vasker møkka av kunstverket ----------
 // Bildet ligger under et lag med møkk. 864 små felt teller treffene, men møkka tegnes som ett sammenhengende lag.
 // SH_TOPP: tom gang over bildet, der boblen kan bli fanget og vaske ovenfra.
-const SH_KOL = 24, SH_RAD = 36, SH_R = 0.033, SH_TYKKEST = 20;
+const SH_KOL = 24, SH_RAD = 36, SH_R = 0.0363, SH_TYKKEST = 20;
 // Bildets øvre kant i feltet. I 2P ligger bildet lenger ned, så spiller 2 får plass til sin flipper øverst.
 let SH_TOPP = 0.13; const SH_P2Y = 0.1;
 // Feltets høyde følger skjermen, så staven står nær bunnen. Settes i shOppsett.
@@ -4765,7 +4765,17 @@ function shVelgRamme(img) {
 }
 // Bobleplasser: 3 ved start, 4 fra brett 4 og 5 fra brett 7 i sesong 1. Senere sesonger har 5.
 function shPlasser(i) { const g = aktiv * 9 + Math.max(0, i); return g >= 6 ? 5 : g >= 3 ? 4 : 3; }
+// 3D-BOSS: Kroghs figur (GLB fra Tripo) i ekte 3D. Motoren (three.js) og figuren lastes først når BUBBLE IT starter.
+// Laster den ikke, tegnes bossen som før.
+let shBoss3DLaster = false;
+function shBoss3DLast() {
+  if (shBoss3DLaster || window.Boss3D) return; shBoss3DLaster = true;
+  const sc = document.createElement("script"); sc.src = "3d/boss3d.js"; sc.async = true;
+  sc.onload = () => { if (window.Boss3D) window.Boss3D.last("3d/duo.glb", Math.min(512, Math.round(240 * Math.min(devicePixelRatio || 1, 2)))); };
+  sc.onerror = () => { shBoss3DLaster = false; }; document.head.appendChild(sc);
+}
 async function shatterStart(i, poeng = 0, liv = null) {
+  shBoss3DLast();
   shRivalHent().then(() => { if (sh) shRivalVis(); });
   if (BETA) settCredits(Math.max(credits(), 30));
   // Bobler du har igjen, tar du med deg. Åpnes en ny plass, får du en boble i den.
@@ -6002,6 +6012,7 @@ function shBombe2P(x, y, v, avst, motP2 = Math.random() < .5) {
 function shBossSteg(g, dt, levende) {
   const s = sh, B = g.boss; if (!B) return;
   B.t += dt; B.blink = Math.max(0, B.blink - dt * 4);
+  if (B.skumP) { for (const q of B.skumP) { q.liv -= dt; q.dy += .004 * dt; } B.skumP = B.skumP.filter(q => q.liv > 0); }
   const ned = s.toP ? 0 : Math.max(0, SH_TOPP - .13); // Under knapperadene når bildet er flyttet ned.
   if (B.tilstand === "inn") { B.y += ((s.toP ? SH_TOPP + .5 : .18 + ned) - B.y) * Math.min(1, dt * 1.4); if (s.toP) B.x += (.5 - B.x) * Math.min(1, dt * 1.4); if (B.t > 2) B.tilstand = "kamp"; }
   else if (B.tilstand === "kamp") {
@@ -6039,6 +6050,7 @@ function shBossTreff(q) {
   if (!B || (B.tilstand !== "kamp" && B.tilstand !== "inn") || B.usynlig) return false;
   if (Math.hypot(q.x - B.x, (q.y - B.y) * 1.1) > .13) return false;
   B.hp--; B.blink = 1; shLyd("bossTreff"); shStov(q.x, q.y, 5, "255,120,120", .12);
+  B.skumP = B.skumP || []; if (B.skumP.length < 70) for (let n = 0; n < 2; n++) B.skumP.push({ dx: q.x - B.x + (Math.random() - .5) * .03, dy: q.y - B.y + (Math.random() - .5) * .03, r: .004 + Math.random() * .006, liv: 2.5 + Math.random() });
   if (B.hp <= 0) {
     B.tilstand = "boble"; B.bt = 0; s.poeng += 5000; shHud(); shLyd("innkapsle");
     s.tekster.push({ txt: "BOSS CAUGHT! +5000", x: .5, y: .4, liv: 1.8, farge: "#ffd23a" });
@@ -6667,7 +6679,7 @@ function shMørkeSteg(dt) {
   const inn = Math.min(1, M.t / 1), ut = M.t < M.varighet ? 1 : Math.max(0, 1 - (M.t - M.varighet) / 1.4), flimmer = M.t > M.varighet && M.t < M.varighet + 1 ? (Math.sin(M.t * 45) > .2 ? .35 : 1) : 1;
   M.I = inn * ut * flimmer;
   M.lynT -= dt;
-  if (M.lynT <= 0 && M.t < M.varighet - 1) { M.lynT = Math.random() < .5 ? .25 + Math.random() * .35 : .9 + Math.random() * 1.1; const L = { t: 0, x: .1 + Math.random() * .8, ned: [] };
+  if (M.lynT <= 0 && M.t < M.varighet - 1) { M.lynT = Math.random() < .7 ? .15 + Math.random() * .35 : .6 + Math.random() * .6; /* ofte, og nye steder hver gang (Krogh) */ const L = { t: 0, x: .1 + Math.random() * .8, ned: [] };
     // Ett til tre nedslag. Der lynet slår ned, går jorda bort.
     for (let n = 1 + Math.floor(Math.random() * 3); n > 0; n--) { const px = .08 + Math.random() * .84, py = SH_TOPP + .12 + Math.random() * .7; L.ned.push([px, py]); shVask(px, py, .055, 2, "syre"); shStov(px, py, 26, "220,235,255", .3); }
     M.lyn.push(L); s.rist = Math.max(s.rist || 0, .35); M.tordenT = .25 + Math.random() * .5; }
@@ -7319,7 +7331,7 @@ function shVoksSteg(b, dt) {
   const u = Math.min(1, V.t / 22), e = u * (.6 + .4 * u);
   b.str = V.fra + (V.mål - V.fra) * e; b.vokse = 1;
   // Jo større, jo roligere farter den.
-  const v = Math.hypot(b.vx, b.vy) || 1, maks = s.fart * (.8 - .3 * e); // Rolig fra start, enda roligere når den er stor. if (v > maks) { b.vx *= maks / v; b.vy *= maks / v; }
+  const v = Math.hypot(b.vx, b.vy) || 1, maks = s.fart * (.8 - .3 * e); /* rolig fra start, enda roligere når den er stor */ if (v > maks) { b.vx *= maks / v; b.vy *= maks / v; }
   const R = shRad(b);
   // Vasker et lag under seg, ofte, over hele flaten den dekker.
   V.vaskT -= dt; if (V.vaskT <= 0 && b.str > 2.2) { V.vaskT = .22; if (!s.bytte) shVask(b.x, b.y, R * .92, 1, "syre"); }
@@ -8451,7 +8463,7 @@ function shOppdater(dt) {
       const sikte = shClamp(s.padV * .6, -.6, .6) + Math.sin(s.tid * 7) * .05, v = 1.4 + Math.random() * .3;
       const d1 = shDysePos(s, -1), d2 = shDysePos(s, 1), kilder = [[d1.x, d1.y], [d2.x, d2.y]].concat(s.wingmen.filter(w => w.klar).map(w => [s.padX + w.side * (s.padW / 2 + .05), SH_PY - .03]));
       s.dyseT = s.tid;
-      for (const [kx, ky] of kilder) s.skudd.push({ x: kx + (Math.random() - .5) * .006, y: ky - .004, vx: Math.sin(sikte) * v + (Math.random() - .5) * .06, vy: -Math.cos(sikte) * v, r: .013 + Math.random() * .009, budsjett: angrep ? 1 : 2, fase: Math.random() * 6, angrep });
+      for (const [kx, ky] of kilder) s.skudd.push({ x: kx + (Math.random() - .5) * .006, y: ky - .004, vx: Math.sin(sikte) * v + (Math.random() - .5) * .06, vy: -Math.cos(sikte) * v, r: .0117 + Math.random() * .0081, budsjett: angrep ? 1 : 2, fase: Math.random() * 6, angrep });
       shLyd("skudd");
     }
     if (s.skuddT < -.1) s.skuddT = 0;
@@ -10165,11 +10177,15 @@ function shTegn(t) {
         const gl = x.createRadialGradient(X, Y, BR * .2, X, Y, BR * 1.5); gl.addColorStop(0, `rgba(255,60,60,${.25 + .2 * Math.sin(s.tid * 4)})`); gl.addColorStop(1, "rgba(255,60,60,0)");
         x.fillStyle = gl; x.fillRect(X - BR * 1.5, Y - BR * 1.5, BR * 3, BR * 3); x.restore();
         if (B.usynlig) x.globalAlpha = .16;
-        shArmer(x, sp, X, Y, BR, s.tid, B.spytt || 0, 1, B.rot || 0, (X + Y) * .013);
-        tegnFigur(sp, X, Y, BR, B.rot, false, false, 0); x.globalAlpha = 1;
+        let lyn = 0; if (s.mørke) for (const L of s.mørke.lyn) lyn = Math.max(lyn, L.t < .07 ? 1 : L.t < .16 ? .15 : L.t < .24 ? .8 : Math.max(0, .5 - (L.t - .24) * 2));
+        const b3 = window.Boss3D?.klar && window.Boss3D.tegn(x, X, Y, BR * 2.9, { vri: s.tid * .7 + B.x * 2, vipp: .1 + Math.sin(s.tid * 1.3) * .05 + shClamp(B.vy || 0, -.3, .3) * .8, rot: (B.rot || 0) - shClamp(B.vx || 0, -.3, .3) * .8, blink: B.blink, lyn });
+        if (!b3) { shArmer(x, sp, X, Y, BR, s.tid, B.spytt || 0, 1, B.rot || 0, (X + Y) * .013); tegnFigur(sp, X, Y, BR, B.rot, false, false, 0); }
+        // Skum der skuddboblene har truffet bossen.
+        for (const q of B.skumP || []) { const a = Math.min(1, q.liv), qx = X + q.dx * f, qy = Y + q.dy * f, rr = q.r * f; x.fillStyle = `rgba(250,252,255,${.75 * a})`; x.beginPath(); x.arc(qx, qy, rr, 0, 7); x.fill(); x.strokeStyle = `rgba(190,225,255,${.6 * a})`; x.lineWidth = 1; x.stroke(); }
+        x.globalAlpha = 1;
         if (SH_BOSS_EGEN[B.egen ?? 0]?.navn === "trekk" && B.tilstand === "kamp") { x.save(); x.globalCompositeOperation = "lighter"; for (let j = 0; j < 3; j++) { const r = BR * (1.2 + ((s.tid * .6 + j / 3) % 1) * 1.6); x.strokeStyle = `rgba(160,120,255,${.35 * (1 - ((s.tid * .6 + j / 3) % 1))})`; x.lineWidth = 2; x.beginPath(); x.arc(X, Y, r, 0, 7); x.stroke(); } x.restore(); }
         shSpyttTegn(x, X, Y, BR, B.spytt || 0, s.tid, s.jord);
-        if (B.blink > 0 && sp) { x.save(); x.globalCompositeOperation = "lighter"; x.globalAlpha = B.blink * .6; tegnFigur(sp, X, Y, BR, B.rot, false, false, 0); x.restore(); x.globalAlpha = 1; }
+        if (B.blink > 0 && sp && !b3) { x.save(); x.globalCompositeOperation = "lighter"; x.globalAlpha = B.blink * .6; tegnFigur(sp, X, Y, BR, B.rot, false, false, 0); x.restore(); x.globalAlpha = 1; }
         if (B.tilstand === "boble") boble(X, Y, BR * 1.35, 1);
         if (B.tilstand === "kamp" || B.tilstand === "inn") {
           // Livslinja: en rolig neonlinje som glir ned (og opp) med livet. Gløden puster sakte, ingen blinking.
@@ -10203,18 +10219,19 @@ function shTegn(t) {
     }
   }
   if (s.skudd.length) { x.save();
-    for (const q of s.skudd) { const X = q.x * f, Y = q.y * f, r = q.r * f, hue = [28, 42, 340, 15, 50][Math.floor(q.fase * 10) % 5], hue2 = (hue + 25) % 360;
-      // Et svakt skjær rundt, så de synes over mørke bilder, men uten å bli lyskuler.
-      x.globalCompositeOperation = "lighter"; x.globalAlpha = .55; x.drawImage(shNeon(hue), X - r * 2.2, Y - r * 2.2, r * 4.4, r * 4.4);
-      const L = Math.min(r * 3, Math.hypot(q.vx, q.vy) * f * .02), a = Math.atan2(q.vy, q.vx); const tx = X - Math.cos(a) * L, ty = Y - Math.sin(a) * L, hg = x.createLinearGradient(X, Y, tx, ty); hg.addColorStop(0, "rgba(235,248,255,.22)"); hg.addColorStop(1, "rgba(235,248,255,0)"); x.globalAlpha = 1; x.strokeStyle = hg; x.lineWidth = r * .4; x.lineCap = "round"; x.beginPath(); x.moveTo(X, Y); x.lineTo(tx, ty); x.stroke();
+    // Skuddboblene ser ut som hovedboblen (Krogh): blå glorie, klar hinne med regnbuekant og høylys.
+    for (const q of s.skudd) { const X = q.x * f, Y = q.y * f, r = q.r * f, hc = "120,225,255";
+      x.globalCompositeOperation = "lighter"; const hr = r * 2.2, hg = x.createRadialGradient(X, Y, r * .8, X, Y, hr);
+      hg.addColorStop(0, `rgba(${hc},0)`); hg.addColorStop(.12, `rgba(${hc},.6)`); hg.addColorStop(.35, `rgba(${hc},.17)`); hg.addColorStop(1, `rgba(${hc},0)`); x.fillStyle = hg; x.fillRect(X - hr, Y - hr, hr * 2, hr * 2);
+      const L = Math.min(r * 3, Math.hypot(q.vx, q.vy) * f * .02), a = Math.atan2(q.vy, q.vx); const tx = X - Math.cos(a) * L, ty = Y - Math.sin(a) * L, tg = x.createLinearGradient(X, Y, tx, ty); tg.addColorStop(0, "rgba(200,240,255,.22)"); tg.addColorStop(1, "rgba(200,240,255,0)"); x.strokeStyle = tg; x.lineWidth = r * .4; x.lineCap = "round"; x.beginPath(); x.moveTo(X, Y); x.lineTo(tx, ty); x.stroke();
       x.globalCompositeOperation = "source-over";
-      // Nesten klar inni, litt lysere mot kanten.
-      const g = x.createRadialGradient(X, Y, r * .2, X, Y, r); g.addColorStop(0, `hsla(${hue},95%,94%,.2)`); g.addColorStop(.75, `hsla(${hue},95%,95%,.3)`); g.addColorStop(1, "rgba(255,250,240,.55)"); x.fillStyle = g; x.beginPath(); x.arc(X, Y, r, 0, 7); x.fill();
-      // Tynn regnbuekant: to svake farger som glir over i hverandre.
-      const kg = x.createLinearGradient(X - r, Y - r, X + r, Y + r); kg.addColorStop(0, `hsla(${hue},100%,84%,.95)`); kg.addColorStop(.5, "rgba(255,252,245,.7)"); kg.addColorStop(1, `hsla(${hue2},100%,84%,.9)`);
-      x.strokeStyle = kg; x.lineWidth = Math.max(1, r * .17); x.beginPath(); x.arc(X, Y, r, 0, 7); x.stroke();
-      x.fillStyle = "rgba(255,255,255,.85)"; x.beginPath(); x.ellipse(X - r * .38, Y - r * .42, r * .26, r * .12, -.7, 0, 7); x.fill();
-      x.fillStyle = "rgba(255,255,255,.4)"; x.beginPath(); x.arc(X + r * .42, Y + r * .4, r * .08, 0, 7); x.fill(); }
+      const fy = x.createRadialGradient(X - r * .3, Y - r * .3, r * .1, X, Y, r * 1.1); fy.addColorStop(0, "rgba(255,255,255,.07)"); fy.addColorStop(.7, "rgba(190,225,255,.12)"); fy.addColorStop(.92, "rgba(255,255,255,.34)"); fy.addColorStop(1, "rgba(255,255,255,.55)");
+      x.fillStyle = fy; x.beginPath(); x.arc(X, Y, r, 0, 7); x.fill();
+      let hinne; if (x.createConicGradient) { hinne = x.createConicGradient(s.tid * 1.3 + q.fase, X, Y); [["255,90,200", 0], ["90,220,255", .2], ["255,240,110", .4], ["120,255,170", .6], ["170,120,255", .8], ["255,90,200", 1]].forEach(([c, p]) => hinne.addColorStop(p, `rgba(${c},.65)`)); }
+      else hinne = "rgba(160,220,255,.65)";
+      x.strokeStyle = hinne; x.lineWidth = Math.max(1, r * .15); x.stroke();
+      x.fillStyle = "rgba(255,255,255,.9)"; x.beginPath(); x.ellipse(X - r * .38, Y - r * .42, r * .3, r * .15, -.7, 0, 7); x.fill();
+      x.fillStyle = "rgba(255,255,255,.45)"; x.beginPath(); x.arc(X + r * .39, Y + r * .39, r * .09, 0, 7); x.fill(); }
     x.restore(); }
   // Fint støv av gull, sølv og diamant.
   x.save(); x.globalCompositeOperation = "lighter";
