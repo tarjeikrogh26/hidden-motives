@@ -704,7 +704,7 @@ body.lys #modusDeal{--farge:#0f8f6c;--glod:15,143,108}
   <div class="regel">Everything counts: Game, Peace, Bubble it 1P and 2P, every board, every level, every collection. Each board list gives up to 100 points (a Bubble it list up to 1,000): #1 gets them all, the rest their share of the top score.</div>
   <div class="sammen" id="spillere"><p class="liten">Loading players …</p></div>
   <p class="kreditt">© 2001–2026 Tarjei Krogh. All photography, music and art. <a href="https://kroghx.com" target="_blank" rel="noopener">kroghx.com</a></p>
-  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 1.91<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
+  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 1.92<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
 </section>
 
 <div class="ark" id="tidUtArk" hidden style="z-index:200001">
@@ -9045,7 +9045,8 @@ function uwSkrap(cx, cy) {
   const x0 = Math.max(0, Math.floor(cx - rc)), x1 = Math.min(G - 1, Math.ceil(cx + rc)), y0 = Math.max(0, Math.floor(cy - rc)), y1 = Math.min(G - 1, Math.ceil(cy + rc));
   for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) {
     const d = Math.hypot(x - cx, y - cy), kant = rc * (.82 + .18 * u.støy[(y * G + x) % u.støy.length]); if (d > kant) continue;
-    const j = y * G + x; if (M[j] === u.strøk) continue; M[j] = u.strøk;
+    const j = y * G + x; if (M[j] === u.strøk) continue;
+    if (u.svidd?.length && u.svidd.some(s => Math.hypot((x + .5) / G - s.x, (y + .5) / G - s.y) < s.r)) continue; M[j] = u.strøk;
     if (C[j] === 0) { if (!saks && slitt[j] < 1 && uwPåBånd((x + .5) / G, (y + .5) / G)) { slitt[j]++; continue; } C[j] = 1; if (!I || !I[j]) u.åpne++; }
     else if (I && I[j] === 1) I[j] = 0, u.åpne++;
     else continue;
@@ -9219,7 +9220,81 @@ function uwOppdater(dt) {
   uwHud();
 }
 // BOSSEN i UNWRAP IT: svever over gaven, pakker inn igjen en flekk innimellom, og tar et liv om den rører fingeren mens du skraper.
-function uwBossSteg(dt) { for (const B of uw.bosser || []) uwEnBossSteg(B, dt); }
+function uwBossSteg(dt) { for (const B of uw.bosser || []) uwEnBossSteg(B, dt); uwSpySteg(dt); uwIldSteg(dt); }
+// Papirbitene bossen spytter: flyr i en bue og klistrer seg fast der de lander.
+function uwSpySteg(dt) {
+  const u = uw, G = UW_G; if (!u.spyBiter?.length) return;
+  for (const q of u.spyBiter) { q.t += dt; if (!q.landet) q.rot += q.spinn * dt;
+    if (!q.landet && q.t >= q.T) { q.landet = true; q.tL = 0; const cx = q.x1 * G, cy = q.y1 * G, rc = G * q.s * .8; let x0 = G, y0 = G, x1 = 0, y1 = 0, n = 0;
+      for (let y = Math.max(0, Math.floor(cy - rc)); y <= Math.min(G - 1, Math.ceil(cy + rc)); y++) for (let x = Math.max(0, Math.floor(cx - rc)); x <= Math.min(G - 1, Math.ceil(cx + rc)); x++) {
+        const a = Math.atan2(y - cy, x - cx), v = q.form[Math.floor((a + Math.PI) / (2 * Math.PI) * q.form.length) % q.form.length]; if (Math.hypot(x - cx, y - cy) > rc * v) continue;
+        const j = y * G + x; if (u.celle[j] !== 1) continue; if (!u.indre || !u.indre[j]) u.åpne--; u.celle[j] = 0; n++; if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+      if (n) uwSkitt(x0, y0, x1, y1);
+      if (lydPa) tone(140 + Math.random() * 90, 0, .06, .035, "triangle", .5, .2); }
+    if (q.landet) q.tL += dt; }
+  u.spyBiter = u.spyBiter.filter(q => !q.landet || q.tL < .3);
+}
+// Ildkulene: flyr mot målet med flammer etter seg; der de lander, svir de papiret i noen sekunder.
+function uwIldSteg(dt) {
+  const u = uw; u.ildP = u.ildP || [];
+  for (const q of u.ild || []) { q.t += dt; const k = Math.min(1, q.t / q.T), px = q.x, py = q.y;
+    q.x = q.x0 + (q.x1 - q.x0) * k; q.y = q.y0 + (q.y1 - q.y0) * k - .1 * 4 * k * (1 - k); const vx = (q.x - px) / Math.max(dt, 1e-3), vy = (q.y - py) / Math.max(dt, 1e-3), v = Math.hypot(vx, vy) || 1;
+    for (let j = 0; j < dt * 110 && u.ildP.length < 260; j++) { const a = Math.random() * 7, rr = .012 * Math.random(); u.ildP.push({ x: q.x + Math.cos(a) * rr, y: q.y + Math.sin(a) * rr, vx: -vx / v * .06 + Math.cos(a) * .02, vy: -vy / v * .06 + Math.sin(a) * .02 - .02, liv: 1, st: .012 + Math.random() * .01 }); }
+    if (k >= 1 && !q.borte) { q.borte = true;
+      (u.svidd = u.svidd || []).push({ x: q.x1, y: q.y1, r: .07, t: 0, T: 5, form: Array.from({ length: 22 }, () => .72 + Math.random() * .38), glør: Array.from({ length: 34 }, () => ({ a: Math.random() * 6.3, d: .55 + Math.random() * .45, f: Math.random() * 6, s: .4 + Math.random() * .6 })) });
+      for (let n = 0; n < 26 && u.ildP.length < 300; n++) { const a = Math.random() * 7, g = .1 + Math.random() * .25; u.ildP.push({ x: q.x1, y: q.y1, vx: Math.cos(a) * g, vy: Math.sin(a) * g - .05, liv: 1, st: 0, gnist: true }); }
+      for (let n = 0; n < 14 && u.ildP.length < 300; n++) { const a = Math.random() * 7, rr = Math.random() * .04; u.ildP.push({ x: q.x1 + Math.cos(a) * rr, y: q.y1 + Math.sin(a) * rr, vx: (Math.random() - .5) * .03, vy: -.05 - Math.random() * .05, liv: 1, st: .016 + Math.random() * .014 }); }
+      if (lydPa) { shSus(.45, "lowpass", 900, .07, .8, .7, .5); tone(90, 0, .25, .08, "sine", 1, .4); }
+      if (uwPeker != null && u.kniv && u.usårbar <= 0 && Math.hypot(u.kniv.x - q.x1, u.kniv.y - q.y1) < .065) uwMistet();
+      else if (!u.sviddVist) { u.sviddVist = true; uwTekst("TOO HOT · SCRAPE ELSEWHERE", q.x1, q.y1 - .1); } } }
+  if (u.ild?.length) u.ild = u.ild.filter(q => !q.borte);
+  for (const p of u.ildP) { p.x += p.vx * dt; p.y += p.vy * dt; if (p.gnist) { p.vy += .3 * dt; p.liv -= dt * 1.7; } else { p.vy -= .1 * dt; p.liv -= dt * 3; } }
+  u.ildP = u.ildP.filter(p => p.liv > 0);
+  if (u.svidd?.length) { for (const s of u.svidd) s.t += dt; u.svidd = u.svidd.filter(s => s.t < s.T); }
+}
+// Under bossen: det svidde papiret og ringen som varsler hvor ildkula lander.
+function uwIldBunnTegn(x, P, f, nå) {
+  const u = uw;
+  // Svidd papir: forkullet i midten, en glødende rand som brenner ut, og små gnister langs kanten.
+  for (const s of u.svidd || []) { const [X, Y] = P(s.x, s.y), R = s.r * f, a = Math.min(1, s.t * 6) * Math.min(1, (s.T - s.t) / 1.2), varme = Math.max(0, 1 - s.t / (s.T * .75));
+    const sti = () => { x.beginPath(); s.form.forEach((v, k) => { const w = k / s.form.length * Math.PI * 2; k ? x.lineTo(Math.cos(w) * R * v, Math.sin(w) * R * v) : x.moveTo(Math.cos(w) * R * v, Math.sin(w) * R * v); }); x.closePath(); };
+    x.save(); x.translate(X, Y); x.globalAlpha = a;
+    const g = x.createRadialGradient(0, 0, 0, 0, 0, R * 1.05); g.addColorStop(0, "rgba(8,6,5,.95)"); g.addColorStop(.6, "rgba(22,14,9,.92)"); g.addColorStop(.85, "rgba(60,32,14,.75)"); g.addColorStop(1, "rgba(110,60,25,.3)");
+    sti(); x.fillStyle = g; x.fill();
+    if (varme > 0) { x.globalCompositeOperation = "screen"; const fl = .75 + .25 * Math.sin(nå * 11 + s.x * 40); sti(); x.lineJoin = "round"; x.strokeStyle = `rgba(255,120,30,${.75 * varme * fl})`; x.lineWidth = Math.max(1.5, R * .07); x.shadowColor = "rgba(255,90,20,.9)"; x.shadowBlur = R * .35; x.stroke();
+      x.shadowBlur = 0; x.strokeStyle = `rgba(255,220,140,${.55 * varme * fl})`; x.lineWidth = Math.max(.7, R * .02); x.stroke();
+      for (const e of s.glør) { const fl2 = .5 + .5 * Math.sin(nå * 13 + e.f), ex = Math.cos(e.a) * e.d * R, ey = Math.sin(e.a) * e.d * R; x.fillStyle = `rgba(255,${170 + 60 * fl2 | 0},90,${varme * fl2 * e.s})`; x.beginPath(); x.arc(ex, ey, Math.max(.6, R * .018 * e.s), 0, 7); x.fill(); } }
+    x.restore(); }
+  for (const q of u.ild || []) { const [X, Y] = P(q.x1, q.y1), k = Math.min(1, q.t / q.T), R = .065 * f, puls = .6 + .4 * Math.sin(nå * 14);
+    x.save(); x.globalCompositeOperation = "screen"; const g = x.createRadialGradient(X, Y, R * .55, X, Y, R * 1.1); g.addColorStop(0, "rgba(255,100,30,0)"); g.addColorStop(.75, `rgba(255,120,40,${(.25 + .45 * k) * puls})`); g.addColorStop(1, "rgba(255,80,20,0)");
+    x.fillStyle = g; x.fillRect(X - R * 1.2, Y - R * 1.2, R * 2.4, R * 2.4); x.restore(); }
+}
+// Over bossen: ildkulene med flammer, og papirbitene som flyr.
+function uwIldTegn(x, P, f, nå) {
+  const u = uw, im = uwPapirBilder[u.stil.navn], ok = im?.complete && im.naturalWidth;
+  for (const q of u.spyBiter || []) { const k = Math.min(1, q.t / q.T), lx = q.x0 + (q.x1 - q.x0) * k, ly = q.y0 + (q.y1 - q.y0) * k, py = ly - q.h * 4 * k * (1 - k), sk = 1 + .5 * 4 * k * (1 - k), r = q.s * f * sk;
+    if (q.landet) { const [X, Y] = P(q.x1, q.y1), a = 1 - q.tL / .3; x.save(); x.globalAlpha = a * .35; x.fillStyle = "#fff"; x.beginPath(); x.arc(X, Y, q.s * f * (1 + q.tL * 2), 0, 7); x.fill(); x.restore(); continue; }
+    const [SX, SY] = P(lx, ly), [X, Y] = P(lx, py); x.save(); x.globalAlpha = .22 * k; x.fillStyle = "#000"; x.beginPath(); x.ellipse(SX, SY, q.s * f * .8, q.s * f * .35, 0, 0, 7); x.fill(); x.restore();
+    x.save(); x.translate(X, Y); x.rotate(q.rot); x.scale(1, .55 + .45 * Math.abs(Math.cos(q.rot * 1.3)));
+    x.beginPath(); q.form.forEach((v, j) => { const w = j / q.form.length * Math.PI * 2; j ? x.lineTo(Math.cos(w) * r * v, Math.sin(w) * r * v) : x.moveTo(Math.cos(w) * r * v, Math.sin(w) * r * v); }); x.closePath();
+    x.shadowColor = "rgba(0,0,0,.35)"; x.shadowBlur = 6; x.fillStyle = u.stil.bunn[0]; x.fill(); x.shadowBlur = 0;
+    if (ok) { x.save(); x.clip(); const W = im.naturalWidth, H = im.naturalHeight; x.drawImage(im, (q.x1 - q.s) * W, (q.y1 - q.s) * H, q.s * 2 * W, q.s * 2 * H, -r, -r, r * 2, r * 2); x.restore(); }
+    x.strokeStyle = "rgba(255,250,244,.85)"; x.lineWidth = Math.max(1, r * .08); x.stroke(); x.restore(); }
+  if (!u.ildP?.length && !u.ild?.length) return;
+  x.save();
+  for (const p of u.ildP || []) if (p.gnist) { const [X, Y] = P(p.x, p.y); x.globalCompositeOperation = "screen"; x.globalAlpha = Math.min(1, p.liv * 1.5); x.fillStyle = p.liv > .5 ? "#fff3b0" : "#ff9a3a"; x.beginPath(); x.arc(X, Y, Math.max(.8, f * .0025), 0, 7); x.fill(); }
+  for (const p of u.ildP || []) { if (p.gnist) continue; const [X, Y] = P(p.x, p.y), k = 1 - p.liv, bred = p.st * f * (1 - k * .55), høy = bred * 2.4, rot = Math.atan2(p.vx, -p.vy);
+    x.save(); x.translate(X, Y); x.rotate(rot); x.globalCompositeOperation = "source-over";
+    if (k > .45) { x.globalAlpha = Math.min(1, (k - .45) * 2.5) * p.liv * .7; x.drawImage(flammeSprite(k > .8 ? "sot" : "kant"), -bred, -høy * .8, bred * 2, høy); }
+    if (k < .8) { x.globalAlpha = Math.max(0, 1 - Math.abs(k - .35) / .45) * .75; x.drawImage(flammeSprite("kropp"), -bred, -høy * .75, bred * 2, høy); }
+    x.globalCompositeOperation = "screen";
+    if (k < .45) { x.globalAlpha = (1 - k / .45) * .8; x.drawImage(flammeSprite("gul"), -bred * .7, -høy * .55, bred * 1.4, høy * .75); }
+    if (k < .2) { x.globalAlpha = (1 - k / .2) * .8; x.drawImage(flammeSprite("kjerne"), -bred * .45, -høy * .38, bred * .9, høy * .5); }
+    x.restore(); }
+  for (const q of u.ild || []) { const [X, Y] = P(q.x, q.y), R = .03 * f; x.globalCompositeOperation = "screen"; x.globalAlpha = 1; const g = x.createRadialGradient(X, Y, 0, X, Y, R * 2.2);
+    g.addColorStop(0, "rgba(255,250,220,1)"); g.addColorStop(.25, "rgba(255,200,90,.95)"); g.addColorStop(.6, "rgba(255,100,30,.5)"); g.addColorStop(1, "rgba(255,60,0,0)"); x.fillStyle = g; x.fillRect(X - R * 2.2, Y - R * 2.2, R * 4.4, R * 4.4); }
+  x.restore();
+}
 function uwEnBossSteg(B, dt) {
   const u = uw, G = UW_G; if (!window.Boss3D?.har(B.modell)) return;
   if (!B.sett) { B.sett = true; uwTekst(B.pakker ? "BOSS!" : "MASK!", .5, .3); if (lydPa) shLyd("boss"); }
@@ -9227,21 +9302,38 @@ function uwEnBossSteg(B, dt) {
   if (Math.hypot(B.mx - B.x, B.my - B.y) < .05 || B.t % 6 < dt) { B.mx = .15 + Math.random() * .7; B.my = .15 + Math.random() * .7; }
   // Den lille masken går etter fingeren når du skraper.
   if (!B.pakker && uwPeker != null && u.kniv && u.tid - (u.skrapT ?? -9) < .5 && Math.random() < dt * 2) { B.mx = u.kniv.x; B.my = u.kniv.y; }
-  const dx = B.mx - B.x, dy = B.my - B.y, d = Math.hypot(dx, dy) || 1, v = B.fart + i2(u) * .01; B.vx = dx / d * v; B.vy = dy / d * v; B.x += B.vx * dt; B.y += B.vy * dt;
-  // Pakker inn igjen: en rund flekk papir legges tilbake der den svever.
-  B.lappT -= dt; if (B.pakker && B.lappT <= 0 && B.y > .05) { B.lappT = 6 + Math.random() * 3; B.blink = 1; const cx = B.x * G, cy = (B.y + .06) * G, rc = G * .07; let n = 0, x0 = G, y0 = G, x1 = 0, y1 = 0;
-    for (let y = Math.max(0, Math.floor(cy - rc)); y <= Math.min(G - 1, Math.ceil(cy + rc)); y++) for (let x = Math.max(0, Math.floor(cx - rc)); x <= Math.min(G - 1, Math.ceil(cx + rc)); x++) {
-      if (Math.hypot(x - cx, y - cy) > rc) continue; const j = y * G + x; if (u.celle[j] !== 1) continue; if (!u.indre || !u.indre[j]) u.åpne--; u.celle[j] = 0; n++; if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
-    if (n) { uwSkitt(x0, y0, x1, y1); uwTekst(B.lappet ? "WRAPPED AGAIN" : "IT WRAPS IT UP AGAIN!", B.x, B.y + .12); B.lappet = true; if (lydPa) shSus(.3, "lowpass", 900, .05, 1, .8, .3); } }
+  const dx = B.mx - B.x, dy = B.my - B.y, d = Math.hypot(dx, dy) || 1, v = B.spy ? 0 : B.fart + i2(u) * .01; B.vx = dx / d * v; B.vy = dy / d * v; B.x += B.vx * dt; B.y += B.vy * dt;
+  // Spyr papir tilbake: dirrer og lener seg bakover, og spytter så papirbiter i en bue
+  // som klistrer seg fast over noe av det du har skrapet fram. Bitene er klippet av brettets papirbilde.
+  B.lappT -= dt;
+  if (B.pakker && !B.spy && B.lappT <= 0 && B.y > .05) {
+    B.lappT = 9 + Math.random() * 4; let best = null, bestN = 2;
+    for (let k = 0; k < 50; k++) { const gx = (Math.random() * G) | 0, gy = (Math.random() * G) | 0; if (u.celle[gy * G + gx] !== 1) continue; let n = 0;
+      for (let q = 0; q < 12; q++) { const a = q / 12 * 6.283, xx = Math.round(gx + Math.cos(a) * G * .045), yy = Math.round(gy + Math.sin(a) * G * .045); if (xx >= 0 && yy >= 0 && xx < G && yy < G && u.celle[yy * G + xx] === 1) n++; }
+      if (n > bestN) { bestN = n; best = { x: (gx + .5) / G, y: (gy + .5) / G }; } }
+    if (best) { B.spy = { t: 0, mål: best, igjen: 18, nesteT: 0 }; if (lydPa) shGlid(170, 80, .55, .05, "sawtooth", .6, .3); }
+  }
+  if (B.spy) { const S = B.spy; S.t += dt; B.skjelv = S.t < .6 ? 1 : 0; B.lene = S.t < .6 ? S.t / .6 : Math.max(0, 1 - (S.t - .6) * 1.4);
+    if (S.t >= .6) { if (!S.sagt) { S.sagt = true; B.blink = 1; uwTekst(B.lappet ? "IT SPITS IT BACK" : "IT SPITS THE PAPER BACK!", B.x, B.y + .13); B.lappet = true; }
+      S.nesteT -= dt; while (S.igjen > 0 && S.nesteT <= 0) { S.nesteT += .045; S.igjen--; const a = Math.random() * 6.283, rr = Math.sqrt(Math.random()) * .075;
+        (u.spyBiter = u.spyBiter || []).push({ x0: B.x + (Math.random() - .5) * .02, y0: B.y + .04, x1: shClamp(S.mål.x + Math.cos(a) * rr, .02, .98), y1: shClamp(S.mål.y + Math.sin(a) * rr, .02, .98), t: 0, T: .4 + Math.random() * .2, h: .1 + Math.random() * .12, rot: Math.random() * 6, spinn: (Math.random() - .5) * 16, s: .028 + Math.random() * .02, form: Array.from({ length: 8 }, () => .68 + Math.random() * .42) }); } }
+    if (S.t > 1.9) { B.spy = null; B.skjelv = 0; B.lene = 0; } }
+  // Ildkuler mot der du skraper: en glødende ring varsler hvor den lander, og der svir den papiret.
+  B.ildT = (B.ildT ?? 3 + Math.random() * 3) - dt;
+  if (B.pakker && !B.spy && B.ildT <= 0) { const skraper = uwPeker != null && u.kniv && u.tid - (u.skrapT ?? -9) < .4;
+    if (!skraper) B.ildT = .5;
+    else { B.ildT = Math.max(2.2, 4 + Math.random() * 3 - i2(u) * .2); B.blink = .7;
+      (u.ild = u.ild || []).push({ x0: B.x, y0: B.y + .03, x1: shClamp(u.kniv.x, .04, .96), y1: shClamp(u.kniv.y, .04, .96), t: 0, T: .85, x: B.x, y: B.y });
+      if (lydPa) shGlid(520, 180, .4, .04, "sawtooth", .5, .3); } }
   // Rører den fingeren mens du skraper?
   if (uwPeker != null && u.tid - (u.skrapT ?? -9) < .25 && u.usårbar <= 0 && u.kniv && Math.hypot(u.kniv.x - B.x, u.kniv.y - B.y) < B.treff) { B.blink = 1; uwMistet(); }
 }
 const i2 = u => Math.min(8, u.i);
 function uwBossTegn(x, P, f, nå) {
   for (const B of uw.bosser || []) { if (!window.Boss3D?.har(B.modell)) continue;
-    const [X, Y] = P(B.x, B.y), str = f * B.str;
+    const [X0, Y] = P(B.x, B.y), str = f * B.str, X = X0 + (B.skjelv || 0) * Math.sin(nå * 57) * f * .006;
     x.save(); x.fillStyle = "rgba(0,0,0,.22)"; x.beginPath(); x.ellipse(X + str * .08, Y + str * .5, str * .26, str * .07, 0, 0, 7); x.fill(); x.restore();
-    window.Boss3D.tegn(x, X, Y, str, { modell: B.modell, vri: B.pakker ? shBoss3DVri(B.modell, nå) : shBoss3DVri(B.modell, nå, 2), vipp: .1 + Math.sin(nå * 1.3) * .05, rot: -(B.vx || 0) * 1.5, blink: B.blink }); }
+    window.Boss3D.tegn(x, X, Y, str, { modell: B.modell, vri: B.pakker ? shBoss3DVri(B.modell, nå) : shBoss3DVri(B.modell, nå, 2), vipp: .1 + Math.sin(nå * 1.3) * .05 - (B.lene || 0) * .4, rot: -(B.vx || 0) * 1.5, blink: B.blink }); }
 }
 // GAVELAPPER: en liten lapp med hyssing ligger på papiret. River du av biten den sitter på, får du det som står på den.
 //   SCISSORS: kniven går dobbelt så fort gjennom papiret, og båndet er ikke seigt (8 s).
@@ -9669,7 +9761,9 @@ function uwTegn() {
     else { const s = Math.max(22, .075 * f); x.save(); x.fillStyle = "rgba(0,0,0,.18)"; x.beginPath(); x.ellipse(ex + s * .25, ey + s * .45, s * .35, s * .18, 0, 0, 7); x.fill(); x.translate(ex, ey); x.rotate(e.a); uwMøllTegn(x, s, nå, e.fase); x.restore(); } }
   for (const q of uw.rester || []) { const [rx, ry] = P(q.x, q.y), rr = q.r * f; x.save(); x.translate(rx, ry); x.rotate(q.rot); x.fillStyle = "rgba(0,0,0,.25)"; x.beginPath(); q.form.forEach((v, k) => { const a = k / q.form.length * Math.PI * 2; k ? x.lineTo(Math.cos(a) * rr * v + 1.5, Math.sin(a) * rr * v * .8 + 2) : x.moveTo(Math.cos(a) * rr * v + 1.5, Math.sin(a) * rr * v * .8 + 2); }); x.fill();
     x.beginPath(); q.form.forEach((v, k) => { const a = k / q.form.length * Math.PI * 2; k ? x.lineTo(Math.cos(a) * rr * v, Math.sin(a) * rr * v * .8) : x.moveTo(Math.cos(a) * rr * v, Math.sin(a) * rr * v * .8); }); x.closePath(); x.fillStyle = q.farge; x.fill(); x.strokeStyle = "rgba(255,248,244,.9)"; x.lineWidth = Math.max(1, rr * .15); x.stroke(); x.restore(); }
+  uwIldBunnTegn(x, P, f, nå);
   uwBossTegn(x, P, f, nå);
+  uwIldTegn(x, P, f, nå);
   // Kniven: et lite hobbykniv-blad som peker dit du skjærer; blinker når den er usårbar.
   if (u.kniv && u.tilstand === "spill" && !u.kast) { const [kx, ky] = P(u.kniv.x, u.kniv.y), Lb = Math.max(14, f * .045), synlig = u.usårbar <= 0 || Math.sin(nå * 50) > 0;
     if (synlig) { x.save(); x.translate(kx, ky); x.globalAlpha = uwPeker != null || u.kø.length ? 1 : .6;
