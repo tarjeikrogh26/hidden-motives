@@ -750,7 +750,7 @@ body.lys #modusDeal{--farge:#0f8f6c;--glod:15,143,108}
   <div class="regel">Everything counts: Game, Peace, Bubble it 1P and 2P, every board, every level, every collection. Each board list gives up to 100 points (a Bubble it list up to 1,000): #1 gets them all, the rest their share of the top score.</div>
   <div class="sammen" id="spillere"><p class="liten">Loading players …</p></div>
   <p class="kreditt">© 2001–2026 Tarjei Krogh. All photography, music and art. <a href="https://kroghx.com" target="_blank" rel="noopener">kroghx.com</a></p>
-  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 1.99<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
+  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 2.00<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
 </section>
 
 <div class="ark" id="tidUtArk" hidden style="z-index:200001">
@@ -9017,6 +9017,7 @@ function uwLayout() {
   return { f, x0: Math.round((innerWidth - f) / 2), y0: Math.round(hud + 12), dpr: Math.min(devicePixelRatio || 1, 2) };
 }
 async function uwStart(i) {
+  $("uwCanvas").style.filter = ""; $("uwCanvas").style.transform = "";
   const b = BRETT[i], img = await hentBilde(b.src);
   $("meny").hidden = true; $("unwrap").hidden = false; oppdaterTema();
   const G = UW_G, n = aktiv * 9 + i, stil = UW_PAPIR[n % UW_PAPIR.length], R = () => Math.random();
@@ -9049,7 +9050,7 @@ async function uwStart(i) {
   if (lydPa) spillMusikk(b.id);
   uwSist = performance.now(); cancelAnimationFrame(uwRAF); uwRAF = requestAnimationFrame(uwLoop);
 }
-function uwAvslutt() { cancelAnimationFrame(uwRAF); uwRAF = 0; uw = null; uwPeker = null; uwMelding(); $("unwrap").hidden = true; tilMeny(); }
+function uwAvslutt() { $("uwCanvas").style.filter = ""; $("uwCanvas").style.transform = ""; cancelAnimationFrame(uwRAF); uwRAF = 0; uw = null; uwPeker = null; uwMelding(); $("unwrap").hidden = true; tilMeny(); }
 function uwHud() {
   if (!uw) return; $("uwPoeng").textContent = uw.poeng.toLocaleString("en");
   $("uwLiv").textContent = "●".repeat(Math.max(0, uw.liv)) + "○".repeat(Math.max(0, 3 - uw.liv));
@@ -9072,7 +9073,19 @@ const uwPapirL = (j, L) => L === 0 ? uw.celle[j] === 0 : uw.celle[j] === 1 && !!
 const uwPåBånd = (x, y) => { if (uw.sløyfe?.ingen) return false; const h = (uw.stil.hyssing ? .016 : .07) / 2; return Math.abs(x - uw.bånd.x) < h || Math.abs(y - uw.bånd.y) < h; };
 // Styring: kniven er der fingeren er (litt over fingertuppen på telefon, så du ser streken).
 let uwPeker = null;
-function uwPunkt(e) { const L = uwLayout(), løft = e.pointerType === "touch" ? 26 : 0; return { x: shClamp((e.clientX - L.x0) / L.f, -.03, 1.03), y: shClamp((e.clientY - løft - L.y0) / L.f, -.03, 1.03) }; }
+function uwPunkt(e) { const L = uwLayout(), løft = e.pointerType === "touch" ? 26 : 0, x = shClamp((e.clientX - L.x0) / L.f, -.03, 1.03); return { x: uw?.trip ? 1 - x : x, y: shClamp((e.clientY - løft - L.y0) / L.f, -.03, 1.03) }; }
+// TRIP (Krogh 1.100): noen ganger i UNWRAP i ca. 10 s. Fargene flyter, bildet puster og gynger litt,
+// og fingeren er speilvendt: du skraper på motsatt side av der du tar. Annerledes enn TRIP i BUBBLE.
+function uwTripSteg(dt) {
+  const u = uw, c = $("uwCanvas"); u.tripT = (u.tripT ?? 30 + Math.random() * 15) - dt;
+  if (!u.trip && u.tripT <= 0 && u.revet && u.tilstand === "spill") { u.trip = { t: 0, d: 9 + Math.random() * 3 }; u.tripT = 45 + Math.random() * 25; uwAvbryt(); u.kø = [];
+    uwTekst("TRIP! LEFT IS RIGHT", .5, .3); if (lydPa) { shGlid(300, 900, .6, .04, "sine", .5, 1); shGlid(905, 290, .6, .03, "triangle", .5, 1); } }
+  const T = u.trip; if (!T) { if (c.style.filter) { c.style.filter = ""; c.style.transform = ""; } return; }
+  T.t += dt; const inn = Math.min(1, T.t / 1.2, (T.d - T.t) / 1.2);
+  if (T.t >= T.d || u.tilstand !== "spill") { u.trip = null; uwAvbryt(); u.kø = []; c.style.filter = ""; c.style.transform = ""; uwTekst("BACK TO NORMAL", .5, .3); return; }
+  c.style.filter = `hue-rotate(${Math.round(T.t * 140) % 360}deg) saturate(${1 + .8 * inn}) contrast(${1 + .1 * inn})`;
+  c.style.transform = `rotate(${(Math.sin(T.t * 1.3) * 1.6 * inn).toFixed(2)}deg) scale(${(1 + Math.sin(T.t * 2.1) * .012 * inn).toFixed(4)})`;
+}
 let uwAktive = new Set();
 function uwNed(e) {
   if (!uw || uw.tilstand !== "spill") return; e.preventDefault(); ctx(); uwAktive.add(e.pointerId);
@@ -9289,7 +9302,7 @@ function uwVunnet() {
   // Resten av papiret: tas bilde av og brytes i ujevne biter som løftes av bildet (se uwSluttTegn).
   const biter = uwSluttBiter();
   for (let j = 0; j < G * G; j++) { u.celle[j] = 1; if (u.indre) u.indre[j] = 0; } uwSkitt(0, 0, G - 1, G - 1); u.spor = []; u.linje = []; u.merket.fill(0);
-  u.spyBiter = []; u.ild = []; u.ildP = []; u.svidd = []; u.flak = [];
+  u.spyBiter = []; u.ild = []; u.ildP = []; u.svidd = []; u.flak = []; u.trip = null; $("uwCanvas").style.filter = ""; $("uwCanvas").style.transform = "";
   if (!u.sløyfe.av) u.sløyfe.av = { vx: .2, vy: -.5, rot: 0, spinn: 3, t: 0 };
   if (u.hage) { u.hage.nett = []; u.hage.hauger = []; u.hage.edd = null; u.hage.mv = null; u.dekket = 0; } u.lapper = [];
   // Tre stjerner, som i BUBBLE IT: pakket opp, minst en tredjedel av tida igjen, ingen kniv mistet.
@@ -9400,7 +9413,7 @@ function uwOppdater(dt) {
   if (u.tid >= u.frist) { u.tilstand = "over"; uwMelding("Time's up", Math.floor(uwSynlig(u) * 100) + " % unwrapped. You need 80 %.", [["Try again", () => uwStart(u.i), true], ["Menu", uwAvslutt]]); return; }
   if (u.kniv) uwKniv(dt);
   if (u.tilstand !== "spill") return;
-  uwMalingSteg(dt); uwLappSteg(dt); uwKastSteg(dt); // Hagen (edderkopp og muldvarp) er tatt ut (Krogh).
+  uwTripSteg(dt); uwMalingSteg(dt); uwLappSteg(dt); uwKastSteg(dt); // Hagen (edderkopp og muldvarp) er tatt ut (Krogh).
   for (const e of [...u.fiender]) {
     if (u.eff?.frys > 0) continue; // FREEZE: står stille og er ufarlig.
     if (e.type === "figur") {
@@ -10006,10 +10019,10 @@ function shAvslutt() { cancelAnimationFrame(shRAF); sh = null; shMelding(); $("s
 $("shUt").onclick = shAvslutt;
 $("uwUt").onclick = uwAvslutt;
 // ---------- MIND GAME (2P under UNWRAP IT) ----------
-// Krogh 1.98: memory for to, ansikt til ansikt. 6 × 6 kort ligger tett; baksidene er til sammen ett papirbilde.
+// Krogh 1.98: memory for to, ansikt til ansikt. 5 × 6 kort (15 par) ligger tett; baksidene er til sammen ett papirbilde.
 // Forsidene er motiver fra spillets bilder. Finner du et par, legger det seg på din side og du går igjen.
 // Under kortene ligger brettets bilde, og det kommer fram etter hvert. Ni runder i sesongen er én match.
-const MG_N = 6, MG_FARGE = ["255,61,139", "47,211,255"], MG_NAVN = ["PINK", "BLUE"];
+const MG_N = 5, MG_R = 6, MG_FARGE = ["255,61,139", "47,211,255"], MG_NAVN = ["PINK", "BLUE"];
 let mg = null, mgRAF = 0, mgSist = 0;
 function mgTilfeldig(frø) { let a = frø * 2654435761 >>> 0; return () => { a = (a + 0x6D2B79F5) >>> 0; let t = a; t = Math.imul(t ^ t >>> 15, t | 1); t ^= t + Math.imul(t ^ t >>> 7, t | 61); return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
 function mgMotivPool(unntak) {
@@ -10023,20 +10036,21 @@ async function mgStart(i) {
   const b = BRETT[i], n = aktiv * 9 + i, R = mgTilfeldig(n * 7 + 3);
   $("meny").hidden = true; $("mind").hidden = false; oppdaterTema(); mgMelding("MIND GAME", "Laying out the cards…", []);
   const pool = mgMotivPool(b.src); for (let k = pool.length - 1; k > 0; k--) { const j = (R() * (k + 1)) | 0; [pool[k], pool[j]] = [pool[j], pool[k]]; }
-  const par = MG_N * MG_N / 2, kilder = pool.slice(0, par), papir = UW_PAPIR[n % UW_PAPIR.length].bilde;
+  const par = MG_N * MG_R / 2, kilder = pool.slice(0, par), papir = UW_PAPIR[n % UW_PAPIR.length].bilde;
   const [under, bak, ...forsider] = await Promise.all([hentBilde(b.src), hentBilde(papir), ...kilder.map(s => hentBilde(s).catch(() => null))]);
   // Forsidene krympes til små, kvadratiske bilder (raskere å tegne).
   const tommel = forsider.map(im => { const c = document.createElement("canvas"); c.width = c.height = 320; const x = c.getContext("2d"); if (im) { const s = Math.min(im.naturalWidth, im.naturalHeight); x.drawImage(im, (im.naturalWidth - s) / 2, (im.naturalHeight - s) / 2, s, s, 0, 0, 320, 320); } else { x.fillStyle = "#333"; x.fillRect(0, 0, 320, 320); } return c; });
   const ordning = []; for (let p = 0; p < par; p++) ordning.push(p, p); for (let k = ordning.length - 1; k > 0; k--) { const j = (Math.random() * (k + 1)) | 0; [ordning[k], ordning[j]] = [ordning[j], ordning[k]]; }
   const forrige = mg?.match; cancelAnimationFrame(mgRAF);
-  mg = { i, under, bak, tommel, kort: ordning.map((p, k) => ({ k, par: p, vis: 0, mål: 0, tatt: false })), åpne: [], tur: Math.random() < .5 ? 0 : 1, poeng: [0, 0], bunke: [[], []], fly: [], låst: false, tid: 0, ferdig: false };
+    mg = { i, under, bak, tommel, kort: ordning.map((p, k) => ({ k, par: p, vis: 0, mål: 0, tatt: p < 0 })), åpne: [], tur: Math.random() < .5 ? 0 : 1, poeng: [0, 0], bunke: [[], []], fly: [], låst: false, tid: 0, ferdig: false };
   mgMelding(); mgSist = performance.now(); mgRAF = requestAnimationFrame(mgLoop);
 }
 function mgLayout() {
-  const W = innerWidth, H = innerHeight, panel = Math.round(Math.max(84, Math.min(130, H * .13))), f = Math.floor(Math.min(W - 20, H - 2 * panel - 16, 860));
-  return { W, H, panel, f, x0: Math.round((W - f) / 2), y0: Math.round((H - f) / 2), dpr: Math.min(devicePixelRatio || 1, 2) };
+  // 5 kort i bredden og 6 i høyden: brettet er litt høyere enn bredt.
+  const W = innerWidth, H = innerHeight, panel = Math.round(Math.max(84, Math.min(130, H * .12))), f = Math.floor(Math.min(W - 20, (H - 2 * panel - 16) * MG_N / MG_R, 720)), h = f * MG_R / MG_N;
+  return { W, H, panel, f, h, x0: Math.round((W - f) / 2), y0: Math.round((H - h) / 2), dpr: Math.min(devicePixelRatio || 1, 2) };
 }
-function mgBunkePos(p, L) { const s = L.panel * .62; return p === 0 ? { x: L.x0 + s * .75, y: L.y0 + L.f + L.panel / 2 + 2, s } : { x: L.x0 + L.f - s * .75, y: L.y0 - L.panel / 2 - 2, s }; }
+function mgBunkePos(p, L) { const s = L.panel * .62; return p === 0 ? { x: L.x0 + s * .75, y: L.y0 + L.h + L.panel / 2 + 2, s } : { x: L.x0 + L.f - s * .75, y: L.y0 - L.panel / 2 - 2, s }; }
 function mgLoop(t) {
   if (!mg) return; const dt = Math.min(.05, (t - mgSist) / 1000); mgSist = t; mg.tid += dt;
   for (const c of mg.kort) c.vis += Math.sign(c.mål - c.vis) * Math.min(Math.abs(c.mål - c.vis), dt * 4.5);
@@ -10046,22 +10060,24 @@ function mgLoop(t) {
   mgTegn(); mgRAF = requestAnimationFrame(mgLoop);
 }
 function mgTegn() {
-  const c = $("mgCanvas"), L = mgLayout(), { f, x0, y0, dpr } = L, s = f / MG_N;
+  const c = $("mgCanvas"), L = mgLayout(), { f, h, x0, y0, dpr } = L, s = f / MG_N;
   if (c.width !== Math.round(L.W * dpr) || c.height !== Math.round(L.H * dpr)) { c.width = Math.round(L.W * dpr); c.height = Math.round(L.H * dpr); c.style.width = L.W + "px"; c.style.height = L.H + "px"; }
   const x = c.getContext("2d"); x.setTransform(dpr, 0, 0, dpr, 0, 0); x.clearRect(0, 0, L.W, L.H);
   // Brettets bilde under kortene.
-  x.drawImage(mg.under, x0, y0, f, f);
-  const BW = mg.bak.naturalWidth, BH = mg.bak.naturalHeight;
+  // Bildene fyller det høye brettet: et utsnitt på midten (litt kuttet på sidene).
+  const utsnitt = im => { const iw = im.naturalWidth, ih = im.naturalHeight, a = MG_N / MG_R; return iw / ih > a ? [(iw - ih * a) / 2, 0, ih * a, ih] : [0, (ih - iw / a) / 2, iw, iw / a]; };
+  { const [ux, uy, uw2, uh] = utsnitt(mg.under); x.drawImage(mg.under, ux, uy, uw2, uh, x0, y0, f, h); }
+  const [bx0, by0, BW, BH] = utsnitt(mg.bak);
   for (const k of mg.kort) { if (k.tatt) continue; const cx = k.k % MG_N, cy = (k.k / MG_N) | 0, X = x0 + cx * s, Y = y0 + cy * s, sk = Math.abs(Math.cos(k.vis * Math.PI));
     x.save(); x.translate(X + s / 2, Y + s / 2); x.scale(Math.max(.02, sk), 1);
-    if (k.vis < .5) x.drawImage(mg.bak, cx / MG_N * BW, cy / MG_N * BH, BW / MG_N, BH / MG_N, -s / 2, -s / 2, s, s);
+    if (k.vis < .5) x.drawImage(mg.bak, bx0 + cx / MG_N * BW, by0 + cy / MG_R * BH, BW / MG_N, BH / MG_R, -s / 2, -s / 2, s, s);
     else { x.drawImage(mg.tommel[k.par], -s / 2, -s / 2, s, s); x.strokeStyle = "rgba(255,255,255,.9)"; x.lineWidth = 2; x.strokeRect(-s / 2 + 1, -s / 2 + 1, s - 2, s - 2); }
     x.restore(); }
   // Tynne streker mellom kortene: neon i fargen til den som har turen.
   const fc = MG_FARGE[mg.tur], puls = .55 + .2 * Math.sin(mg.tid * 3);
-  x.save(); x.beginPath(); for (let j = 1; j < MG_N; j++) { x.moveTo(x0 + j * s, y0); x.lineTo(x0 + j * s, y0 + f); x.moveTo(x0, y0 + j * s); x.lineTo(x0 + f, y0 + j * s); }
+  x.save(); x.beginPath(); for (let j = 1; j < MG_N; j++) { x.moveTo(x0 + j * s, y0); x.lineTo(x0 + j * s, y0 + h); } for (let j = 1; j < MG_R; j++) { x.moveTo(x0, y0 + j * s); x.lineTo(x0 + f, y0 + j * s); }
   x.strokeStyle = mg.ferdig ? "rgba(255,255,255,.12)" : `rgba(${fc},${puls})`; x.lineWidth = 1; if (!mg.ferdig) { x.shadowColor = `rgba(${fc},.9)`; x.shadowBlur = 6; } x.stroke();
-  x.shadowBlur = 0; x.strokeStyle = mg.ferdig ? "rgba(255,255,255,.2)" : `rgba(${fc},.85)`; x.lineWidth = 1.5; x.strokeRect(x0 + .5, y0 + .5, f - 1, f - 1); x.restore();
+  x.shadowBlur = 0; x.strokeStyle = mg.ferdig ? "rgba(255,255,255,.2)" : `rgba(${fc},.85)`; x.lineWidth = 1.5; x.strokeRect(x0 + .5, y0 + .5, f - 1, h - 1); x.restore();
   // Hver spiller sin side: bunken med par (siste øverst) og tallet.
   for (const p of [0, 1]) { const B = mgBunkePos(p, L), aktivTur = mg.tur === p && !mg.ferdig;
     x.save(); x.translate(B.x, B.y); if (p === 1) x.rotate(Math.PI);
@@ -10080,7 +10096,7 @@ function mgTegn() {
 }
 function mgTrykk(e) {
   if (!mg || mg.låst || mg.ferdig) return; const L = mgLayout(), s = L.f / MG_N, cx = Math.floor((e.clientX - L.x0) / s), cy = Math.floor((e.clientY - L.y0) / s);
-  if (cx < 0 || cy < 0 || cx >= MG_N || cy >= MG_N) return; const k = mg.kort[cy * MG_N + cx]; if (k.tatt || k.mål === 1) return;
+  if (cx < 0 || cy < 0 || cx >= MG_N || cy >= MG_R) return; const k = mg.kort[cy * MG_N + cx]; if (k.tatt || k.mål === 1 || k.par < 0) return;
   k.mål = 1; mg.åpne.push(k); if (lydPa) tone(520 + mg.åpne.length * 140, 0, .06, .03, "triangle", .5, .3);
   if (mg.åpne.length < 2) return;
   const [a, b] = mg.åpne; mg.åpne = []; mg.låst = true;
@@ -11107,7 +11123,7 @@ function shSteg(t) {
 }
 addEventListener("resize", () => { if (sh) shOppsett(); });
 // Bare for automatisk testing lokalt (?autotest).
-if (location.search.includes("autotest")) { window.__sh = () => sh; window.__boss3D = (m, a) => { if (a != null) aktiv = a; shBoss3DLast(m); }; window.__shSmåTreff = (...a) => shSmåTreff(...a); window.__shFerdig = () => shFerdig(); window.__ark = () => ark; window.__shHud = () => shHud(); window.__shMistet = () => shMistetLiv(); window.__shOppdater = dt => { shOppdater(dt); if (sh) { sh.tid += dt; shPartikler(dt); } }; window.__shTreff = shTreff; window.__shGalaga = shGalagaStart; window.__shSopp = shSopp; window.__shBytte = shByttetStart; window.__shOrm = shOrmStart; window.__levende = levendeStart; window.__gn = () => ({ gnister, raf: gnistRAF }); window.__hendelse = t => t === "katt" ? kattBesøk() : t === "stov" ? støvstorm() : t === "ketchup" ? ketchup() : t === "tilt" ? tilt(true) : t === "vokse" ? vokseBrikke() : t === "break" ? puzzleBreak() : t === "speilX" ? speilStart("x") : t === "speilY" ? speilStart("y") : lynnedslag(); window.__shSprekk = shSprekk; window.__shP2 = () => ({ pad2X: sh.pad2X, P2Y: SH_P2Y, TOPP: SH_TOPP, H: SH_H }); window.__shTegn = () => { shRens(); shTegn(performance.now()); }; window.__spill = () => spill; window.__banner = banner; window.__kast = kast; window.__gratisPeace = async () => sjekkGratis(await hentSammen("P")); window.__fremdrift = () => fremdrift; window.__sammenP = async () => ({ lok: minLokaleSum("P"), f: fremdrift.b1, liste: (await hentSammen("P")).slice(0, 2) }); window.__shKrabbe = () => shKrabbeStart(); window.__shHopper = () => shHopperStart(); window.__shSlipp = () => shSlipp(); window.__shPY = () => SH_PY; window.__shTopp = () => SH_TOPP; window.__shKapsel = shKapsel; window.__shSnø = shSnøStart; window.__shMørke = shMørkeStart; window.__uw = () => uw; window.__uwStart = uwStart; window.__uwOppdater = dt => uwOppdater(dt); window.__uwTegn = () => uwTegn(); window.__uwVunnet = () => uwVunnet(); window.__uwMaling = () => uwMalingStart(); window.__uwBorst = p => uwBørst(p); window.__mg = () => mg; window.__mgStart = i => mgStart(i); window.__mgRundeSlutt = () => mgRundeSlutt(); window.__shFrys = shFrys; window.__shPlante = shPlante; window.__myntSprites = myntSprites; window.__katt = hentKattHode; window.__pote = hentKattPote; window.__shG = () => shG; window.__shStorm = () => shMørkeStart(); window.__tellOpp = tellOpp; window.__lyd = () => { const c = lydCtx; return c ? { musikk: musikkUt(c).gain.value, effekt: effektUt(c).gain.value } : null; }; window.__speilSlutt = speilSlutt; window.__figurKant = async (n, farge) => shFigurKant(await hentBilde("figurer/" + n + ".webp"), farge); window.__hentBilde = hentBilde; window.__falskMusikk = () => { lydCtx = lydCtx || { currentTime: 0 }; const nei = () => {}; musikk = { kilde: { stop: nei, playbackRate: { v: 1, setTargetAtTime(r) { this.v = r; } } }, g: { gain: { value: .3, cancelScheduledValues: nei, setValueAtTime: nei, linearRampToValueAtTime: nei, setTargetAtTime: nei } } }; }; window.__musikkFart = () => musikk?.kilde?.playbackRate?.v ?? null; window.__musikkFor = id => musikkFor(id)?.fil; window.__geo = () => geo; window.__plasser = plasser; window.__skjermPkt = skjermPkt; }
+if (location.search.includes("autotest")) { window.__sh = () => sh; window.__boss3D = (m, a) => { if (a != null) aktiv = a; shBoss3DLast(m); }; window.__shSmåTreff = (...a) => shSmåTreff(...a); window.__shFerdig = () => shFerdig(); window.__ark = () => ark; window.__shHud = () => shHud(); window.__shMistet = () => shMistetLiv(); window.__shOppdater = dt => { shOppdater(dt); if (sh) { sh.tid += dt; shPartikler(dt); } }; window.__shTreff = shTreff; window.__shGalaga = shGalagaStart; window.__shSopp = shSopp; window.__shBytte = shByttetStart; window.__shOrm = shOrmStart; window.__levende = levendeStart; window.__gn = () => ({ gnister, raf: gnistRAF }); window.__hendelse = t => t === "katt" ? kattBesøk() : t === "stov" ? støvstorm() : t === "ketchup" ? ketchup() : t === "tilt" ? tilt(true) : t === "vokse" ? vokseBrikke() : t === "break" ? puzzleBreak() : t === "speilX" ? speilStart("x") : t === "speilY" ? speilStart("y") : lynnedslag(); window.__shSprekk = shSprekk; window.__shP2 = () => ({ pad2X: sh.pad2X, P2Y: SH_P2Y, TOPP: SH_TOPP, H: SH_H }); window.__shTegn = () => { shRens(); shTegn(performance.now()); }; window.__spill = () => spill; window.__banner = banner; window.__kast = kast; window.__gratisPeace = async () => sjekkGratis(await hentSammen("P")); window.__fremdrift = () => fremdrift; window.__sammenP = async () => ({ lok: minLokaleSum("P"), f: fremdrift.b1, liste: (await hentSammen("P")).slice(0, 2) }); window.__shKrabbe = () => shKrabbeStart(); window.__shHopper = () => shHopperStart(); window.__shSlipp = () => shSlipp(); window.__shPY = () => SH_PY; window.__shTopp = () => SH_TOPP; window.__shKapsel = shKapsel; window.__shSnø = shSnøStart; window.__shMørke = shMørkeStart; window.__uw = () => uw; window.__uwStart = uwStart; window.__uwOppdater = dt => uwOppdater(dt); window.__uwTegn = () => uwTegn(); window.__uwVunnet = () => uwVunnet(); window.__uwMaling = () => uwMalingStart(); window.__uwTrip = () => { uw.tripT = 0; uw.revet = 1; }; window.__uwBorst = p => uwBørst(p); window.__mg = () => mg; window.__mgStart = i => mgStart(i); window.__mgRundeSlutt = () => mgRundeSlutt(); window.__shFrys = shFrys; window.__shPlante = shPlante; window.__myntSprites = myntSprites; window.__katt = hentKattHode; window.__pote = hentKattPote; window.__shG = () => shG; window.__shStorm = () => shMørkeStart(); window.__tellOpp = tellOpp; window.__lyd = () => { const c = lydCtx; return c ? { musikk: musikkUt(c).gain.value, effekt: effektUt(c).gain.value } : null; }; window.__speilSlutt = speilSlutt; window.__figurKant = async (n, farge) => shFigurKant(await hentBilde("figurer/" + n + ".webp"), farge); window.__hentBilde = hentBilde; window.__falskMusikk = () => { lydCtx = lydCtx || { currentTime: 0 }; const nei = () => {}; musikk = { kilde: { stop: nei, playbackRate: { v: 1, setTargetAtTime(r) { this.v = r; } } }, g: { gain: { value: .3, cancelScheduledValues: nei, setValueAtTime: nei, linearRampToValueAtTime: nei, setTargetAtTime: nei } } }; }; window.__musikkFart = () => musikk?.kilde?.playbackRate?.v ?? null; window.__musikkFor = id => musikkFor(id)?.fil; window.__geo = () => geo; window.__plasser = plasser; window.__skjermPkt = skjermPkt; }
 
 
 
