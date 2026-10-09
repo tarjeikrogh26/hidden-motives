@@ -704,7 +704,7 @@ body.lys #modusDeal{--farge:#0f8f6c;--glod:15,143,108}
   <div class="regel">Everything counts: Game, Peace, Bubble it 1P and 2P, every board, every level, every collection. Each board list gives up to 100 points (a Bubble it list up to 1,000): #1 gets them all, the rest their share of the top score.</div>
   <div class="sammen" id="spillere"><p class="liten">Loading players …</p></div>
   <p class="kreditt">© 2001–2026 Tarjei Krogh. All photography, music and art. <a href="https://kroghx.com" target="_blank" rel="noopener">kroghx.com</a></p>
-  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 1.84<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
+  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 1.85<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
 </section>
 
 <div class="ark" id="tidUtArk" hidden style="z-index:200001">
@@ -4768,7 +4768,11 @@ function shPlasser(i) { const g = aktiv * 9 + Math.max(0, i); return g >= 6 ? 5 
 // 3D-BOSS: Kroghs figur (GLB fra Tripo) i ekte 3D. Motoren (three.js) og figuren lastes først når BUBBLE IT starter.
 // Laster den ikke, tegnes bossen som før.
 // Hvilken figur er bossen: duoen i sesong 01, hodet i 02, gassmasken i 03, og så på rundgang.
-const shBoss3DModell = () => ["duo", "hode", "maske"][aktiv % 3];
+const SH_3D = ["duo", "hode", "maske", "kroko", "monster", "kanin", "trane"];
+const shBoss3DModell = () => SH_3D[aktiv % SH_3D.length];
+// Hvordan figuren snur seg over tid t: bystene (hodet, krokodilledama, kaninen) snur seg sakte, så du mest ser forsiden.
+// Monsteret (flatt som et relieff) og tranen vipper fram og tilbake i stedet for å snurre.
+const shBoss3DVri = (m, t, fart = 1) => m === "monster" || m === "trane" ? Math.sin(t * .7 * fart) * .55 : t * fart * (m === "hode" || m === "kroko" || m === "kanin" ? .3 : .7);
 let shBoss3DMotor = null; const shBoss3DLastet = {};
 function shBoss3DLast(navn = shBoss3DModell()) {
   if (shBoss3DLastet[navn]) return; shBoss3DLastet[navn] = true;
@@ -5983,8 +5987,9 @@ function shGalagaSteg(dt) {
   g.fiender = g.fiender.filter(e => e.tilstand !== "borte" || g.fiender.length < 40);
   shBossSteg(g, dt, levende);
   for (const q of g.bomber) {
-    if (!s.toP && !q.drypp && q.mål > SH_TOPP + .5) q.mål = SH_TOPP + .08 + Math.random() * .4;
+    if (!s.toP && !q.drypp && !q.fri && q.mål > SH_TOPP + .5) q.mål = SH_TOPP + .08 + Math.random() * .4;
     if (q.opp) q.vy = Math.max(-.5, q.vy - .3 * dt); else q.vy = Math.min(.5, q.vy + .3 * dt);
+    if (q.vx) { q.x += q.vx * dt; q.vx *= Math.exp(-dt * .8); if (q.x < .03 || q.x > .97) { q.vx = -q.vx; q.x = shClamp(q.x, .03, .97); } }
     q.y += q.vy * dt;
     if (q.opp ? q.y <= q.mål : q.y >= q.mål) {
       q.borte = true;
@@ -6023,6 +6028,9 @@ function shBossSteg(g, dt, levende) {
   const ned = s.toP ? 0 : Math.max(0, SH_TOPP - .13); // Under knapperadene når bildet er flyttet ned.
   if (B.tilstand === "inn") { B.y += ((s.toP ? SH_TOPP + .5 : .28 + ned) - B.y) * Math.min(1, dt * 1.4); if (s.toP) B.x += (.5 - B.x) * Math.min(1, dt * 1.4); if (B.t > 2) B.tilstand = "kamp"; }
   else if (B.tilstand === "kamp") {
+    if (B.vakle > 0) { B.vakle = Math.max(0, B.vakle - dt * .9); B.rot = Math.sin(B.t * 13) * .4 * B.vakle; if (!B.vakle) B.rot = 0; }
+    B.slag = Math.max(0, (B.slag || 0) - dt * 1.2);
+    if (!shBossTrekk(g, B, dt)) {
     B.vT = (B.vT || 0) - dt;
     if (B.vT <= 0) { B.vT = 1.8 + Math.random() * 2.4; B.mx = .15 + Math.random() * .7;
       // 2P: holder seg i midten, men kaster seg av og til mot den ene spilleren.
@@ -6030,6 +6038,7 @@ function shBossSteg(g, dt, levende) {
     B.vx = (B.vx || 0) + ((B.mx - B.x) * 1.1 - (B.vx || 0) * 1.6) * dt; B.vy = (B.vy || 0) + ((B.my - B.y) * 1.1 - (B.vy || 0) * 1.6) * dt;
     const fmax = .28, fv = Math.hypot(B.vx, B.vy); if (fv > fmax) { B.vx *= fmax / fv; B.vy *= fmax / fv; }
     B.x += B.vx * dt + Math.sin(B.t * 2.1) * .01 * dt; B.y += B.vy * dt + Math.sin(B.t * 1.6) * .012 * dt;
+    }
     B.spawnT -= dt; if (B.spawnT <= 0 && levende < 3 && g.fiender.filter(e => e.tilstand !== "borte").length < 4) { B.spawnT = 3.5 + Math.random() * 2; g.fiender.push(shNyFiende(0, g.nesteNr++, [B.x, B.y + .06])); shLyd("spawn"); }
     B.spytt = Math.max(0, (B.spytt || 0) - dt * 4);
     // Egenskapen til akkurat denne bossen.
@@ -6052,11 +6061,55 @@ function shBossSteg(g, dt, levende) {
     if (B.x < -.3 || B.x > 1.3 || B.y > SH_H + .3) g.boss = null;
   }
 }
+// Bossen gjør mer enn å sveve: stuper ned mot flipperne, stamper så bildet rister og jord drysser,
+// eller spytter jordklatter i en vifte. Før hvert trekk dirrer den, så du ser det komme.
+function shBossTrekk(g, B, dt) {
+  const s = sh; if (s.toP) return false;
+  if (!B.trekk) {
+    B.trekkT = (B.trekkT ?? 4 + Math.random() * 3) - dt;
+    if (B.trekkT > 0 || B.vakle > 0) return false;
+    B.trekkT = 5 + Math.random() * 4;
+    const valg = ["stup", "stamp", "vifte"].filter(n => n !== B.sistTrekk), navn = valg[(Math.random() * valg.length) | 0];
+    B.sistTrekk = navn; B.trekk = { navn, t: 0, x0: B.x, y0: B.y, mx: shClamp(s.padX, .2, .8), steg: 0 };
+  }
+  const T = B.trekk, x0 = B.x, y0 = B.y; T.t += dt; const t = T.t, ut = u => 1 - (1 - u) * (1 - u);
+  B.skjelv = 0;
+  if (T.navn === "stup") {
+    const yt = T.y0 - .04, ym = Math.max(T.y0, Math.min(SH_PY - .22, SH_TOPP + .8));
+    if (t < .6) { B.skjelv = 1; B.y = T.y0 - .04 * ut(t / .6); }
+    else if (t < 1.1) { const u = (t - .6) / .5; B.y = yt + (ym - yt) * u * u; B.x = T.x0 + (T.mx - T.x0) * u; }
+    else if (t < 1.6) { if (!T.steg) { T.steg = 1; s.rist = Math.max(s.rist || 0, .3); shStov(B.x, B.y + .08, 30, "150,115,80", .25); B.spytt = 1;
+        for (let n = 0; n < 2; n++) g.bomber.push({ x: shClamp(s.padX + (Math.random() - .5) * .2, .05, .95), y: B.y + .08, vy: .2, mål: SH_PY, drypp: true }); }
+      B.y = ym + Math.sin((t - 1.1) * 9) * .01; }
+    else if (t < 2.8) { const u = ut((t - 1.6) / 1.2); B.y = ym + (T.y0 - ym) * u; B.x = T.mx + (T.x0 - T.mx) * u; }
+    else B.trekk = null;
+  } else if (T.navn === "stamp") {
+    const yt = T.y0 - .08, ym = T.y0 + .1;
+    if (t < .7) { B.skjelv = 1; B.y = T.y0 - .08 * ut(t / .7); }
+    else if (t < .88) { const u = (t - .7) / .18; B.y = yt + (ym - yt) * u * u; }
+    else if (t < 2.2) { if (!T.steg) { T.steg = 1; s.rist = Math.max(s.rist || 0, .8); shStov(B.x, B.y + .09, 50, "150,115,80", .35); s.splatter.push({ x: B.x, y: B.y + .09, r: .07, t: 0 }); shLyd("plopp");
+        if (lydPa) tone(70, 0, .35, .12, "sine", 1, .5);
+        for (let n = 0; n < 7; n++) g.bomber.push({ x: .08 + Math.random() * .84, y: SH_TOPP - .02 - Math.random() * .12, vy: .05 + Math.random() * .1, mål: SH_TOPP + .1 + Math.random() * .4 }); }
+      B.y = ym + (T.y0 - ym) * ut((t - .88) / 1.32); }
+    else B.trekk = null;
+  } else if (T.navn === "vifte") {
+    if (t < .6) { B.skjelv = 1; B.spytt = Math.max(B.spytt || 0, t / .6); B.y = T.y0 - .03 * ut(t / .6); }
+    else if (t < 1.4) { if (!T.steg) { T.steg = 1; B.spytt = 1; s.rist = Math.max(s.rist || 0, .25); shLyd("plopp");
+        for (let n = 0; n < 7; n++) { const a = (n / 6 - .5) * 2.1; g.bomber.push({ x: B.x, y: B.y + .07, vx: Math.sin(a) * .38, vy: .1 + Math.cos(a) * .12, mål: Math.min(SH_TOPP + .9, B.y + .15 + Math.random() * .3), fri: true }); } }
+      B.y = T.y0 - .03 + .03 * ut((t - .6) / .8); }
+    else B.trekk = null;
+  }
+  // Fart regnes ut fra bevegelsen, så figuren lener seg riktig vei.
+  if (dt > 0) { B.vx = (B.x - x0) / dt; B.vy = (B.y - y0) / dt; }
+  if (!B.trekk) { B.vx = B.vy = 0; B.vT = 0; B.skjelv = 0; }
+  return true;
+}
 function shBossTreff(q) {
   const s = sh, B = s.galaga.boss;
   if (!B || (B.tilstand !== "kamp" && B.tilstand !== "inn") || B.usynlig) return false;
   if (Math.hypot(q.x - B.x, (q.y - B.y) * 1.1) > (window.Boss3D?.har(shBoss3DModell()) ? .117 : .13)) return false;
-  B.hp--; B.blink = 1; shLyd("bossTreff"); shStov(q.x, q.y, 5, "255,120,120", .12);
+  B.hp--; B.blink = 1; shLyd("bossTreff");
+  B.slag = (B.slag || 0) + 1; if (B.slag >= 2.6 && !(B.vakle > 0) && s.tid - (B.vakleSist ?? -9) > 3) { B.vakle = 1; B.vakleSist = s.tid; B.slag = 0; B.trekk = null; B.skjelv = 0; B.vT = .8; B.mx ??= B.x; B.my ??= B.y; B.vy = -.3; B.vx = shClamp((B.x - q.x) * 3, -.15, .15); s.rist = Math.max(s.rist || 0, .25); s.tekster.push({ txt: "STAGGERED!", x: B.x, y: B.y - .1, liv: .9, farge: "#ffb37a", liten: true }); } shStov(q.x, q.y, 5, "255,120,120", .12);
   B.skumP = B.skumP || []; if (B.skumP.length < 70) for (let n = 0; n < 2; n++) B.skumP.push({ dx: q.x - B.x + (Math.random() - .5) * .03, dy: q.y - B.y + (Math.random() - .5) * .03, r: .004 + Math.random() * .006, liv: 2.5 + Math.random() });
   if (B.hp <= 0) {
     B.tilstand = "boble"; B.bt = 0; s.poeng += 5000; shHud(); shLyd("innkapsle");
@@ -6675,7 +6728,7 @@ function shVaerP(p) { const s = sh; s.vaerP = s.vaerP || []; if (s.vaerP.length 
 // SKVADRONEN (Krogh: mer Galaga): små aliens kommer inn øverst og legger seg i rader. De marsjerer fram og tilbake,
 // slipper jordklatter nedover, og av og til stuper én ned mot flipperne. Boblene og skuddene sprenger dem.
 // De er Kroghs 3D-figurer som ikke er bossen på brettet (tegnes én gang per bilde og kopieres). Uten 3D: figurene fra bildene.
-function shSmåModeller() { const b = shBoss3DModell(); return ["duo", "hode", "maske"].filter(m => m !== b); }
+function shSmåModeller() { const b = shBoss3DModell(), andre = SH_3D.filter(m => m !== b), k = aktiv % andre.length; return [andre[k], andre[(k + 1) % andre.length]]; }
 function shSmåStart() {
   const s = sh, rader = 2 + (Math.random() < .5 ? 1 : 0), kol = 6, liste = [], ms = shSmåModeller();
   for (const m of ms) shBoss3DLast(m);
@@ -9183,7 +9236,7 @@ function uwBossTegn(x, P, f, nå) {
   for (const B of uw.bosser || []) { if (!window.Boss3D?.har(B.modell)) continue;
     const [X, Y] = P(B.x, B.y), str = f * B.str;
     x.save(); x.fillStyle = "rgba(0,0,0,.22)"; x.beginPath(); x.ellipse(X + str * .08, Y + str * .5, str * .26, str * .07, 0, 0, 7); x.fill(); x.restore();
-    window.Boss3D.tegn(x, X, Y, str, { modell: B.modell, vri: nå * (B.modell === "hode" ? .3 : B.pakker ? .7 : 1.4), vipp: .1 + Math.sin(nå * 1.3) * .05, rot: -(B.vx || 0) * 1.5, blink: B.blink }); }
+    window.Boss3D.tegn(x, X, Y, str, { modell: B.modell, vri: B.pakker ? shBoss3DVri(B.modell, nå) : shBoss3DVri(B.modell, nå, 2), vipp: .1 + Math.sin(nå * 1.3) * .05, rot: -(B.vx || 0) * 1.5, blink: B.blink }); }
 }
 // GAVELAPPER: en liten lapp med hyssing ligger på papiret. River du av biten den sitter på, får du det som står på den.
 //   SCISSORS: kniven går dobbelt så fort gjennom papiret, og båndet er ikke seigt (8 s).
@@ -10332,14 +10385,14 @@ function shTegn(t) {
       }
       const B = g.boss;
       if (B) {
-        const X = B.x * f, Y = B.y * f, BR = .16 * f, sp = fig.b.length ? fig.b[B.figur % fig.b.length] : null;
+        const X = (B.x + (B.skjelv || 0) * Math.sin(s.tid * 57) * .006) * f, Y = B.y * f, BR = .16 * f, sp = fig.b.length ? fig.b[B.figur % fig.b.length] : null;
         // Rød glød bak bossen, og den blinker hvitt når den blir truffet.
         x.save(); x.globalCompositeOperation = "lighter";
         const gl = x.createRadialGradient(X, Y, BR * .2, X, Y, BR * 1.5); gl.addColorStop(0, `rgba(255,60,60,${.25 + .2 * Math.sin(s.tid * 4)})`); gl.addColorStop(1, "rgba(255,60,60,0)");
         x.fillStyle = gl; x.fillRect(X - BR * 1.5, Y - BR * 1.5, BR * 3, BR * 3); x.restore();
         if (B.usynlig) x.globalAlpha = .16;
         let lyn = 0; if (s.mørke) for (const L of s.mørke.lyn) lyn = Math.max(lyn, L.t < .07 ? 1 : L.t < .16 ? .15 : L.t < .24 ? .8 : Math.max(0, .5 - (L.t - .24) * 2));
-        const b3m = shBoss3DModell(), b3 = window.Boss3D?.har(b3m) && window.Boss3D.tegn(x, X, Y, BR * 2.6, { modell: b3m, vri: s.tid * (b3m === "hode" ? .3 : .7) + B.x * 2, vipp: .1 + Math.sin(s.tid * 1.3) * .05 + shClamp(B.vy || 0, -.3, .3) * .8, rot: (B.rot || 0) - shClamp(B.vx || 0, -.3, .3) * .8, blink: B.blink, lyn });
+        const b3m = shBoss3DModell(), b3 = window.Boss3D?.har(b3m) && window.Boss3D.tegn(x, X, Y, BR * 2.6, { modell: b3m, vri: shBoss3DVri(b3m, s.tid) + (b3m === "monster" || b3m === "trane" ? B.x * .4 : B.x * 2), vipp: .1 + Math.sin(s.tid * 1.3) * .05 + shClamp(B.vy || 0, -.3, .3) * .8, rot: (B.rot || 0) - shClamp(B.vx || 0, -.3, .3) * .8, blink: B.blink, lyn });
         if (!b3) { shArmer(x, sp, X, Y, BR, s.tid, B.spytt || 0, 1, B.rot || 0, (X + Y) * .013); tegnFigur(sp, X, Y, BR, B.rot, false, false, 0); }
         // Skum der skuddboblene har truffet bossen.
         for (const q of B.skumP || []) { const a = Math.min(1, q.liv), qx = X + q.dx * f, qy = Y + q.dy * f, rr = q.r * f; x.fillStyle = `rgba(250,252,255,${.75 * a})`; x.beginPath(); x.arc(qx, qy, rr, 0, 7); x.fill(); x.strokeStyle = `rgba(190,225,255,${.6 * a})`; x.lineWidth = 1; x.stroke(); }
@@ -10654,7 +10707,7 @@ function shSteg(t) {
 }
 addEventListener("resize", () => { if (sh) shOppsett(); });
 // Bare for automatisk testing lokalt (?autotest).
-if (location.search.includes("autotest")) { window.__sh = () => sh; window.__shSmåTreff = (...a) => shSmåTreff(...a); window.__shFerdig = () => shFerdig(); window.__ark = () => ark; window.__shHud = () => shHud(); window.__shMistet = () => shMistetLiv(); window.__shOppdater = dt => { shOppdater(dt); if (sh) { sh.tid += dt; shPartikler(dt); } }; window.__shTreff = shTreff; window.__shGalaga = shGalagaStart; window.__shSopp = shSopp; window.__shBytte = shByttetStart; window.__shOrm = shOrmStart; window.__levende = levendeStart; window.__gn = () => ({ gnister, raf: gnistRAF }); window.__hendelse = t => t === "katt" ? kattBesøk() : t === "stov" ? støvstorm() : t === "ketchup" ? ketchup() : t === "tilt" ? tilt(true) : t === "vokse" ? vokseBrikke() : t === "break" ? puzzleBreak() : t === "speilX" ? speilStart("x") : t === "speilY" ? speilStart("y") : lynnedslag(); window.__shSprekk = shSprekk; window.__shP2 = () => ({ pad2X: sh.pad2X, P2Y: SH_P2Y, TOPP: SH_TOPP, H: SH_H }); window.__shTegn = () => { shRens(); shTegn(performance.now()); }; window.__spill = () => spill; window.__banner = banner; window.__kast = kast; window.__gratisPeace = async () => sjekkGratis(await hentSammen("P")); window.__fremdrift = () => fremdrift; window.__sammenP = async () => ({ lok: minLokaleSum("P"), f: fremdrift.b1, liste: (await hentSammen("P")).slice(0, 2) }); window.__shKrabbe = () => shKrabbeStart(); window.__shHopper = () => shHopperStart(); window.__shSlipp = () => shSlipp(); window.__shPY = () => SH_PY; window.__shTopp = () => SH_TOPP; window.__shKapsel = shKapsel; window.__shSnø = shSnøStart; window.__shMørke = shMørkeStart; window.__uw = () => uw; window.__uwStart = uwStart; window.__uwOppdater = dt => uwOppdater(dt); window.__uwTegn = () => uwTegn(); window.__shFrys = shFrys; window.__shPlante = shPlante; window.__myntSprites = myntSprites; window.__katt = hentKattHode; window.__pote = hentKattPote; window.__shG = () => shG; window.__shStorm = () => shMørkeStart(); window.__tellOpp = tellOpp; window.__lyd = () => { const c = lydCtx; return c ? { musikk: musikkUt(c).gain.value, effekt: effektUt(c).gain.value } : null; }; window.__speilSlutt = speilSlutt; window.__figurKant = async (n, farge) => shFigurKant(await hentBilde("figurer/" + n + ".webp"), farge); window.__hentBilde = hentBilde; window.__falskMusikk = () => { lydCtx = lydCtx || { currentTime: 0 }; const nei = () => {}; musikk = { kilde: { stop: nei, playbackRate: { v: 1, setTargetAtTime(r) { this.v = r; } } }, g: { gain: { value: .3, cancelScheduledValues: nei, setValueAtTime: nei, linearRampToValueAtTime: nei, setTargetAtTime: nei } } }; }; window.__musikkFart = () => musikk?.kilde?.playbackRate?.v ?? null; window.__musikkFor = id => musikkFor(id)?.fil; window.__geo = () => geo; window.__plasser = plasser; window.__skjermPkt = skjermPkt; }
+if (location.search.includes("autotest")) { window.__sh = () => sh; window.__boss3D = (m, a) => { if (a != null) aktiv = a; shBoss3DLast(m); }; window.__shSmåTreff = (...a) => shSmåTreff(...a); window.__shFerdig = () => shFerdig(); window.__ark = () => ark; window.__shHud = () => shHud(); window.__shMistet = () => shMistetLiv(); window.__shOppdater = dt => { shOppdater(dt); if (sh) { sh.tid += dt; shPartikler(dt); } }; window.__shTreff = shTreff; window.__shGalaga = shGalagaStart; window.__shSopp = shSopp; window.__shBytte = shByttetStart; window.__shOrm = shOrmStart; window.__levende = levendeStart; window.__gn = () => ({ gnister, raf: gnistRAF }); window.__hendelse = t => t === "katt" ? kattBesøk() : t === "stov" ? støvstorm() : t === "ketchup" ? ketchup() : t === "tilt" ? tilt(true) : t === "vokse" ? vokseBrikke() : t === "break" ? puzzleBreak() : t === "speilX" ? speilStart("x") : t === "speilY" ? speilStart("y") : lynnedslag(); window.__shSprekk = shSprekk; window.__shP2 = () => ({ pad2X: sh.pad2X, P2Y: SH_P2Y, TOPP: SH_TOPP, H: SH_H }); window.__shTegn = () => { shRens(); shTegn(performance.now()); }; window.__spill = () => spill; window.__banner = banner; window.__kast = kast; window.__gratisPeace = async () => sjekkGratis(await hentSammen("P")); window.__fremdrift = () => fremdrift; window.__sammenP = async () => ({ lok: minLokaleSum("P"), f: fremdrift.b1, liste: (await hentSammen("P")).slice(0, 2) }); window.__shKrabbe = () => shKrabbeStart(); window.__shHopper = () => shHopperStart(); window.__shSlipp = () => shSlipp(); window.__shPY = () => SH_PY; window.__shTopp = () => SH_TOPP; window.__shKapsel = shKapsel; window.__shSnø = shSnøStart; window.__shMørke = shMørkeStart; window.__uw = () => uw; window.__uwStart = uwStart; window.__uwOppdater = dt => uwOppdater(dt); window.__uwTegn = () => uwTegn(); window.__shFrys = shFrys; window.__shPlante = shPlante; window.__myntSprites = myntSprites; window.__katt = hentKattHode; window.__pote = hentKattPote; window.__shG = () => shG; window.__shStorm = () => shMørkeStart(); window.__tellOpp = tellOpp; window.__lyd = () => { const c = lydCtx; return c ? { musikk: musikkUt(c).gain.value, effekt: effektUt(c).gain.value } : null; }; window.__speilSlutt = speilSlutt; window.__figurKant = async (n, farge) => shFigurKant(await hentBilde("figurer/" + n + ".webp"), farge); window.__hentBilde = hentBilde; window.__falskMusikk = () => { lydCtx = lydCtx || { currentTime: 0 }; const nei = () => {}; musikk = { kilde: { stop: nei, playbackRate: { v: 1, setTargetAtTime(r) { this.v = r; } } }, g: { gain: { value: .3, cancelScheduledValues: nei, setValueAtTime: nei, linearRampToValueAtTime: nei, setTargetAtTime: nei } } }; }; window.__musikkFart = () => musikk?.kilde?.playbackRate?.v ?? null; window.__musikkFor = id => musikkFor(id)?.fil; window.__geo = () => geo; window.__plasser = plasser; window.__skjermPkt = skjermPkt; }
 
 
 
