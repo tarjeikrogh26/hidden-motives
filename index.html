@@ -743,7 +743,7 @@ body.lys #modusDeal{--farge:#0f8f6c;--glod:15,143,108}
   <div class="regel">Everything counts: Game, Peace, Bubble it 1P and 2P, every board, every level, every collection. Each board list gives up to 100 points (a Bubble it list up to 1,000): #1 gets them all, the rest their share of the top score.</div>
   <div class="sammen" id="spillere"><p class="liten">Loading players …</p></div>
   <p class="kreditt">© 2001–2026 Tarjei Krogh. All photography, music and art. <a href="https://kroghx.com" target="_blank" rel="noopener">kroghx.com</a></p>
-  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 1.96<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
+  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 1.97<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
 </section>
 
 <div class="ark" id="tidUtArk" hidden style="z-index:200001">
@@ -6877,7 +6877,11 @@ function shMørkeStart() {
   const s = sh; s.mørke = { t: 0, varighet: 14, lynT: 2 + Math.random() * 1.5, lyn: [], tordenT: null };
   s.tekster = s.tekster.filter(tk => !tk.kapsel && !tk.vaer);
   s.tekster.push({ txt: "BLACKOUT!", x: .5, y: SH_TOPP + .42, liv: 2.8, fade: 1.4, farge: "#c9d6ff", vaer: true }, { txt: "ONLY THE BUBBLE GIVES LIGHT", x: .5, y: SH_TOPP + .48, liv: 3.2, fade: 1.4, farge: "#e6ecff", liten: true, kapsel: true });
-  shRegnStart(); s.regn.varighet = Math.max(s.regn.varighet, 15);
+  // Krogh 1.97: tre varianter av uværet, på rundgang: lyn og regn (vasker), lyn og snø (mer å vaske bort), bare lyn.
+  const v = ["regn", "snø", "tørr"][(aktiv * 9 + (s.i || 0)) % 3]; s.mørke.variant = v;
+  if (v === "regn") { shRegnStart(); s.regn.varighet = Math.max(s.regn.varighet, 15); }
+  else if (v === "snø") { if (!s.snø) shSnøStart(); s.snø.varighet = Math.max(s.snø.varighet, 15); s.tekster[s.tekster.length - 1].txt = "LIGHTNING AND SNOW"; }
+  else s.tekster[s.tekster.length - 1].txt = "DRY LIGHTNING · NO RAIN";
   if (lydPa) { shGlid(220, 40, .7, .05, "sawtooth", .5, .3); shSus(.5, "lowpass", 400, .04, 1, .6, .3); }
 }
 function shMørkeSteg(dt) {
@@ -9278,24 +9282,26 @@ function uwSluttTegn(x, P, f, x0, y0, nå) {
   const px = x0 + S.fx * f, py = y0 + S.fy * f, rx = px + (W / 2 - px) * k - S.fx * F, ry = py + (H * .45 - py) * k - S.fy * F;
   x.drawImage(u.img, rx, ry, F, F);
   if (k > 0) { x.fillStyle = `rgba(0,0,0,${.32 * k})`; x.fillRect(0, 0, W, H); }
-  if (t > UW_LØFT + .3) return;
+  if (t > UW_LØFT + .6) return;
+  // Alt som løftes, toner rolig ut mot slutten, så overgangen til det tomme bildet er myk.
+  const A = Math.max(0, Math.min(1, (UW_LØFT + .6 - t) / 1.4)); if (A <= 0) return;
   // Skyggene der bitene lå, så ser du at de løftes.
   const snap = u.sluttSnap, løftet = [];
   for (const b of S.biter) { const L = uwLøft(b, b.cx, b.cy); if (!L) continue; løftet.push([b, L]);
-    const [X, Y] = P(b.cx + L.z * .05, b.cy + L.z * .09); x.save(); x.globalAlpha = .3 * Math.max(0, 1 - L.z / .7) * L.a; x.fillStyle = "#000"; x.translate(X, Y); x.beginPath(); b.pts.forEach((q, j) => { const qx = (q[0] - b.cx) * f, qy = (q[1] - b.cy) * f; j ? x.lineTo(qx, qy) : x.moveTo(qx, qy); }); x.closePath(); x.fill(); x.restore(); }
+    const [X, Y] = P(b.cx + L.z * .05, b.cy + L.z * .09); x.save(); x.globalAlpha = .3 * Math.max(0, 1 - L.z / .7) * L.a * A; x.fillStyle = "#000"; x.translate(X, Y); x.beginPath(); b.pts.forEach((q, j) => { const qx = (q[0] - b.cx) * f, qy = (q[1] - b.cy) * f; j ? x.lineTo(qx, qy) : x.moveTo(qx, qy); }); x.closePath(); x.fill(); x.restore(); }
   // Figurene og papirrestene løftes også.
   for (const e of u.fiender) { if (e.type !== "figur") continue; const L = uwLøft(e, e.x, e.y); if (!L) continue; const sp = u.figurer?.m?.length ? u.figurer.m[e.figur % u.figurer.m.length] : null; if (!sp) continue;
-    const [ex, ey] = P(L.x, L.y); x.save(); x.globalAlpha = L.a; x.translate(ex, ey); x.rotate(L.rot); shSprite(x, sp, 0, 0, .046 * f * L.s, u.tid, e.fase, true); x.restore(); }
-  for (const q of u.rester || []) { const L = uwLøft(q, q.x, q.y); if (!L) continue; const [rx2, ry2] = P(L.x, L.y), rr = q.r * f * L.s; x.save(); x.globalAlpha = L.a; x.translate(rx2, ry2); x.rotate(q.rot + L.rot);
+    const [ex, ey] = P(L.x, L.y); x.save(); x.globalAlpha = L.a * A; x.translate(ex, ey); x.rotate(L.rot); shSprite(x, sp, 0, 0, .046 * f * L.s, u.tid, e.fase, true); x.restore(); }
+  for (const q of u.rester || []) { const L = uwLøft(q, q.x, q.y); if (!L) continue; const [rx2, ry2] = P(L.x, L.y), rr = q.r * f * L.s; x.save(); x.globalAlpha = L.a * A; x.translate(rx2, ry2); x.rotate(q.rot + L.rot);
     x.beginPath(); q.form.forEach((v, j) => { const a = j / q.form.length * Math.PI * 2; j ? x.lineTo(Math.cos(a) * rr * v, Math.sin(a) * rr * v * .8) : x.moveTo(Math.cos(a) * rr * v, Math.sin(a) * rr * v * .8); }); x.closePath(); x.fillStyle = q.farge; x.fill(); x.restore(); }
   // Papirbitene, nærmest sist.
   løftet.sort((a, b) => a[1].z - b[1].z);
-  for (const [b, L] of løftet) { const [X, Y] = P(L.x, L.y); x.save(); x.globalAlpha = L.a; x.translate(X, Y); x.rotate(L.rot); x.scale(L.s, L.s);
+  for (const [b, L] of løftet) { const [X, Y] = P(L.x, L.y); x.save(); x.globalAlpha = L.a * A; x.translate(X, Y); x.rotate(L.rot); x.scale(L.s, L.s);
     x.beginPath(); b.pts.forEach((q, j) => { const qx = (q[0] - b.cx) * f, qy = (q[1] - b.cy) * f; j ? x.lineTo(qx, qy) : x.moveTo(qx, qy); }); x.closePath();
     if (L.z > .02) { x.shadowColor = "rgba(0,0,0,.35)"; x.shadowBlur = 12 * L.z; x.shadowOffsetY = 6 * L.z; x.fillStyle = "rgba(0,0,0,.01)"; x.fill(); x.shadowColor = "transparent"; }
     x.clip(); if (snap) x.drawImage(snap, -b.cx * f, -b.cy * f, f, f); x.restore(); }
   // Bossene blir også vektløse og forsvinner ut.
-  for (const B of u.bosser || []) { if (!window.Boss3D?.har(B.modell)) continue; const L = uwLøft(B, B.x, B.y); if (!L) continue; const [X, Y] = P(L.x, L.y); x.save(); x.globalAlpha = L.a;
+  for (const B of u.bosser || []) { if (!window.Boss3D?.har(B.modell)) continue; const L = uwLøft(B, B.x, B.y); if (!L) continue; const [X, Y] = P(L.x, L.y); x.save(); x.globalAlpha = L.a * A;
     window.Boss3D.tegn(x, X, Y, f * B.str * L.s, { modell: B.modell, vri: shBoss3DVri(B.modell, nå) + L.rot, vipp: .1 + L.z * .5, rot: L.rot, blink: 0 }); x.restore(); }
 }
 // Poengene telles opp oppå det zoomede bildet; stjerner, beste og knapper kommer etterpå.
