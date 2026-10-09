@@ -127,6 +127,13 @@ body.lys.meny-hvit::before{background:radial-gradient(ellipse 120% 85% at 50% 12
 .variant button{border:0;border-radius:0;padding:6px 16px;background:transparent;color:rgba(var(--vg),1);font-weight:600}
 .variant button+button{border-left:1.5px solid rgba(var(--vg),.9)}
 .variant button[aria-checked=true]{color:#fff;background:rgba(var(--vg),1);box-shadow:none}
+/* Krogh 2.02: fire spill, to og to i et rutenett. Like brede bokser, teksten i midten. HIT ART er grønn. */
+#modusHit,body.lys #modusHit{--farge:#149a5a;--glod:20,154,90}
+#modusHit .tittel{color:var(--farge)!important;font-size:1em!important;line-height:1;white-space:nowrap}
+#modusHit[aria-selected="true"] .tittel{color:#fff!important}
+.moduser{display:grid!important;grid-template-columns:1fr 1fr;width:max-content}
+.moduser .modus,body.lys .moduser .modus{text-align:center}
+.variant button:disabled{opacity:.38;cursor:default}
 .variant.v-pusle{--vg:226,52,127}
 .variant.v-scrub{--vg:240,116,0}
 .resultat.peace .ark-hoyre{display:none}
@@ -572,6 +579,10 @@ body:has(.resultat.vis) #spill .linje{opacity:0;pointer-events:none;transition:o
 #mgCanvas{position:absolute;inset:0;touch-action:none}
 #mgUt{position:absolute;top:max(8px,env(safe-area-inset-top,0px));left:max(8px,env(safe-area-inset-left,0px));z-index:3}
 .variant.v-unwrap{--vg:31,99,255}
+#hit{touch-action:none;background:#14110d}
+#haCanvas{position:absolute;inset:0;touch-action:none}
+#haUt{position:absolute;top:max(8px,env(safe-area-inset-top,0px));left:max(8px,env(safe-area-inset-left,0px));z-index:3}
+.variant.v-hit{--vg:20,150,90}
 #uwCanvas{position:absolute;inset:0;touch-action:none}
 #uwVerktøy{display:none!important;position:absolute;left:50%;transform:translateX(-50%);display:flex;gap:8px;z-index:3}
 .uw-v{font:700 11px var(--tall);letter-spacing:.12em;padding:8px 13px;border-radius:999px;border:1px solid rgba(255,255,255,.25);color:#fff;background:rgba(0,0,0,.45);cursor:pointer;white-space:nowrap}
@@ -737,6 +748,7 @@ body.lys #modusDeal{--farge:#0f8f6c;--glod:15,143,108}
         <button class="modus" id="modusPuslespill" role="tab"><span class="tittel">PIECE&nbsp;IT</span></button>
         <button class="modus" id="modusScrub" role="tab"><span class="tittel">BUBBLE&nbsp;IT</span></button>
         <button class="modus" id="modusUnwrap" role="tab"><span class="tittel">UNWRAP&nbsp;IT</span></button>
+        <button class="modus" id="modusHit" role="tab"><span class="tittel">HIT&nbsp;ART</span></button>
         <button class="modus" id="modusDeal" role="tab" hidden><span class="tittel">DEAL&nbsp;IT</span></button>
       </div>
       <div class="variant" id="variant" role="radiogroup" aria-label="Mode"></div>
@@ -756,7 +768,7 @@ body.lys #modusDeal{--farge:#0f8f6c;--glod:15,143,108}
   <div class="regel">Everything counts: Game, Peace, Bubble it 1P and 2P, every board, every level, every collection. Each board list gives up to 100 points (a Bubble it list up to 1,000): #1 gets them all, the rest their share of the top score.</div>
   <div class="sammen" id="spillere"><p class="liten">Loading players …</p></div>
   <p class="kreditt">© 2001–2026 Tarjei Krogh. All photography, music and art. <a href="https://kroghx.com" target="_blank" rel="noopener">kroghx.com</a></p>
-  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 2.01<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
+  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 2.02<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
 </section>
 
 <div class="ark" id="tidUtArk" hidden style="z-index:200001">
@@ -889,6 +901,11 @@ body.lys #modusDeal{--farge:#0f8f6c;--glod:15,143,108}
   <canvas id="mgCanvas"></canvas>
   <button class="sh-ut" id="mgUt">Menu</button>
   <div class="sh-melding aktiv" id="mgMelding" hidden><b id="mgTittel"></b><span id="mgTekst"></span><div class="knapper" id="mgKnapper"></div></div>
+</section>
+<section id="hit" class="skjerm" hidden aria-label="Hit art">
+  <canvas id="haCanvas"></canvas>
+  <button class="sh-ut" id="haUt">Menu</button>
+  <div class="sh-melding aktiv" id="haMelding" hidden><b id="haTittel"></b><span id="haTekst"></span><div class="knapper" id="haKnapper"></div></div>
 </section>
 <section id="deal" class="skjerm" hidden aria-label="Deal it">
   <div class="dl-topp"><b>DEAL IT</b><span id="dlInfo"></span><button class="dl-ut" id="dlUt">Menu</button></div>
@@ -1083,7 +1100,7 @@ function sjekkKomplett() {
 function erLost(id) { return !!fremdrift[id] && Object.keys(fremdrift[id]).some(k => !k.startsWith("peace") && k !== "p2"); }
 const PEACE_TID = 1.35; // Peace har romsligere tid. Den vises som en rolig klokke på galleri-veggen.
 const peaceBeste = id => { const f = fremdrift[id] || {}; let b = null; for (const k in f) if (k.startsWith("peace_") && (!b || f[k].poeng > b.poeng)) b = f[k]; return b; };
-let variant = { pusle: "game", scrub: "1p", unwrap: "1p" };
+let variant = { pusle: "game", scrub: "1p", unwrap: "1p", hit: "blind" };
 try { const v = JSON.parse(localStorage.getItem("sm-variant") || "null"); if (v) variant = { ...variant, ...v }; } catch {}
 const iPeace = () => modus === "pusle" && variant.pusle === "peace";
 // BETA: alle brett er åpne for testerne. Sett til false for låsing én og én.
@@ -1093,6 +1110,7 @@ function erApen(i) {
   const f = fremdrift[BRETT[i - 1].id] || {};
   if (modus === "scrub") return !!f.scrub; // 1P og 2P: åpnes av 1P.
   if (modus === "unwrap") return !!f.unwrap;
+  if (modus === "hit") return haKlart().has(i - 1);
   return Object.keys(f).some(k => +k || k.startsWith("peace_"));
 }
 // En sesong er åpen hvis den er den første, er vunnet gratis, eller er kjøpt.
@@ -1135,9 +1153,9 @@ function tegnFaner() {
 }
 // To måter å spille på: pusle eller vaske. Løser du et brett i ett av dem, åpnes neste.
 let modus = "pusle";
-try { const m = localStorage.getItem("sm-modus"); if (m === "scrub" || m === "unwrap") modus = m; } catch {}
+try { const m = localStorage.getItem("sm-modus"); if (m === "scrub" || m === "unwrap" || m === "hit") modus = m; } catch {}
 function velgModus(m) { modus = m; try { localStorage.setItem("sm-modus", m); } catch {} tegnMeny(); }
-function plasserVariant() { const vr = $("variant"), valgt = $(modus === "pusle" ? "modusPuslespill" : modus === "unwrap" ? "modusUnwrap" : "modusScrub"); if (!vr || !valgt) return; vr.style.paddingLeft = ""; vr.style.marginLeft = "0px"; const plass = (vr.parentElement?.clientWidth || innerWidth) - vr.offsetWidth - 66; vr.style.marginLeft = Math.max(0, Math.min(plass, valgt.offsetLeft - vr.offsetLeft)) + "px"; }
+function plasserVariant() { const vr = $("variant"), valgt = $(modus === "pusle" ? "modusPuslespill" : modus === "unwrap" ? "modusUnwrap" : modus === "hit" ? "modusHit" : "modusScrub"); if (!vr || !valgt) return; vr.style.paddingLeft = ""; vr.style.marginLeft = "0px"; const plass = (vr.parentElement?.clientWidth || innerWidth) - vr.offsetWidth - 66; vr.style.marginLeft = Math.max(0, Math.min(plass, valgt.offsetLeft - vr.offsetLeft)) + "px"; }
 function tilpassLogo() {
   const meny = $("meny"); if (!meny || meny.hidden) return;
   const cs = getComputedStyle(meny), bredde = meny.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
@@ -1146,12 +1164,14 @@ function tilpassLogo() {
   // På telefon flyttes tannhjulet ned i raden under modusene, så logoen og modusene får hele bredden.
   const smal = bredde < 560, gear = $("tannhjul"), vr = $("variant");
   const plass = bredde - (av ? av.offsetWidth + 10 : 0) - (smal ? 0 : 50);
-  if (m) { m.style.fontSize = "34px"; const w = m.scrollWidth; if (w > plass) m.style.fontSize = Math.max(12, Math.floor(34 * plass / w * 0.98)) + "px"; }
+  const fs0 = smal ? 34 : 42;
+  if (m) { m.style.fontSize = fs0 + "px"; const w = m.scrollWidth; if (w > plass) m.style.fontSize = Math.max(12, Math.floor(fs0 * plass / w * 0.98)) + "px"; }
   // Fra venstre kant av PIECE IT til høyre kant av den siste synlige modusen (uten bokstavluften etter siste bokstav).
   const tit = [...document.querySelectorAll(".moduser .modus:not([hidden]) .tittel")], x0 = logo.getBoundingClientRect().left;
   if (!tit.length || !navn) return plasserVariant();
   const a = tit[0].getBoundingClientRect(), siste = tit[tit.length - 1], b = siste.getBoundingClientRect();
-  const L = a.left - x0, R = b.right - (parseFloat(getComputedStyle(siste).letterSpacing) || 0) - x0, W = R - L;
+  // To og to bokser: logoen går fra venstre kant av rutenettet til høyre kant.
+  const mr = m.getBoundingClientRect(), L = mr.left - x0, R = mr.right - x0, W = R - L;
   navn.style.marginLeft = L + "px";
   // HIDDEN og MOTIVES får hver sin størrelse, så begge linjene blir nøyaktig like brede som modusraden.
   let størst = 0;
@@ -1165,6 +1185,7 @@ addEventListener("resize", tilpassLogo); document.fonts?.ready.then(tilpassLogo)
 $("modusPuslespill").onclick = () => velgModus("pusle");
 $("modusScrub").onclick = () => { ctx(); velgModus("scrub"); };
 $("modusUnwrap").onclick = () => { ctx(); velgModus("unwrap"); }
+$("modusHit").onclick = () => { ctx(); velgModus("hit"); };
 $("albumKnapp").onclick = visAlbum; $("albumUt").onclick = lukkAlbum;;
 // Lys vegg i HIDDEN MOTIVES (menyen og brettet), mørk i BUBBLE IT.
 function oppdaterTema() { const meny = !$("meny").hidden; document.body.classList.toggle("lys", !$("spill").hidden || meny); document.body.classList.toggle("meny-hvit", meny); document.body.classList.toggle("rosa", false); }
@@ -1172,19 +1193,25 @@ function tegnModus() {
   $("modusPuslespill").setAttribute("aria-selected", String(modus === "pusle"));
   $("modusScrub").setAttribute("aria-selected", String(modus === "scrub"));
   $("modusUnwrap").setAttribute("aria-selected", String(modus === "unwrap"));
+  $("modusHit").setAttribute("aria-selected", String(modus === "hit"));
+  const haNoeKlart = haKlart().size > 0; if (variant.hit === "known" && !haNoeKlart) variant.hit = "blind";
   $("modusTekst").textContent = modus === "pusle"
     ? (iPeace() ? "Piece it in peace. No fire, no surprises, no power-ups to buy. Just the pieces, calm music and a quiet clock. Beat the clock, and climb the Peace list."
       : "You never see the picture until it's done. Place the pieces before the clock runs out, and the image reveals itself.")
+    : modus === "hit" && variant.hit === "known" ? "Known game: the points are on the picture. Only boards you have cleared together."
+    : modus === "hit" ? "Two players throw burrs at the art. Both count down from 500, first to exactly 0 wins. The points are hidden in the picture: one 100, one 75, one 50, two 25, four 10, ten 5. Remember where they are. Clear a board together to open the next."
     : modus === "unwrap" && variant.unwrap === "mind" ? "Mind game for two, face to face. The cards make one picture together. Turn two: a pair is yours and you go again. Nine rounds in a season make a match."
     : modus === "unwrap" ? "The art is wrapped. Scratch the paper off with your finger and brush away the scraps. Don't let anything touch your finger while you scratch. Unwrap 80 % to win."
     : variant.scrub === "2p" ? "Two players, one screen. A flipper at each end: wash the picture clean together. No shop, only what the mud gives you."
     : "The art is buried in mud. Wash it off with soap bubbles. Clear a board in either game and the next one opens.";
   // Bryteren under spillet som er valgt (BUBBLE IT får 1P | 2P når 2P er bygget).
-  const vr = $("variant"); vr.replaceChildren(); vr.className = "variant " + (modus === "pusle" ? "v-pusle" : modus === "unwrap" ? "v-unwrap" : "v-scrub");
+  const vr = $("variant"); vr.replaceChildren(); vr.className = "variant " + (modus === "pusle" ? "v-pusle" : modus === "unwrap" ? "v-unwrap" : modus === "hit" ? "v-hit" : "v-scrub");
   requestAnimationFrame(plasserVariant);
-  const del = modus === "pusle" ? "pusle" : modus === "unwrap" ? "unwrap" : "scrub";
-  for (const [v, navn] of modus === "unwrap" ? [["1p", "1P"], ["mind", "MIND GAME"]] : del === "pusle" ? [["game", "GAME"], ["peace", "PEACE"]] : [["1p", "1P"], ["2p", "2P"]]) {
+  const del = modus === "pusle" ? "pusle" : modus === "unwrap" ? "unwrap" : modus === "hit" ? "hit" : "scrub";
+  for (const [v, navn] of modus === "hit" ? [["blind", "BLIND GAME"], ["known", "KNOWN GAME"]] : modus === "unwrap" ? [["1p", "1P"], ["mind", "MIND GAME"]] : del === "pusle" ? [["game", "GAME"], ["peace", "PEACE"]] : [["1p", "1P"], ["2p", "2P"]]) {
     const b = document.createElement("button"); b.textContent = navn; b.setAttribute("role", "radio"); b.setAttribute("aria-checked", String(variant[del] === v));
+    // KNOWN GAME er låst til dere har klart et brett sammen.
+    if (del === "hit" && v === "known" && !haNoeKlart) { b.disabled = true; b.title = "Clear a board to open it"; }
     b.onclick = () => { variant[del] = v; try { localStorage.setItem("sm-variant", JSON.stringify(variant)); } catch {} tegnMeny(); };
     vr.appendChild(b);
   }
@@ -1199,7 +1226,8 @@ async function tegnMeny() {
   liste.replaceChildren();
   BRETT.forEach((b, i) => {
     const kort = document.createElement("button");
-    kort.className = "brett" + (erApen(i) ? "" : " laast");
+    const åpen = erApen(i) && !(modus === "hit" && variant.hit === "known" && !haKlart().has(i));
+    kort.className = "brett" + (åpen ? "" : " laast");
     kort.setAttribute("aria-label", kode(i) + " " + b.navn + (erLost(b.id) ? ", solved" : erApen(i) ? ", unknown" : ", locked"));
     const c = document.createElement("canvas");
     kort.appendChild(c);
@@ -1220,7 +1248,8 @@ async function tegnMeny() {
     if (modus === "scrub" && fremdrift[b.id]?.scrubS) st.textContent = "★".repeat(fremdrift[b.id].scrubS) + "☆".repeat(3 - fremdrift[b.id].scrubS);
     st.className = "status";
     merke.append(nr, st); kort.appendChild(merke);
-    if (erApen(i)) kort.onclick = () => { if (modus === "scrub") { ctx(); shatterStart(i); } else if (modus === "unwrap") { ctx(); if (variant.unwrap === "mind") mgStart(i); else uwStart(i); } else visStartark(i); };
+    if (modus === "hit") st.textContent = haKlart().has(i) ? "Cleared" : "";
+    if (åpen) kort.onclick = () => { if (modus === "hit") { ctx(); haStart(i); return; } if (modus === "scrub") { ctx(); shatterStart(i); } else if (modus === "unwrap") { ctx(); if (variant.unwrap === "mind") mgStart(i); else uwStart(i); } else visStartark(i); };
     liste.appendChild(kort);
     hentBilde(b.src).then(img => {
       if (erLost(b.id) || (iPeace() && peaceBeste(b.id))) { c.width = 400; c.height = 400; const x = c.getContext("2d"); x.drawImage(img, 0, 0, 400, 400); c.style.imageRendering = "auto"; }
@@ -10193,6 +10222,172 @@ function mgMelding(tittel, tekst, knapper) {
 function mgAvslutt() { cancelAnimationFrame(mgRAF); mgRAF = 0; mg = null; mgMelding(); $("mind").hidden = true; tilMeny(); }
 $("mgCanvas").addEventListener("pointerdown", mgTrykk); $("mgUt").onclick = mgAvslutt;
 
+// ---------- HIT ART (fjerde spill) ----------
+// Krogh 2.02: to spillere kaster borrer på kunstbildet. Begge teller ned fra 500; først til nøyaktig 0 vinner (for mye = kastet teller ikke, turen er over).
+// Du sikter i to trinn: en loddrett strek går fram og tilbake (trykk), så en vannrett (trykk), og borren flyr dit.
+// Poengene ligger skjult i bildet: ett felt 100, ett 75, ett 50, to 25, fire 10 og ti 5. Feltene er de samme hver gang du spiller brettet,
+// så du må huske dem. Klarer dere brettet, åpnes KNOWN GAME for det: da står feltene på bildet.
+const HA_START = 500, HA_N = 12, HA_KAST = 3, HA_FARGE = ["255,61,139", "47,211,255"], HA_NAVN = ["PINK", "BLUE"];
+const HA_FELT = [[100, 4], [75, 5], [50, 6], [25, 7], [25, 7], [10, 9], [10, 9], [10, 9], [10, 9]]; // resten deles i ti 5-felt
+let ha = null, haRAF = 0, haSist = 0;
+const haKlartNøkkel = () => "ha-klart-" + aktiv;
+function haKlart() { try { return new Set(JSON.parse(localStorage.getItem(haKlartNøkkel()) || "[]")); } catch { return new Set(); } }
+function haLagreKlart(i) { const s = haKlart(); s.add(i); try { localStorage.setItem(haKlartNøkkel(), JSON.stringify([...s])); } catch {} }
+// Feltene: et 12 × 12-rutenett der hvert felt er en sammenhengende klump av ruter. Samme frø gir samme felt hver gang.
+function haFelt(frø) {
+  const R = mgTilfeldig(frø), N = HA_N, g = new Int16Array(N * N).fill(-1), soner = [];
+  const nabo = c => { const x = c % N, y = (c / N) | 0, r = []; if (x > 0) r.push(c - 1); if (x < N - 1) r.push(c + 1); if (y > 0) r.push(c - N); if (y < N - 1) r.push(c + N); return r; };
+  const vokse = (s, kompakt) => { const kand = []; for (const c of s.celler) for (const m of nabo(c)) if (g[m] < 0) kand.push(m); if (!kand.length) return false;
+    let m = kand[(R() * kand.length) | 0];
+    if (kompakt) { let bs = -1; for (const q of kand) { const v = nabo(q).filter(z => g[z] === s.id).length + R() * 1.5; if (v > bs) { bs = v; m = q; } } }
+    g[m] = s.id; s.celler.push(m); return true; };
+  for (const [v, n] of HA_FELT) {
+    let c0 = -1; for (let f = 0; f < 500 && c0 < 0; f++) { const c = (R() * N * N) | 0; if (g[c] < 0 && nabo(c).every(m => g[m] < 0)) c0 = c; }
+    if (c0 < 0) c0 = g.findIndex(q => q < 0);
+    const s = { id: soner.length, v, celler: [c0] }; g[c0] = s.id; soner.push(s);
+    while (s.celler.length < n && vokse(s, true));
+  }
+  // Ti 5-felt fyller resten: spredte frø som vokser samtidig.
+  const frø5 = [];
+  for (let k = 0; k < 10; k++) { const frie = []; for (let c = 0; c < N * N; c++) if (g[c] < 0) frie.push(c); if (!frie.length) break;
+    let best = -1, bd = -1; for (let f = 0; f < 16; f++) { const c = frie[(R() * frie.length) | 0], d = frø5.length ? Math.min(...frø5.map(q => Math.hypot(q % N - c % N, ((q / N) | 0) - ((c / N) | 0)))) : 0; if (d > bd) { bd = d; best = c; } }
+    const s = { id: soner.length, v: 5, celler: [best] }; g[best] = s.id; soner.push(s); frø5.push(best); }
+  for (let vokst = true; vokst;) { vokst = false; for (const s of soner) if (s.v === 5 && vokse(s, false)) vokst = true; }
+  // Lommer som ingen nådde, går til nabofeltet med lavest verdi.
+  for (let igjen = true; igjen;) { igjen = false; for (let c = 0; c < N * N; c++) if (g[c] < 0) { const ns = nabo(c).filter(m => g[m] >= 0).map(m => soner[g[m]]); if (!ns.length) { igjen = true; continue; } const s = ns.sort((a, b) => a.v - b.v)[0]; g[c] = s.id; s.celler.push(c); } }
+  // Kantene mellom feltene og et midtpunkt for tallet (til KNOWN GAME).
+  const kanter = []; for (let c = 0; c < N * N; c++) { const x = c % N, y = (c / N) | 0; if (x < N - 1 && g[c] !== g[c + 1]) kanter.push([x + 1, y, x + 1, y + 1]); if (y < N - 1 && g[c] !== g[c + N]) kanter.push([x, y + 1, x + 1, y + 1]); }
+  for (const s of soner) { const mx = s.celler.reduce((a, c) => a + c % N, 0) / s.celler.length, my = s.celler.reduce((a, c) => a + ((c / N) | 0), 0) / s.celler.length;
+    const m = s.celler.reduce((b, c) => Math.hypot(c % N - mx, ((c / N) | 0) - my) < Math.hypot(b % N - mx, ((b / N) | 0) - my) ? c : b); s.midt = [(m % N + .5) / N, (((m / N) | 0) + .5) / N]; }
+  return { g, soner, kanter };
+}
+const haVerdi = (x, y) => { const c = Math.min(HA_N - 1, Math.floor(y * HA_N)) * HA_N + Math.min(HA_N - 1, Math.floor(x * HA_N)); return ha.soner[ha.g[c]].v; };
+const haHash = s => [...s].reduce((h, c) => (Math.imul(h, 31) + c.charCodeAt(0)) >>> 0, 7);
+async function haStart(i) {
+  const b = BRETT[i], kjent = variant.hit === "known" && haKlart().has(i);
+  $("meny").hidden = true; $("hit").hidden = false; oppdaterTema(); haMelding("HIT ART", "Hanging up the art…", []);
+  const bilde = await hentBilde(b.src); cancelAnimationFrame(haRAF);
+  ha = { i, bilde, ...haFelt(haHash(b.id)), kjent, poeng: [HA_START, HA_START], tur: Math.random() < .5 ? 0 : 1, kast: 0, fase: "banner", ft: 0, f0: 0, x: .5, y: .5,
+    borrer: [], gamle: [], gamleT: 1, tekster: [], tid: 0, ferdig: false, antall: 0 };
+  haMelding(); haSist = performance.now(); haRAF = requestAnimationFrame(haLoop);
+}
+function haLayout() {
+  const W = innerWidth, H = innerHeight, bred = W > H * 1.25, dpr = Math.min(devicePixelRatio || 1, 2);
+  if (bred) { const f = Math.floor(Math.min(H - 70, W - 360, 900)); return { W, H, bred, f, x0: Math.round((W - f) / 2), y0: Math.round((H - f) / 2) - 8, dpr }; }
+  const topp = Math.round(Math.max(84, Math.min(130, H * .13))), f = Math.floor(Math.min(W - 24, H - topp - 70, 900));
+  return { W, H, bred, topp, f, x0: Math.round((W - f) / 2), y0: Math.round(topp + (H - topp - 50 - f) / 2), dpr };
+}
+// Streken går fram og tilbake med jevn fart (litt over ett sekund over bildet).
+const haSveip = t => { const u = (t * .74) % 2; return u < 1 ? u : 2 - u; };
+function haLoop(t) {
+  if (!ha) return; const dt = Math.min(.05, (t - haSist) / 1000); haSist = t; ha.tid += dt; ha.ft += dt; ha.gamleT += dt;
+  for (const q of ha.tekster) q.t += dt; ha.tekster = ha.tekster.filter(q => q.t < 1.8);
+  for (const b of ha.borrer) { if (b.fly < 1) { b.fly = Math.min(1, b.fly + dt / .42); if (b.fly >= 1) haLand(b); } else b.sett += dt; }
+  if (ha.fase === "banner" && ha.ft > 1.1) { ha.fase = "x"; ha.ft = 0; ha.f0 = Math.random() * 2.7; }
+  haTegn(); haRAF = requestAnimationFrame(haLoop);
+}
+function haTrykk(e) {
+  if (!ha || ha.ferdig) return; e.preventDefault?.();
+  if (ha.fase === "x" && ha.ft > .2) { ha.x = haSveip(ha.ft + ha.f0); ha.fase = "y"; ha.ft = 0; ha.f0 = Math.random() * 2.7; if (lydPa) tone(660, 0, .05, .025, "triangle", .5, .2); }
+  else if (ha.fase === "y" && ha.ft > .2) {
+    ha.y = haSveip(ha.ft + ha.f0); if (lydPa) tone(880, 0, .05, .025, "triangle", .5, .2);
+    const j = () => (Math.random() - .5) * .012;
+    ha.borrer.push({ x: shClamp(ha.x + j(), .004, .996), y: shClamp(ha.y + j(), .004, .996), p: ha.tur, fly: 0, sett: 0, rot: Math.random() * 6.3, frø: (Math.random() * 1e6) | 0 });
+    ha.fase = "fly"; ha.kast++; ha.antall++;
+  }
+}
+function haLand(b) {
+  const v = haVerdi(b.x, b.y), p = b.p, rest = ha.poeng[p] - v, g = ha;
+  if (lydPa) { tone(120, 0, .12, .05, "sine", .8, .2); const toner = v >= 100 ? [0, 4, 7, 12, 16] : v >= 50 ? [0, 4, 7] : v >= 25 ? [0, 7] : [0]; toner.forEach((st, k) => tone(523.25 * Math.pow(2, st / 12), .05 + k * .07, .3, .025, "triangle", .5, 1)); }
+  if (rest < 0) { b.bust = true; ha.tekster.push({ txt: "TOO MUCH", x: b.x, y: b.y, t: 0, p, stor: true }); ha.fase = "pause"; setTimeout(() => { if (ha === g) haNesteTur(); }, 1500); return; }
+  ha.poeng[p] = rest; ha.tekster.push({ txt: String(v), x: b.x, y: b.y, t: 0, p, stor: v >= 75 });
+  if (rest === 0) { ha.fase = "pause"; ha.ferdig = true; setTimeout(() => { if (ha === g) haVunnet(); }, 1100); }
+  else if (ha.kast >= HA_KAST) { ha.fase = "pause"; setTimeout(() => { if (ha === g) haNesteTur(); }, 1300); }
+  else { ha.fase = "x"; ha.ft = 0; ha.f0 = Math.random() * 2.7; }
+}
+function haNesteTur() { ha.gamle = ha.borrer; ha.borrer = []; ha.gamleT = 0; ha.tur = 1 - ha.tur; ha.kast = 0; ha.fase = "banner"; ha.ft = 0; }
+function haVunnet() {
+  const g = ha, v = g.tur, neste = g.i + 1 < BRETT.length ? g.i + 1 : -1, førstGang = !haKlart().has(g.i); haLagreKlart(g.i);
+  if (lydPa) [0, 4, 7, 12].forEach((st, j) => tone(523.25 * Math.pow(2, st / 12), j * .1, .5, .03, "triangle", .5, 1));
+  const linje = `${HA_NAVN[1 - v]} had ${g.poeng[1 - v]} left.` + (førstGang ? " Board cleared: the next one is open, and KNOWN GAME is open for this one." : "");
+  const videre = neste >= 0 ? ["Next board →", () => haStart(neste), true] : aktiv + 1 < SESONG_BRETT.length ? ["Next season →", () => { velgSamling(aktiv + 1); haStart(0); }, true] : ["Play again", () => haStart(g.i), true];
+  haMelding(HA_NAVN[v] + " WINS", linje, [videre, ...(videre[0] === "Play again" ? [] : [["Play again", () => haStart(g.i)]]), ["Menu", haAvslutt]]);
+}
+// Borren: en kjerne med mange tynne pigger med krok, i brunt og halm. Glorien har fargen til den som kastet.
+function haBorre(x, X, Y, r, rot, frø, p, a = 1) {
+  const R = mgTilfeldig(frø); x.save(); x.globalAlpha = a; x.translate(X, Y); x.rotate(rot); x.lineCap = "round";
+  x.shadowColor = `rgba(${HA_FARGE[p]},1)`; x.shadowBlur = r * 1.4; x.fillStyle = `rgba(${HA_FARGE[p]},.55)`; x.beginPath(); x.arc(0, 0, r * .62, 0, 7); x.fill(); x.fill(); x.shadowBlur = 0;
+  x.shadowColor = "rgba(0,0,0,.45)"; x.shadowBlur = r * .35; x.shadowOffsetX = r * .12; x.shadowOffsetY = r * .18;
+  const n = 44; for (let k = 0; k < n; k++) { const v = k / n * Math.PI * 2 + (R() - .5) * .3, L = r * (.85 + R() * .35), a0 = r * .3, cx = Math.cos(v), cy = Math.sin(v), side = R() < .5 ? 1 : -1;
+    x.strokeStyle = ["#4a3818", "#6e5629", "#8f743d"][k % 3]; x.lineWidth = Math.max(1, r * .085);
+    x.beginPath(); x.moveTo(cx * a0, cy * a0); x.lineTo(cx * L, cy * L); x.quadraticCurveTo(cx * (L + r * .07) - cy * side * r * .06, cy * (L + r * .07) + cx * side * r * .06, cx * (L - r * .03) - cy * side * r * .13, cy * (L - r * .03) + cx * side * r * .13); x.stroke(); }
+  x.shadowColor = "transparent";
+  const gr = x.createRadialGradient(-r * .14, -r * .16, r * .04, 0, 0, r * .52); gr.addColorStop(0, "#c2a564"); gr.addColorStop(.45, "#7d6230"); gr.addColorStop(1, "#3a2b12");
+  x.fillStyle = gr; x.beginPath(); x.arc(0, 0, r * .55, 0, 7); x.fill();
+  for (let k = 0; k < 22; k++) { const v = R() * 6.3, a0 = r * R() * .25, L = r * (.55 + R() * .2); x.strokeStyle = "rgba(214,192,140,.8)"; x.lineWidth = Math.max(.5, r * .04); x.beginPath(); x.moveTo(Math.cos(v) * a0, Math.sin(v) * a0); x.lineTo(Math.cos(v) * L, Math.sin(v) * L); x.stroke(); }
+  x.restore();
+}
+function haPanel(x, p, X, Y, jus, fs) {
+  const aktivTur = ha.tur === p && !ha.ferdig, fc = HA_FARGE[p]; x.save(); x.textAlign = jus; x.textBaseline = "alphabetic";
+  x.font = `600 ${Math.max(11, Math.round(fs * .22))}px "IBM Plex Sans", sans-serif`; x.fillStyle = aktivTur ? `rgb(${fc})` : "rgba(255,255,255,.45)";
+  x.fillText(HA_NAVN[p] + (aktivTur ? " · YOUR TURN" : ""), X, Y);
+  x.font = `600 ${fs}px "IBM Plex Mono", monospace`; x.fillStyle = aktivTur ? "#fff" : "rgba(255,255,255,.5)"; if (aktivTur) { x.shadowColor = `rgba(${fc},.9)`; x.shadowBlur = 14; }
+  x.fillText(String(ha.poeng[p]), X, Y + fs * .98); x.shadowBlur = 0;
+  // Borrer igjen i turen.
+  const rr = Math.max(3, fs * .07), d = rr * 3.2; for (let k = 0; k < HA_KAST; k++) { const cx = jus === "left" ? X + rr + k * d : X - rr - (HA_KAST - 1 - k) * d, igjen = aktivTur && k >= ha.kast;
+    x.beginPath(); x.arc(cx, Y + fs * 1.3, rr, 0, 7); if (igjen) { x.fillStyle = `rgb(${fc})`; x.fill(); } else { x.strokeStyle = "rgba(255,255,255,.22)"; x.lineWidth = 1; x.stroke(); } }
+  x.restore();
+}
+function haTegn() {
+  const c = $("haCanvas"), L = haLayout(), { f, x0, y0, dpr } = L, fc = HA_FARGE[ha.tur];
+  if (c.width !== Math.round(L.W * dpr) || c.height !== Math.round(L.H * dpr)) { c.width = Math.round(L.W * dpr); c.height = Math.round(L.H * dpr); c.style.width = L.W + "px"; c.style.height = L.H + "px"; }
+  const x = c.getContext("2d"); x.setTransform(dpr, 0, 0, dpr, 0, 0); x.clearRect(0, 0, L.W, L.H);
+  // Bildet, kvadratisk utsnitt.
+  { const im = ha.bilde, s = Math.min(im.naturalWidth, im.naturalHeight); x.save(); x.shadowColor = "rgba(0,0,0,.6)"; x.shadowBlur = 30; x.shadowOffsetY = 10; x.fillStyle = "#000"; x.fillRect(x0, y0, f, f); x.restore();
+    x.drawImage(im, (im.naturalWidth - s) / 2, (im.naturalHeight - s) / 2, s, s, x0, y0, f, f); }
+  // KNOWN GAME: feltene og tallene står på bildet.
+  if (ha.kjent) { const s = f / HA_N; x.save(); x.strokeStyle = "rgba(255,255,255,.8)"; x.lineWidth = 1.5; x.shadowColor = "rgba(0,0,0,.8)"; x.shadowBlur = 3; x.beginPath();
+    for (const [a, b, c2, d] of ha.kanter) { x.moveTo(x0 + a * s, y0 + b * s); x.lineTo(x0 + c2 * s, y0 + d * s); } x.stroke();
+    x.textAlign = "center"; x.textBaseline = "middle";
+    for (const z of ha.soner) { const fs = Math.round(s * (z.v >= 75 ? .62 : z.v >= 25 ? .55 : .48)); x.font = `600 ${fs}px "IBM Plex Mono", monospace`; x.fillStyle = "#fff"; x.shadowBlur = 6; x.fillText(String(z.v), x0 + z.midt[0] * f, y0 + z.midt[1] * f); }
+    x.restore(); }
+  x.save(); x.strokeStyle = "rgba(255,255,255,.18)"; x.lineWidth = 1; x.strokeRect(x0 + .5, y0 + .5, f - 1, f - 1); x.restore();
+  // Siktet: først en loddrett strek, så en vannrett.
+  const strek = (x1, y1, x2, y2, a) => { x.save(); x.strokeStyle = `rgba(${fc},${a})`; x.lineWidth = 2; x.shadowColor = `rgba(${fc},.95)`; x.shadowBlur = 10; x.beginPath(); x.moveTo(x1, y1); x.lineTo(x2, y2); x.stroke(); x.restore(); };
+  if (ha.fase === "x") { const X = x0 + haSveip(ha.ft + ha.f0) * f; strek(X, y0 - 14, X, y0 + f + 14, .95); }
+  if (ha.fase === "y") { const X = x0 + ha.x * f, Y = y0 + haSveip(ha.ft + ha.f0) * f; strek(X, y0 - 14, X, y0 + f + 14, .35); strek(x0 - 14, Y, x0 + f + 14, Y, .95);
+    x.save(); x.fillStyle = "#fff"; x.shadowColor = `rgba(${fc},1)`; x.shadowBlur = 12; x.beginPath(); x.arc(X, Y, 4, 0, 7); x.fill(); x.restore(); }
+  // Borrene: forrige tur blekner bort, denne turens sitter fast.
+  const r = f * .042;
+  if (ha.gamleT < .5) for (const b of ha.gamle) haBorre(x, x0 + b.x * f, y0 + b.y * f, r, b.rot, b.frø, b.p, 1 - ha.gamleT / .5);
+  for (const b of ha.borrer) { const X1 = x0 + b.x * f, Y1 = y0 + b.y * f;
+    if (b.fly < 1) { const u = b.fly, e = 1 - (1 - u) ** 2, X0 = L.W / 2, Y0 = L.H + r * 3; haBorre(x, X0 + (X1 - X0) * e, Y0 + (Y1 - Y0) * e - Math.sin(Math.PI * u) * f * .12, r * (1 + 1.8 * (1 - u) ** 2), b.rot + u * 5, b.frø, b.p); }
+    else { const sk = b.sett < .18 ? 1 + .22 * Math.sin(b.sett / .18 * Math.PI) : 1; haBorre(x, X1, Y1, r * sk, b.rot + 5, b.frø, b.p, b.bust ? Math.max(.35, 1 - b.sett) : 1); } }
+  // Poengene der borren traff.
+  x.save(); x.textAlign = "center"; x.textBaseline = "middle";
+  for (const q of ha.tekster) { const a = Math.min(1, q.t * 5) * Math.min(1, (1.8 - q.t) / .6), fs = Math.round(f * (q.stor ? .085 : .065)); x.globalAlpha = a; x.font = `600 ${fs}px "IBM Plex Mono", monospace`;
+    x.shadowColor = `rgba(${HA_FARGE[q.p]},1)`; x.shadowBlur = 14; x.fillStyle = "#fff"; x.fillText(q.txt, x0 + shClamp(q.x, .14, .86) * f, y0 + (q.y - .07 - q.t * .04) * f); }
+  x.restore();
+  // Tallene: hver sin side.
+  if (L.bred) { const fs = Math.round(Math.min(64, (x0 - 40) * .42)); haPanel(x, 0, x0 - 24, y0 + fs * .4, "right", fs); haPanel(x, 1, x0 + f + 24, y0 + fs * .4, "left", fs); }
+  else { const fs = Math.round(Math.min(56, L.topp * .45)); haPanel(x, 0, x0, y0 - fs * 1.55 - 6, "left", fs); haPanel(x, 1, x0 + f, y0 - fs * 1.55 - 6, "right", fs); }
+  // Turen begynner: navnet i fargen over bildet.
+  if (ha.fase === "banner") { const t = ha.ft, a = Math.min(1, t / .25) * Math.min(1, (1.1 - t) / .3); x.save(); x.globalAlpha = Math.max(0, a);
+    x.fillStyle = "rgba(10,8,6,.55)"; x.fillRect(x0, y0 + f * .4, f, f * .2); x.textAlign = "center"; x.textBaseline = "middle";
+    x.font = `600 ${Math.round(f * .085)}px "IBM Plex Mono", monospace`; x.fillStyle = `rgb(${fc})`; x.shadowColor = `rgba(${fc},.9)`; x.shadowBlur = 16; x.fillText(HA_NAVN[ha.tur], L.W / 2, y0 + f * .48);
+    x.shadowBlur = 0; x.font = `500 ${Math.max(11, Math.round(f * .03))}px "IBM Plex Sans", sans-serif`; x.fillStyle = "rgba(255,255,255,.8)"; x.fillText(HA_KAST + " BURRS", L.W / 2, y0 + f * .555); x.restore(); }
+  // Hjelp de første kastene.
+  if (ha.antall < 4 && (ha.fase === "x" || ha.fase === "y")) { x.save(); x.fillStyle = "rgba(255,255,255,.7)"; x.textAlign = "center"; x.font = `500 ${Math.max(12, Math.round(f * .032))}px "IBM Plex Sans", sans-serif`;
+    x.fillText(ha.fase === "x" ? "TAP TO STOP THE LINE" : "TAP AGAIN TO THROW", L.W / 2, Math.min(L.H - 12, y0 + f + 36)); x.restore(); }
+}
+function haMelding(tittel, tekst, knapper) {
+  const m = $("haMelding"); if (!tittel) { m.hidden = true; return; }
+  m.hidden = false; $("haTittel").textContent = tittel; $("haTekst").textContent = tekst || ""; const k = $("haKnapper"); k.replaceChildren();
+  for (const [navn, fn, hoved] of knapper || []) { const b = document.createElement("button"); b.className = hoved ? "hoved" : "sekundar"; b.textContent = navn; b.onclick = fn; k.appendChild(b); }
+}
+function haAvslutt() { cancelAnimationFrame(haRAF); haRAF = 0; ha = null; haMelding(); $("hit").hidden = true; tilMeny(); }
+$("haCanvas").addEventListener("pointerdown", haTrykk); $("haUt").onclick = haAvslutt;
+
 $("uwKnivKnapp").onclick = uwKnivBytt; $("uwKnekkKnapp").onclick = uwKnekk;
 { const c = $("uwCanvas"); c.addEventListener("pointerdown", uwNed); c.addEventListener("pointermove", uwFlytt); c.addEventListener("pointerup", uwOpp); c.addEventListener("pointercancel", uwOpp); }
 
@@ -11189,7 +11384,7 @@ function shSteg(t) {
 }
 addEventListener("resize", () => { if (sh) shOppsett(); });
 // Bare for automatisk testing lokalt (?autotest).
-if (location.search.includes("autotest")) { window.__sh = () => sh; window.__boss3D = (m, a) => { if (a != null) aktiv = a; shBoss3DLast(m); }; window.__shSmåTreff = (...a) => shSmåTreff(...a); window.__shFerdig = () => shFerdig(); window.__ark = () => ark; window.__shHud = () => shHud(); window.__shMistet = () => shMistetLiv(); window.__shOppdater = dt => { shOppdater(dt); if (sh) { sh.tid += dt; shPartikler(dt); } }; window.__shTreff = shTreff; window.__shGalaga = shGalagaStart; window.__shSopp = shSopp; window.__shBytte = shByttetStart; window.__shOrm = shOrmStart; window.__levende = levendeStart; window.__gn = () => ({ gnister, raf: gnistRAF }); window.__hendelse = t => t === "katt" ? kattBesøk() : t === "stov" ? støvstorm() : t === "ketchup" ? ketchup() : t === "tilt" ? tilt(true) : t === "vokse" ? vokseBrikke() : t === "break" ? puzzleBreak() : t === "speilX" ? speilStart("x") : t === "speilY" ? speilStart("y") : lynnedslag(); window.__shSprekk = shSprekk; window.__shP2 = () => ({ pad2X: sh.pad2X, P2Y: SH_P2Y, TOPP: SH_TOPP, H: SH_H }); window.__shTegn = () => { shRens(); shTegn(performance.now()); }; window.__spill = () => spill; window.__banner = banner; window.__kast = kast; window.__gratisPeace = async () => sjekkGratis(await hentSammen("P")); window.__fremdrift = () => fremdrift; window.__sammenP = async () => ({ lok: minLokaleSum("P"), f: fremdrift.b1, liste: (await hentSammen("P")).slice(0, 2) }); window.__shKrabbe = () => shKrabbeStart(); window.__shHopper = () => shHopperStart(); window.__shSlipp = () => shSlipp(); window.__shPY = () => SH_PY; window.__shTopp = () => SH_TOPP; window.__shKapsel = shKapsel; window.__shSnø = shSnøStart; window.__shMørke = shMørkeStart; window.__uw = () => uw; window.__uwStart = uwStart; window.__uwOppdater = dt => uwOppdater(dt); window.__uwTegn = () => uwTegn(); window.__uwVunnet = () => uwVunnet(); window.__uwMaling = () => uwMalingStart(); window.__uwTrip = () => { uw.tripT = 0; uw.revet = 1; }; window.__uwRegn = () => { uw.regnT = 0; uw.revet = 1; }; window.__uwBorst = p => uwBørst(p); window.__mg = () => mg; window.__mgStart = i => mgStart(i); window.__mgRundeSlutt = () => mgRundeSlutt(); window.__shFrys = shFrys; window.__shPlante = shPlante; window.__myntSprites = myntSprites; window.__katt = hentKattHode; window.__pote = hentKattPote; window.__shG = () => shG; window.__shStorm = () => shMørkeStart(); window.__tellOpp = tellOpp; window.__lyd = () => { const c = lydCtx; return c ? { musikk: musikkUt(c).gain.value, effekt: effektUt(c).gain.value } : null; }; window.__speilSlutt = speilSlutt; window.__figurKant = async (n, farge) => shFigurKant(await hentBilde("figurer/" + n + ".webp"), farge); window.__hentBilde = hentBilde; window.__falskMusikk = () => { lydCtx = lydCtx || { currentTime: 0 }; const nei = () => {}; musikk = { kilde: { stop: nei, playbackRate: { v: 1, setTargetAtTime(r) { this.v = r; } } }, g: { gain: { value: .3, cancelScheduledValues: nei, setValueAtTime: nei, linearRampToValueAtTime: nei, setTargetAtTime: nei } } }; }; window.__musikkFart = () => musikk?.kilde?.playbackRate?.v ?? null; window.__musikkFor = id => musikkFor(id)?.fil; window.__geo = () => geo; window.__plasser = plasser; window.__skjermPkt = skjermPkt; }
+if (location.search.includes("autotest")) { window.__sh = () => sh; window.__boss3D = (m, a) => { if (a != null) aktiv = a; shBoss3DLast(m); }; window.__shSmåTreff = (...a) => shSmåTreff(...a); window.__shFerdig = () => shFerdig(); window.__ark = () => ark; window.__shHud = () => shHud(); window.__shMistet = () => shMistetLiv(); window.__shOppdater = dt => { shOppdater(dt); if (sh) { sh.tid += dt; shPartikler(dt); } }; window.__shTreff = shTreff; window.__shGalaga = shGalagaStart; window.__shSopp = shSopp; window.__shBytte = shByttetStart; window.__shOrm = shOrmStart; window.__levende = levendeStart; window.__gn = () => ({ gnister, raf: gnistRAF }); window.__hendelse = t => t === "katt" ? kattBesøk() : t === "stov" ? støvstorm() : t === "ketchup" ? ketchup() : t === "tilt" ? tilt(true) : t === "vokse" ? vokseBrikke() : t === "break" ? puzzleBreak() : t === "speilX" ? speilStart("x") : t === "speilY" ? speilStart("y") : lynnedslag(); window.__shSprekk = shSprekk; window.__shP2 = () => ({ pad2X: sh.pad2X, P2Y: SH_P2Y, TOPP: SH_TOPP, H: SH_H }); window.__shTegn = () => { shRens(); shTegn(performance.now()); }; window.__spill = () => spill; window.__banner = banner; window.__kast = kast; window.__gratisPeace = async () => sjekkGratis(await hentSammen("P")); window.__fremdrift = () => fremdrift; window.__sammenP = async () => ({ lok: minLokaleSum("P"), f: fremdrift.b1, liste: (await hentSammen("P")).slice(0, 2) }); window.__shKrabbe = () => shKrabbeStart(); window.__shHopper = () => shHopperStart(); window.__shSlipp = () => shSlipp(); window.__shPY = () => SH_PY; window.__shTopp = () => SH_TOPP; window.__shKapsel = shKapsel; window.__shSnø = shSnøStart; window.__shMørke = shMørkeStart; window.__uw = () => uw; window.__uwStart = uwStart; window.__uwOppdater = dt => uwOppdater(dt); window.__uwTegn = () => uwTegn(); window.__uwVunnet = () => uwVunnet(); window.__uwMaling = () => uwMalingStart(); window.__uwTrip = () => { uw.tripT = 0; uw.revet = 1; }; window.__uwRegn = () => { uw.regnT = 0; uw.revet = 1; }; window.__uwBorst = p => uwBørst(p); window.__mg = () => mg; window.__ha = () => ha; window.__haStart = i => haStart(i); window.__haVunnet = () => haVunnet(); window.__mgStart = i => mgStart(i); window.__mgRundeSlutt = () => mgRundeSlutt(); window.__shFrys = shFrys; window.__shPlante = shPlante; window.__myntSprites = myntSprites; window.__katt = hentKattHode; window.__pote = hentKattPote; window.__shG = () => shG; window.__shStorm = () => shMørkeStart(); window.__tellOpp = tellOpp; window.__lyd = () => { const c = lydCtx; return c ? { musikk: musikkUt(c).gain.value, effekt: effektUt(c).gain.value } : null; }; window.__speilSlutt = speilSlutt; window.__figurKant = async (n, farge) => shFigurKant(await hentBilde("figurer/" + n + ".webp"), farge); window.__hentBilde = hentBilde; window.__falskMusikk = () => { lydCtx = lydCtx || { currentTime: 0 }; const nei = () => {}; musikk = { kilde: { stop: nei, playbackRate: { v: 1, setTargetAtTime(r) { this.v = r; } } }, g: { gain: { value: .3, cancelScheduledValues: nei, setValueAtTime: nei, linearRampToValueAtTime: nei, setTargetAtTime: nei } } }; }; window.__musikkFart = () => musikk?.kilde?.playbackRate?.v ?? null; window.__musikkFor = id => musikkFor(id)?.fil; window.__geo = () => geo; window.__plasser = plasser; window.__skjermPkt = skjermPkt; }
 
 
 
