@@ -808,7 +808,7 @@ body.lys #modusDeal{--farge:#0f8f6c;--glod:15,143,108}
   <div class="regel">Everything counts: Game, Peace, Bubble it 1P and 2P, every board, every level, every collection. Each board list gives up to 100 points (a Bubble it list up to 1,000): #1 gets them all, the rest their share of the top score.</div>
   <div class="sammen" id="spillere"><p class="liten">Loading players …</p></div>
   <p class="kreditt">© 2001–2026 Tarjei Krogh. All photography, music and art. <a href="https://kroghx.com" target="_blank" rel="noopener">kroghx.com</a></p>
-  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 2.10<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
+  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 2.11<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
 </section>
 
 <div class="ark" id="tidUtArk" hidden style="z-index:200001">
@@ -8211,7 +8211,11 @@ function shKrabbeTegn(x, f, s) {
   // Krogh 2.10: MUD CRAWLER er bygget av Kroghs egne 3D-figurer: hodet og leddene er det rosa foliehodet, og under hvert ledd går to bare føtter.
   { const B3 = window.Boss3D; if (B3?.har("folie")) { const dpr = Math.min(2, devicePixelRatio || 1), mot = Math.cos(K.a), css = R * 5, str = Math.round(css * dpr), c = K.hodeC || (K.hodeC = document.createElement("canvas")); if (c.width !== str) c.width = c.height = str;
       const cx = c.getContext("2d"); cx.clearRect(0, 0, str, str); B3.tegn(cx, str / 2, str / 2, str, { modell: "folie", vri: mot * .5 + Math.sin(K.t * 3) * .15, vipp: .1 + Math.sin(K.t * 5) * .05 });
-      let fot = null; if (B3.har("fot")) { const fs = Math.round(R * 2.2 * dpr); fot = K.fotC || (K.fotC = document.createElement("canvas")); if (fot.width !== fs) { fot.width = fot.height = fs; B3.tegn(fot.getContext("2d"), fs / 2, fs / 2, fs, { modell: "fot", vri: 1.57, vipp: .05 }); } }
+      let fot = null; if (B3.har("fot")) { const fs = Math.round(R * 2.2 * dpr); fot = K.fotC || (K.fotC = document.createElement("canvas")); if (fot.width !== fs) { fot.width = fot.height = fs; const fx = fot.getContext("2d"); B3.tegn(fx, fs / 2, fs / 2, fs, { modell: "fot", vri: 1.57, vipp: .05 });
+        // Hudfarge (Krogh): den grå foten får hudtone (fargen fra hud, lyset fra modellen), og formen beholdes.
+        const kopi = document.createElement("canvas"); kopi.width = kopi.height = fs; kopi.getContext("2d").drawImage(fot, 0, 0);
+        fx.globalCompositeOperation = "color"; fx.fillStyle = "#e3a385"; fx.fillRect(0, 0, fs, fs); fx.globalCompositeOperation = "screen"; fx.fillStyle = "rgba(255,215,190,.28)"; fx.fillRect(0, 0, fs, fs);
+        fx.globalCompositeOperation = "destination-in"; fx.drawImage(kopi, 0, 0); fx.globalCompositeOperation = "source-over"; } }
       for (let i = n - 1; i >= 3; i -= 6) { const p = K.kropp[i], u = i / Math.max(1, n - 1), r = R * (1 - u * .55) * 2.8, X = p.x * f, Y = p.y * f, fase = K.t * 9 + i * .7;
         // Føttene: én foran og én bak, de tar annethvert skritt i den retningen krabben går. Tærne peker framover.
         if (fot) for (const sd of [0, Math.PI]) { const st = Math.sin(fase + sd), løft = Math.max(0, Math.cos(fase + sd)), fw = r * .62;
