@@ -696,7 +696,7 @@ h1{font-weight:300;letter-spacing:.14em;line-height:1.02}
 .hendelse{font-weight:600;letter-spacing:.16em;line-height:1.08}
 .flaks{font-weight:600;letter-spacing:.14em}
 #kraftLinje button,#shKraftLinje button{font-weight:500}
-#modusDeal{--farge:#2fd4a0;--glod:47,212,160}
+#modusDeal,body.lys #modusDeal{--farge:#7a3cff!important;--glod:122,60,255!important}
 #modusDeal[hidden]{display:none!important}
 body.lys #modusDeal{--farge:#0f8f6c;--glod:15,143,108}
 #modusDeal .tittel{color:var(--farge)!important;font-size:1em!important;letter-spacing:.08em!important;line-height:1;white-space:nowrap}
@@ -808,7 +808,7 @@ body.lys #modusDeal{--farge:#0f8f6c;--glod:15,143,108}
   <div class="regel">Everything counts: Game, Peace, Bubble it 1P and 2P, every board, every level, every collection. Each board list gives up to 100 points (a Bubble it list up to 1,000): #1 gets them all, the rest their share of the top score.</div>
   <div class="sammen" id="spillere"><p class="liten">Loading players …</p></div>
   <p class="kreditt">© 2001–2026 Tarjei Krogh. All photography, music and art. <a href="https://kroghx.com" target="_blank" rel="noopener">kroghx.com</a></p>
-  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 2.08<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
+  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 2.09<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
 </section>
 
 <div class="ark" id="tidUtArk" hidden style="z-index:200001">
@@ -1247,6 +1247,8 @@ $("modusScrub").onclick = () => { ctx(); velgModus("scrub"); };
 $("modusUnwrap").onclick = () => { ctx(); velgModus("unwrap"); }
 $("modusHit").onclick = () => { ctx(); velgModus("hit"); };
 $("modusHit").hidden = !HIT_ALENE;
+// Krogh 2.09: kortspillet (DEAL IT) er flyttet til HIT ART og heter CARDS der. I HIDDEN MOTIVES er det skjult.
+if (HIT_ALENE) { $("modusDeal").hidden = false; $("modusDeal").querySelector(".tittel").textContent = "CARDS"; document.querySelector("#deal .dl-topp b").textContent = "CARDS"; }
 if (HIT_ALENE) { for (const id of ["modusPuslespill", "modusScrub", "modusUnwrap"]) $(id).hidden = true; document.title = "Hit Art"; document.querySelector(".hm-l1").textContent = "HIT"; document.querySelector(".hm-l2").textContent = "ART"; $("albumKnapp").style.display = "none"; }
 $("albumKnapp").onclick = visAlbum; $("albumUt").onclick = lukkAlbum;;
 // Lys vegg i HIDDEN MOTIVES (menyen og brettet), mørk i BUBBLE IT.
@@ -4462,7 +4464,7 @@ function dlKlar() {
   const T = $("dlTerninger"); T.replaceChildren(); for (let i = 0; i < 6; i++) { const d = document.createElement("div"); d.className = "dl-terning"; dlTerningVis(d, 0); T.appendChild(d); }
   $("dlMal").textContent = "–"; $("dlKortrad").replaceChildren(); dlInfo();
   const n = dlStokk().length;
-  if (n < 6) { dlStatus("", "Your deck has " + n + " card" + (n === 1 ? "" : "s") + ". Every board you play in PIECE IT or BUBBLE IT becomes a card. You need 6 to play."); dlKnapper([["Roll the dice", dlKast, true, true]]); }
+  if (n < 6) { dlStatus("", "Your deck has " + n + " card" + (n === 1 ? "" : "s") + ". Every board you play becomes a card. You need 6 to play."); dlKnapper([["Roll the dice", dlKast, true, true]]); }
   else { dlStatus("", "Roll six dice. Then get as close to the sum as you can, fast. You see the art, not the value. Going over is allowed."); dlKnapper([["Roll the dice", dlKast, true]]); }
   dlTegnMappe();
 }
