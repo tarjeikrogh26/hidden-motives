@@ -623,7 +623,7 @@ body:has(.resultat.vis) #spill .linje{opacity:0;pointer-events:none;transition:o
 #haCanvas{position:absolute;inset:0;touch-action:none}
 #haUt{position:absolute;top:max(8px,env(safe-area-inset-top,0px));left:max(8px,env(safe-area-inset-left,0px));z-index:3}
 .variant.v-hit{--vg:20,150,90}
-#uwCanvas{position:absolute;inset:0;touch-action:none}
+#uwCanvas{position:absolute;inset:0;touch-action:none;max-width:100vw;max-height:100vh}
 #uwVerktøy{display:none!important;position:absolute;left:50%;transform:translateX(-50%);display:flex;gap:8px;z-index:3}
 .uw-v{font:700 11px var(--tall);letter-spacing:.12em;padding:8px 13px;border-radius:999px;border:1px solid rgba(255,255,255,.25);color:#fff;background:rgba(0,0,0,.45);cursor:pointer;white-space:nowrap}
 #uwKnivKnapp{border-color:var(--kf,#e0791c);box-shadow:inset 0 0 0 1px var(--kf,#e0791c)}
@@ -808,7 +808,7 @@ body.lys #modusDeal{--farge:#0f8f6c;--glod:15,143,108}
   <div class="regel">Everything counts: Game, Peace, Bubble it 1P and 2P, every board, every level, every collection. Each board list gives up to 100 points (a Bubble it list up to 1,000): #1 gets them all, the rest their share of the top score.</div>
   <div class="sammen" id="spillere"><p class="liten">Loading players …</p></div>
   <p class="kreditt">© 2001–2026 Tarjei Krogh. All photography, music and art. <a href="https://kroghx.com" target="_blank" rel="noopener">kroghx.com</a></p>
-  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 2.11<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
+  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 2.12<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
 </section>
 
 <div class="ark" id="tidUtArk" hidden style="z-index:200001">
@@ -3243,7 +3243,7 @@ let smussRAF = 0, smussSist = 0, smussFalm = 0, klut = null;
 const smussJobber = [], smussSprites = {}, tørkSist = new Map();
 function smussLerret(id) {
   const c = $(id), dpr = Math.min(devicePixelRatio || 1, 2), W = Math.round(innerWidth * dpr), H = Math.round(innerHeight * dpr);
-  if (c.width !== W || c.height !== H) { c.width = W; c.height = H; c.style.width = innerWidth + "px"; c.style.height = innerHeight + "px"; }
+  if (c.width !== W || c.height !== H) { const vw = W / dpr, vh = H / dpr; c.style.width = vw + "px"; c.style.height = vh + "px"; c.width = W; c.height = H; }
   const x = c.getContext("2d"); x.setTransform(dpr, 0, 0, dpr, 0, 0); return x;
 }
 function mykFlekk(farge) {
@@ -3681,7 +3681,7 @@ function lynnedslag() {
   if (mål.ferdig) { mål.ferdig = false; sp.lagt--; mål.z = ++sp.ztopp; tegnBit(mål); plasser(mål); oppdaterTeller(); visHintKnapp(); }
   setTimeout(() => { if (spill === sp && !mål.ferdig) kast(mål, false); }, 60);
   sp.brann = { spre: .3 + Math.random() * .6, tenn: mål.id, ild: new Map(), brent: new Map(), glor: new Map(), lyn: { x: lx, y: ly, t: 0, hoved, greiner, gnister }, partikler: [], plask: [], damp: [], sist: performance.now(), tegnT: 0, slange: null };
-  const c = $("brannLag"), dpr = Math.min(devicePixelRatio || 1, 2); c.width = innerWidth * dpr; c.height = innerHeight * dpr; c.style.width = innerWidth + "px"; c.style.height = innerHeight + "px";
+  const c = $("brannLag"), dpr = Math.min(devicePixelRatio || 1, 2), vw = innerWidth, vh = innerHeight; c.style.width = vw + "px"; c.style.height = vh + "px"; c.width = vw * dpr; c.height = vh * dpr;
   cancelAnimationFrame(brannRAF); brannRAF = requestAnimationFrame(brannSteg);
 }
 function brannSteg(t) {
@@ -10198,7 +10198,8 @@ function uwLag(S, L = 0) {
 }
 function uwTegn() {
   const u = uw, c = $("uwCanvas"), L = uwLayout(), dpr = L.dpr, G = UW_G, nå = performance.now() / 1000;
-  if (c.width !== Math.round(innerWidth * dpr) || c.height !== Math.round(innerHeight * dpr)) { c.width = Math.round(innerWidth * dpr); c.height = Math.round(innerHeight * dpr); c.style.width = innerWidth + "px"; c.style.height = innerHeight + "px"; }
+  // Mål skjermen før lerretet endres (Android utvider ellers siden til dobbel bredde).
+  { const vw = innerWidth, vh = innerHeight; if (c.width !== Math.round(vw * dpr) || c.height !== Math.round(vh * dpr)) { c.style.width = vw + "px"; c.style.height = vh + "px"; c.width = Math.round(vw * dpr); c.height = Math.round(vh * dpr); } }
   const x = c.getContext("2d"); x.setTransform(dpr, 0, 0, dpr, 0, 0); x.clearRect(0, 0, innerWidth, innerHeight);
   const { f, x0, y0 } = L, P = (fx, fy) => [x0 + fx * f, y0 + fy * f];
   if (u.slutt) { uwSluttTegn(x, P, f, x0, y0, nå); return; }
