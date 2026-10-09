@@ -743,7 +743,7 @@ body.lys #modusDeal{--farge:#0f8f6c;--glod:15,143,108}
   <div class="regel">Everything counts: Game, Peace, Bubble it 1P and 2P, every board, every level, every collection. Each board list gives up to 100 points (a Bubble it list up to 1,000): #1 gets them all, the rest their share of the top score.</div>
   <div class="sammen" id="spillere"><p class="liten">Loading players …</p></div>
   <p class="kreditt">© 2001–2026 Tarjei Krogh. All photography, music and art. <a href="https://kroghx.com" target="_blank" rel="noopener">kroghx.com</a></p>
-  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 1.95<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
+  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 1.96<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
 </section>
 
 <div class="ark" id="tidUtArk" hidden style="z-index:200001">
@@ -4504,7 +4504,28 @@ const SH_INN = {
   fiende: { levende: 1, galaga: 2, sabot: 3, krabbe: 4, boss: 6, hopper: 7, fugl: 9, snø: 5, mørke: 4, deler: 3 } };
 const SH_NYNAVN = { kjøp: { tilt: "TILT", orm: "WORM", magnet: "VACUMA", trip: "TRIP", bombe: "BOMBS", missil: "MISSILES", laser: "BEAM", alien: "ALIEN", boble: "EXTRA BUBBLE", voks: "MEGA BUBBLE" },
   fiende: { levende: "THE ART WAKES UP", galaga: "SPACESHIPS", sabot: "SABOTEURS", krabbe: "MUD CRAWLER", boss: "THE BOSS", hopper: "PARATROOPER", fugl: "SEED BIRD", snø: "SNOW", mørke: "BLACKOUT", deler: "PINBALL PARTS" } };
-function shHar(type, navn, i = sh?.i ?? 0) { return BETA || aktiv * 9 + i >= (SH_INN[type][navn] ?? 0); }
+function shHar(type, navn, i = sh?.i ?? 0) { return (BETA || aktiv * 9 + i >= (SH_INN[type][navn] ?? 0)) && shPlanHar(type, navn, i); }
+// Krogh 1.96: ikke alt på hvert brett. Galaga, skvadronen og det vanlige er alltid med. Bossen kommer bare på
+// brett 9 i hver sesong. Hvert brett får to spesielle hendelser og tre spesielle power-ups, på rundgang,
+// så det blir variasjon fra brett til brett og det er gøy når noe nytt plutselig dukker opp.
+const SH_PLAN_HENDELSE = ["mørke", "snø", "krabbe", "hopper", "fugl", "sabot"];
+const SH_PLAN_KAPSEL = ["T", "O", "J", "V", "I", "X", "Z", "Q"];
+function shPlanHar(type, navn, i) {
+  const n = aktiv * 9 + i;
+  if (type === "fiende") {
+    if (navn === "boss") return i === 8;
+    const k = SH_PLAN_HENDELSE.indexOf(navn); if (k < 0) return true;
+    const L = SH_PLAN_HENDELSE.length, a = n % L, b2 = (a + 1 + (((n / L) | 0) + 1) % (L - 1)) % L;
+    return k === a || k === b2;
+  }
+  if (type === "kapsel") {
+    const k = SH_PLAN_KAPSEL.indexOf(navn); if (k < 0) return true;
+    const L = SH_PLAN_KAPSEL.length, valgt = new Set(); let j = n * 3;
+    while (valgt.size < 3) valgt.add((j++ * 3 + (n >> 1)) % L);
+    return valgt.has(k);
+  }
+  return true;
+}
 // Velger en power-up blant dem som er åpnet (vektet etter hvor vanlige de er, eller helt jevnt).
 function shKapselValg(vektet = true) {
   const lov = KAPSLER.filter(q => shHar("kapsel", q.t)); if (!lov.length) return KAPSLER[0];
@@ -6769,12 +6790,13 @@ function shVaerP(p) { const s = sh; s.vaerP = s.vaerP || []; if (s.vaerP.length 
 // SKVADRONEN (Krogh: mer Galaga): små aliens kommer inn øverst og legger seg i rader. De marsjerer fram og tilbake,
 // slipper jordklatter nedover, og av og til stuper én ned mot flipperne. Boblene og skuddene sprenger dem.
 // De er Kroghs 3D-figurer som ikke er bossen på brettet (tegnes én gang per bilde og kopieres). Uten 3D: figurene fra bildene.
-function shSmåModeller() { const b = shBoss3DModell(), andre = SH_3D.filter(m => m !== b), k = aktiv % andre.length; return [andre[k], andre[(k + 1) % andre.length]]; }
+function shSmåModeller() { const b = shBoss3DModell(), andre = SH_3D.filter(m => m !== b), k = (aktiv * 9 + (sh?.i || 0)) % andre.length; return [andre[k], andre[(k + 2) % andre.length], andre[(k + 4) % andre.length]]; }
 function shSmåStart() {
   const s = sh, rader = 2 + (Math.random() < .5 ? 1 : 0), kol = 6, liste = [], ms = shSmåModeller();
   for (const m of ms) shBoss3DLast(m);
-  for (let rr = 0; rr < rader; rr++) for (let c = 0; c < kol; c++) { const n = rr * kol + c; liste.push({ rad: rr, kol: c, x: c < kol / 2 ? -.1 : 1.1, y: SH_TOPP - .05, t: -n * .12, tilstand: "inn", modell: ms[rr % ms.length], figur: n, fase: Math.random() * 6, bombeT: 2 + Math.random() * 5, hp: 2, rot: 0 }); }
-  s.små = { t: 0, liste, dykkT: 4, varighet: 32 + Math.random() * 10, slutt: false };
+  const toD = s.figurer?.m?.length || 0;
+  for (let rr = 0; rr < rader; rr++) for (let c = 0; c < kol; c++) { const n = rr * kol + c; const todim = toD > 0 && (c + rr) % 2 === 1; liste.push({ rad: rr, kol: c, x: c < kol / 2 ? -.1 : 1.1, y: SH_TOPP - .05, t: -n * .12, tilstand: "inn", modell: ms[(c + rr * 2) % ms.length], todim, figur: (Math.random() * 1000) | 0, fase: Math.random() * 6, bombeT: 2 + Math.random() * 5, hp: 2, rot: 0 }); }
+  s.små = { t: 0, liste, modeller: ms, dykkT: 4, varighet: 32 + Math.random() * 10, slutt: false };
   s.tekster.push({ txt: "SQUADRON!", x: .5, y: SH_TOPP + .3, liv: 1.4, farge: "#9fe3ff", liten: true }); shLyd("invasjon");
 }
 function shSmåHjem(e, S) { const sv = Math.sin(S.t * .5) * .08; return [.17 + e.kol * .132 + sv + (e.rad % 2 ? .02 : 0), SH_TOPP + .055 + e.rad * .07]; }
@@ -6782,6 +6804,8 @@ function shSmåSteg(dt) {
   const s = sh; if (s.toP) return;
   if (!s.små) { s.småT = (s.småT ?? 12 + Math.random() * 8) - dt; if (s.småT <= 0 && s.tilstand === "spill" && !s.galaga && !s.bytte && !(s.sopp > 0) && !s.finale) { s.småT = 28 + Math.random() * 18; shSmåStart(); } return; }
   const S = s.små; S.t += dt; S.dykkT -= dt;
+  // Når skvadronen er der, skyter flipperne bobler med en gang.
+  if (S.liste.some(e => e.t >= 0 && e.tilstand !== "såpe" && e.tilstand !== "boble" && e.tilstand !== "ut")) s.eff.K = Math.max(s.eff.K, .2);
   if (S.t > S.varighet && !S.slutt) { S.slutt = true; for (const e of S.liste) if (e.tilstand === "form") { e.tilstand = "ut"; e.t = 0; } }
   for (const e of S.liste) { e.t += dt; if (e.t < 0) continue;
     if (e.tilstand === "inn") { const [hx, hy] = shSmåHjem(e, S), u = Math.min(1, e.t / 1.4), k = u * u * (3 - 2 * u); e.x += (hx - e.x) * Math.min(1, k * dt * 6 + .02); e.y += (hy - e.y) * Math.min(1, k * dt * 6 + .02); if (u >= 1) e.tilstand = "form"; }
@@ -6824,11 +6848,12 @@ function shSmåTegn(x, f, s) {
   if (!S) return;
   // Hver figur tegnes én gang i 3D per bilde, og kopieres til alle i skvadronen.
   const sp = S.sprite || (S.sprite = {}), str = Math.round(f * .085), B3 = window.Boss3D;
-  for (const m of shSmåModeller()) { if (!B3?.har(m)) continue; const c = sp[m] || (sp[m] = document.createElement("canvas")); if (c.width !== str) c.width = c.height = str; const cx = c.getContext("2d"); cx.clearRect(0, 0, str, str); B3.tegn(cx, str / 2, str / 2, str, { modell: m, vri: Math.sin(s.tid * 1.4 + m.length) * .5, vipp: .12 }); c.klar = true; }
+  for (const m of S.modeller || (S.modeller = shSmåModeller())) { if (!B3?.har(m)) continue; const c = sp[m] || (sp[m] = document.createElement("canvas")); if (c.width !== str) c.width = c.height = str; const cx = c.getContext("2d"); cx.clearRect(0, 0, str, str); B3.tegn(cx, str / 2, str / 2, str, { modell: m, vri: Math.sin(s.tid * 1.4 + m.length) * .5, vipp: .12 }); c.klar = true; }
   for (const e of S.liste) { if (e.t < 0) continue; const X = e.x * f, Y = e.y * f, c = sp[e.modell];
     x.save(); if (e.tilstand === "pop") { const u = e.t / .35; x.globalAlpha = 1 - u; x.translate(X, Y); x.scale(1 + u, 1 + u); x.translate(-X, -Y); }
     x.translate(X, Y); x.rotate(e.rot || 0);
-    if (c?.klar) x.drawImage(c, -str / 2, -str / 2 + (e.tilstand === "form" ? Math.sin(s.tid * 3 + e.fase) * 2 : 0), str, str);
+    if (e.todim && s.figurer?.m?.length) { x.translate(0, e.tilstand === "form" ? Math.sin(s.tid * 3 + e.fase) * 2 : 0); shSprite(x, s.figurer.m[e.figur % s.figurer.m.length], 0, 0, str * .42, s.tid, e.fase, true); }
+    else if (c?.klar) x.drawImage(c, -str / 2, -str / 2 + (e.tilstand === "form" ? Math.sin(s.tid * 3 + e.fase) * 2 : 0), str, str);
     else { x.fillStyle = "rgba(200,240,255,.8)"; x.beginPath(); x.arc(0, 0, str * .25, 0, 7); x.fill(); }
     if (e.tilstand === "såpe") { const u = Math.min(1, e.t * 3); x.fillStyle = `rgba(240,248,255,${.3 * u})`; x.beginPath(); x.ellipse(0, 0, str * .42, str * .46, 0, 0, 7); x.fill(); for (let k = 0; k < 13; k++) { const a = k * 2.4 + e.fase, rr = str * (.07 + .07 * ((k * 7) % 4) / 4); x.fillStyle = `rgba(250,252,255,${.72 * u})`; x.beginPath(); x.arc(Math.cos(a) * str * .4, Math.sin(a) * str * .44, rr * u, 0, 7); x.fill(); x.strokeStyle = `rgba(180,220,255,${.6 * u})`; x.lineWidth = 1; x.stroke(); } }
     if (e.tilstand === "boble") { const R = str * .62, g = x.createRadialGradient(-R * .3, -R * .3, R * .1, 0, 0, R * 1.05); g.addColorStop(0, "rgba(255,255,255,.06)"); g.addColorStop(.8, "rgba(190,225,255,.12)"); g.addColorStop(1, "rgba(255,255,255,.5)"); x.fillStyle = g; x.beginPath(); x.arc(0, 0, R, 0, 7); x.fill();
@@ -8642,7 +8667,7 @@ function shOppdater(dt) {
     s.skuddT -= dt;
     // Som en vannslange: en tett stråle av bobler fra midten mellom flipperne. Flytt flipperne for å sikte.
     for (let n = 0; n < 3 && s.skuddT <= 0; n++) {
-      const angrep = !!s.galaga && s.eff.K < .3;
+      const angrep = (!!s.galaga || !!s.små) && s.eff.K < .3;
       s.skuddT += angrep ? .075 : .045;
       const sikte = shClamp(s.padV * .6, -.6, .6) + Math.sin(s.tid * 7) * .05, v = 1.4 + Math.random() * .3;
       const d1 = shDysePos(s, -1), d2 = shDysePos(s, 1), kilder = [[d1.x, d1.y], [d2.x, d2.y]].concat(s.wingmen.filter(w => w.klar).map(w => [s.padX + w.side * (s.padW / 2 + .05), SH_PY - .03]));
@@ -8667,8 +8692,8 @@ function shOppdater(dt) {
   if (s.toP) { if (!s.bytte && !(s.sopp > 0) && !s.galaga && !s.galagaKommet && s.tid >= 8 && s.igjen >= s.klosser.length * .12) shGalagaStart(true); }
   else if (!s.bytte && !(s.sopp > 0) && !s.galaga && !s.finale) {
     const andel = 1 - s.igjen / s.klosser.length; s.bossVed = s.bossVed ?? .4 + Math.random() * .25;
-    if (!s.bossKommet && shHar("fiende", "boss") && andel >= s.bossVed && andel < .9) { s.bossKommet = true; shGalagaStart(true); }
-    else if (shHar("fiende", "galaga") && s.tid > (s.galagaPause ?? 20) && andel > .06 && andel < .88) shGalagaStart(false);
+    if (!s.bossKommet && !s.små && shHar("fiende", "boss") && andel >= s.bossVed && andel < .9) { s.bossKommet = true; shGalagaStart(true); }
+    else if (!s.små && shHar("fiende", "galaga") && s.tid > (s.galagaPause ?? 20) && andel > .06 && andel < .88) shGalagaStart(false);
   }
   for (const q of s.skudd) {
     q.x += q.vx * dt; q.y += q.vy * dt;
