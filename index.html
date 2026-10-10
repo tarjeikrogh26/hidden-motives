@@ -117,6 +117,11 @@ body.lys.meny-hvit{--rom:#f8f6f2;--flate:#ffffff;--strek:rgba(40,30,20,.12)}
 .moduser{gap:.32em!important}
 .moduser .modus,body.lys .moduser .modus{opacity:1;background:#fff;border:1.5px solid var(--farge);border-radius:10px;padding:.26em .42em .3em;text-shadow:none;box-shadow:none;transition:background .2s,box-shadow .2s,transform .12s}
 .moduser .modus .tittel{font-weight:600!important;letter-spacing:.06em!important}
+.moduser .modus{text-align:center;box-sizing:border-box}
+/* Krogh 2.26: tekster deles i jevne linjer (ikke en lang første linje og en kort andre). */
+.under,#modusTekst,.liten,.res-info,#resInfo,#resRekord,.neste,.samlingsnavn,.ark-boks p{text-wrap:balance}
+.regel{text-wrap:pretty}
+@media (max-width:600px){.variant button{padding:6px 9px!important;letter-spacing:.09em!important;font-size:10.5px!important}.variant{justify-content:stretch}.variant button{flex:1 1 auto}}
 .moduser .modus:hover{opacity:1;background:rgba(var(--glod),.06)}
 .moduser .modus[aria-selected="true"],body.lys .moduser .modus[aria-selected="true"]{background:var(--farge);border-color:var(--farge);text-shadow:none;box-shadow:0 4px 16px rgba(var(--glod),.32)}
 #modusPuslespill[aria-selected="true"] .tittel,#modusScrub[aria-selected="true"] .tittel,#modusUnwrap[aria-selected="true"] .tittel{color:#fff!important}
@@ -1278,7 +1283,12 @@ try { const m = localStorage.getItem("sm-modus"); if (m === "scrub" || m === "un
 if (HIT_ALENE) modus = "hit";
 function velgModus(m) { if (HIT_ALENE) m = "hit"; modus = m; try { localStorage.setItem("sm-modus", m); } catch {} tegnMeny(); }
 function plasserVariant() { { const mt = $("modusTekst"), rad = document.querySelector(".moduser"); if (mt && rad) { mt.style.maxWidth = rad.offsetWidth + "px"; mt.style.width = rad.offsetWidth + "px"; } }
-  const vr = $("variant"), valgt = $(modus === "pusle" ? "modusPuslespill" : modus === "unwrap" ? "modusUnwrap" : modus === "hit" ? "modusHit" : "modusScrub"); if (!vr || !valgt) return; vr.style.paddingLeft = ""; vr.style.marginLeft = "0px";
+  const vr = $("variant"), valgt = $(modus === "pusle" ? "modusPuslespill" : modus === "unwrap" ? "modusUnwrap" : modus === "hit" ? "modusHit" : "modusScrub"); if (!vr || !valgt) return; vr.style.paddingLeft = ""; vr.style.marginLeft = "0px"; vr.style.minWidth = "";
+  if (innerWidth < 600) { vr.style.minWidth = valgt.offsetWidth + "px"; const gear = $("tannhjul"), W = vr.parentElement?.clientWidth || innerWidth, høyre = valgt.offsetLeft + valgt.offsetWidth / 2 > W * .66;
+    if (gear) { gear.style.right = høyre ? "auto" : ""; gear.style.left = høyre ? "0px" : ""; }
+    const ml = valgt.offsetLeft + valgt.offsetWidth / 2 - vr.offsetWidth / 2 - vr.offsetLeft, lo = høyre ? 50 : 0, hi = W - vr.offsetWidth - (høyre ? 0 : 50);
+    vr.style.marginLeft = Math.max(lo, Math.min(hi, ml)) + "px"; return; }
+  { const gear = $("tannhjul"); if (gear) { gear.style.right = ""; gear.style.left = ""; } }
   const plass = (vr.parentElement?.clientWidth || innerWidth) - vr.offsetWidth - 66; vr.style.marginLeft = Math.max(0, Math.min(plass, valgt.offsetLeft + valgt.offsetWidth / 2 - vr.offsetWidth / 2 - vr.offsetLeft)) + "px"; } // Krogh 2.25: midtstilt under knappen.
 // Krogh 2.26: på telefon kommer bildene først. Sesongtittel og episoder rett under modusene, så sesongene på én rad
 // du kan bla sidelengs i (det kommer mange sesonger), og albumet under. På iPad står alt som før.
@@ -1299,7 +1309,10 @@ function tilpassLogo() {
   const smal = bredde < 560, gear = $("tannhjul"), vr = $("variant");
   const plass = bredde - (av ? av.offsetWidth + 10 : 0) - (smal ? 0 : 50);
   const fs0 = smal ? 34 : 42;
-  if (m) { m.style.fontSize = fs0 + "px"; const w = m.scrollWidth; if (w > plass) m.style.fontSize = Math.max(12, Math.floor(fs0 * plass / w * 0.98)) + "px"; }
+  // Krogh 2.26: de tre spillknappene er like brede (PIECE er kortere enn de andre). Teksten står midt i.
+  if (m) { const kn = [...m.querySelectorAll(".modus:not([hidden])")]; kn.forEach(k => k.style.minWidth = ""); m.style.fontSize = fs0 + "px";
+    const lik = () => { const b = Math.max(...kn.map(k => k.offsetWidth)); kn.forEach(k => k.style.minWidth = b + "px"); }; lik();
+    const w = m.scrollWidth; if (w > plass) { kn.forEach(k => k.style.minWidth = ""); m.style.fontSize = Math.max(12, Math.floor(fs0 * plass / w * 0.98)) + "px"; lik(); } }
   // Fra venstre kant av PIECE IT til høyre kant av den siste synlige modusen (uten bokstavluften etter siste bokstav).
   const tit = [...document.querySelectorAll(".moduser .modus:not([hidden]) .tittel")], x0 = logo.getBoundingClientRect().left;
   if (!tit.length || !navn) return plasserVariant();
@@ -4731,7 +4744,7 @@ const SH_NYNAVN = { kjøp: { tilt: "TILT", orm: "WORM", magnet: "VACUMA", trip: 
 // ned mot 0,4), og fra Season 3 får hvert brett én spesiell hendelse til.
 function shVanske(i = sh?.i ?? 0) { return aktiv === BRUKER ? 1 : Math.max(.4, 1 - aktiv * .14 - i * .02); }
 function shHar(type, navn, i = sh?.i ?? 0) { return (BETA || aktiv * 9 + i >= (SH_INN[type][navn] ?? 0)) && shPlanHar(type, navn, i); }
-// Krogh 1.96: ikke alt på hvert brett. Galaga, skvadronen og det vanlige er alltid med. Bossen kommer bare på
+// Krogh 1.96, 2.26: ikke alt på hvert brett. Galaga-formasjonen og det vanlige er alltid med (skvadronen er tatt ut). Bossen kommer bare på
 // brett 9 i hver sesong. Hvert brett får to spesielle hendelser og tre spesielle power-ups, på rundgang,
 // så det blir variasjon fra brett til brett og det er gøy når noe nytt plutselig dukker opp.
 const SH_PLAN_HENDELSE = ["mørke", "snø", "krabbe", "hopper", "fugl", "sabot"];
@@ -4742,7 +4755,7 @@ function shPlanHar(type, navn, i) {
     if (navn === "boss") return i === 8;
     const k = SH_PLAN_HENDELSE.indexOf(navn); if (k < 0) return true;
     const L = SH_PLAN_HENDELSE.length, a = n % L, b2 = (a + 1 + (((n / L) | 0) + 1) % (L - 1)) % L;
-    return k === a || k === b2 || (aktiv >= 2 && aktiv !== BRUKER && k === (a + 3) % L && (a + 3) % L !== b2);
+    return k === a || (aktiv >= 2 && aktiv !== BRUKER && k === b2); // Krogh 2.26: én hendelse per brett, to fra Season 3. Ikke alt på en gang.
   }
   if (type === "kapsel") {
     const k = SH_PLAN_KAPSEL.indexOf(navn); if (k < 0) return true;
@@ -5193,7 +5206,7 @@ function flyNy(yMin, yMax, opptatt = []) {
 // Én til tre om gangen, med god avstand i tid. lov = false: ingen nye nå (noe annet stort skjer), de som er der, flyr videre.
 function flySteg(F, dt, yMin, yMax, lov) {
   F.ventT -= dt;
-  if (F.ventT <= 0 && lov && !F.liste.length) { F.ventT = 18 + Math.random() * 16; const n = 1 + (Math.random() < .45 ? 1 : 0) + (Math.random() < .15 ? 1 : 0);
+  if (F.ventT <= 0 && lov && !F.liste.length) { F.ventT = 38 + Math.random() * 24; const n = 1 + (Math.random() < .25 ? 1 : 0); // Krogh 2.26: sjeldnere, færre.
     for (let k = 0; k < n; k++) { const e = flyNy(yMin, yMax, F.liste.map(f => f.modell)); e.x -= Math.sign(e.vx) * k * .3; F.liste.push(e); } }
   for (const e of F.liste) { e.t += dt; if (e.pop >= 0) { e.pop += dt; continue; } e.x += e.vx * dt; e.yv = e.y + Math.sin(e.t * 1.6 + e.fase) * .02; }
   F.liste = F.liste.filter(e => e.pop < flyPopTid(e) && e.x > -.35 && e.x < 1.35);
@@ -5387,7 +5400,7 @@ async function shatterStart(i, poeng = 0, liv = null) {
   // Rolig start, så farten øker litt for hvert nivå og litt underveis.
   const fart = (0.5 + Math.min(niva, 14) * 0.03) * .98 * .9; // 10 % roligere (Krogh): skal være deilig, ikke stress.
   sh = { niva, i, img, klosser, igjen: klosser.length, poeng, liv, plasser: shPlasser(i), gull: shMotivFunnet(aktiv) >= 9, fart, grunnfart: fart, maksFart: Math.min(1.3, fart + 0.61),
-    padX: 0.5, padW: 0.26, baller: [], kapsler: [], tekster: [], smaa: [], stov: [], stavSkitt: [], skudd: [], skuddT: 0, lamper: 0, galaga: null, galagaPause: (50 + Math.random() * 30) * shVanske(i), wingmen: [], galagaKommet: false, padMål: null, sopp: 0, soppSide: -1, padY: .7, soppOverg: 1, soppTilbake: 1, bytte: null, byttePlan: Math.random() < .22, sabot: [], sabotT: 14 + Math.random() * 10, drypp: [], skum: [], stjerner: [], ringer: [],
+    padX: 0.5, padW: 0.26, baller: [], kapsler: [], tekster: [], smaa: [], stov: [], stavSkitt: [], skudd: [], skuddT: 0, lamper: 0, galaga: null, galagaPause: (22 + Math.random() * 12) * shVanske(i), wingmen: [], galagaKommet: false, padMål: null, sopp: 0, soppSide: -1, padY: .7, soppOverg: 1, soppTilbake: 1, bytte: null, byttePlan: aktiv >= 4 && aktiv !== BRUKER && Math.random() < .22, sabot: [], sabotT: 14 + Math.random() * 10, drypp: [], skum: [], stjerner: [], ringer: [],
     eff: { W: 0, B: 0, G: 0, A: 0, F: 0, K: 0 }, tilstand: "klar", kombo: 0, ferdigT: 0, tid: 0, lydSist: {},
     jord: jPal[j1], jord2: jPal[j2], terreng, ramme: null, skitten: new Set(), milepael: 0, glimt: -9, sprekkT: 0,
     klatter: [], splatter: [], sigT: 0, flomT: 14, dryppT: 1, flomIgjen: Math.round(klosser.reduce((a, k) => a + k.liv, 0) * .05),
@@ -6486,7 +6499,7 @@ const SH_FORMER = ["rader", "v", "sirkel", "sverm"];
 function shHjem(e, g) {
   // 2P: aliens svever i en ring rundt midten av bildet.
   if (sh?.toP) { const n = Math.max(4, g.antall), a = g.t * .35 + (e.nr % n) / n * Math.PI * 2; return [.5 + Math.cos(a) * .27, SH_TOPP + .5 + Math.sin(a) * .2]; }
-  const [x, y] = shHjem0(e, g); return [x, y + Math.max(0, SH_TOPP - .13)]; } // Under knapperadene når bildet er flyttet ned.
+  const [x, y] = shHjem0(e, g); return [x, y + SH_TOPP - .01]; } // Krogh 2.26: formasjonen står øverst i bildet, under våpenknappene.
 function shHjem0(e, g) {
   const t = g.t, n = g.antall, i = e.nr % n;
   if (g.form === "rader") { const rad = Math.floor(i / 5), kol = i % 5; return [.2 + kol * .15 + (rad % 2 ? .0375 : 0) + Math.sin(t * .9 + rad) * .07, .07 + rad * .085]; }
@@ -6571,7 +6584,8 @@ function shGalagaStart(boss = false) {
   const s = sh; if (s.galaga || s.bytte || s.sopp > 0) return;
   if (s.toP) boss = true; // 2P: alltid bossen, med aliens rundt seg.
   s.lamper = 0; s.galagaKommet = true;
-  const form = SH_FORMER[(Math.random() * SH_FORMER.length) | 0], N = boss ? 2 : 1 + ((Math.random() * 4) | 0);
+  // Krogh 2.26: aliens i formasjon, på rekke og rad (eller i V), som i Galaga. Fem til åtte om gangen.
+  const form = Math.random() < .65 ? "rader" : "v", N = boss ? 2 : 5 + ((Math.random() * 4) | 0);
   const fiender = []; for (let n = 0; n < N; n++) fiender.push(shNyFiende(n, n));
   s.galaga = { t: 0, fiender, bomber: [], dykkT: 2.5, fanget: 0, antall: boss ? 6 : Math.max(4, N), form: boss ? "sverm" : form, nesteNr: N, bolge: 1, bolger: 1,
     boss: boss ? { x: s.toP ? -.3 : .5, y: s.toP ? SH_TOPP + .5 : -.3, hp: 45, maks: 45, figur: (Math.random() * 9) | 0, tilstand: "inn", t: 0, blink: 0, spawnT: 4, bombeT: 2.5, dryppT: 3.5, rot: 0 } : null };
@@ -6748,13 +6762,13 @@ function shGalagaSteg(dt) {
   if (!g.boss && g.fiender.every(e => e.tilstand === "borte") && !g.bomber.length && g.bolge < g.bolger) {
     // Første bølge er tatt: en ny formasjon kommer inn fra sidene.
     g.bolge++; s.poeng += 1000; shHud();
-    const andre = SH_FORMER.filter(f => f !== g.form), form = andre[(Math.random() * andre.length) | 0], N = form === "v" ? 11 : form === "sirkel" ? 10 : 13;
+    const form = g.form === "rader" ? "v" : "rader", N = form === "v" ? 9 : 10;
     g.form = form; g.antall = N; g.nesteNr = N; g.dykkT = 3; g.fiender = []; for (let n = 0; n < N; n++) { const e = shNyFiende(n, n); e.t -= Math.floor(n / 4) * 4.5; g.fiender.push(e); }
     s.tekster.push({ txt: "WAVE 2!", x: .5, y: .45, liv: 1.8, farge: "#7fe8ff" }); shLyd("invasjon");
   }
   if (!g.boss && g.fiender.every(e => e.tilstand === "borte") && !g.bomber.length) {
     s.poeng += 2000; shHud(); s.tekster.push({ txt: "WAVE CLEAR! +2000", x: .5, y: .45, liv: 1.5, farge: "#ffd23a" }); shLyd("glimt");
-    s.galaga = null; s.galagaPause = s.tid + 55 + Math.random() * 35; s.eff.K = Math.min(s.eff.K, .5);
+    s.galaga = null; s.galagaPause = s.tid + 30 + Math.random() * 20; s.eff.K = Math.min(s.eff.K, .5);
     if (s.igjen <= 0) shFerdig();
   }
 }
@@ -7517,6 +7531,7 @@ function shSmåStart() {
 function shSmåHjem(e, S) { const sv = Math.sin(S.t * .5) * .08, n = S.liste.length || 4; return [.5 + (e.kol - (n - 1) / 2) * .2 + sv, SH_TOPP + .2 + Math.sin(S.t * .8 + e.kol) * .015]; }
 function shSmåSteg(dt) {
   const s = sh; if (s.toP) return;
+  if (!s.små) return; // Krogh 2.26: skvadronen er tatt ut. Toppen er Galaga-formasjonen, så det ikke flyr for mye rundt.
   if (!s.små) { s.småT = (s.småT ?? 12 + Math.random() * 8) - dt;
     // Skvadronen kommer først når 3D-figurene er lastet (ingen flate reservefigurer lenger).
     if (s.småT <= 0 && s.tilstand === "spill" && !s.galaga && !s.bytte && !(s.sopp > 0) && !s.finale) { const ms = shSmåModeller(); if (!ms.every(m => window.Boss3D?.har(m))) { ms.forEach(m => shBoss3DLast(m)); s.småT = 1; return; } s.småT = 28 + Math.random() * 18; shSmåStart(); } return; }
@@ -9134,10 +9149,10 @@ function hentVinge() {
 }
 // Tegner fire vinger (to på hver side). slag går fra −.35 til .35: vingene løftes, senkes og forkortes i perspektiv.
 let vinger3d = null;
-function tegnVinger(x, X, Y, R, slag, rosa) {
+function tegnVinger(x, X, Y, R, slag, rosa, tegnet = false) {
   // Ferdig rendret 3D (figurer/vinger.webp, 12 bilder av ett vingeslag). Faller tilbake til de tegnede vingene til den er lastet.
   if (!vinger3d) { vinger3d = new Image(); vinger3d.src = "figurer/vinger.webp"; }
-  if (vinger3d.complete && vinger3d.naturalWidth) {
+  if (!tegnet && vinger3d.complete && vinger3d.naturalWidth) {
     const u = Math.max(-1, Math.min(1, slag / .35)), k = ((Math.round(Math.asin(u) / (Math.PI * 2) * 12) % 12) + 12) % 12, w = R * 7.1, h = w * 224 / 384;
     x.drawImage(vinger3d, k * 384, 0, 384, 224, X - w / 2, Y - R * .12 - h * .63, w, h); return;
   }
@@ -12818,6 +12833,8 @@ function shTegn(t) {
       // Krogh 2.25: Kroghs 3D-figurer i stedet for figurene klippet ut av bildene (og uten vingene). Samme figur deler bildet
       // (oppdateres høyst 30 ganger i sekundet), så mange på skjermen koster lite. Dreiningen gjøres på lerretet.
       if (sp?.m3 && window.Boss3D?.har(sp.m3)) { const m = sp.m3; x.save(); x.translate(X, Y); x.rotate((rot || 0) + Math.sin(s.tid * 2 + (rosa ? 1.7 : 0)) * .05);
+        // Krogh 2.26: vinger på 3D-figurene, som Galaga-aliens. Hver figur har sin variant: store 3D-vinger, små høye vinger eller de tegnede.
+        if (vinger) { const h = [...m].reduce((a, c) => a + c.charCodeAt(0), 0) % 3; tegnVinger(x, 0, h === 1 ? -R * .35 : -R * .1, R * (h === 1 ? .62 : .82), slag, rosa, h === 2); }
         window.Boss3D.tegn(x, 0, 0, R * 2.7 * (FLY_ANIM[m]?.stor || 1), { buffer: shAlienBuf[m] || (shAlienBuf[m] = {}), modell: m, vri: (FLY_VRI[m] || 0) + (rosa ? .25 : -.25), vipp: .1, rot: 0, ...fig3D(m, s.tid + m.length) }); x.restore(); return; }
       x.save(); if (rot) { x.translate(X, Y); x.rotate(rot); x.translate(-X, -Y); }
       if (vinger) {
