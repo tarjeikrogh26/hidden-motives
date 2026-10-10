@@ -648,6 +648,8 @@ body:has(.resultat.vis) #spill .linje{opacity:0;pointer-events:none;transition:o
 #shatter.vegg{background:radial-gradient(ellipse at 50% 45%,#f08a2c 0%,#c9600f 100%)}
 #unwrap{touch-action:none;background:#14110d}
 #mind{touch-action:none;background:#14110d}
+/* Krogh 2.26: UNWRAP og DÉJÀ VU henger som bilder på en blå gallerivegg (UNWRAP-blå fra menyen), med PEACE-rammen rundt. */
+#unwrap.vegg,#mind.vegg{background:radial-gradient(ellipse at 50% 45%,#2b66f0 0%,#12358f 100%)}
 #mgCanvas{position:absolute;inset:0;touch-action:none}
 #mgUt{display:none!important;position:absolute;top:max(8px,env(safe-area-inset-top,0px));left:max(8px,env(safe-area-inset-left,0px));z-index:3}
 .variant.v-unwrap{--vg:31,99,255}
@@ -6316,7 +6318,7 @@ function shRolig(s) {
 function shTreff(k, lag = 1, kilde = null) {
   const s = sh; if (k.liv <= 0 || s.tilstand === "ferdig" || s.tilstand === "over") return;
   if ((k.is > 0 || k.snø > .2) && shVaerTreff(k, lag, kilde)) return;
-  const egen = kilde; if (kilde === "regn" || kilde === "visne" || kilde === "ild") kilde = "syre";
+  const egen = kilde; if (kilde === "regn" || kilde === "visne" || kilde === "ild" || kilde === "sjokk") kilde = "syre";
   // Såpe (boblen selv eller sprut) får en plante til å visne, sakte.
   if (k.plante && k.plante.visne == null && (egen == null || egen === "syre")) k.plante.visne = s.tid;
   const j = k.r * SH_KOL + k.c;
@@ -6362,6 +6364,51 @@ function shTreff(k, lag = 1, kilde = null) {
   if (mål && andel >= mål) { s.milepael++; s.glimt = s.tid; shLyd("glimt"); }
   if (s.igjen <= 0 && !s.galaga) shFerdig();
 }
+// Krogh 2.26: SHOCKWAVE (skjult). To bobler som treffer hverandre uten å ha truffet aliens på veien fra flipperne
+// sender en liquify-bølge ut fra treffpunktet. Den løsner ca. en femtedel av jorda som er igjen. Høyst én gang hvert 20. sekund.
+const SH_SJOKK_ANDEL = .2, SH_SJOKK_PAUSE = 20, SH_SJOKK_FART = .85;
+function shSjokkSjekk(s) {
+  const B = s.baller.filter(b => !b.borte && !b.fast && !b.fast2 && !b.fanget && !b.hent);
+  if (B.length < 2) return;
+  const fi = s.galaga ? s.galaga.fiender.filter(shFangbar) : [];
+  for (const b of B) if (b.ren && fi.some(e => Math.hypot(e.x - b.x, e.y - b.y) < shRad(b) + .035)) b.ren = false;
+  for (let i = 0; i < B.length; i++) for (let j = i + 1; j < B.length; j++) {
+    const a = B[i], c = B[j], dx = c.x - a.x, dy = c.y - a.y, d = Math.hypot(dx, dy) || 1e-6, R = shRad(a) + shRad(c);
+    if (d >= R) continue;
+    // De spretter fra hverandre som to såpebobler.
+    const nx = dx / d, ny = dy / d, rel = (a.vx - c.vx) * nx + (a.vy - c.vy) * ny;
+    if (rel > 0) { a.vx -= rel * nx; a.vy -= rel * ny; c.vx += rel * nx; c.vy += rel * ny; shStot(a, -nx, -ny, .5); shStot(c, nx, ny, .5); shLyd("vegg"); }
+    const inn = (R - d) / 2 + .001; a.x -= nx * inn; a.y -= ny * inn; c.x += nx * inn; c.y += ny * inn;
+    if (a.ren && c.ren && s.tid >= (s.sjokkNeste || 0)) { a.ren = c.ren = false; shSjokk(s, (a.x + c.x) / 2, (a.y + c.y) / 2); }
+  }
+}
+function shSjokk(s, x, y) {
+  s.sjokkNeste = s.tid + SH_SJOKK_PAUSE;
+  const fylt = s.klosser.filter(k => k.liv > 0 && !k.ramme), n = Math.round(fylt.length * SH_SJOKK_ANDEL);
+  // Tilfeldige felt over hele brettet; hvert løsner når bølgen kommer fram til det.
+  for (let i = fylt.length - 1; i > 0; i--) { const j = (Math.random() * (i + 1)) | 0; [fylt[i], fylt[j]] = [fylt[j], fylt[i]]; }
+  const kø = fylt.slice(0, n).map(k => ({ k, t: Math.hypot(k.x + k.w / 2 - x, k.y + k.h / 2 - y) / SH_SJOKK_FART })).sort((a, b) => a.t - b.t);
+  (s.sjokk = s.sjokk || []).push({ x, y, t: 0, kø, n });
+  s.rist = Math.max(s.rist || 0, .6); s.glod = 1; shLyd("sprekk", 2); shLyd("power");
+  shStov(x, y, 60, "255,255,255", .35);
+  s.tekster.push({ txt: "SHOCKWAVE!", x: .5, y: SH_TOPP + (s.toP ? .62 : .45), liv: 1.8, farge: "#bfefff" });
+  if (s.toP) s.tekster.push({ txt: "SHOCKWAVE!", x: .5, y: SH_TOPP + .38, liv: 1.8, farge: "#bfefff", snu: true });
+}
+function shSjokkSteg(s, dt) {
+  if (!s.sjokk?.length) return;
+  for (const S of s.sjokk) { S.t += dt;
+    while (S.kø.length && S.kø[0].t <= S.t) { const { k } = S.kø.shift(); if (k.liv <= 0) continue; const mx = k.x + k.w / 2, my = k.y + k.h / 2;
+      shTreff(k, k.liv, "sjokk"); if (Math.random() < .35) shStov(mx, my, 2, (s.jord?.mork || [120, 90, 60]).join(","), .06); if (Math.random() < .08) shKlatt(mx, my, .003 + Math.random() * .004, .06); } }
+  s.sjokk = s.sjokk.filter(S => S.kø.length || S.t < 2.2);
+}
+// Bølgen tegnes som liquify: ringer der bildet buler seg litt ut, som vann.
+function shSjokkTegn(x, c, s) {
+  if (!s.sjokk?.length || !shG) return; const g = shG, f = g.fw, d = g.dpr;
+  for (const S of s.sjokk) { const cx = (g.fx + S.x * f) * d, cy = (g.fy + S.y * f) * d, R0 = S.t * SH_SJOKK_FART * f * d, fade = Math.max(0, 1 - S.t / 2.2);
+    for (let i = 0; i < 3; i++) { const R = R0 - i * .09 * f * d, w = .035 * f * d; if (R <= w) continue; const a = .045 * fade * (1 - i * .3);
+      x.save(); x.setTransform(1, 0, 0, 1, 0, 0); x.beginPath(); x.arc(cx, cy, R + w, 0, 7); x.arc(cx, cy, R - w, 0, 7, true); x.clip();
+      x.translate(cx, cy); x.scale(1 + a, 1 + a); x.translate(-cx, -cy); x.drawImage(c, 0, 0);
+      x.setTransform(1, 0, 0, 1, 0, 0); x.strokeStyle = `rgba(220,245,255,${.35 * fade * (1 - i * .3)})`; x.lineWidth = Math.max(1, d * 1.2); x.beginPath(); x.arc(cx, cy, R, 0, 7); x.stroke(); x.restore(); } } }
 function shVask(x, y, rad, lag, kilde) {
   const s = sh, c0 = Math.max(0, Math.floor((x - rad) * SH_KOL)), c1 = Math.min(SH_KOL - 1, Math.floor((x + rad) * SH_KOL));
   const r0 = Math.max(0, Math.floor((y - rad - SH_TOPP) * SH_RAD)), r1 = Math.min(SH_RAD - 1, Math.floor((y + rad - SH_TOPP) * SH_RAD));
@@ -6523,9 +6570,16 @@ function shFigurer() {
 // Formasjonene: hjemmeplassen til hver figur, som beveger seg over tid.
 const SH_FORMER = ["rader", "v", "sirkel", "sverm"];
 function shHjem(e, g) {
-  // 2P: aliens svever i en ring rundt midten av bildet.
-  if (sh?.toP) { const n = Math.max(4, g.antall), a = g.t * .35 + (e.nr % n) / n * Math.PI * 2; return [.5 + Math.cos(a) * .27, SH_TOPP + .5 + Math.sin(a) * .2]; }
+  // Krogh 2.26: i 2P samler formasjonen seg midt i bildet, mellom de to spillerne. Bossens sverm går i ring rundt midten.
+  if (sh?.toP) { if (g.boss) { const n = Math.max(4, g.antall), a = g.t * .35 + (e.nr % n) / n * Math.PI * 2; return [.5 + Math.cos(a) * .27, SH_TOPP + .5 + Math.sin(a) * .2]; }
+    const [x, y] = shHjem0(e, g); return [x, SH_TOPP + .5 + y - shHjemMidt(g)]; }
   const [x, y] = shHjem0(e, g); return [x, y + SH_TOPP - .01]; } // Krogh 2.26: formasjonen står øverst i bildet, under våpenknappene.
+// Midten av formasjonen i høyden (i shHjem0 sine tall), så den kan sentreres i 2P.
+function shHjemMidt(g) { const n = g.antall;
+  if (g.form === "rader" && g.liten) return .1 + (Math.ceil(n / 8) - 1) * .0325;
+  if (g.form === "rader") return .07 + (Math.ceil(n / 5) - 1) * .0425;
+  if (g.form === "v") return .06 + (n - 1) / 2 * .0175;
+  return g.form === "sirkel" ? .2 : .14; }
 function shHjem0(e, g) {
   const t = g.t, n = g.antall, i = e.nr % n;
   if (g.form === "rader" && g.liten) { const rad = Math.floor(i / 8), kol = i % 8; return [.15 + kol * .1 + Math.sin(t * .7) * .05, .1 + rad * .065]; }
@@ -6611,11 +6665,10 @@ function shKraterTegn(x, X, Y, R, a, jord) {
 }
 function shGalagaStart(boss = false) {
   const s = sh; if (s.galaga || s.bytte || s.sopp > 0) return;
-  if (s.toP) boss = true; // 2P: alltid bossen, med aliens rundt seg.
   s.lamper = 0; s.galagaKommet = true;
   // Krogh 2.26: aliens i formasjon, på rekke og rad (eller i V), som i Galaga. Fem til åtte om gangen.
   // Krogh 2.26: oftest mange små Galaga-aliens på rad (tre rader med åtte); av og til en scene med de store side-aliensene med vinger.
-  const liten = !boss && !s.toP && Math.random() < .7, form = liten ? "rader" : Math.random() < .65 ? "rader" : "v", N = boss ? 2 : liten ? 16 + ((Math.random() * 9) | 0) : 5 + ((Math.random() * 4) | 0);
+  const liten = !boss && Math.random() < .7, form = liten ? "rader" : Math.random() < .65 ? "rader" : "v", N = boss ? 2 : liten ? 16 + ((Math.random() * 9) | 0) : 5 + ((Math.random() * 4) | 0);
   const fiender = []; for (let n = 0; n < N; n++) fiender.push(shNyFiende(n, n));
   if (liten) fiender.forEach((e, n) => shSmåAlien(e, n));
   s.galaga = { t: 0, liten, fiender, bomber: [], dykkT: 2.5, fanget: 0, antall: boss ? 6 : Math.max(4, N), form: boss ? "sverm" : form, nesteNr: N, bolge: 1, bolger: boss ? 1 : 2,
@@ -6660,7 +6713,7 @@ function shInnkaps(e) {
 }
 function shGalagaSteg(dt) {
   const s = sh, g = s.galaga; if (!g) return;
-  if (!g.ut && !s.toP && ((!g.boss && (g.t > 25 || s.igjen <= s.klosser.length * .09)) || (g.boss && g.t > 60 && g.boss.tilstand === "kamp"))) {
+  if (!g.ut && ((!g.boss && (g.t > 25 || s.igjen <= s.klosser.length * .09)) || (g.boss && g.t > 60 && g.boss.tilstand === "kamp"))) {
     g.ut = true; if (g.boss) { const B = g.boss; B.tilstand = "kastet"; B.vx = (B.x < .5 ? -1 : 1) * .5; B.vy = -.5; B.spinn = 2; B.rot = B.rot || 0; s.tekster.push({ txt: "THE BOSS GOT BORED", x: .5, y: .45, liv: 1.6, farge: "#ffd0d0", liten: true }); }
     for (const e of g.fiender) if (e.tilstand !== "borte" && e.tilstand !== "boble" && e.tilstand !== "tilWing" && e.tilstand !== "klem" && e.tilstand !== "klemInn" && e.tilstand !== "spinnUt") Object.assign(e, { tilstand: "kastet", vx: (e.x < .5 ? -1 : 1) * (.4 + Math.random() * .3), vy: -.7, spinn: 0, rot: e.rot || 0 });
   }
@@ -6757,7 +6810,7 @@ function shGalagaSteg(dt) {
     } else if (e.tilstand === "stup") {
       e.dt += dt; const u = Math.min(1, e.dt / 2.2);
       e.x = e.dx0 + (e.side - e.dx0) * u * u; e.y = e.dy0 + (e.mot === 2 ? -1 : 1) * Math.sin(Math.PI * u * .85) * (s.toP ? .45 : .8);
-      if (Math.random() < dt * 1.2) g.bomber.push({ x: e.x, y: e.y + .02, vy: .2, mål: e.y + .03 + Math.random() * .2 });
+      if (Math.random() < dt * 1.2) g.bomber.push(s.toP ? shBombe2P(e.x, e.y, .2, .03 + Math.random() * .2, e.mot === 2) : { x: e.x, y: e.y + .02, vy: .2, mål: e.y + .03 + Math.random() * .2 });
       if (u >= 1) Object.assign(e, { tilstand: "inn", t: 0, fx: Math.random() < .5 ? -.15 : 1.15, fy: s.toP ? SH_TOPP + .35 + Math.random() * .3 : -.1 });
     } else if (e.tilstand === "boble") {
       e.bt += dt; e.y -= (.12 + e.bt * .25) * dt; e.x += Math.sin(e.bt * 4 + e.fase) * .05 * dt;
@@ -9316,6 +9369,7 @@ function shFlipVinkel(t) {
 }
 // Spiller 2 sin flipper øverst: samme som nede, bare speilvendt. Sveip gir kraft her også.
 function shRacket2Treff(b, R) {
+  b.ren = true;
   const s = sh, t = shClamp((b.x - s.pad2X) / (s.pad2W / 2), -1, 1), fl = s.flip2[b.x < s.pad2X ? 0 : 1];
   let a = t * 1.1 + (Math.random() - .5) * .35;
   s.fart = Math.min(s.maksFart, s.fart * 1.008); s.kombo = 0; s.glod = 1; b.eier = 2;
@@ -9345,6 +9399,7 @@ const shPadSlakk = (vy, dt) => (sh.padSprang || 0) + Math.max(0, vy || 0) * dt, 
 const shPad2Slakk = (vy, dt) => (sh.pad2Sprang || 0) + Math.max(0, -(vy || 0)) * dt, shPad2XSlakk = () => sh.pad2XSprang || 0;
 function shPadTopp(s) { return SH_PY - .03 * Math.max(0, s.kjempe || 0); }
 function shRacketTreff(b, R) {
+  b.ren = true; /* Krogh 2.26: SHOCKWAVE krever at boblen ikke har truffet aliens siden flipperen */
   const s = sh, t = shClamp((b.x - s.padX) / (s.padW / 2), -1, 1); b.eier = 1; s.kontaktT = s.tid;
   let a = t * 1.05;
   s.fart = Math.min(s.maksFart, s.fart * 1.008);
@@ -9592,11 +9647,12 @@ function shOppdater(dt) {
     if (!b.fast && !b.borte) { shDryppTørk(s, b.x, b.y, shRad(b) * 1.1); shBankTreff(s, b.x, b.y, shRad(b) * .8, 1, .35); if (s.snegl && s.tid - (b.sneglT ?? -9) > .4 && shSneglTreff(s, b.x, b.y, shRad(b), 2)) b.sneglT = s.tid; }
     if (!b.borte) shDelerTreff(b);
     if (!b.borte) shBordTreff(b);
-    if (!b.borte && s.små) shSmåTreff(b.x, b.y, shRad(b), b.vx, b.vy, "ball");
-    if (!b.borte) shFlyTreff(b.x, b.y, shRad(b), b.vx, b.vy, "ball");
+    if (!b.borte && s.små && shSmåTreff(b.x, b.y, shRad(b), b.vx, b.vy, "ball")) b.ren = false;
+    if (!b.borte && shFlyTreff(b.x, b.y, shRad(b), b.vx, b.vy, "ball")) b.ren = false;
     if (!b.borte) shBokstavTreff(b);
   }
   if (s.tilstand !== "spill") return;
+  shSjokkSjekk(s);
   s.baller = s.baller.filter(b => !b.borte);
   if (!s.baller.length && !s.ormer?.length) {
     // Ball save: mistet innen 10 s etter utskyting? Du får den tilbake.
@@ -9676,6 +9732,9 @@ function shOppdater(dt) {
       } else
       for (const [kx, ky] of kilder) s.skudd.push({ x: kx + (Math.random() - .5) * .006, y: ky - .004, vx: Math.sin(sikte) * v + (Math.random() - .5) * .06, vy: -Math.cos(sikte) * v, r: .0105 + Math.random() * .0073, budsjett: angrep ? 1 : 2, fase: Math.random() * 6, angrep });
       // Sideflipperne skyter også når aliens er der: fra dysene i tuppen, inn mot midten og opp.
+      // 2P: P2 skyter sin egen stråle nedover fra flipperne sine.
+      if (s.toP) { const sikte2 = shClamp(-(s.pad2V || 0) * .6, -.6, .6) + Math.sin(s.tid * 7 + 1) * .05; s.dyse2Side = -(s.dyse2Side || 1);
+        s.skudd.push({ x: s.pad2X + s.dyse2Side * s.pad2W * .1, y: SH_P2Y + .03, vx: Math.sin(-sikte2) * v, vy: Math.cos(sikte2) * v, r: .0105 + Math.random() * .0073, budsjett: angrep ? 1 : 2, fase: Math.random() * 6, angrep, ned: true }); }
       if (s.side?.ut >= 1 && angrep) for (const F of s.side.liste) { const G = shSideGeom(F, 1), a = Math.atan2(.5 - G.tx, 1) * .6; s.skudd.push({ x: G.tx, y: G.ty - .006, vx: Math.sin(a) * v * .8 - F.side * .25, vy: -Math.cos(a) * v * .8, r: .0095, budsjett: 1, fase: Math.random() * 6, angrep }); }
       shLyd("skudd");
     }
@@ -9687,14 +9746,14 @@ function shOppdater(dt) {
   for (const e of s.galaga?.fiender || []) if (e.tilstand === "iboble" && (!e.boble || !e.boble.voks || !s.baller.includes(e.boble))) Object.assign(e, { tilstand: "kastet", vx: (e.x < .5 ? -1 : 1) * .5, vy: -.6, spinn: 10, rot: 0, boble: null });
   if (s.wingmen.length && !s.galaga && !(s.eff.K > 0)) { for (const w of s.wingmen) shStov(shClamp(s.padX + w.side * (s.padW / 2 + .05), .03, .97), SH_PY - .02, 22, "200,240,255", .25); s.wingmen = []; shLyd("innkapsle"); }
   { const n = [s.galaga, s.bytte, s.fugl, s.hopper, s.krabbe, s.snø, s.mørke, s.sabot?.length, s.orm || s.ormer?.length].filter(Boolean).length; if (n > (s.storN || 0)) s.sistStorT = s.tid; s.storN = n; }
-  shFinaleSteg(s, dt); shKontaktSteg(s); shGalagaSteg(dt); if (!s.bytte) shSabotSteg(dt); shOrmSteg(dt); shKrabbeSteg(dt); shHopperSteg(dt); shFuglSteg(dt); shVaerSteg(dt); shSolSteg(dt); shSmåSteg(dt); shFlySteg(dt); shVapenSteg(dt);
+  shFinaleSteg(s, dt); shKontaktSteg(s); shSjokkSteg(s, dt); shGalagaSteg(dt); if (!s.bytte) shSabotSteg(dt); shOrmSteg(dt); shKrabbeSteg(dt); shHopperSteg(dt); shFuglSteg(dt); shVaerSteg(dt); shSolSteg(dt); shSmåSteg(dt); shFlySteg(dt); shVapenSteg(dt);
   { const andel = 1 - s.igjen / s.klosser.length; if (!s.fugl && !s.toP && shHar("fiende", "fugl") && shRolig(s) && s.tilstand === "spill" && !s.bytte && !s.galaga && !s.finale && andel > .2 && andel < .8 && s.tid > (s.fuglT ?? 35 * shVanske())) { s.fuglT = s.tid + 60 + Math.random() * 30; shFuglStart(); } }
   { const andel = 1 - s.igjen / s.klosser.length; if (!s.hopper && shHar("fiende", "hopper") && shRolig(s) && s.tilstand === "spill" && !s.bytte && !s.galaga && andel > .15 && andel < .85 && s.tid > (s.hopperT ?? 20 * shVanske())) { s.hopperT = s.tid + 30 + Math.random() * 15; shHopperStart(); } }
   { const andel = 1 - s.igjen / s.klosser.length; if (!s.krabbe && shHar("fiende", "krabbe") && shRolig(s) && s.tilstand === "spill" && !s.bytte && !s.galaga && !(s.sopp > 0) && andel > .25 && andel < .85 && s.tid > (s.krabbeT ?? 18 * shVanske())) { s.krabbeT = s.tid + 25 + Math.random() * 15; shKrabbeStart(); } }
   if (s.bytte) shByttetSteg(dt);
   else if (s.byttePlan && !s.galaga && !(s.sopp > 0) && s.tid > 60 && s.igjen <= s.klosser.length * .35 && s.igjen > s.klosser.length * .12) shByttetStart();
-  if (s.toP) { if (!s.bytte && !(s.sopp > 0) && !s.galaga && !s.galagaKommet && s.tid >= 8 && s.igjen >= s.klosser.length * .12) shGalagaStart(true); }
-  else if (!s.bytte && !(s.sopp > 0) && !s.galaga && !s.finale) {
+  // Krogh 2.26: 2P får Galaga som 1P (små aliens oftest, bossen bare på episode 9), ikke alltid bossen.
+  if (!s.bytte && !(s.sopp > 0) && !s.galaga && !s.finale) {
     const andel = 1 - s.igjen / s.klosser.length; s.bossVed = s.bossVed ?? .4 + Math.random() * .25;
     if (!s.bossKommet && !s.små && shHar("fiende", "boss") && andel >= s.bossVed && andel < .9) { s.bossKommet = true; shGalagaStart(true); }
     else if (!s.små && shHar("fiende", "galaga") && s.tid > (s.galagaPause ?? 20) && andel > .06 && andel < .88) shGalagaStart(false);
@@ -9705,8 +9764,9 @@ function shOppdater(dt) {
   for (const q of s.skudd) {
     if (!Number.isFinite(q.x) || !Number.isFinite(q.y)) { q.borte = true; if (!shSteg.nanVist) { shSteg.nanVist = true; console.warn("Skudd med NaN", JSON.stringify(q)); } continue; }
     if (q.samle && q.y <= q.samle.cy) { q.vx = q.samle.vx; q.vy = q.samle.vy; q.samle = null; }
+    const qn = q.ned ? -1 : 1; // Krogh 2.26: P2s skudd går nedover.
     if (skuddMål && !q.samle && !s.galaga?.liten) { const m = shVapenMål(q.x, q.y) || (() => { const F = (s.fly?.liste || []).filter(e => e.pop < 0 && !e.ferdig); let b = null, d = 9; for (const e of F) { const y = e.yv ?? e.y, dd = Math.hypot(e.x - q.x, y - q.y); if (dd < d) { d = dd; b = { x: e.x, y }; } } return b; })();
-      if (m && m.y < q.y) { const sp = Math.hypot(q.vx, q.vy) || 1, a = Math.atan2(m.y - q.y, m.x - q.x), ønsket = Math.cos(a) * sp; q.vx += (ønsket - q.vx) * Math.min(1, dt * 2.2); q.vy = -Math.sqrt(Math.max(.01, sp * sp - q.vx * q.vx)); } }
+      if (m && (m.y - q.y) * qn < 0) { const sp = Math.hypot(q.vx, q.vy) || 1, a = Math.atan2(m.y - q.y, m.x - q.x), ønsket = Math.cos(a) * sp; q.vx += (ønsket - q.vx) * Math.min(1, dt * 2.2); q.vy = -qn * Math.sqrt(Math.max(.01, sp * sp - q.vx * q.vx)); } }
     q.x += q.vx * dt; q.y += q.vy * dt;
     if (q.x < .01 || q.x > .99) q.vx = -q.vx;
     if (s.galaga) {
@@ -9734,12 +9794,12 @@ function shOppdater(dt) {
     if (shFlyTreff(q.x, q.y, q.r, q.vx, q.vy, "skudd")) { q.borte = true; continue; }
     if (shSneglTreff(s, q.x, q.y, q.r || .01)) { q.borte = true; continue; }
     if (q.y > SH_TOPP + .6) shDryppTørk(s, q.x, q.y, (q.r || .01) * 1.5);
-    if (skuddMål) { if (q.y < 0) q.borte = true; continue; } // gjennom gjørma, rett mot målene
+    if (skuddMål) { if (q.y < 0 || q.y > SH_H) q.borte = true; continue; } // gjennom gjørma, rett mot målene
     if (!q.angrep && q.vy < 0 && shBankTreff(s, q.x, q.y, q.r || .008, 1)) { q.borte = true; for (let n = 0; n < 4; n++) if (s.skum.length < 400) s.skum.push({ x: q.x + (Math.random() - .5) * .02, y: q.y + (Math.random() - .5) * .01, r: .002 + Math.random() * .004, liv: 1, fart: 1 + Math.random() }); continue; }
     const k = shKlossVed(q.x, q.y);
     if (k) { if (!q.angrep || Math.random() < .15) shTreff(k, q.angrep ? 1 : 2); if (!q.angrep && Math.random() < .8) { const k2 = shKlossVed(q.x + (Math.random() - .5) * .03, q.y - .025); if (k2) shTreff(k2, 2); } /* spiser litt mer rundt seg (Krogh: +20 %) */ if (!q.angrep) shSkumFlekk(q.x, q.y, 1.2, true); for (let n = 0; n < (Math.random() < .5 ? 5 : 4); n++) if (s.skum.length < 440) s.skum.push({ x: q.x + (Math.random() - .5) * .025, y: q.y + (Math.random() - .5) * .01, r: .002 + Math.random() * .005, liv: 1, fart: 1.2 + Math.random() * .8 }); q.budsjett--; q.vy *= .55;
       if (q.budsjett <= 0) { q.borte = true; if (!q.angrep) shSkumFlekk(q.x, q.y, 1.45, true); if (!q.angrep && Math.random() < .12 && (s.skumDott || []).length < 40) (s.skumDott = s.skumDott || []).push({ x: q.x, y: q.y + .01, vx: 0, vy: .02, r: .004 + Math.random() * .005, t: 0 }); for (let n = 0; n < 8; n++) if (s.skum.length < 400) s.skum.push({ x: q.x + (Math.random() - .5) * .035, y: q.y + (Math.random() - .5) * .015, r: .002 + Math.random() * .006, liv: 1, fart: 1.3 + Math.random() * .9 }); } }
-    if (q.y < 0) q.borte = true;
+    if (q.y < 0 || q.y > SH_H) q.borte = true;
   }
   s.skudd = s.skudd.filter(q => !q.borte);
   shSkumSteg(dt);
@@ -10089,10 +10149,11 @@ const UW_PAPIR = [
 const uwPapirBilder = {};
 // Laster papirbildene. Er et bilde ikke klart når papirlaget lages, lages laget på nytt når bildet kommer.
 /* Krogh 2.25: bare papirene brettet bruker (og neste brett), ikke alle på en gang. */ function uwPapirLast(liste) { for (const st of liste) { if (uwPapirBilder[st.navn] || !st.bilde) continue; const im = new Image(); im.onload = () => { if (uw?.lagS) for (const l of uw.lagS) l.lag = null; }; im.src = st.bilde; uwPapirBilder[st.navn] = im; } }
+const GALLERI_RAMME = .045; // rammens bredde i forhold til bildet (som BUBBLE)
 function uwLayout() {
   const hud = $("uwHud").getBoundingClientRect().height || 64, ledig = innerHeight - hud - 24;
-  const f = Math.floor(Math.min(innerWidth - 16, ledig - Math.min(150, ledig * .2), 760));
-  return { f, x0: Math.round((innerWidth - f) / 2), y0: Math.round(hud + 12), dpr: Math.min(devicePixelRatio || 1, 2) };
+  const f = Math.floor(Math.min(innerWidth - 16, ledig - Math.min(150, ledig * .2), 760) / (1 + 2 * GALLERI_RAMME)), RT = Math.round(f * GALLERI_RAMME);
+  return { f, RT, x0: Math.round((innerWidth - f) / 2), y0: Math.round(hud + 12 + RT), dpr: Math.min(devicePixelRatio || 1, 2) };
 }
 // Tvillingen (Krogh 2.23): etter FREEZE ALL ACTIVITY spilles samme brett videre med ditt malte bilde. Historien og albumet
 // beholder det vanlige bildet; poengene teller som vanlig.
@@ -10100,7 +10161,7 @@ let uwTvilling = null;
 async function uwStart(i, tvilling = null) {
   $("uwCanvas").style.filter = ""; $("uwCanvas").style.transform = ""; uwTvilling = tvilling;
   const b = BRETT[i], img = tvilling || await hentBilde(b.src);
-  $("meny").hidden = true; $("unwrap").hidden = false; oppdaterTema();
+  $("meny").hidden = true; $("unwrap").hidden = false; $("unwrap").classList.add("vegg"); oppdaterTema();
   const G = UW_G, n = aktiv * 9 + i, stil = UW_PAPIR[n % UW_PAPIR.length], R = () => Math.random();
   const støy = new Float32Array(G * G); for (let j = 0; j < G * G; j++) støy[j] = R();
   const bx = .36 + R() * .28, by = .34 + R() * .28, fiender = [];
@@ -11290,6 +11351,7 @@ function uwTegn() {
   const x = c.getContext("2d"); x.setTransform(dpr, 0, 0, dpr, 0, 0); x.clearRect(0, 0, innerWidth, innerHeight);
   const { f, x0, y0 } = L, P = (fx, fy) => [x0 + fx * f, y0 + fy * f];
   if (u.slutt) { uwSluttTegn(x, P, f, x0, y0, nå); return; }
+  mgRamme(x, x0 + f / 2, y0 + f / 2, f, f, L.RT);
   x.drawImage(u.img, x0, y0, f, f); uwBokstavTegn(x, P, f);
   const SL = Math.min(u.indre ? 1100 : 1400, Math.round(f * dpr));
   if (u.indre) x.drawImage(uwLag(SL, 1), x0, y0, f, f);
@@ -11299,7 +11361,7 @@ function uwTegn() {
   // Sløyfen ligger på papiret til den rives løs og flyr.
   const sl = u.sløyfe; if (!sl.ingen && (!sl.av || sl.av.t < 2.5)) { const [sx, sy] = P(sl.x, sl.y); x.save(); x.translate(sx, sy); if (sl.av) { x.rotate(sl.av.rot); x.globalAlpha = Math.max(0, 1 - sl.av.t / 2.5); } uwSløyfeTegn(x, sl.r * f, u.stil); x.restore(); }
   uwLappTegn(x, P, f, nå);
-  { const vt = $("uwVerktøy"), ty = Math.round(y0 + f + 10) + "px"; if (vt && vt.style.top !== ty) vt.style.top = ty; }
+  { const vt = $("uwVerktøy"), ty = Math.round(y0 + f + L.RT + 10) + "px"; if (vt && vt.style.top !== ty) vt.style.top = ty; }
   // Streken du skjærer: et tynt, mørkt snitt i papiret med en rosa glød, så du ser at den er sårbar.
   if (u.linje.length) { const pts = [...u.linje, u.kniv]; x.save(); x.lineCap = "round"; x.lineJoin = "round"; x.beginPath(); let [ax, ay] = P(pts[0].x, pts[0].y); x.moveTo(ax, ay);
     for (let q = 1; q < pts.length; q++) { const [bx, by] = P(pts[q].x, pts[q].y); x.quadraticCurveTo(ax, ay, (ax + bx) / 2, (ay + by) / 2); ax = bx; ay = by; } x.lineTo(ax, ay);
@@ -11368,7 +11430,7 @@ function mgMatch() { try { return JSON.parse(localStorage.getItem(mgMatchNøkkel
 function mgLagreMatch(m) { try { localStorage.setItem(mgMatchNøkkel(), JSON.stringify(m)); } catch {} }
 async function mgStart(i) {
   const b = BRETT[i], n = aktiv * 9 + i, R = mgTilfeldig(n * 7 + 3);
-  $("meny").hidden = true; $("mind").hidden = false; oppdaterTema(); mgMelding("DÉJÀ VU", "Laying out the cards…", []);
+  $("meny").hidden = true; $("mind").hidden = false; $("mind").classList.add("vegg"); oppdaterTema(); mgMelding("DÉJÀ VU", "Laying out the cards…", []);
   const pool = mgMotivPool(b.src); for (let k = pool.length - 1; k > 0; k--) { const j = (R() * (k + 1)) | 0; [pool[k], pool[j]] = [pool[j], pool[k]]; }
   const par = MG_N * MG_R / 2, kilder = pool.slice(0, par), papir = UW_PAPIR[n % UW_PAPIR.length].bilde;
   const [under, bak, ...forsider] = await Promise.all([hentBilde(b.src), hentBilde(papir), ...kilder.map(s => hentBilde(s).catch(() => null))]);
@@ -11400,7 +11462,7 @@ const MG_T = [.45, 1.25, 1.65, 2.85, 3.35];
 // Stikkene på en spillers side: rad nr. j av n, i spillerens egne koordinater (0,0 = brettets kant, y utover).
 function mgStikkLokal(L, j, n, par) { const ts = L.panel * .5, ledig = L.f - ts * 1.6, avst = Math.min(ts * 1.3, ledig / Math.max(1, n - 1));
   return { x: ts * .55 + j * avst, y: L.panel * .64 + ((par * 53) % 7 - 3) * ts * .025, rot: ((par * 37) % 11 - 5) * .035, s: ts }; }
-function mgTilSkjerm(L, p, lx, ly) { return p === 0 ? [L.x0 + lx, L.y0 + L.h + ly] : [L.x0 + L.f - lx, L.y0 - ly]; }
+function mgTilSkjerm(L, p, lx, ly) { const R = L.RT || 0; return p === 0 ? [L.x0 + lx, L.y0 + L.h + R + ly] : [L.x0 + L.f - lx, L.y0 - R - ly]; }
 // Rammen fra PEACE: hvitt passepartout, tynn fas, bred svart list og myk skygge.
 function mgRamme(x, cx, cy, w, h, RT) { const M = Math.round(RT * .45), lag = (d, farge) => { x.fillStyle = farge; x.fillRect(cx - w / 2 - d, cy - h / 2 - d, w + 2 * d, h + 2 * d); };
   x.save(); x.shadowColor = "rgba(0,0,0,.55)"; x.shadowBlur = RT * 1.2; x.shadowOffsetY = RT * .3; lag(RT + 1, "#000"); x.restore();
@@ -11448,8 +11510,8 @@ function mgVisTegn(x, L) {
 }
 function mgLayout() {
   // 5 kort i bredden og 6 i høyden: brettet er litt høyere enn bredt.
-  const W = innerWidth, H = innerHeight, panel = Math.round(Math.max(84, Math.min(130, H * .12))), f = Math.floor(Math.min(W - 20, (H - 2 * panel - 16) * MG_N / MG_R, 720)), h = f * MG_R / MG_N;
-  return { W, H, panel, f, h, x0: Math.round((W - f) / 2), y0: Math.round((H - h) / 2), dpr: Math.min(devicePixelRatio || 1, 2) };
+  const W = innerWidth, H = innerHeight, panel = Math.round(Math.max(84, Math.min(130, H * .12))), RF = GALLERI_RAMME, f = Math.floor(Math.min((W - 20) / (1 + 2 * RF), (H - 2 * panel - 16) / (MG_R / MG_N + 2 * RF), 720)), h = f * MG_R / MG_N, RT = Math.round(f * RF);
+  return { W, H, panel, f, h, RT, x0: Math.round((W - f) / 2), y0: Math.round((H - h) / 2), dpr: Math.min(devicePixelRatio || 1, 2) };
 }
 function mgLoop(t) {
   if (!mg) return; const dt = Math.min(.05, (t - mgSist) / 1000); mgSist = t; mg.tid += dt;
@@ -11467,6 +11529,7 @@ function mgTegn() {
   // Jordskjelv: hele brettet rister.
   const skA = mg.skjelv ? Math.min(1, mg.skjelv.t / .3) * Math.min(1, (2.2 - mg.skjelv.t) / .5) : 0;
   if (skA > 0) { const t = mg.tid; x.translate((Math.sin(t * 47) + Math.sin(t * 29)) * .5 * f * .018 * skA, (Math.sin(t * 43) + Math.sin(t * 23)) * .5 * f * .018 * skA); }
+  mgRamme(x, x0 + f / 2, y0 + h / 2, f, h, L.RT); /* Krogh 2.26: brettet henger i PEACE-rammen */
   // Brettets bilde under kortene.
   // Bildene fyller det høye brettet: et utsnitt på midten (litt kuttet på sidene).
   const utsnitt = im => { const iw = im.naturalWidth, ih = im.naturalHeight, a = MG_N / MG_R; return iw / ih > a ? [(iw - ih * a) / 2, 0, ih * a, ih] : [0, (ih - iw / a) / 2, iw, iw / a]; };
@@ -13141,6 +13204,7 @@ function shTegn(t) {
   shMørkeTegn(x, f, s);
   for (const b of s.baller) { shBobleTegn(x, b, f, s); shVoksTegn(x, b, f, s); shBallSnøTegn(x, b, f); }
   const tdt = Math.min(.05, Math.max(0, (t - (s.sistTegnT ?? t)) / 1000)); s.sistTegnT = t;
+  shSjokkTegn(x, c, s);
   if (s.bytte) s.tekster = s.tekster.filter(tk => !/^\+\d/.test(tk.txt));
   // Teksten tegnes på et eget lag over feltet, så TRIP (farger, bølger, buling, ekko, zoom) ikke treffer den.
   { const x = shTekstLag(c, g);
