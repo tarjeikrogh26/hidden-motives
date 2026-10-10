@@ -1837,6 +1837,9 @@ function visArkade() {
   kanv.style.transition = "none"; kanv.style.transform = `translate(${a.fra.x - kr.left}px, ${a.fra.y - kr.top}px) scale(${s})`;
   void kanv.offsetWidth;
   kanv.style.transition = "transform .9s cubic-bezier(.3,.7,.3,1)"; kanv.style.transform = "";
+  // Krogh 2.26: bølgingen (feiringen) følger bildet opp til plassen sin og roer seg der mens poengene telles.
+  { const fe = a.tema === "scrub" && document.getElementById("feiring"); if (fe) { const fr = fe.getBoundingClientRect(); Object.assign(fe.style, { zIndex: 272, transformOrigin: "0 0", transition: "transform .9s cubic-bezier(.3,.7,.3,1)" });
+    void fe.offsetWidth; fe.style.transform = `translate(${kr.left - fr.left}px, ${kr.top - fr.top}px) scale(${w / fr.width}, ${h / fr.height})`; } }
   const telleTid = a.tema === "scrub" ? 1400 : 1900;
   { let rs = $("resStjerner"); if (!rs) { rs = document.createElement("div"); rs.id = "resStjerner"; rs.className = "res-stjerner"; $("resInfo").before(rs); }
     rs.replaceChildren(); rs.hidden = !a.stjerner;
@@ -1899,6 +1902,7 @@ for (const ev of ["pointerdown", "wheel", "touchstart"]) $("liste").addEventList
 function sprengBilde() {
   const kanv = $("arkBilde");
   if (stovRAF || kanv.style.opacity === "0" || !$("resultat").classList.contains("vis")) return;
+  feiringStopp(); // bølgingen må ikke ligge over bildet som sprenges
   const r = kanv.getBoundingClientRect(); if (!r.width) return;
   const c = $("stovLag"), dpr = Math.min(devicePixelRatio || 1, 2), W = innerWidth, H = innerHeight;
   c.width = W * dpr; c.height = H * dpr; c.style.width = W + "px"; c.style.height = H + "px";
@@ -9748,10 +9752,44 @@ function shBossTap(tid) {
   shMelding(tid ? "Time's up" : "The flipper won", tid ? "The flipper held on. No score this time." : "It cleaned the painting before you covered it. No score this time.",
     [["Try again", () => shatterStart(s.i), true], ["Menu", shAvslutt]], true);
 }
+// Krogh 2.26: kortere venting før resultatet (bølgingen fortsetter inn i det), og det som lå på bildet
+// forsvinner ikke på et blunk: det løsner i biter og stiger mot deg, som i UNWRAP.
+const SH_SLUTT_VENT = 2600;
+// Det som ligger oppå bildet akkurat nå (gjørme, dråper, skum, tekst): forskjellen mellom brettet slik det ble tegnet
+// sist og det rene bildet. Det brytes i ujevne biter som løftes mot deg på et eget lerret over alt.
+function shRestStart(s) {
+  if (s.toP || !shG || !s.kunst || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  try {
+    const c = $("shCanvas"), k = c.width / innerWidth, X = shG.fx, Y = shG.fy + SH_TOPP * shG.fw, F = shG.fw, N = Math.max(64, Math.min(640, Math.round(F * k)));
+    const a = Object.assign(document.createElement("canvas"), { width: N, height: N }), ax = a.getContext("2d", { willReadFrequently: true });
+    const r = Object.assign(document.createElement("canvas"), { width: N, height: N }), rx = r.getContext("2d", { willReadFrequently: true });
+    ax.drawImage(c, X * k, Y * k, F * k, F * k, 0, 0, N, N); rx.drawImage(s.kunst, 0, 0, N, N);
+    const A = ax.getImageData(0, 0, N, N), B = rx.getImageData(0, 0, N, N).data, D = A.data; let n = 0;
+    for (let i = 0; i < D.length; i += 4) { const d = Math.abs(D[i] - B[i]) + Math.abs(D[i + 1] - B[i + 1]) + Math.abs(D[i + 2] - B[i + 2]), al = d < 60 ? 0 : Math.min(255, (d - 60) * 3); D[i + 3] = al; if (al > 40) n++; }
+    if (n < N * N * .003) return; ax.putImageData(A, 0, 0);
+    // Ujevne biter: et rutenett med forskjøvne hjørner. Bare biter med noe i blir med.
+    const M = 8, R = Math.random, J = .3 / M, V = []; for (let j = 0; j <= M; j++) for (let i = 0; i <= M; i++) V.push([i / M + (i > 0 && i < M ? (R() - .5) * 2 * J : 0), j / M + (j > 0 && j < M ? (R() - .5) * 2 * J : 0)]);
+    const v = (i, j) => V[j * (M + 1) + i], biter = [];
+    for (let j = 0; j < M; j++) for (let i = 0; i < M; i++) { let m = 0; for (let y = Math.floor(j / M * N); y < (j + 1) / M * N; y += 3) for (let x = Math.floor(i / M * N); x < (i + 1) / M * N; x += 3) if (D[(y * N + x) * 4 + 3] > 40) m++;
+      if (m < 6) continue; const pts = [v(i, j), v(i + 1, j), v(i + 1, j + 1), v(i, j + 1)]; biter.push({ pts, cx: (pts[0][0] + pts[2][0]) / 2, cy: (pts[0][1] + pts[2][1]) / 2, d: R() * .35, a: .4 + R() * .3, rot: (R() - .5) * 1.6, vx: (R() - .5) * .05 }); }
+    let lag = document.getElementById("shRestLag"); if (!lag) { lag = document.createElement("canvas"); lag.id = "shRestLag"; Object.assign(lag.style, { position: "fixed", left: 0, top: 0, width: "100vw", height: "100vh", pointerEvents: "none", zIndex: 262 }); document.body.appendChild(lag); }
+    const dpr = Math.min(devicePixelRatio || 1, 2); lag.width = Math.round(innerWidth * dpr); lag.height = Math.round(innerHeight * dpr); const lx = lag.getContext("2d"), t0 = performance.now(), cxS = X + F / 2, cyS = Y + F / 2;
+    const steg = () => { if (!lag.isConnected) return; const τ0 = (performance.now() - t0) / 1000; lx.setTransform(1, 0, 0, 1, 0, 0); lx.clearRect(0, 0, lag.width, lag.height); lx.setTransform(dpr, 0, 0, dpr, 0, 0); let igjen = 0;
+      // Nærmest sist: bitene sorteres etter hvor langt de har kommet.
+      const liste = biter.map(b => { const τ = τ0 - b.d; if (τ <= 0) return { b, z: 0, τ: 0 }; const sv = Math.min(1, τ / .4); return { b, τ, sv, z: .05 * sv * sv * (3 - 2 * sv) + b.a * Math.max(0, τ - .25) ** 2 }; }).filter(q => q.z < .92).sort((p, q) => p.z - q.z);
+      for (const { b, z, τ = 0, sv = 0 } of liste) { igjen++; const sc = 1 / (1 - z), px = cxS + ((b.cx - .5) * F) * sc + b.vx * F * τ * τ * 4, py = cyS + ((b.cy - .5) * F) * sc - F * .02 * sv;
+        lx.save(); lx.globalAlpha = z < .6 ? 1 : Math.max(0, 1 - (z - .6) / .32); lx.translate(px, py); lx.rotate(b.rot * τ * τ * .5); lx.scale(sc, sc);
+        if (z > .02) { lx.shadowColor = "rgba(0,0,0,.4)"; lx.shadowBlur = 10 * z; lx.shadowOffsetY = 6 * z; }
+        lx.beginPath(); b.pts.forEach((q, j) => { const qx = (q[0] - b.cx) * F, qy = (q[1] - b.cy) * F; j ? lx.lineTo(qx, qy) : lx.moveTo(qx, qy); }); lx.closePath(); lx.fillStyle = "rgba(0,0,0,.01)"; lx.fill(); lx.shadowColor = "transparent";
+        lx.clip(); lx.drawImage(a, -b.cx * F, -b.cy * F, F, F); lx.restore(); }
+      if (igjen && τ0 < 4) requestAnimationFrame(steg); else lag.remove(); };
+    requestAnimationFrame(steg);
+  } catch (e) { console.warn("Rest av:", e.message); }
+}
 function shFerdig() {
   // Vasket flipperen alt mens du var bossen, vant den.
   if (sh.bytte) { shBossTap(false); return; }
-  const s = sh; s.tilstand = "ferdig"; s.ferdigT = performance.now(); tripMusikk(1);
+  const s = sh; shRestStart(s); s.tilstand = "ferdig"; s.ferdigT = performance.now(); tripMusikk(1);
   if (s.bank) s.bankBort = performance.now();
   const grunn = s.poeng, tidIgjen = Math.max(0, Math.ceil(SH_TIDSGRENSE - s.tid)), bonus = (s.liv - 1) * 500, tidBonus = tidIgjen * SH_TIDPOENG; s.poeng += bonus + tidBonus;
   const trekk = Math.min(.6, s.trekk || 0), førTrekk = s.poeng; if (trekk) s.poeng = Math.round(s.poeng * (1 - trekk)); shHud();
@@ -9770,7 +9808,7 @@ function shFerdig() {
   for (const b of baller0) { shStov(b.x, b.y, 34, "220,240,255", .3); for (let n = 0; n < 6; n++) shStjerne(b.x + (Math.random() - .5) * .05, b.y + (Math.random() - .5) * .05, .8); }
   s.fyr = { t: 0, raketter: Array.from({ length: s.toP ? 0 : 7 }, (_, j) => ({ x: .15 + Math.random() * .7, y: SH_PY - .02, mål: SH_TOPP + .2 + Math.random() * .4, t: -j * .18 - Math.random() * .08, vy: -2 - Math.random() * .4, vx: (Math.random() - .5) * .12, farge: ["255,214,90", "255,111,216", "111,243,255", "255,255,255", "160,255,140"][j % 5] })), gnist: [] };
   if (!s.bossVant) { magiStart(s.kunst || s.img, { x: shG.fx, y: shG.fy + SH_TOPP * shG.fw, w: shG.fw, h: shG.fw }, 3.4);
-    feiringStart(s.toP ? s.kunst : s.img, { x: shG.fx, y: shG.fy + SH_TOPP * shG.fw, w: shG.fw, h: shG.fw }, s.toP ? "" : BRETT[s.i].id, 3.2); }
+    feiringStart(s.toP ? s.kunst : s.img, { x: shG.fx, y: shG.fy + SH_TOPP * shG.fw, w: shG.fw, h: shG.fw }, s.toP ? "" : BRETT[s.i].id, SH_SLUTT_VENT / 1000 + 1.8); }
   ferdigLyd(); dempMusikk(); s.glimt = s.tid; s.drypp = []; s.skum = []; s.klatter = []; s.kantFall = [];
   for (const h of s.levende || []) { h.bule = 1; h.blink = 1; h.holder = null; }
   for (let n = 0; n < 40; n++) shStjerne(Math.random(), SH_TOPP + Math.random(), .6 + Math.random() * .5, Math.random() * 1.6);
@@ -9793,7 +9831,7 @@ function shFerdig() {
   $("nesteKnapp").textContent = nesteI >= 0 ? "Next: " + BRETT[nesteI].navn + " →" : "Menu"; $("nesteKnapp").disabled = false;
   shLagreRekord(s.poeng, s.toP).then(() => shArkListe(s.poeng, s.toP)).then(async liste => {
   });
-  if (s.bossVant) shBossSeierPoeng(s, ark); else arkTimere.push(setTimeout(visArkade, 3500));
+  if (s.bossVant) shBossSeierPoeng(s, ark); else arkTimere.push(setTimeout(visArkade, SH_SLUTT_VENT));
 }
 // Et bilde av bildefeltet slik det ser ut nå (med all møkka), til resultatet etter at du vant som boss.
 function shBrettBilde() { const c = $("shCanvas"), d = shG.dpr, ut = document.createElement("canvas"), S = Math.round(shG.fw * d); ut.width = ut.height = S;
