@@ -213,6 +213,8 @@ h1 .signatur{font-size:.55em;letter-spacing:.06em;white-space:nowrap}
 /* Tre stempler per brett: PIECE IT, BUBBLE IT, UNWRAP IT. Alle tre: kortet får gullkant. */
 .brett .stempler{display:flex;gap:3px;margin-bottom:5px}
 .brett .stempler i{width:14px;height:14px;border-radius:50%;border:1.2px solid rgba(255,255,255,.5);font:600 7.5px/11.6px var(--tall);font-style:normal;text-align:center;color:rgba(255,255,255,.6);background:rgba(0,0,0,.28);text-shadow:none;box-sizing:border-box}
+/* Krogh 2.26: på telefon var det mer tekst enn bilde på episodebildene. Bare små stempler og EPISODE-nummeret; navnet står når du åpner den. */
+@media (max-width:600px){.brett .navn{display:none}.brett .merke{padding:16px 7px 6px;background:linear-gradient(transparent,rgba(0,0,0,.45))}.brett .kode{font-size:9.5px;letter-spacing:.06em}.brett .stempler{gap:2px;margin-bottom:3px}.brett .stempler i{width:12px;height:12px;font-size:6.5px;line-height:9.6px}.brett .status{top:5px;right:6px;font-size:9px}}
 .brett .stempler i.ja{border-color:transparent;color:#fff;background:var(--sf);box-shadow:0 0 6px var(--sf)}
 .brett.komplett{border-color:#e7c25a;box-shadow:0 0 0 1px rgba(231,194,90,.55),0 0 16px rgba(231,194,90,.35)}
 .brett.komplett .stempler i.ja{background:linear-gradient(#f8e39a,#c9982c);color:#3a2808;box-shadow:0 0 7px rgba(240,200,90,.8)}
@@ -1264,7 +1266,10 @@ try { const m = localStorage.getItem("sm-modus"); if (m === "scrub" || m === "un
 if (HIT_ALENE) modus = "hit";
 function velgModus(m) { if (HIT_ALENE) m = "hit"; modus = m; try { localStorage.setItem("sm-modus", m); } catch {} tegnMeny(); }
 function plasserVariant() { { const mt = $("modusTekst"), rad = document.querySelector(".moduser"); if (mt && rad) { mt.style.maxWidth = rad.offsetWidth + "px"; mt.style.width = rad.offsetWidth + "px"; } }
-  const vr = $("variant"), valgt = $(modus === "pusle" ? "modusPuslespill" : modus === "unwrap" ? "modusUnwrap" : modus === "hit" ? "modusHit" : "modusScrub"); if (!vr || !valgt) return; vr.style.paddingLeft = ""; vr.style.marginLeft = "0px"; const plass = (vr.parentElement?.clientWidth || innerWidth) - vr.offsetWidth - 66; vr.style.marginLeft = Math.max(0, Math.min(plass, valgt.offsetLeft + valgt.offsetWidth / 2 - vr.offsetWidth / 2 - vr.offsetLeft)) + "px"; } // Krogh 2.25: midtstilt under knappen.
+  const vr = $("variant"), valgt = $(modus === "pusle" ? "modusPuslespill" : modus === "unwrap" ? "modusUnwrap" : modus === "hit" ? "modusHit" : "modusScrub"); if (!vr || !valgt) return; vr.style.paddingLeft = ""; vr.style.marginLeft = "0px";
+  // Krogh 2.26: på telefon står bryteren alltid midt under modusraden, ikke under knappen som er valgt (så det ser ryddig ut).
+  if (innerWidth < 600) { const rad = document.querySelector(".moduser"); if (rad) { vr.style.marginLeft = Math.max(0, rad.offsetLeft + rad.offsetWidth / 2 - vr.offsetWidth / 2 - vr.offsetLeft) + "px"; return; } }
+  const plass = (vr.parentElement?.clientWidth || innerWidth) - vr.offsetWidth - 66; vr.style.marginLeft = Math.max(0, Math.min(plass, valgt.offsetLeft + valgt.offsetWidth / 2 - vr.offsetWidth / 2 - vr.offsetLeft)) + "px"; } // Krogh 2.25: midtstilt under knappen.
 function tilpassLogo() {
   const meny = $("meny"); if (!meny || meny.hidden) return;
   const cs = getComputedStyle(meny), bredde = meny.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
@@ -1286,7 +1291,7 @@ function tilpassLogo() {
   let størst = 0;
   for (const l of navn.children) { l.style.fontSize = "100px"; const ls = parseFloat(getComputedStyle(l).letterSpacing) || 0, fs = Math.floor(100 * W / (l.offsetWidth - ls) * 10) / 10; l.style.fontSize = fs + "px"; l.style.marginRight = -ls * fs / 100 + "px"; størst = Math.max(størst, fs); }
   if (av) av.style.fontSize = Math.round(Math.max(12, Math.min(17, størst * .15))) + "px";
-  $("faner").style.maxWidth = HIT_ALENE ? "" : R + "px";
+  $("faner").style.maxWidth = HIT_ALENE || smal ? "" : R + "px"; // Krogh 2.26: på telefon like bred som albumet og episodene.
   plasserVariant();
   if (gear) gear.style.top = smal && vr ? Math.round(vr.getBoundingClientRect().top - gear.offsetParent.getBoundingClientRect().top + (vr.offsetHeight - gear.offsetHeight) / 2) + "px" : "";
 }
