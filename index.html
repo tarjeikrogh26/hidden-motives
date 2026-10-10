@@ -852,7 +852,7 @@ body.lys #modusDeal{--farge:#0f8f6c;--glod:15,143,108}
   <div class="regel">Everything counts: Game, Peace, Bubble it 1P and 2P, every board, every level, every collection. Each board list gives up to 100 points (a Bubble it list up to 1,000): #1 gets them all, the rest their share of the top score.</div>
   <div class="sammen" id="spillere"><p class="liten">Loading players …</p></div>
   <p class="kreditt">© 2001–2026 Tarjei Krogh. All photography, music and art. <a href="https://kroghx.com" target="_blank" rel="noopener">kroghx.com</a></p>
-  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 2.25<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
+  <p class="liten" id="versjon" style="margin-top:10px;opacity:.5">Version 2.26<span id="lydStatus" role="button" style="cursor:pointer"></span></p>
 </section>
 
 <div class="ark" id="tidUtArk" hidden style="z-index:200001">
@@ -9927,8 +9927,9 @@ async function uwStart(i, tvilling = null) {
   const bx = .36 + R() * .28, by = .34 + R() * .28, fiender = [];
   // Motstanderne: Kroghs figurer spretter rundt, maur går i rekker på papiret, en møll flyr over alt.
   // Krogh 2.25: for lett uten dem. Små 3D-figurer saboterer på alle brett: rører du en mens du skraper, mister du et liv.
-  // Episode 1–2: to små (ingen stor). Episode 3–6: én liten og den store. Episode 7–9: to små og den store. Fra Season 3: én til.
-  const nFig = Math.min(3, (i < 2 ? 2 : i < 6 ? 1 : 2) + (aktiv >= 2 ? 1 : 0)), fart = (.16 + aktiv * .012 + i * .005) * 1.2;
+  // Krogh 2.26: for mange figurer. Episode 1–2: to små (ingen stor). Fra episode 3: bare den store bossen, som blåser ild og spytter papir.
+  // Fra Season 3 får brettene med boss én liten i tillegg.
+  const nFig = i < 2 ? 2 : aktiv >= 2 ? 1 : 0, fart = (.16 + aktiv * .012 + i * .005) * 1.2;
   const blandet = a => a.map(m => [R(), m]).sort((p, q) => p[0] - q[0]).map(p => p[1]), småValg = [...blandet(SH_LIV), ...blandet([...new Set([...FLY_3D, ...SH_STILLE])].filter(m => !SH_LIV.includes(m) && !FLY_SNURR[m]))].filter(m => m !== uwBoss3DModell(i)); // figurene med bevegelser først
   for (let k = 0; k < nFig; k++) { const a = R() * 6.283, modell = småValg[k % småValg.length]; shBoss3DLast(modell); fiender.push({ type: "figur", modell, x: .25 + R() * .5, y: .25 + R() * .5, vx: Math.cos(a) * fart, vy: Math.sin(a) * fart, r: .038, figur: n * 3 + k, fase: R() * 6 }); }
   const rekker = 0 /* ingen maur (Krogh) */, iRekke = 4 + Math.min(4, Math.floor(n / 5));
@@ -9983,18 +9984,38 @@ const uwPapirL = (j, L) => L === 0 ? uw.celle[j] === 0 : uw.celle[j] === 1 && !!
 const uwPåBånd = (x, y) => { if (uw.sløyfe?.ingen) return false; const h = (uw.stil.hyssing ? .016 : .07) / 2; return Math.abs(x - uw.bånd.x) < h || Math.abs(y - uw.bånd.y) < h; };
 // Styring: kniven er der fingeren er (litt over fingertuppen på telefon, så du ser streken).
 let uwPeker = null;
-function uwPunkt(e) { const L = uwLayout(), løft = e.pointerType === "touch" ? 26 : 0, x = shClamp((e.clientX - L.x0) / L.f, -.03, 1.03); return { x: uw?.trip ? 1 - x : x, y: shClamp((e.clientY - løft - L.y0) / L.f, -.03, 1.03) }; }
-// TRIP (Krogh 1.100): noen ganger i UNWRAP i ca. 10 s. Fargene flyter, bildet puster og gynger litt,
-// og fingeren er speilvendt: du skraper på motsatt side av der du tar. Annerledes enn TRIP i BUBBLE.
+function uwPunkt(e) { const L = uwLayout(), løft = e.pointerType === "touch" ? 26 : 0, x = shClamp((e.clientX - L.x0) / L.f, -.03, 1.03); return { x, y: shClamp((e.clientY - løft - L.y0) / L.f, -.03, 1.03) }; }
+// TRIP (Krogh 1.100): noen ganger i UNWRAP i ca. 10 s. Fargene flyter, bildet puster og gynger litt.
+// Krogh 2.26: ikke speilvendt lenger. Hvert trykk (og dragning) sender ut bølger som dråper i vann, og bølgen skraper
+// bort papiret i en ring rundt fingeren (UW_BØLGE_R). Selve ringen går helt ut til kanten og blekner.
 function uwTripSteg(dt) {
   const u = uw, c = $("uwCanvas"); u.tripT = (u.tripT ?? 30 + Math.random() * 15) - dt;
   if (!u.trip && u.tripT <= 0 && u.revet && u.tilstand === "spill") { u.trip = { t: 0, d: 9 + Math.random() * 3 }; u.tripT = 45 + Math.random() * 25; uwAvbryt(); u.kø = [];
-    uwTekst("SPACING OUT · LEFT IS RIGHT", .5, .3); if (lydPa) { shGlid(300, 900, .6, .04, "sine", .5, 1); shGlid(905, 290, .6, .03, "triangle", .5, 1); } }
+    uwTekst("TRIP! EVERY TOUCH MAKES WAVES", .5, .3); if (lydPa) { shGlid(300, 900, .6, .04, "sine", .5, 1); shGlid(905, 290, .6, .03, "triangle", .5, 1); } }
+  uwBølgeSteg(dt);
   const T = u.trip; if (!T) { if (c.style.filter) { c.style.filter = ""; c.style.transform = ""; } return; }
   T.t += dt; const inn = Math.min(1, T.t / 1.2, (T.d - T.t) / 1.2);
   if (T.t >= T.d || u.tilstand !== "spill") { u.trip = null; uwAvbryt(); u.kø = []; c.style.filter = ""; c.style.transform = ""; uwTekst("BACK TO NORMAL", .5, .3); return; }
   c.style.filter = `hue-rotate(${Math.round(T.t * 140) % 360}deg) saturate(${1 + .8 * inn}) contrast(${1 + .1 * inn})`;
-  c.style.transform = `rotate(${(Math.sin(T.t * 1.3) * 1.6 * inn).toFixed(2)}deg) scale(${(1 + Math.sin(T.t * 2.1) * .012 * inn).toFixed(4)})`;
+  c.style.transform = `rotate(${(Math.sin(T.t * 1.3) * 1 * inn).toFixed(2)}deg) scale(${(1 + Math.sin(T.t * 2.1) * .012 * inn).toFixed(4)})`;
+}
+const UW_BØLGE_R = .09;
+function uwBølge(p) { const u = uw; if (!u.trip) return; u.bølger = (u.bølger || []).slice(-11); u.bølger.push({ x: p.x, y: p.y, r: 0 }); u.bølgeSist = { x: p.x, y: p.y };
+  if (lydPa) shGlid(240 + Math.random() * 80, 110, .35, .02, "sine", .4, .8); }
+function uwBølgeSteg(dt) {
+  const u = uw, G = UW_G; if (!u.bølger?.length) return;
+  for (const b of u.bølger) { const r0 = b.r; b.r += dt * .7;
+    if (r0 >= UW_BØLGE_R || u.tilstand !== "spill") continue;
+    const r = Math.min(b.r, UW_BØLGE_R), n = Math.max(12, Math.ceil(2 * Math.PI * r * G / 4)); u.skrapN = 0; u.skrapBoks = null;
+    for (let k = 0; k < n; k++) { const v = k / n * 6.283; uwSkrap((b.x + Math.cos(v) * r) * G, (b.y + Math.sin(v) * r) * G); }
+    if (u.skrapN) uwSkrapFerdig(); }
+  u.bølger = u.bølger.filter(b => b.r < 1.2);
+}
+function uwBølgeTegn(x, P, f, nå) {
+  const u = uw; if (!u.bølger?.length) return; const [X0, Y0] = P(0, 0); x.save(); x.beginPath(); x.rect(X0, Y0, f, f); x.clip(); x.globalCompositeOperation = "lighter";
+  for (const b of u.bølger) { const [X, Y] = P(b.x, b.y), a = Math.max(0, 1 - b.r / 1.2);
+    for (const [k, w] of [[1, .007], [.72, .004], [.5, .0025]]) { const r = b.r * k * f; if (r < 1) continue; x.globalAlpha = a * (k === 1 ? .9 : .6); x.strokeStyle = `hsl(${(nå * 160 + b.r * 300 + k * 90) % 360},100%,65%)`; x.lineWidth = Math.max(1, f * w * (.4 + a)); x.beginPath(); x.arc(X, Y, r, 0, 7); x.stroke(); } }
+  x.restore();
 }
 let uwAktive = new Set();
 function uwNed(e) {
@@ -10002,7 +10023,7 @@ function uwNed(e) {
   
   uwPeker = e.pointerId; const u = uw, p = uwPunkt(e), nå = performance.now();
   
-  u.sistTrykk = { t: nå, x: p.x, y: p.y }; if (u.kast) return; uwAvbryt(); u.strøk = (u.strøk || 0) + 1; u.kø = []; u.slipp = false; u.låst = false; u.gc = null; u.kniv = { x: p.x, y: p.y, a: u.kniv?.a ?? -.6 }; uwFlyttKniv(p);
+  u.sistTrykk = { t: nå, x: p.x, y: p.y }; if (u.kast) return; uwAvbryt(); u.strøk = (u.strøk || 0) + 1; u.kø = []; u.slipp = false; u.låst = false; u.gc = null; u.kniv = { x: p.x, y: p.y, a: u.kniv?.a ?? -.6 }; uwFlyttKniv(p); if (u.trip) uwBølge(p);
 }
 function uwFlytt(e) {
   if (!uw || e.pointerId !== uwPeker || uw.låst) return; e.preventDefault();
@@ -10034,6 +10055,7 @@ function uwFlyttKniv(p) {
   uwHageKniv(p); uwTeipKutt(p);
   if (u.spor.length) { const l = u.linje[u.linje.length - 1]; if (!l || Math.hypot(l.x - p.x, l.y - p.y) > .003) u.linje.push({ x: p.x, y: p.y }); }
   uwBørst(p);
+  if (u.trip && uwPeker != null && u.bølgeSist && Math.hypot(p.x - u.bølgeSist.x, p.y - u.bølgeSist.y) > .07) uwBølge(p);
   if (u.gc && u.gc.x === gx && u.gc.y === gy) return;
   // SKRAPELODD (Krogh): papiret skrapes bort der fingeren drar. Ingen kutt.
   const fra = u.gc || { x: gx, y: gy }; u.gc = { x: gx, y: gy };
@@ -10155,16 +10177,25 @@ function uwSkrapFerdig() {
   uwSkitt(b.x0, b.y0, b.x1, b.y1);
   const p = Math.round(n * 1.4); u.poeng += p; u.skrapP = (u.skrapP || 0) + p;
   if (u.tid - (u.skrapTekstT ?? -9) > .8 && u.skrapP >= 150) { uwTekst("+" + u.skrapP.toLocaleString("en"), u.kniv.x, u.kniv.y - .04); u.skrapP = 0; u.skrapTekstT = u.tid; }
-  // Papirrester blir liggende på bildet; de må børstes bort.
-  if (Math.random() < .15 && (u.rester || (u.rester = [])).length < 60) { const rx = (b.x0 + Math.random() * (b.x1 - b.x0)) / G, ry = (b.y0 + Math.random() * (b.y1 - b.y0)) / G, rr = .006 + Math.random() * .012; u.rester.push({ x: rx, y: ry, r: rr, strøk: u.strøk, rot: Math.random() * 6, farge: u.stil.bunn[0], form: Array.from({ length: 7 }, () => .55 + Math.random() * .55) }); u.resterA = (u.resterA || 0) + Math.PI * (rr * G) ** 2 * .7; }
-  // Smuler av papir som flyr.
-  if (Math.random() < .5 && u.flak.length < 160) { const x = (b.x0 + b.x1) / 2 / G, y = (b.y0 + b.y1) / 2 / G, a = Math.random() * 6.28; u.flak.push({ x, y, vx: Math.cos(a) * .12, vy: -.15 - Math.random() * .2, r: .006 + Math.random() * .01, rot: Math.random() * 6, spinn: (Math.random() - .5) * 9, liv: .8, farge: u.stil.bunn[0], form: Array.from({ length: 7 }, () => .55 + Math.random() * .55) }); }
-  if (lydPa && u.tid - (u.skrapLydT ?? -9) > .07) { u.skrapLydT = u.tid; shSus(.06, "bandpass", 2600 + Math.random() * 1800, .025, 2, .8, .1); }
+  // Krogh 2.26: ingen papirsøl som blir liggende eller flyr. Bare noen kjempetynne svarte hårstrå som spruter av
+  // mens du skraper vanlig, og som er borte med en gang. Med MAGIC FINGER er det stjernestøvet som gjelder.
+  if (!u.magi && u.kniv) { const hh = u.hår || (u.hår = []); for (let k = 0; k < 1 && hh.length < 40 && Math.random() < .55; k++) { const a = Math.random() * 6.283, g = .05 + Math.random() * .12;
+    hh.push({ x: u.kniv.x + Math.cos(a) * .02, y: u.kniv.y + Math.sin(a) * .02, vx: Math.cos(a) * g, vy: Math.sin(a) * g - .03, rot: Math.random() * 6.283, spinn: (Math.random() - .5) * 14, l: .008 + Math.random() * .016, bøy: (Math.random() - .5) * .8, liv: 1 }); } }
+  if (lydPa && u.tid - (u.skrapLydT ?? -9) > .07) { u.skrapLydT = u.tid; uwKullLyd(); }
   uwLappSjekk(); uwBokstavSjekk();
   const sl = u.sløyfe; if (!sl.ingen && !sl.av && u.celle[Math.min(G - 1, Math.floor(sl.y * G)) * G + Math.min(G - 1, Math.floor(sl.x * G))] === 1) { sl.av = { vx: (Math.random() - .5) * .5, vy: -.55, rot: 0, spinn: (Math.random() - .5) * 6, t: 0 }; u.poeng += 3000; uwTekst("BOW! +3,000", sl.x, sl.y - .05);
     if (lydPa) [0, 7, 12].forEach((st, j) => tone(784 * Math.pow(2, st / 12), j * .07, .35, .03, "triangle", .5, 1)); }
   uwHud(); uwRegnDekket(); if (uwSynlig(u) >= u.krav) uwVunnet();
 }
+// Skrapelyden (Krogh 2.26): grillkull som gnis mot hverandre. Korte, knasende korn i støy, ikke synt. Svært diskret.
+let uwKullBuf = null;
+function uwKullLyd() { const c = ctx(); if (!c) return;
+  if (!uwKullBuf) { const len = c.sampleRate; uwKullBuf = c.createBuffer(1, len, c.sampleRate); const d = uwKullBuf.getChannelData(0); let e = 0;
+    for (let i = 0; i < len; i++) { if (Math.random() < .0025) e = .4 + Math.random() * .6; e *= .985; d[i] = (Math.random() * 2 - 1) * (e + .05); } }
+  const src = c.createBufferSource(), fl = c.createBiquadFilter(), g = c.createGain(), t = c.currentTime, v = .08 + Math.random() * .05;
+  src.buffer = uwKullBuf; src.playbackRate.value = .8 + Math.random() * .4; fl.type = "bandpass"; fl.frequency.value = 1100 + Math.random() * 900; fl.Q.value = .9;
+  g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(.06, t + .01); g.gain.setValueAtTime(.06, t + v * .6); g.gain.exponentialRampToValueAtTime(.0001, t + v);
+  src.connect(fl).connect(g).connect(effektUt(c)); src.start(t, Math.random() * .8, v + .02); }
 function uwSkjærCelle(x, y) {
   const u = uw, G = UW_G, M = u.merket;
   if (x < 0 || y < 0 || x >= G || y >= G) { if (u.spor.length) uwSjekkRiv(); return; }
@@ -10253,7 +10284,7 @@ function uwVunnet() {
   // Resten av papiret: tas bilde av og brytes i ujevne biter som løftes av bildet (se uwSluttTegn).
   const biter = uwSluttBiter();
   for (let j = 0; j < G * G; j++) { u.celle[j] = 1; if (u.indre) u.indre[j] = 0; } uwSkitt(0, 0, G - 1, G - 1); u.spor = []; u.linje = []; u.merket.fill(0);
-  u.spyBiter = []; u.ild = []; u.ildP = []; u.svidd = []; u.flak = []; u.trip = null; $("uwCanvas").style.filter = ""; $("uwCanvas").style.transform = "";
+  u.spyBiter = []; u.ild = []; u.ildP = []; u.svidd = []; u.flak = []; u.hår = []; u.bølger = []; u.trip = null; $("uwCanvas").style.filter = ""; $("uwCanvas").style.transform = "";
   if (!u.sløyfe.av) u.sløyfe.av = { vx: .2, vy: -.5, rot: 0, spinn: 3, t: 0 };
   if (u.hage) { u.hage.nett = []; u.hage.hauger = []; u.hage.edd = null; u.hage.mv = null; u.dekket = 0; } u.lapper = [];
   // Tre stjerner, som i BUBBLE IT: pakket opp, minst en tredjedel av tida igjen, ingen kniv mistet.
@@ -10377,6 +10408,7 @@ function uwLoop(t) {
 function uwOppdater(dt) {
   const u = uw, G = UW_G;
   for (const q of u.flak) { q.vy += .5 * dt; q.x += q.vx * dt; q.y += q.vy * dt; q.rot += q.spinn * dt; q.liv -= dt * .8; } u.flak = u.flak.filter(q => q.liv > 0);
+  if (u.hår?.length) { for (const q of u.hår) { q.x += q.vx * dt; q.y += q.vy * dt; q.vy += .15 * dt; q.rot += q.spinn * dt; q.liv -= dt * 2.6; } u.hår = u.hår.filter(q => q.liv > 0); }
   for (const q of u.tekster) q.t += dt; u.tekster = u.tekster.filter(q => q.t < 1.6);
   if (u.slutt) { u.slutt.t += dt; if (!u.slutt.vist && u.slutt.t > UW_LØFT + UW_RO + .35) { u.slutt.vist = true; uwSluttVis(); } }
   const av = u.sløyfe.av; if (av) { av.t += dt; av.vy += .9 * dt; u.sløyfe.x += av.vx * dt; u.sløyfe.y += av.vy * dt; av.rot += av.spinn * dt; }
@@ -10444,7 +10476,7 @@ function uwIldSteg(dt) {
     q.x = q.x0 + (q.x1 - q.x0) * k; q.y = q.y0 + (q.y1 - q.y0) * k - .1 * 4 * k * (1 - k); const vx = (q.x - px) / Math.max(dt, 1e-3), vy = (q.y - py) / Math.max(dt, 1e-3), v = Math.hypot(vx, vy) || 1;
     for (let j = 0; j < dt * 110 && u.ildP.length < 260; j++) { const a = Math.random() * 7, rr = .012 * Math.random(); u.ildP.push({ x: q.x + Math.cos(a) * rr, y: q.y + Math.sin(a) * rr, vx: -vx / v * .06 + Math.cos(a) * .02, vy: -vy / v * .06 + Math.sin(a) * .02 - .02, liv: 1, st: .012 + Math.random() * .01 }); }
     if (k >= 1 && !q.borte) { q.borte = true;
-      (u.svidd = u.svidd || []).push({ x: q.x1, y: q.y1, r: .07, t: 0, T: 5, form: Array.from({ length: 22 }, () => .72 + Math.random() * .38), glør: Array.from({ length: 34 }, () => ({ a: Math.random() * 6.3, d: .55 + Math.random() * .45, f: Math.random() * 6, s: .4 + Math.random() * .6 })) });
+      (u.svidd = u.svidd || []).push({ x: q.x1, y: q.y1, r: .07, t: 0, Tb: 2.6, T: 5.8, form: Array.from({ length: 22 }, () => .72 + Math.random() * .38), glør: Array.from({ length: 34 }, () => ({ a: Math.random() * 6.3, d: .55 + Math.random() * .45, f: Math.random() * 6, s: .4 + Math.random() * .6 })) });
       for (let n = 0; n < 26 && u.ildP.length < 300; n++) { const a = Math.random() * 7, g = .1 + Math.random() * .25; u.ildP.push({ x: q.x1, y: q.y1, vx: Math.cos(a) * g, vy: Math.sin(a) * g - .05, liv: 1, st: 0, gnist: true }); }
       for (let n = 0; n < 14 && u.ildP.length < 300; n++) { const a = Math.random() * 7, rr = Math.random() * .04; u.ildP.push({ x: q.x1 + Math.cos(a) * rr, y: q.y1 + Math.sin(a) * rr, vx: (Math.random() - .5) * .03, vy: -.05 - Math.random() * .05, liv: 1, st: .016 + Math.random() * .014 }); }
       if (lydPa) { shSus(.45, "lowpass", 900, .07, .8, .7, .5); tone(90, 0, .25, .08, "sine", 1, .4); }
@@ -10453,17 +10485,41 @@ function uwIldSteg(dt) {
   if (u.ild?.length) u.ild = u.ild.filter(q => !q.borte);
   for (const p of u.ildP) { p.x += p.vx * dt; p.y += p.vy * dt; if (p.gnist) { p.vy += .3 * dt; p.liv -= dt * 1.7; } else { p.vy -= .1 * dt; p.liv -= dt * 3; } }
   u.ildP = u.ildP.filter(p => p.liv > 0);
-  if (u.svidd?.length) { for (const s of u.svidd) s.t += dt; u.svidd = u.svidd.filter(s => s.t < s.T); }
+  // Krogh 2.26: der ildkula lander, brenner det (flammer), så gløder det. Så lenge det brenner eller gløder, kan du ikke skrape der.
+  // Når det er svart, er det kull på papiret: flekken dekkes til igjen, og kullet skrapes bort som papir.
+  for (const s of u.svidd || []) { s.t += dt;
+    if (s.t < s.Tb) for (let j = 0; j < dt * 55 && u.ildP.length < 360; j++) { const a = Math.random() * 6.283, rr = s.r * .85 * Math.sqrt(Math.random()); u.ildP.push({ x: s.x + Math.cos(a) * rr, y: s.y + Math.sin(a) * rr, vx: (Math.random() - .5) * .02, vy: -.06 - Math.random() * .08, liv: 1, st: .028 + Math.random() * .026 }); }
+    if (s.t >= s.T) uwKull(s); }
+  if (u.svidd?.length) u.svidd = u.svidd.filter(s => s.t < s.T);
+}
+function uwKull(s) {
+  const u = uw, G = UW_G, cx = s.x * G, cy = s.y * G, rc = s.r * G * 1.05, n = s.form.length; let åpnet = 0;
+  for (let y = Math.max(0, Math.floor(cy - rc)); y <= Math.min(G - 1, Math.ceil(cy + rc)); y++) for (let x = Math.max(0, Math.floor(cx - rc)); x <= Math.min(G - 1, Math.ceil(cx + rc)); x++) {
+    const v = s.form[Math.floor((Math.atan2(y - cy, x - cx) + Math.PI) / (2 * Math.PI) * n) % n]; if (Math.hypot(x - cx, y - cy) > rc * v) continue;
+    const j = y * G + x; if (u.celle[j] === 1) { if (!u.indre || !u.indre[j]) u.åpne--; u.celle[j] = 0; åpnet++; } }
+  (u.kull = u.kull || []).push(s); const l = u.lagS[0]; if (l.papir) uwKullBak(l, s, l.lag.width);
+  const m = Math.ceil(rc * 1.4); uwSkitt(Math.max(0, Math.floor(cx - m)), Math.max(0, Math.floor(cy - m)), Math.min(G - 1, Math.ceil(cx + m)), Math.min(G - 1, Math.ceil(cy + m))); uwHud();
+}
+// Kullet males inn i papirbildet (svart i midten, brun svidd rand), så det følger papiret og skrapes bort med det.
+function uwKullBak(l, s, S) {
+  const P = l.papir, cx = s.x * S, cy = s.y * S, R = s.r * S * 1.05, n = s.form.length;
+  for (let py = Math.max(0, Math.floor(cy - R * 1.35)); py < Math.min(S, Math.ceil(cy + R * 1.35)); py++) for (let px = Math.max(0, Math.floor(cx - R * 1.35)); px < Math.min(S, Math.ceil(cx + R * 1.35)); px++) {
+    const dx = px - cx, dy = py - cy, w = (Math.atan2(dy, dx) + Math.PI) / (2 * Math.PI) * n, k0 = Math.floor(w) % n, fr = w - Math.floor(w), v = s.form[k0] * (1 - fr) + s.form[(k0 + 1) % n] * fr, t = Math.hypot(dx, dy) / (R * v);
+    if (t > 1.3) continue; const h = (((px * 73856093) ^ (py * 19349663)) >>> 0) % 256 / 255, o = (py * S + px) * 4;
+    const m = t < .8 ? .94 + h * .05 : t < 1 ? .94 - (t - .8) * 2.2 : (1.3 - t) / .3 * .4 * (.6 + h * .4), c = t < .82 ? [10 + h * 16, 8 + h * 10, 6 + h * 7] : [62 + h * 20, 34 + h * 10, 16 + h * 6];
+    P[o] = P[o] * (1 - m) + c[0] * m; P[o + 1] = P[o + 1] * (1 - m) + c[1] * m; P[o + 2] = P[o + 2] * (1 - m) + c[2] * m; }
 }
 // Under bossen: det svidde papiret og ringen som varsler hvor ildkula lander.
 function uwIldBunnTegn(x, P, f, nå) {
   const u = uw;
   // Svidd papir: forkullet i midten, en glødende rand som brenner ut, og små gnister langs kanten.
-  for (const s of u.svidd || []) { const [X, Y] = P(s.x, s.y), R = s.r * f, a = Math.min(1, s.t * 6) * Math.min(1, (s.T - s.t) / 1.2), varme = Math.max(0, 1 - s.t / (s.T * .75));
+  for (const s of u.svidd || []) { const [X, Y] = P(s.x, s.y), R = s.r * f, a = Math.min(1, s.t * 6), brenner = s.t < s.Tb, varme = brenner ? 1 : Math.max(0, 1 - (s.t - s.Tb) / (s.T - s.Tb - .4));
     const sti = () => { x.beginPath(); s.form.forEach((v, k) => { const w = k / s.form.length * Math.PI * 2; k ? x.lineTo(Math.cos(w) * R * v, Math.sin(w) * R * v) : x.moveTo(Math.cos(w) * R * v, Math.sin(w) * R * v); }); x.closePath(); };
     x.save(); x.translate(X, Y); x.globalAlpha = a;
     const g = x.createRadialGradient(0, 0, 0, 0, 0, R * 1.05); g.addColorStop(0, "rgba(8,6,5,.95)"); g.addColorStop(.6, "rgba(22,14,9,.92)"); g.addColorStop(.85, "rgba(60,32,14,.75)"); g.addColorStop(1, "rgba(110,60,25,.3)");
     sti(); x.fillStyle = g; x.fill();
+    if (varme > 0) { x.save(); x.globalCompositeOperation = "lighter"; const gg = x.createRadialGradient(0, 0, 0, 0, 0, R); gg.addColorStop(0, `rgba(255,${brenner ? 150 : 100},40,${(brenner ? .75 : .8) * varme})`); gg.addColorStop(.7, `rgba(230,70,15,${.45 * varme})`); gg.addColorStop(1, "rgba(150,30,0,0)"); sti(); x.fillStyle = gg; x.fill(); x.restore(); }
+    if (!brenner && varme > 0) { const fs = Math.max(12, f * .034); x.save(); x.globalAlpha = a * Math.min(1, varme * 3); x.font = `700 ${fs}px "IBM Plex Sans", sans-serif`; x.textAlign = "center"; x.textBaseline = "middle"; x.lineJoin = "round"; x.lineWidth = Math.max(2, fs * .22); x.strokeStyle = "rgba(0,0,0,.8)"; x.strokeText("COOL DOWN", 0, -R * 1.2); x.shadowColor = "rgba(255,120,40,.9)"; x.shadowBlur = fs * .5; x.fillStyle = "#fff4e6"; x.fillText("COOL DOWN", 0, -R * 1.2); x.restore(); }
     if (varme > 0) { x.globalCompositeOperation = "screen"; const fl = .75 + .25 * Math.sin(nå * 11 + s.x * 40); sti(); x.lineJoin = "round"; x.strokeStyle = `rgba(255,120,30,${.75 * varme * fl})`; x.lineWidth = Math.max(1.5, R * .07); x.shadowColor = "rgba(255,90,20,.9)"; x.shadowBlur = R * .35; x.stroke();
       x.shadowBlur = 0; x.strokeStyle = `rgba(255,220,140,${.55 * varme * fl})`; x.lineWidth = Math.max(.7, R * .02); x.stroke();
       for (const e of s.glør) { const fl2 = .5 + .5 * Math.sin(nå * 13 + e.f), ex = Math.cos(e.a) * e.d * R, ey = Math.sin(e.a) * e.d * R; x.fillStyle = `rgba(255,${170 + 60 * fl2 | 0},90,${varme * fl2 * e.s})`; x.beginPath(); x.arc(ex, ey, Math.max(.6, R * .018 * e.s), 0, 7); x.fill(); } }
@@ -10529,7 +10585,7 @@ function uwEnBossSteg(B, dt) {
   // Ildkuler mot der du skraper: en glødende ring varsler hvor den lander, og der svir den papiret.
   B.ildT = (B.ildT ?? 3 + Math.random() * 3) - dt;
   if (B.pakker && !B.spy && B.ildT <= 0) { const skraper = uwPeker != null && u.kniv && u.tid - (u.skrapT ?? -9) < .4;
-    if (!skraper) B.ildT = .5;
+    if (!skraper || (u.ild?.length || 0) + (u.svidd?.length || 0) >= 2) B.ildT = .5; // Krogh: maks to branner om gangen.
     else { B.ildT = Math.max(2.2, 4 + Math.random() * 3 - i2(u) * .2); B.blink = .7;
       (u.ild = u.ild || []).push({ x0: B.x, y0: B.y + .03, x1: shClamp(u.kniv.x, .04, .96), y1: shClamp(u.kniv.y, .04, .96), t: 0, T: .85, x: B.x, y: B.y });
       if (lydPa) shGlid(520, 180, .4, .04, "sawtooth", .5, .3); } }
@@ -10543,33 +10599,24 @@ function uwBossTegn(x, P, f, nå) {
     // Ingen skygge-plattform under bossen (Krogh 2.18): den svever fritt over bildet.
     window.Boss3D.tegn(x, X, Y, str, { buffer: B.buf || (B.buf = {}), modell: B.modell, vri: B.pakker ? shBoss3DVri(B.modell, nå) : shBoss3DVri(B.modell, nå, 2), vipp: .1 + Math.sin(nå * 1.3) * .05 - (B.lene || 0) * .4, rot: -(B.vx || 0) * 1.5, blink: B.blink, ...fig3D(B.modell, nå, "boss") }); }
 }
-// FREEZE (lappen, Krogh 2.18): alt står stille i UW_FRYS_TID sekunder. Bildet blir kaldt og blekt, isroser vokser fram på
-// brettet, og FREEZE står stort midt på og blekner bort. Ikke det samme som FREEZE ALL ACTIVITY (malingen).
+// FREEZE (lappen, Krogh 2.18, 2.26): alt står stille i UW_FRYS_TID sekunder, og det snør. EVERYBODY FREEZE / EXCEPT YOU
+// står midt på og blekner bort. Bildet blekes ikke. Ikke det samme som FREEZE ALL ACTIVITY (malingen).
 const UW_FRYS_TID = 8;
-function uwFrysLapp() { const u = uw; u.eff.frys = UW_FRYS_TID; u.frysBilde = null;
-  u.isroser = Array.from({ length: 7 }, () => ({ x: .08 + Math.random() * .84, y: .08 + Math.random() * .84, r: .07 + Math.random() * .09, rot: Math.random() * 6, grener: Array.from({ length: 6 }, () => .7 + Math.random() * .3) }));
+function uwFrysLapp() { const u = uw; u.eff.frys = UW_FRYS_TID;
+  // Krogh 2.26: ikke noe hvitt skjær. Alle stopper, og det snør masse.
+  u.frysSnø = Array.from({ length: 260 }, () => ({ x: Math.random(), y: Math.random(), r: .0025 + Math.random() * .006, v: .05 + Math.random() * .12, fase: Math.random() * 6 }));
   if (lydPa) { shSus(.6, "highpass", 6000, .03, .7, .4, 1.2); [0, 7, 12, 19].forEach((st, k) => tone(1047 * Math.pow(2, st / 12), k * .07, .5, .015, "sine", .4, 1.5)); } }
 function uwFrysTegn(x, f, x0, y0, nå) {
   const u = uw, fr0 = u.eff?.frys || 0; if (fr0 <= 0) return; const gått = UW_FRYS_TID - fr0, a = Math.min(1, gått * 3, fr0 * 1.2);
-  // Krogh 2.25: FREEZE skal bare stoppe figurene og gjøre bildet kaldt, ikke få maskinen til å henge. Før ble tre tunge
-  // blandemoduser (metning, soft-light, screen) og isroser med uskarphet tegnet over hele brettet i hvert bilde. Nå tegnes
-  // det frosne laget én gang (kaldt, blekt skjær og isrosene), og legges bare oppå med en gjennomsiktighet.
-  const dp = Math.min(2, x.getTransform().a || 1), W = Math.max(64, Math.round(f * dp));
-  if (!u.frysBilde || u.frysBilde.width !== W) { const c = u.frysBilde = Object.assign(document.createElement("canvas"), { width: W, height: W }), k = c.getContext("2d"), F = W;
-    k.fillStyle = "rgba(205,228,245,.42)"; k.fillRect(0, 0, F, F);
-    const g = k.createRadialGradient(F / 2, F / 2, F * .25, F / 2, F / 2, F * .75); g.addColorStop(0, "rgba(160,210,255,0)"); g.addColorStop(1, "rgba(225,242,255,.45)"); k.fillStyle = g; k.fillRect(0, 0, F, F);
-    k.lineCap = "round"; k.strokeStyle = "rgba(245,252,255,.85)"; k.shadowColor = "rgba(180,230,255,.9)"; k.shadowBlur = 5 * dp;
-    for (const R of u.isroser || []) { const cx = R.x * F, cy = R.y * F, L = R.r * F;
-      R.grener.forEach((gr, n) => { const v = R.rot + n * Math.PI / 3, ex = Math.cos(v), ey = Math.sin(v), l = L * gr; k.lineWidth = Math.max(1, F * .0035);
-        k.beginPath(); k.moveTo(cx, cy); k.lineTo(cx + ex * l, cy + ey * l); k.stroke(); k.lineWidth = Math.max(.7, F * .002);
-        for (let m = 1; m <= 3; m++) { const t = m / 4, bx = cx + ex * l * t, by = cy + ey * l * t, kl = l * (.32 - t * .06);
-          for (const sd of [-1, 1]) { const w = v + sd * .7; k.beginPath(); k.moveTo(bx, by); k.lineTo(bx + Math.cos(w) * kl, by + Math.sin(w) * kl); k.stroke(); } } }); } }
-  x.save(); x.globalAlpha = a; x.drawImage(u.frysBilde, x0, y0, f, f); x.restore();
-  // FREEZE midt på brettet, og en linje under. Blekner bort etter et par sekunder.
-  const ta = Math.min(1, gått * 4) * Math.max(0, Math.min(1, (2.6 - gått) / .8)); if (ta <= 0) return;
-  const fs = Math.max(30, f * .15); x.save(); x.globalAlpha = ta; x.textAlign = "center"; x.textBaseline = "middle"; x.shadowColor = "rgba(120,200,255,.95)"; x.shadowBlur = fs * .12; x.fillStyle = "#f4fbff";
-  x.font = `800 ${fs}px "IBM Plex Sans", sans-serif`; x.fillText("FREEZE", x0 + f / 2, y0 + f * .46);
-  x.font = `600 ${Math.max(12, f * .036)}px "IBM Plex Sans", sans-serif`; x.fillText("NOTHING CAN TOUCH YOU · SCRATCH LIKE MAD", x0 + f / 2, y0 + f * .46 + fs * .75); x.restore();
+  x.save(); x.beginPath(); x.rect(x0, y0, f, f); x.clip(); x.fillStyle = "#fff";
+  for (const q of u.frysSnø || []) { const y = (q.y + gått * q.v) % 1.04 - .02, xx = q.x + Math.sin(gått * 1.3 + q.fase) * .015; x.globalAlpha = a * (.5 + q.r * 55); x.beginPath(); x.arc(x0 + xx * f, y0 + y * f, Math.max(1, q.r * f), 0, 7); x.fill(); }
+  x.restore();
+  // EVERYBODY FREEZE midt på, EXCEPT YOU under. Blekner bort etter et par sekunder.
+  const ta = Math.min(1, gått * 4) * Math.max(0, Math.min(1, (3 - gått) / .8)); if (ta <= 0) return;
+  const fs = Math.max(22, f * .075), my = y0 + f * .44; x.save(); x.globalAlpha = ta; x.textAlign = "center"; x.textBaseline = "middle"; x.lineJoin = "round";
+  const linje = (t, y, s) => { x.font = `800 ${s}px "IBM Plex Sans", sans-serif`; x.shadowColor = "rgba(0,0,0,.85)"; x.shadowBlur = s * .3; x.lineWidth = Math.max(2.5, s * .09); x.strokeStyle = "rgba(0,0,0,.5)"; x.strokeText(t, x0 + f / 2, y);
+    x.shadowColor = "rgba(120,200,255,.95)"; x.shadowBlur = s * .2; x.fillStyle = "#f4fbff"; x.fillText(t, x0 + f / 2, y); };
+  linje("EVERYBODY FREEZE", my, fs); linje("EXCEPT YOU", my + fs * 1.05, fs * .62); x.restore();
 }
 // MAGIC FINGER (Krogh 2.17): en mynt i bronse, sølv eller gull. Tar du den, skraper fingeren en større flekk en stund
 // (30, 60 eller 100 % mer per strek: flekken blir så mye bredere), og stjernestøv i myntens farge glitrer rundt fingeren. Bossen spytter mynten ut;
@@ -10981,7 +11028,7 @@ function uwMøllTegn(x, s, t, fase) {
 function uwLag(S, L = 0) {
   const u = uw, G = UW_G, C = u.celle, l = u.lagS[L];
   if (!l.lag || l.lag.width !== S) { l.lag = Object.assign(document.createElement("canvas"), { width: S, height: S }); const lx = l.lag.getContext("2d");
-    l.data = lx.createImageData(S, S); l.papir = uwPapir(S, L ? u.stil2 : u.stil).getContext("2d").getImageData(0, 0, S, S).data;
+    l.data = lx.createImageData(S, S); l.papir = uwPapir(S, L ? u.stil2 : u.stil).getContext("2d").getImageData(0, 0, S, S).data; if (!L) for (const k of u.kull || []) uwKullBak(l, k, S);
     l.F = new Float32Array(G * G); l.T = new Float32Array(G * G); l.skitten = { x0: 0, y0: 0, x1: G - 1, y1: G - 1 }; }
   if (!l.skitten) return l.lag;
   const d = l.skitten; l.skitten = null;
@@ -11000,7 +11047,13 @@ function uwLag(S, L = 0) {
       if (v > .995) { O[o] = P[o]; O[o + 1] = P[o + 1]; O[o + 2] = P[o + 2]; O[o + 3] = 255; continue; }
       const vs = prøv(F, gx - .5, gy - 1.4), sh = Math.min(1, Math.max(0, (vs - .04) / .45)) * .42;
       let a = (v - .5) * skarp + .5; a = a < 0 ? 0 : a > 1 ? 1 : a;
-      if (a <= 0) { O[o] = O[o + 1] = O[o + 2] = 0; O[o + 3] = Math.round(sh * 255); continue; }
+      if (a <= 0) {
+        // Krogh 2.26: litt mer fiber i kanten. Korte, lyse papirfibre stikker ut over kanten, tettere jo nærmere papiret.
+        if (v > .2) { const gxv = prøv(F, gx + .6, gy) - prøv(F, gx - .6, gy), gyv = prøv(F, gx, gy + .6) - prøv(F, gx, gy - .6), gl = Math.hypot(gxv, gyv);
+          if (gl > .02) { const id = Math.floor((-gyv * px + gxv * py) / gl / 1.4), hh = ((id * 2654435761) ^ (id >>> 7) * 40503) >>> 0, L = .08 + (hh >>> 9) % 100 / 100 * .22;
+            if (hh % 100 < 26 && v > .5 - L) { const al = Math.min(1, (v - (.5 - L)) / L * 1.6) * .85, fv = 236 + (hh >>> 3) % 18, ut = al + sh * (1 - al);
+              O[o] = fv * al / ut; O[o + 1] = (fv - 4) * al / ut; O[o + 2] = (fv - 10) * al / ut; O[o + 3] = Math.round(ut * 255); continue; } } }
+        O[o] = O[o + 1] = O[o + 2] = 0; O[o + 3] = Math.round(sh * 255); continue; }
       // Rivekanten: lys papirkjerne, bredere og smalere langs kanten (støy), med små fibre.
       const t = (v - .5) / (.1 + .24 * prøv(N, gx * .5, gy * .5)), rim = t < 1 ? 1 - t * t : 0, h = (((px * 73856093) ^ (py * 19349663)) >>> 0) % 256 / 255;
       const skygge = t > 1 && t < 1.8 ? (1 - Math.abs(t - 1.35) / .45) * .1 : 0, rv = 252 - h * 22, m = Math.min(1, rim * (.85 + h * .2));
@@ -11045,7 +11098,7 @@ function uwTegn() {
     x.beginPath(); q.form.forEach((v, k) => { const a = k / q.form.length * Math.PI * 2; k ? x.lineTo(Math.cos(a) * rr * v, Math.sin(a) * rr * v * .8) : x.moveTo(Math.cos(a) * rr * v, Math.sin(a) * rr * v * .8); }); x.closePath(); x.fillStyle = q.farge; x.fill(); x.strokeStyle = "rgba(255,248,244,.9)"; x.lineWidth = Math.max(1, rr * .15); x.stroke(); x.restore(); }
   uwIldBunnTegn(x, P, f, nå);
   uwBossTegn(x, P, f, nå); flyTegn(x, uw.fly, P, f, uw.tid);
-  uwIldTegn(x, P, f, nå); uwMagiTegn(x, P, f, nå); uwFrysTegn(x, f, x0, y0, nå);
+  uwIldTegn(x, P, f, nå); uwMagiTegn(x, P, f, nå); uwBølgeTegn(x, P, f, nå); uwFrysTegn(x, f, x0, y0, nå);
   // Kniven: et lite hobbykniv-blad som peker dit du skjærer; blinker når den er usårbar.
   if (u.kniv && u.tilstand === "spill" && !u.kast) { const [kx, ky] = P(u.kniv.x, u.kniv.y), Lb = Math.max(14, f * .045), synlig = u.usårbar <= 0 || Math.sin(nå * 50) > 0;
     if (synlig) { x.save(); x.translate(kx, ky); x.globalAlpha = uwPeker != null || u.kø.length ? 1 : .6;
@@ -11057,6 +11110,11 @@ function uwTegn() {
   for (const q of u.flak) { const px = x0 + q.x * f, py = y0 + q.y * f, r = q.r * f; x.save(); x.globalAlpha = Math.min(1, q.liv * 1.5); x.translate(px, py); x.rotate(q.rot); x.scale(1, Math.cos(q.rot * 1.7) * .5 + .6);
     x.beginPath(); q.form.forEach((v, k) => { const a = k / q.form.length * Math.PI * 2; k ? x.lineTo(Math.cos(a) * r * v, Math.sin(a) * r * v * .8) : x.moveTo(Math.cos(a) * r * v, Math.sin(a) * r * v * .8); }); x.closePath();
     x.fillStyle = q.farge || fl; x.fill(); x.strokeStyle = "rgba(255,248,244,.95)"; x.lineWidth = Math.max(1, r * .12); x.stroke(); x.restore(); }
+  // Hårstråene fra skrapingen.
+  if (u.hår?.length) { x.save(); x.lineCap = "round"; x.strokeStyle = "#0a0a0a"; x.lineWidth = Math.max(.6, f * .0013);
+    for (const q of u.hår) { const px = x0 + q.x * f, py = y0 + q.y * f, L = q.l * f, c = Math.cos(q.rot), sn = Math.sin(q.rot); x.globalAlpha = Math.min(1, q.liv * 1.8) * .85;
+      x.beginPath(); x.moveTo(px - c * L / 2, py - sn * L / 2); x.quadraticCurveTo(px - sn * L * q.bøy, py + c * L * q.bøy, px + c * L / 2, py + sn * L / 2); x.stroke(); }
+    x.restore(); }
   // Tekster der det skjer.
   x.save(); x.textAlign = "center"; x.font = `600 ${Math.max(13, f * .04)}px "IBM Plex Sans", sans-serif`;
   for (const q of u.tekster) { const a = Math.min(1, q.t * 4) * Math.min(1, (1.6 - q.t) / .6); x.globalAlpha = a; const tx = x0 + shClamp(q.x, .15, .85) * f, ty = y0 + (q.y - .03 - q.t * .03) * f;
