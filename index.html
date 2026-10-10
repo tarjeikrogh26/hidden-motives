@@ -7402,12 +7402,13 @@ function shVapenSteg(dt) {
   // Missilene flyr, søker mål fra nivå 2, og eksploderer i jorda.
   for (const q of s.missiler || []) {
     q.t += dt;
-    if (q.nivå >= 2) { const m = shVapenMål(q.x, q.y); if (m) { const a = Math.atan2(m.y - q.y, m.x - q.x), sp = Math.hypot(q.vx, q.vy); q.vx += (Math.cos(a) * sp - q.vx) * Math.min(1, dt * 5); q.vy += (Math.sin(a) * sp - q.vy) * Math.min(1, dt * 5); if (Math.hypot(m.x - q.x, m.y - q.y) < .035) { shVapenTreff(m); q.borte = true; shStov(q.x, q.y, 14, "255,190,120", .2); continue; } } }
+    const mM = shVapenMål(q.x, q.y); q.harMål = !!mM;
+    if (mM) { const m = mM; { const a = Math.atan2(m.y - q.y, m.x - q.x), sp = Math.hypot(q.vx, q.vy); q.vx += (Math.cos(a) * sp - q.vx) * Math.min(1, dt * 5); q.vy += (Math.sin(a) * sp - q.vy) * Math.min(1, dt * 5); if (Math.hypot(m.x - q.x, m.y - q.y) < .035) { shVapenTreff(m); q.borte = true; shStov(q.x, q.y, 14, "255,190,120", .2); continue; } } }
     const sp = Math.min(1.5, Math.hypot(q.vx, q.vy) * (1 + dt * .8)), a = Math.atan2(q.vy, q.vx); q.vx = Math.cos(a) * sp; q.vy = Math.sin(a) * sp;
     q.x += q.vx * dt; q.y += q.vy * dt;
     if (q.x < .01 || q.x > .99) q.vx *= -1;
     const k = shKlossVed(q.x, q.y);
-    if (k && k.liv > 0) { q.borte = true; const st = q.nivå >= 3; shVask(q.x, q.y, st ? .075 : .045, st ? 3 : 2); shStov(q.x, q.y, st ? 26 : 14, "255,170,80", .25); (s.smell = s.smell || []).push({ x: q.x, y: q.y, t: 0 }); shLyd("sprekk", st ? 1.4 : .8); }
+    if (k && k.liv > 0 && !q.harMål) { q.borte = true; const st = q.nivå >= 3; shVask(q.x, q.y, st ? .075 : .045, st ? 3 : 2); shStov(q.x, q.y, st ? 26 : 14, "255,170,80", .25); (s.smell = s.smell || []).push({ x: q.x, y: q.y, t: 0 }); shLyd("sprekk", st ? 1.4 : .8); }
     if (q.y < SH_TOPP - .1 || q.t > 4) q.borte = true;
   }
   if (s.missiler) s.missiler = s.missiler.filter(q => !q.borte);
@@ -9632,9 +9633,14 @@ function shOppdater(dt) {
     if (!s.bossKommet && !s.små && shHar("fiende", "boss") && andel >= s.bossVed && andel < .9) { s.bossKommet = true; shGalagaStart(true); }
     else if (!s.små && shHar("fiende", "galaga") && s.tid > (s.galagaPause ?? 20) && andel > .06 && andel < .88) shGalagaStart(false);
   }
+  // Krogh 2.26: to lag. Boblen vasker gjørma; bobleskuddene fra dysene (og missilene) er for aliens og det som flyr.
+  // Så lenge det er noe å skyte på, går skuddene rett gjennom gjørma og trekker litt mot nærmeste mål. Er det ingenting, vasker de som før.
+  const skuddMål = !!(s.galaga || s.små || s.krabbe || s.hopper || s.fugl || s.snegl || (s.sabot || []).length || (s.fly?.liste || []).some(e => e.pop < 0 && !e.ferdig));
   for (const q of s.skudd) {
     if (!Number.isFinite(q.x) || !Number.isFinite(q.y)) { q.borte = true; if (!shSteg.nanVist) { shSteg.nanVist = true; console.warn("Skudd med NaN", JSON.stringify(q)); } continue; }
     if (q.samle && q.y <= q.samle.cy) { q.vx = q.samle.vx; q.vy = q.samle.vy; q.samle = null; }
+    if (skuddMål && !q.samle) { const m = shVapenMål(q.x, q.y) || (() => { const F = (s.fly?.liste || []).filter(e => e.pop < 0 && !e.ferdig); let b = null, d = 9; for (const e of F) { const y = e.yv ?? e.y, dd = Math.hypot(e.x - q.x, y - q.y); if (dd < d) { d = dd; b = { x: e.x, y }; } } return b; })();
+      if (m && m.y < q.y) { const sp = Math.hypot(q.vx, q.vy) || 1, a = Math.atan2(m.y - q.y, m.x - q.x), ønsket = Math.cos(a) * sp; q.vx += (ønsket - q.vx) * Math.min(1, dt * 2.2); q.vy = -Math.sqrt(Math.max(.01, sp * sp - q.vx * q.vx)); } }
     q.x += q.vx * dt; q.y += q.vy * dt;
     if (q.x < .01 || q.x > .99) q.vx = -q.vx;
     if (s.galaga) {
@@ -9663,6 +9669,7 @@ function shOppdater(dt) {
     if (shFlyTreff(q.x, q.y, q.r, q.vx, q.vy, "skudd")) { q.borte = true; continue; }
     if (shSneglTreff(s, q.x, q.y, q.r || .01)) { q.borte = true; continue; }
     if (q.y > SH_TOPP + .6) shDryppTørk(s, q.x, q.y, (q.r || .01) * 1.5);
+    if (skuddMål) { if (q.y < 0) q.borte = true; continue; } // gjennom gjørma, rett mot målene
     if (!q.angrep && q.vy < 0 && shBankTreff(s, q.x, q.y, q.r || .008, 1)) { q.borte = true; for (let n = 0; n < 4; n++) if (s.skum.length < 400) s.skum.push({ x: q.x + (Math.random() - .5) * .02, y: q.y + (Math.random() - .5) * .01, r: .002 + Math.random() * .004, liv: 1, fart: 1 + Math.random() }); continue; }
     const k = shKlossVed(q.x, q.y);
     if (k) { if (!q.angrep || Math.random() < .15) shTreff(k, q.angrep ? 1 : 2); if (!q.angrep && Math.random() < .8) { const k2 = shKlossVed(q.x + (Math.random() - .5) * .03, q.y - .025); if (k2) shTreff(k2, 2); } /* spiser litt mer rundt seg (Krogh: +20 %) */ if (!q.angrep) shSkumFlekk(q.x, q.y, 1.2, true); for (let n = 0; n < (Math.random() < .5 ? 5 : 4); n++) if (s.skum.length < 440) s.skum.push({ x: q.x + (Math.random() - .5) * .025, y: q.y + (Math.random() - .5) * .01, r: .002 + Math.random() * .005, liv: 1, fart: 1.2 + Math.random() * .8 }); q.budsjett--; q.vy *= .55;
