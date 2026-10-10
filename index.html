@@ -4657,7 +4657,9 @@ const shGlipe = s => SH_GLIPE * Math.pow(Math.max(1, s.padW / .26), 1.35);
 // Bildets øvre kant i feltet. I 2P ligger bildet lenger ned, så spiller 2 får plass til sin flipper øverst.
 let SH_TOPP = 0.13; const SH_P2Y = 0.1;
 // Feltets høyde følger skjermen, så staven står nær bunnen. Settes i shOppsett.
-let SH_H = 1.45, SH_PY = 1.36;
+let SH_H = 1.45, SH_PY = 1.36, SH_PY0 = 1.36;
+// Krogh 2.26: flipperne kan styres litt opp, som romskipet i Galaga (bare med én spiller). SH_PY er flipperens høyde nå.
+const SH_LØFT_MAKS = .22;
 const KAPSLER = [
   { t: "W", navn: "WIDE", hva: "WIDER FLIPPERS", farge: "#ffd23a", vekt: 5, edel: "gull" },
   { t: "S", navn: "SLOW", hva: "A SLOWER BUBBLE", farge: "#ff9a3c", vekt: 4, edel: "blaa" },
@@ -4954,7 +4956,7 @@ function shFang(b, h) {
 }
 function shSlippUt(b, h) {
   const s = sh, v = (Math.random() - .5) * 1.5;
-  b.fanget = null; h.holder = null; h.sist = s.tid; b.skala = 1; b.uro = 1;
+  b.fanget = null; h.holder = null; h.sist = s.tid; b.skala = 1; b.uro = 1; h.hvile = s.tid + 7 + Math.random() * 4; b.fangFri = s.tid + 3;
   b.x = h.x; b.y = h.fy - h.r * .4; b.vx = s.fart * Math.sin(v); b.vy = -s.fart * Math.cos(v);
   shSkum(h.x, h.fy, 10); shLyd("spytt");
   if (!s.bytte) s.tekster.push({ txt: h.t === "munn" ? "+1000" : "+800", x: h.x, y: h.fy - h.r - .02, liv: .9, farge: "#ffb0c8" });
@@ -5385,6 +5387,7 @@ function shTerrengStart(s) {
 // sprekk. Boblen som treffer dem, slås opp igjen. Er det aliens og skyting, spruter dysene i tuppen bobler inn mot midten.
 const SH_SIDE_STEDER = [[-1, .28], [-1, .6], [1, .6], [1, .32]];
 function shSideSteg(s, dt) {
+  if (!s.side) return; // Krogh 2.26: sideflipperne er tatt ut (ting hang fast i dem).
   if (!s.side) { if (s.toP || s.tilstand !== "spill" || s.sideFerdig) return; s.sideVent = s.sideVent ?? (Math.random() < .35 ? 25 + Math.random() * 50 : 1e9);
     if (s.tid > s.sideVent && shRolig(s)) { s.sideFerdig = true; const valg = SH_SIDE_STEDER.slice().sort(() => Math.random() - .5).slice(0, 2 + (Math.random() < .5 ? 1 : 0));
       s.side = { t: 0, varighet: 28, liste: valg.map(([side, y]) => ({ side, y: SH_TOPP + y, L: .17, slag: 9, sprekk: Math.random() })) };
@@ -6008,7 +6011,7 @@ function shOppsett() {
   const fri = H - topp - 10;
   const toP = !!sh.toP, fw = Math.max(120, Math.min(W - 16, fri / (toP ? 1.95 : 1.62)));
   const gml = SH_PY;
-  SH_H = toP ? Math.min(2.3, Math.max(1.95, fri / fw)) : Math.min(2, Math.max(1.62, fri / fw)); SH_PY = SH_H - 0.2;
+  SH_H = toP ? Math.min(2.3, Math.max(1.95, fri / fw)) : Math.min(2, Math.max(1.62, fri / fw)); SH_PY0 = SH_H - 0.2; SH_PY = SH_PY0 - (sh.toP ? 0 : sh.padLøft || 0);
   for (const b of sh.baller) if (b.fast) b.y = shHvileY(b);
   for (const k of sh.kapsler) k.y += SH_PY - gml;
   shG = { dpr, fw, fx: (W - fw) / 2, fy: topp + Math.max(0, (fri - fw * SH_H) / 2) };
@@ -6147,7 +6150,10 @@ function shPek(e) {
   if (shPekr2 && e.pointerId === shPekr2.id) { if (Math.abs(e.clientX - shPekr2.x) > 8) shPekr2.dratt = true; if (shPekr2.dratt) sh.pad2Mål = shClamp(shPekr2.pad + (e.clientX - shPekr2.x) / shG.fw * 1.3, sh.pad2W / 2, 1 - sh.pad2W / 2); shPekr2.sistX = e.clientX; return; }
   if (!shPekr || e.pointerId !== shPekr.id) return;
   if (Math.abs(e.clientX - shPekr.x) > 8) shPekr.dratt = true;
+  const dy = shPekr.y - e.clientY, dyFri = Math.sign(dy) * Math.max(0, Math.abs(dy) - 12); if (Math.abs(dy) > 12) shPekr.dratt = true;
   if (shPekr.dratt) sh.padMål = shClamp(shPekr.pad + (e.clientX - shPekr.x) / shG.fw * 1.3, sh.padW / 2, 1 - sh.padW / 2);
+  // Opp og ned: flipperne løftes litt; som bossen styrer du bossen opp og ned.
+  if (shPekr.dratt && !sh.toP) { if (sh.bytte) sh.bossYMål = shClamp((shPekr.bossY ?? sh.bytte.y) - dyFri / shG.fw * 1.3, .1, SH_TOPP + .55); else if (!(sh.sopp > 0)) sh.padLøftMål = shClamp(shPekr.løft - dyFri / shG.fw * -1.3, 0, SH_LØFT_MAKS); }
   // Som bossen: egen styring, helt ut til kantene, regnet fra der bossen var da du satte ned fingeren.
   if (shPekr.dratt && sh.bytte) sh.bossMål = shClamp((shPekr.boss ?? sh.bytte.x) + (e.clientX - shPekr.x) / shG.fw * 1.3, .03, .97);
   shPekr.sistX = e.clientX;
@@ -6156,7 +6162,7 @@ $("shCanvas").addEventListener("pointermove", shPek);
 $("shCanvas").addEventListener("pointerdown", e => {
   e.preventDefault(); ctx();
   if (sh && e.pointerType !== "mouse" && shErP2(e)) { sh.pad2Mål = null; shPekr2 = { id: e.pointerId, x: e.clientX, sistX: e.clientX, pad: sh.pad2X, dratt: false, t0: performance.now() }; shSlipp(); return; }
-  if (sh && e.pointerType !== "mouse") { sh.padMål = null; shPekr = { id: e.pointerId, x: e.clientX, sistX: e.clientX, pad: sh.padX, boss: sh.bytte?.x, dratt: false, t0: performance.now() }; }
+  if (sh && e.pointerType !== "mouse") { sh.padMål = null; shPekr = { id: e.pointerId, x: e.clientX, y: e.clientY, sistX: e.clientX, pad: sh.padX, løft: sh.padLøftMål ?? sh.padLøft ?? 0, boss: sh.bytte?.x, bossY: sh.bytte?.y, dratt: false, t0: performance.now() }; }
   shPek(e); shSlipp();
 });
 const shPekSlutt = e => { if (shPekr && e.pointerId === shPekr.id) shPekr = null; if (shPekr2 && e.pointerId === shPekr2.id) shPekr2 = null; };
@@ -6166,6 +6172,8 @@ addEventListener("keydown", e => {
   if (!sh || $("shatter").hidden) return;
   if (e.key === "ArrowLeft") sh.padMål = shClamp((sh.padMål ?? sh.padX) - 0.06, sh.padW / 2, 1 - sh.padW / 2);
   if (e.key === "ArrowRight") sh.padMål = shClamp((sh.padMål ?? sh.padX) + 0.06, sh.padW / 2, 1 - sh.padW / 2);
+  if ((e.key === "ArrowUp" || e.key === "ArrowDown") && !sh.toP) { e.preventDefault(); const d = e.key === "ArrowUp" ? .05 : -.05;
+    if (sh.bytte) sh.bossYMål = shClamp((sh.bossYMål ?? sh.bytte.y) - d, .1, SH_TOPP + .55); else sh.padLøftMål = shClamp((sh.padLøftMål ?? sh.padLøft ?? 0) + d, 0, SH_LØFT_MAKS); }
   if (e.key === " ") { e.preventDefault(); ctx(); shSlipp(); }
 });
 document.addEventListener("visibilitychange", () => { if (document.hidden && sh && sh.tilstand === "spill") { sh.tilstand = "pause"; shMelding("Paused", "Tap to continue."); } });
@@ -6904,7 +6912,7 @@ function shByttetStart() {
   const s = sh; s.byttePlan = false; s.sopp = 0; s.bossMål = null;
   // Ingen hjelpere eller parkerte bobler på flipperne mens du er bossen.
   s.wingmen = []; s.galaga = null; for (const b of s.baller) { b.parkert = false; b.friGalaga = false; }
-  s.bytte = { x: .5, bomber: [], bombeT: .3, figur: (Math.random() * 9) | 0, mål: .96, tekstT: 0, smørT: 0, sprut: [], y: .22 }; // Krogh 2.25: nesten helt dekket (96 %; rutene der boblen går, blir nesten aldri dekket).
+  s.bossYMål = null; s.bytte = { x: .5, bomber: [], bombeT: .3, figur: (Math.random() * 9) | 0, mål: .9, tekstT: 0, smørT: 0, sprut: [], y: .22 }; // Krogh 2.25: nesten helt dekket (96 %; rutene der boblen går, blir nesten aldri dekket).
   s.tekster.push({ txt: "ALIEN SWITCH!", x: .5, y: .7, liv: 2, farge: "#6dff8a" });
   // Ingen power-ups for flipperen mens du er bossen, og de den hadde, forsvinner.
   s.eff = { W: 0, B: 0, G: 0, A: 0, F: 0, K: 0 }; s.kapsler = []; s.smaa = []; s.skudd = [];
@@ -6918,16 +6926,17 @@ function shByttetSteg(dt) {
   // Du styrer bossen med samme bevegelse som flipperen. Flipperen følger ballen av seg selv.
   const mål = s.bossMål ?? (shPekr && !shPekr.dratt ? (shPekr.sistX - shG.fx) / shG.fw : B.x);
   B.x += shClamp(shClamp(mål, .03, .97) - B.x, -2.3 * dt, 2.3 * dt); // Krogh 2.21: raskere, så du rekker å vinne som boss.
-  B.yT = (B.yT || 0) - dt; if (B.yT <= 0) { B.yT = 1.5 + Math.random() * 2; B.yMål = .19 + Math.random() * .1; } // Krogh 2.25: hele bossen synes alltid.
+  B.yT = (B.yT || 0) - dt; if (s.bossYMål != null) B.yMål = s.bossYMål; else if (B.yT <= 0) { B.yT = 1.5 + Math.random() * 2; B.yMål = .19 + Math.random() * .1; } // Krogh 2.26: du styrer bossen opp og ned.
   // Krogh 2.25: vippingen ble lagt oppå hvert bilde og vokste til ±0,2 (bossen fløy nesten ut av skjermen). Nå er den en fast vugge rundt en rolig bane.
-  B.yBase = (B.yBase ?? B.y ?? .22) + ((B.yMål ?? .22) - (B.yBase ?? B.y ?? .22)) * Math.min(1, dt * 1.2); B.y = B.yBase + Math.sin((B.alder || 0) * 2.3) * .008;
+  B.yBase = (B.yBase ?? B.y ?? .22) + ((B.yMål ?? .22) - (B.yBase ?? B.y ?? .22)) * Math.min(1, dt * (s.bossYMål != null ? 6 : 1.2)); B.y = B.yBase + Math.sin((B.alder || 0) * 2.3) * .008;
   const lav = s.baller.filter(b => !b.fast).reduce((a, b) => !a || b.y > a.y ? b : a, null);
   if (lav) s.padX = shClamp(s.padX + shClamp(lav.x - s.padX, -.65 * dt, .65 * dt), s.padW / 2, 1 - s.padW / 2);
   B.bombeT -= dt;
   // Etter 40 sekunder blir bossen sliten: mindre bomber, og etter 80 sekunder ingen. Da vinner flipperen til slutt.
-  B.alder = (B.alder || 0) + dt; B.tekstT += dt; B.kraft = Math.max(.4, 1 - Math.max(0, B.alder - 36) / 14);
-  if (B.alder >= 50) { shBossTap(true); return; }
-  if (B.alder > 36 && !B.sliten) { B.sliten = true; s.tekster.push({ txt: "THE BOSS IS TIRING", x: .5, y: .45, liv: 1.6, farge: "#ff7ad9" }); }
+  // Krogh 2.26: han hadde aldri vunnet som boss. Mer tid (sliten etter 50 s, slutt etter 65 s) og 90 % holder.
+  B.alder = (B.alder || 0) + dt; B.tekstT += dt; B.kraft = Math.max(.4, 1 - Math.max(0, B.alder - 50) / 15);
+  if (B.alder >= 65) { shBossTap(true); return; }
+  if (B.alder > 50 && !B.sliten) { B.sliten = true; s.tekster.push({ txt: "THE BOSS IS TIRING", x: .5, y: .45, liv: 1.6, farge: "#ff7ad9" }); }
   // Står du stille, faller bombene tett i en søyle og stivner til sement: du kan bygge vegger og stenge boblen inne.
   B.stille = Math.abs(B.x - (B.sistX ?? B.x)) < .0015 ? (B.stille || 0) + dt : 0; B.sistX = B.x;
   const hard = B.stille > .35;
@@ -7063,8 +7072,11 @@ function shByttetTegn(x, f, s) {
   x.font = `600 ${.054 * f}px "IBM Plex Sans", sans-serif`; x.fillText("YOU ARE THE BOSS", tx, ty);
   x.shadowBlur = 10; x.fillStyle = "#6dff8a"; x.font = `500 ${.028 * f}px "IBM Plex Sans", sans-serif`; x.fillText("COVER THE PAINTING · BEAT THE FLIPPER", tx, ty + f * .042);
   x.restore();
-  // Krogh 2.21: ingen strek. Et tall ved hodet viser hvor nær du er seieren (100 % = vunnet).
-  { const fs = f * .04, høyre = X < f * .7; shTallTegn(x, Math.min(100, Math.round(dekket / B.mål * 100)) + "%", X + (høyre ? R * 1.05 : -R * 1.05), Math.max(fs * 1.2, Y - R * .15), fs, "#6dff8a", høyre ? "left" : "right"); }
+  // Krogh 2.26: hvor mye av bildet som er dekket (ikke bossens kraft), og hvor mye som er igjen til du vinner.
+  { const fs = f * .05, høyre = X < f * .7, px = X + (høyre ? R * 1.05 : -R * 1.05), py = Math.max(fs * 1.2, Y - R * .2), pr = Math.floor(dekket * 100), igjen = Math.max(0, Math.ceil(B.mål * 100) - pr);
+    shTallTegn(x, pr + "%", px, py, fs, "#6dff8a", høyre ? "left" : "right");
+    x.save(); x.textAlign = høyre ? "left" : "right"; x.font = `600 ${f * .022}px "IBM Plex Sans", sans-serif`; x.shadowColor = "#000"; x.shadowBlur = 6; x.fillStyle = "#c8ffd4";
+    x.fillText("COVERED · " + igjen + " % TO GO", px, py + fs * .55); x.restore(); }
 }
 // SNAKE: flipperen skyter opp en selvlysende slange. Den slynger seg mot gjørma og spiser den lag for lag,
 // blir lengre og tykkere, og når den er mett, krøller den seg til en tung, lysende klump som faller ned.
@@ -9291,6 +9303,8 @@ function shBevegBall(b, dt) {
   if (s.side && shSideTreff(b, R)) return;
   for (const h of s.levende) {
     if (!h.aktiv || h.dekket || s.tid - h.sist < .45) continue;
+    // Krogh 2.26: munn og virvel hviler etter at de har spyttet ut, så boblen ikke går i loop. Da går den rett over.
+    if ((h.t === "munn" || h.t === "virvel") && (s.tid < (h.hvile || 0) || s.tid < (b.fangFri || 0))) continue;
     const dx = b.x - h.x, dy = b.y - h.fy, d = Math.hypot(dx, dy);
     if (d > h.r + R * .5) continue;
     if ((h.t === "munn" || h.t === "virvel") && !h.holder) { shFang(b, h); return; }
@@ -9351,6 +9365,8 @@ function shOppdater(dt) {
   if (s.soppOverg < 1) s.soppOverg = Math.min(1, s.soppOverg + dt / 1.3);
   if (s.soppTilbake < 1) s.soppTilbake = Math.min(1, s.soppTilbake + dt / 1.1);
   s.padX = shClamp(s.padX, s.padW / 2, 1 - s.padW / 2);
+  { const mål = s.toP || s.sopp > 0 ? 0 : s.bytte ? 0 : s.padLøftMål ?? 0; s.padLøft = (s.padLøft || 0) + shClamp(mål - (s.padLøft || 0), -1.6 * dt, 1.6 * dt); if (!Number.isFinite(s.padLøft)) s.padLøft = 0;
+    SH_PY = SH_PY0 - s.padLøft; }
   // Hvor fort flipperne flyttes: boble-slangen sikter den veien.
   s.padV = (s.padV || 0) * .8 + (s.padX - (s.padXFør ?? s.padX)) / Math.max(dt, 1e-3) * .2; s.padXFør = s.padX;
   if (s.toP) {
