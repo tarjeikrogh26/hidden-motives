@@ -4712,8 +4712,8 @@ let SH_TOPP = 0.13; const SH_P2Y = 0.1;
 // Feltets høyde følger skjermen, så staven står nær bunnen. Settes i shOppsett.
 let SH_H = 1.45, SH_PY = 1.36, SH_PY0 = 1.36;
 // Krogh 2.26: flipperne kan styres litt opp, som romskipet i Galaga (bare med én spiller). SH_PY er flipperens høyde nå.
-const SH_LØFT_MAKS = .4, SH_SENK_MAKS = .15; // Krogh 2.26: helt ned til bunnen og lenger opp
-const shLøftMaks = () => Math.max(.1, Math.min(SH_LØFT_MAKS, SH_PY0 - (SH_TOPP + 1) - .08));
+const SH_SENK_MAKS = .15; // Krogh 2.26: helt ned til bunnen, og opp over hele bildet (helt til toppen av det)
+const shLøftMaks = () => Math.max(.1, SH_PY0 - SH_TOPP - .1);
 const KAPSLER = [
   { t: "W", navn: "WIDE", hva: "WIDER FLIPPERS", farge: "#ffd23a", vekt: 5, edel: "gull" },
   { t: "S", navn: "SLOW", hva: "A SLOWER BUBBLE", farge: "#ff9a3c", vekt: 4, edel: "blaa" },
@@ -6063,7 +6063,7 @@ function shOppsett() {
   c.width = Math.round(W * dpr); c.height = Math.round(H * dpr); c.style.width = W + "px"; c.style.height = H + "px";
   const topp = $("shHud").getBoundingClientRect().bottom + 6;
   const fri = H - topp - 10;
-  const toP = !!sh.toP, fw = Math.max(120, Math.min(W - 16, fri / (toP ? 1.95 : 1.62)));
+  const toP = !!sh.toP, fw = Math.max(120, Math.min((W - 16) / (SH_RAMME_UT && !toP ? 1 + 2 * SH_RUT : 1), fri / (toP ? 1.95 : 1.62)));
   const gml = SH_PY;
   SH_H = toP ? Math.min(2.3, Math.max(1.95, fri / fw)) : Math.min(2, Math.max(1.62, fri / fw)); SH_PY0 = SH_H - 0.2; SH_PY = SH_PY0 - (sh.toP ? 0 : sh.padLøft || 0);
   for (const b of sh.baller) if (b.fast) b.y = shHvileY(b);
@@ -6207,7 +6207,7 @@ function shPek(e) {
   const dy = shPekr.y - e.clientY, dyFri = Math.sign(dy) * Math.max(0, Math.abs(dy) - 12); if (Math.abs(dy) > 12) shPekr.dratt = true;
   if (shPekr.dratt) sh.padMål = shClamp(shPekr.pad + (e.clientX - shPekr.x) / shG.fw * 1.3, sh.padW / 2, 1 - sh.padW / 2);
   // Opp og ned: flipperne løftes litt; som bossen styrer du bossen opp og ned.
-  if (shPekr.dratt && !sh.toP) { if (sh.bytte) sh.bossYMål = shClamp((shPekr.bossY ?? sh.bytte.y) - dyFri / shG.fw * 1.3, .1, SH_TOPP + .55); else if (!(sh.sopp > 0)) sh.padLøftMål = shClamp(shPekr.løft - dyFri / shG.fw * -1.3, -SH_SENK_MAKS, shLøftMaks()); }
+  if (shPekr.dratt && !sh.toP) { if (sh.bytte) sh.bossYMål = shClamp((shPekr.bossY ?? sh.bytte.y) - dyFri / shG.fw * 1.3, .1, SH_TOPP + .55); else if (!(sh.sopp > 0)) { const gain = 1.3 * (1 + .25 * Math.min(1, Math.abs(dyFri) / (shG.fw * .25))); sh.padLøftMål = shClamp(shPekr.løft + dyFri / shG.fw * gain, -SH_SENK_MAKS, shLøftMaks()); } } // lange drag går 25 % fortere
   // Som bossen: egen styring, helt ut til kantene, regnet fra der bossen var da du satte ned fingeren.
   if (shPekr.dratt && sh.bytte) sh.bossMål = shClamp((shPekr.boss ?? sh.bytte.x) + (e.clientX - shPekr.x) / shG.fw * 1.3, .03, .97);
   shPekr.sistX = e.clientX;
@@ -6503,12 +6503,15 @@ function shHjem(e, g) {
   const [x, y] = shHjem0(e, g); return [x, y + SH_TOPP - .01]; } // Krogh 2.26: formasjonen står øverst i bildet, under våpenknappene.
 function shHjem0(e, g) {
   const t = g.t, n = g.antall, i = e.nr % n;
+  if (g.form === "rader" && g.liten) { const rad = Math.floor(i / 8), kol = i % 8; return [.15 + kol * .1 + Math.sin(t * .7) * .05, .1 + rad * .065]; }
   if (g.form === "rader") { const rad = Math.floor(i / 5), kol = i % 5; return [.2 + kol * .15 + (rad % 2 ? .0375 : 0) + Math.sin(t * .9 + rad) * .07, .07 + rad * .085]; }
   if (g.form === "v") { const k = i - (n - 1) / 2; return [.5 + k * .085 + Math.sin(t * .8) * .05, .06 + Math.abs(k) * .035]; }
   if (g.form === "sirkel") { const a = t * .7 + i / n * Math.PI * 2; return [.5 + Math.cos(a) * .3, .2 + Math.sin(a) * .1]; }
   return [.5 + Math.sin(t * .6 + i * 1.3) * .36, .14 + Math.sin(t * 1.05 + i * 2.1) * .09];
 }
-const shFangbar = e => e.tilstand === "form" || e.tilstand === "dykk" || e.tilstand === "stup" || e.tilstand === "hent" || e.tilstand === "hjem" || (e.tilstand === "inn" && e.t > .3);
+const shFangbar = e => (e.liten && e.tilstand === "inn") ? false : e.tilstand === "form" || e.tilstand === "dykk" || e.tilstand === "stup" || e.tilstand === "hent" || e.tilstand === "hjem" || (e.tilstand === "inn" && e.t > .3);
+// De små Galaga-aliensene flyr inn fra sidene (ikke opp av jorda), tåler ett skudd og bomber sjeldnere hver for seg.
+function shSmåAlien(e, n) { e.hp = 1; e.liten = true; if (e.tilstand === "klekk") { const side = n % 2 ? 1.12 : -.12; Object.assign(e, { tilstand: "inn", x: side, y: -.05, fx: side, fy: -.05 }); } e.t = -n * .09; e.bombeT = 4 + Math.random() * 6; }
 function shNyFiende(n, nr, fra) {
   const side = n % 2 ? 1.15 : -.15, y0 = sh?.toP ? SH_TOPP + .35 + Math.random() * .3 : -.1;
   const e = { nr, figur: nr, x: fra ? fra[0] : side, y: fra ? fra[1] : y0, fx: fra ? fra[0] : side, fy: fra ? fra[1] : y0, t: fra ? 0 : -n * .14, tilstand: "inn", fase: Math.random() * 6, bombeT: 1.5 + Math.random() * 3, hp: 3, blink: 0 };
@@ -6586,9 +6589,11 @@ function shGalagaStart(boss = false) {
   if (s.toP) boss = true; // 2P: alltid bossen, med aliens rundt seg.
   s.lamper = 0; s.galagaKommet = true;
   // Krogh 2.26: aliens i formasjon, på rekke og rad (eller i V), som i Galaga. Fem til åtte om gangen.
-  const form = Math.random() < .65 ? "rader" : "v", N = boss ? 2 : 5 + ((Math.random() * 4) | 0);
+  // Krogh 2.26: oftest mange små Galaga-aliens på rad (tre rader med åtte); av og til en scene med de store side-aliensene med vinger.
+  const liten = !boss && !s.toP && Math.random() < .7, form = liten ? "rader" : Math.random() < .65 ? "rader" : "v", N = boss ? 2 : liten ? 16 + ((Math.random() * 9) | 0) : 5 + ((Math.random() * 4) | 0);
   const fiender = []; for (let n = 0; n < N; n++) fiender.push(shNyFiende(n, n));
-  s.galaga = { t: 0, fiender, bomber: [], dykkT: 2.5, fanget: 0, antall: boss ? 6 : Math.max(4, N), form: boss ? "sverm" : form, nesteNr: N, bolge: 1, bolger: boss ? 1 : 2,
+  if (liten) fiender.forEach((e, n) => shSmåAlien(e, n));
+  s.galaga = { t: 0, liten, fiender, bomber: [], dykkT: 2.5, fanget: 0, antall: boss ? 6 : Math.max(4, N), form: boss ? "sverm" : form, nesteNr: N, bolge: 1, bolger: boss ? 1 : 2,
     boss: boss ? { x: s.toP ? -.3 : .5, y: s.toP ? SH_TOPP + .5 : -.3, hp: 45, maks: 45, figur: (Math.random() * 9) | 0, tilstand: "inn", t: 0, blink: 0, spawnT: 4, bombeT: 2.5, dryppT: 3.5, rot: 0 } : null };
   if (boss) { const E = SH_BOSS_EGEN[shBossEgen(s)]; s.galaga.boss.egen = shBossEgen(s); s.tekster.push({ txt: "BOSS!", x: .5, y: .42, liv: 2.2, farge: "#ff5a6a" }, { txt: E.hva, x: .5, y: .49, liv: 2.6, fade: 1.2, farge: "#ffd0d0", liten: true, kapsel: true }); }
   else s.tekster.push({ txt: N === 1 ? "ALIEN!" : N + " ALIENS!", x: .5, y: .45, liv: 1.4, farge: "#7fe8ff" });
@@ -6612,6 +6617,11 @@ function shNyGjorme(x, y, rad, tak = 2, stille = false) {
 }
 function shInnkaps(e) {
   const s = sh, g = s.galaga;
+  // Krogh 2.26: de små Galaga-aliensene sprekker bare, som i originalen: et lite smell av lys og skum.
+  if (e.liten) { e.tilstand = "borte"; g.fanget++; s.poeng += 100; shHud(); shLyd("pop"); shStov(e.x, e.y, 22, "255,240,210", .22); shStov(e.x, e.y, 10, "120,230,255", .16);
+    for (let n = 0; n < 5; n++) shStjerne(e.x + (Math.random() - .5) * .04, e.y + (Math.random() - .5) * .04, .5, n * .03);
+    for (let n = 0; n < 10; n++) if (s.skum.length < 440) s.skum.push({ x: e.x + (Math.random() - .5) * .04, y: e.y + (Math.random() - .5) * .04, r: .002 + Math.random() * .004, liv: 1, fart: 1.6 });
+    if (Math.random() < .08) s.smaa.push(shSmaaNy(e.x, e.y, true)); return; }
   // Tar du den som var på vei hjem med hjelperen din, kommer hjelperen tilbake.
   if (e.tilstand === "hjem" && e.bror != null && s.wingmen.length < 2) { s.wingmen.push({ figur: e.bror, side: s.wingmen.some(w => w.side === e.hside) ? -e.hside : e.hside, klar: true, fase: e.fase }); s.tekster.push({ txt: "BRO STAYS! +200", x: shClamp(e.x, .2, .8), y: e.y - .07, liv: 1.4, farge: "#9dff7a" }); s.poeng += 200; e.bror = null; }
   else if (e.tilstand === "hent") s.tekster.push({ txt: "NOT TODAY, BRO!", x: shClamp(e.x, .2, .8), y: e.y - .07, liv: 1.3, farge: "#9dff7a", liten: true });
@@ -6674,7 +6684,7 @@ function shGalagaSteg(dt) {
         else { e.tilstand = "stup"; e.side = e.x < .5 ? -.2 : 1.2; }
       }
       e.bombeT -= dt;
-      if (e.bombeT <= 0) { e.bombeT = (1.3 + Math.random() * 2) * (.4 + .6 * andel);
+      if (e.bombeT <= 0) { e.bombeT = (1.3 + Math.random() * 2) * (.4 + .6 * andel) * (e.liten ? 3.5 : 1);
         if (s.toP) g.bomber.push(shBombe2P(e.x, e.y, .18, .05 + Math.random() * .35));
         else g.bomber.push({ x: e.x, y: e.y + .02, vy: .18, mål: SH_TOPP + .15 + Math.random() * .75 }); }
     } else if (e.tilstand === "dykk") {
@@ -6727,6 +6737,11 @@ function shGalagaSteg(dt) {
     } else if (e.tilstand === "boble") {
       e.bt += dt; e.y -= (.12 + e.bt * .25) * dt; e.x += Math.sin(e.bt * 4 + e.fase) * .05 * dt;
       if (e.y < -.08) e.tilstand = "borte";
+      else if (e.bt > e.sprekkT && shG && shMon(e.figur)?.m3 && figUtFly(shMon(e.figur).m3, shG.fx + e.x * shG.fw, shG.fy + e.y * shG.fw, shG.fw * .135 * (FLY_ANIM[shMon(e.figur).m3]?.stor || 1), { treff: true })) {
+        // Krogh 2.26: boblen sprekker, og figuren hopper opp av skjermen mot deg (større og større), som når brettet er ferdig.
+        e.tilstand = "borte"; shLyd("pop"); shStov(e.x, e.y, 16, "200,240,255", .2);
+        for (let n = 0; n < 10; n++) s.skum.push({ x: e.x + (Math.random() - .5) * .05, y: e.y + (Math.random() - .5) * .05, r: .002 + Math.random() * .005, liv: 1, fart: 1.5 });
+      }
       else if (e.utgang === "sprekk" && e.bt > e.sprekkT) {
         e.tilstand = "kastet"; e.vx = (e.x < .5 ? -1 : 1) * (Math.random() < .2 ? -1 : 1) * (.45 + Math.random() * .5); e.vy = -.3 - Math.random() * .3; e.spinn = (Math.random() - .5) * 20; e.rot = 0;
         shLyd("pop"); shStov(e.x, e.y, 14, "200,240,255", .2);
@@ -6764,7 +6779,7 @@ function shGalagaSteg(dt) {
     // Første bølge er tatt: en ny formasjon kommer inn fra sidene.
     g.bolge++; s.poeng += 1000; shHud();
     const form = g.form === "rader" ? "v" : "rader", N = form === "v" ? 9 : 10;
-    g.form = form; g.antall = N; g.nesteNr = N; g.dykkT = 3; g.fiender = []; for (let n = 0; n < N; n++) { const e = shNyFiende(n, n); e.t -= Math.floor(n / 4) * 4.5; g.fiender.push(e); }
+    g.form = g.liten ? "rader" : form; const N2 = g.liten ? 24 : N; g.antall = N2; g.nesteNr = N2; g.dykkT = 3; g.fiender = []; for (let n = 0; n < N2; n++) { const e = shNyFiende(n, n); if (g.liten) shSmåAlien(e, n); else e.t -= Math.floor(n / 4) * 4.5; g.fiender.push(e); }
     s.tekster.push({ txt: "WAVE 2!", x: .5, y: .45, liv: 1.8, farge: "#7fe8ff" }); shLyd("invasjon");
   }
   if (!g.boss && g.fiender.every(e => e.tilstand === "borte") && !g.bomber.length) {
@@ -9649,7 +9664,7 @@ function shOppdater(dt) {
   for (const q of s.skudd) {
     if (!Number.isFinite(q.x) || !Number.isFinite(q.y)) { q.borte = true; if (!shSteg.nanVist) { shSteg.nanVist = true; console.warn("Skudd med NaN", JSON.stringify(q)); } continue; }
     if (q.samle && q.y <= q.samle.cy) { q.vx = q.samle.vx; q.vy = q.samle.vy; q.samle = null; }
-    if (skuddMål && !q.samle) { const m = shVapenMål(q.x, q.y) || (() => { const F = (s.fly?.liste || []).filter(e => e.pop < 0 && !e.ferdig); let b = null, d = 9; for (const e of F) { const y = e.yv ?? e.y, dd = Math.hypot(e.x - q.x, y - q.y); if (dd < d) { d = dd; b = { x: e.x, y }; } } return b; })();
+    if (skuddMål && !q.samle && !s.galaga?.liten) { const m = shVapenMål(q.x, q.y) || (() => { const F = (s.fly?.liste || []).filter(e => e.pop < 0 && !e.ferdig); let b = null, d = 9; for (const e of F) { const y = e.yv ?? e.y, dd = Math.hypot(e.x - q.x, y - q.y); if (dd < d) { d = dd; b = { x: e.x, y }; } } return b; })();
       if (m && m.y < q.y) { const sp = Math.hypot(q.vx, q.vy) || 1, a = Math.atan2(m.y - q.y, m.x - q.x), ønsket = Math.cos(a) * sp; q.vx += (ønsket - q.vx) * Math.min(1, dt * 2.2); q.vy = -Math.sqrt(Math.max(.01, sp * sp - q.vx * q.vx)); } }
     q.x += q.vx * dt; q.y += q.vy * dt;
     if (q.x < .01 || q.x > .99) q.vx = -q.vx;
@@ -9662,7 +9677,7 @@ function shOppdater(dt) {
       if (e) { e.tilstand = "boble"; e.bt = 0; s.poeng += 300; shHud(); shLyd("innkapsle"); s.tekster.push({ txt: "+300", x: e.x, y: e.y - .04, liv: .8, farge: "#7fe8ff", liten: true }); q.borte = true; continue; }
     }
     if (s.galaga) {
-      const e = s.galaga.fiender.find(e => shFangbar(e) && Math.hypot(e.x - q.x, e.y - q.y) < .045);
+      const e = s.galaga.fiender.find(e => shFangbar(e) && Math.hypot(e.x - q.x, e.y - q.y) < (e.liten ? .03 : .045));
       if (e) {
         q.borte = true;
         if (e.tilstand === "hent" || e.tilstand === "hjem") { if (s.tid - (e.treffT ?? -9) < .2) continue; e.treffT = s.tid; }
@@ -12394,7 +12409,14 @@ function shBankTreff(s, x, y, r, lag = 1, kjøl = 0) { const B = s.bank; if (!B 
 function shBankSteg(s, dt) { const B = s.bank; if (!B) return; for (let i = 0; i < SH_BANK_N; i++) if (B.vist[i] !== B.lag[i]) { B.vist[i] += (B.lag[i] - B.vist[i]) * Math.min(1, dt * 7); if (Math.abs(B.vist[i] - B.lag[i]) < .01) B.vist[i] = B.lag[i]; } }
 // Krogh 2.26: bildet i BUBBLE får rammen fra PEACE (hvitt passepartout, tynn fas, svart list), så bildekanten ikke er så brå.
 // Hele bildet står inni rammen; gjørma ligger over både bildet og rammen og renner over kanten. SH_RAMME = false slår det av.
-const SH_RAMME = true, SH_RAMME_T = .065;
+const SH_RAMME = false, SH_RAMME_T = .065; // rammen inni bildet (prøvd først, dekket av gjørma)
+// Krogh 2.26: rammen står UTENFOR bildet, så den alltid synes. Hele bildet er med; gjørma renner over den nederste lista.
+const SH_RAMME_UT = true, SH_RUT = .045;
+function shRammeUtTegn(x, f, iy) {
+  const T = SH_RUT * f, M = T * .45, l = Math.max(1, f / 500), r = (d, farge) => { x.fillStyle = farge; x.fillRect(-d, iy - d, f + 2 * d, f + 2 * d); };
+  x.save(); x.shadowColor = "rgba(0,0,0,.6)"; x.shadowBlur = T * .8; x.shadowOffsetY = T * .25; r(T + l, "#6a645d"); x.restore();
+  r(T, "#121110"); r(M + 2 * l, "#2b2927"); r(M + l, "#d6d3cc"); r(M, "#fbfaf6");
+}
 function shRammeKunst(kx, img, ks) {
   const T = Math.round(ks * SH_RAMME_T), M = Math.round(T * .45), l = Math.max(1, Math.round(ks / 700)), a = T - M - 2 * l, f = (inn, farge) => { kx.fillStyle = farge; kx.fillRect(inn, inn, ks - 2 * inn, ks - 2 * inn); };
   f(0, "#6a645d"); f(l, "#000"); f(2 * l, "#121110"); f(a, "#2b2927"); // tynn lys ytterkant, så lista synes mot den mørke bakgrunnen f(a + l, "#d6d3cc"); f(a + 2 * l, "#fbfaf6");
@@ -12706,6 +12728,7 @@ function shTegn(t) {
   x.save(); x.translate(g.fx, g.fy);
   if (s.rist > 0) x.translate((Math.random() - .5) * s.rist * f * .03, (Math.random() - .5) * s.rist * f * .03);
   x.fillStyle = "#0d0c0b"; x.fillRect(0, 0, f, SH_H * f);
+  if (SH_RAMME_UT && !s.toP) shRammeUtTegn(x, f, SH_TOPP * f);
   x.beginPath(); x.rect(0, 0, f, SH_H * f); x.clip();
   // Kunsten under møkka, ferdig skalert til feltet (lages på nytt bare når størrelsen endres).
   const ks = Math.round(f * g.dpr);
@@ -12897,9 +12920,9 @@ function shTegn(t) {
     if (s.fugl) { const F = s.fugl; tegnFigur(mon(F.figur), F.x * f, F.y * f, .045 * f, Math.sin(s.tid * 3 + F.fase) * .12, true, F.retn > 0, Math.sin(s.tid * 16 + F.fase) * .4); }
     if (s.kratere?.length) { s.kratere = s.kratere.filter(q => s.tid - q.t0 < 2.5); for (const q of s.kratere) shKraterTegn(x, q.x * f, q.y * f, .05 * f, 1 - (s.tid - q.t0) / 2.5, s.jord); }
     if (s.galaga) {
-      const g = s.galaga, R = .05 * f;
+      const g = s.galaga, R0 = .05 * f;
       for (const q of g.bomber) shKlattTegn(x, q.x * f, q.y * f, (q.stor ? .016 : q.drypp ? .012 : .008) * f, 1 + Math.min(1, q.vy * 2), s.jord, q.x * 9, s.tid);
-      for (const e of g.fiender) {
+      for (const e of g.fiender) { const R = e.liten ? R0 * .5 : R0;
         if (e.tilstand === "klekk") { if (e.t >= 0) shKlekkTegn(x, e.x * f, e.y * f, R, Math.min(1, e.t / 1.35), s.jord, e.fase, (XX, YY, RR) => tegnFigur(mon(e.figur), XX, YY, RR, 0, true, e.nr % 2, Math.sin(s.tid * 14 + e.fase) * .35)); continue; }
         if (e.tilstand === "borte" || (e.tilstand === "inn" && e.t < 0)) continue;
         const X = e.x * f, Y = e.y * f, slag = Math.sin(s.tid * (e.tilstand === "kastet" ? 30 : 14) + e.fase) * .35;
