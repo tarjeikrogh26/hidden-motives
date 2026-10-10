@@ -11152,7 +11152,7 @@ async function mgStart(i) {
   const par = MG_N * MG_R / 2, kilder = pool.slice(0, par), papir = UW_PAPIR[n % UW_PAPIR.length].bilde;
   const [under, bak, ...forsider] = await Promise.all([hentBilde(b.src), hentBilde(papir), ...kilder.map(s => hentBilde(s).catch(() => null))]);
   // Forsidene krympes til små, kvadratiske bilder (raskere å tegne).
-  const tommel = forsider.map(im => { const c = document.createElement("canvas"); c.width = c.height = 320; const x = c.getContext("2d"); if (im) { const s = Math.min(im.naturalWidth, im.naturalHeight); x.drawImage(im, (im.naturalWidth - s) / 2, (im.naturalHeight - s) / 2, s, s, 0, 0, 320, 320); } else { x.fillStyle = "#333"; x.fillRect(0, 0, 320, 320); } return c; });
+  const tommel = forsider.map(im => { const c = document.createElement("canvas"); c.width = c.height = 320; const x = c.getContext("2d"); if (im) { const s = Math.min(im.naturalWidth, im.naturalHeight); x.translate(160, 160); x.rotate(MG_SNU); x.drawImage(im, (im.naturalWidth - s) / 2, (im.naturalHeight - s) / 2, s, s, -160, -160, 320, 320); } else { x.fillStyle = "#333"; x.fillRect(0, 0, 320, 320); } return c; });
   const bakKort = mgBakside(bak);
   const ordning = []; for (let p = 0; p < par; p++) ordning.push(p, p); for (let k = ordning.length - 1; k > 0; k--) { const j = (Math.random() * (k + 1)) | 0; [ordning[k], ordning[j]] = [ordning[j], ordning[k]]; }
   const forrige = mg?.match; cancelAnimationFrame(mgRAF);
@@ -11170,6 +11170,9 @@ function mgBakside(im) {
   const lys = (r * .3 + g * .59 + b * .11) > 150; x.textAlign = "center"; x.textBaseline = "middle"; x.font = `600 ${N * .13}px "IBM Plex Sans", sans-serif`; x.letterSpacing = N * .02 + "px";
   x.fillStyle = lys ? "rgba(0,0,0,.28)" : "rgba(255,255,255,.3)"; x.fillText("DÉJÀ VU", N / 2, N / 2 + N * .01); return c;
 }
+// Krogh 2.26: alle bildene i DÉJÀ VU ligger på siden (toppen mot venstre kant). Da ser begge spillerne, én i hver ende,
+// bildene like riktig, og brettet trenger aldri snu seg.
+const MG_SNU = -Math.PI / 2;
 const MG_FUNNET = ["YOU FOUND A MATCH", "AMAZING, YOU FOUND A MATCH", "TWO OF A KIND", "A PERFECT PAIR", "DÉJÀ VU!", "SEEN IT BEFORE", "SNAP!", "SPOT ON", "WHAT A MEMORY", "THAT'S A MATCH"];
 // Tidslinjen når et par er funnet (sekunder): flyr opp, står i vifte, vokser til helskjerm, står, faller ned som stikk.
 const MG_T = [.45, 1.25, 1.65, 2.85, 3.35];
@@ -11196,28 +11199,30 @@ function mgVisTegn(x, L) {
   const V = mg.vis; if (!V) return; const t = V.t, e = k => 1 - (1 - Math.max(0, Math.min(1, k))) ** 3, W = L.W, H = L.H, cx = W / 2, cy = H / 2;
   const S1 = Math.min(L.f * .46, W * .42, H * .3), RTq = Math.round(Math.min(W, H) * .045), Q = Math.min(W, H) - 28 - 2 * RTq;
   const im = mg.store[V.par], iw = im?.naturalWidth || 1, ih = im?.naturalHeight || 1, fw = iw >= ih ? Q : Q * iw / ih, fh = iw >= ih ? Q * ih / iw : Q;
-  // For BLUE er hele visningen snudd 180° rundt midten; stikkets plass regnes om til den snudde rammen.
-  const n = mg.bunke[V.p].length + 1, st = mgStikkLokal(L, n - 1, n, V.par), [sx0, sy0] = mgTilSkjerm(L, V.p, st.x, st.y), [tx, ty] = V.p === 1 ? [W - sx0, H - sy0] : [sx0, sy0], tr = st.rot;
+  // Begge ser bildet likt (det ligger på siden). Til slutt glir paret over til siden til den som tok stikket.
+  const n = mg.bunke[V.p].length + 1, st = mgStikkLokal(L, n - 1, n, V.par), [tx, ty] = mgTilSkjerm(L, V.p, st.x, st.y), tr = st.rot + (V.p === 1 ? Math.PI : 0);
   const vifte = [[cx - S1 * .52, cy - S1 * .05, -.12], [cx + S1 * .52, cy - S1 * .05, .12]];
   const stikk = [[tx, ty, tr], [tx + Math.cos(tr) * st.s * .24 - Math.sin(tr) * st.s * -.06, ty + Math.sin(tr) * st.s * .24 + Math.cos(tr) * st.s * -.06, tr + .14]];
   // Mørk bakgrunn så paret står i fokus.
   const mørk = t < MG_T[3] ? e(t / .3) : 1 - e((t - MG_T[3]) / (MG_T[4] - MG_T[3]));
   x.save(); x.fillStyle = `rgba(6,5,8,${.62 * mørk})`; x.fillRect(0, 0, W, H); x.restore();
   // BLUE sitter på motsatt side: hele visningen snus mot den som fant paret.
-  x.save(); if (V.p === 1) { x.translate(cx, cy); x.rotate(Math.PI); x.translate(-cx, -cy); }
+  x.save();
   const kortTegn = (X, Y, w, h, rot, a, kilde) => { if (a <= 0) return; x.save(); x.globalAlpha = a; x.translate(X, Y); x.rotate(rot); x.shadowColor = "rgba(0,0,0,.55)"; x.shadowBlur = 14; x.fillStyle = "#fff"; x.fillRect(-w / 2 - 2, -h / 2 - 2, w + 4, h + 4); x.shadowBlur = 0; x.drawImage(kilde, -w / 2, -h / 2, w, h); x.restore(); };
   if (t < MG_T[1]) { const k = e(t / MG_T[0]), s0 = L.f / MG_N;
-    for (const j of [0, 1]) { const [sx, sy] = V.p === 1 ? [W - V.pos[j][0], H - V.pos[j][1]] : V.pos[j], [vx, vy, vr] = vifte[j], z = s0 + (S1 - s0) * k; kortTegn(sx + (vx - sx) * k, sy + (vy - sy) * k, z, z, vr * k, 1, mg.tommel[V.par]); }
-    const ta = e((t - .25) / .3); if (ta > 0) { const fs = Math.max(20, Math.min(W * .075, 46)), sk = 1 + .15 * (1 - ta); x.save(); x.globalAlpha = ta; x.translate(cx, cy + S1 * .42); x.scale(sk, sk); x.textAlign = "center"; x.textBaseline = "middle"; x.lineJoin = "round";
+    for (const j of [0, 1]) { const [sx, sy] = V.pos[j], [vx, vy, vr] = vifte[j], z = s0 + (S1 - s0) * k; kortTegn(sx + (vx - sx) * k, sy + (vy - sy) * k, z, z, vr * k, 1, mg.tommel[V.par]); }
+    const ta = e((t - .25) / .3); if (ta > 0) for (const side of [0, 1]) { const fs = Math.max(20, Math.min(W * .075, 46)), sk = 1 + .15 * (1 - ta); x.save(); x.globalAlpha = ta; x.translate(cx, cy); x.rotate(side * Math.PI); x.translate(0, S1 * .5 + fs * .9); x.scale(sk, sk); x.textAlign = "center"; x.textBaseline = "middle"; x.lineJoin = "round";
       x.font = `800 ${fs}px "IBM Plex Sans", sans-serif`; const fc = MG_FARGE[V.p]; x.shadowColor = "rgba(0,0,0,.9)"; x.shadowBlur = fs * .4; x.lineWidth = fs * .14; x.strokeStyle = "rgba(0,0,0,.55)"; x.strokeText(V.tekst, 0, 0);
       x.shadowColor = `rgba(${fc},1)`; x.shadowBlur = fs * .55; x.fillStyle = "#fff"; x.fillText(V.tekst, 0, 0); x.shadowBlur = fs * .2; x.fillText(V.tekst, 0, 0); x.restore(); } }
   else if (t < MG_T[3]) { const k = e((t - MG_T[1]) / (MG_T[2] - MG_T[1])), [ax, ay, ar] = vifte[0], [bx, by, br] = vifte[1];
     kortTegn(bx + (cx - bx) * k, by + (cy - by) * k, S1, S1, br * (1 - k), 1 - k, mg.tommel[V.par]);
     const w = S1 + (fw - S1) * k, h = S1 + (fh - S1) * k, X = ax + (cx - ax) * k, Y = ay + (cy - ay) * k, rot = ar * (1 - k);
-    x.save(); x.translate(X, Y); x.rotate(rot); if (k > 0) { x.globalAlpha = k; mgRamme(x, 0, 0, w, h, RTq * k); x.globalAlpha = 1; } x.drawImage(k > .3 && im ? im : mg.tommel[V.par], -w / 2, -h / 2, w, h); x.restore(); }
+    x.save(); x.translate(X, Y); x.rotate(rot);
+    if (k > .3 && im) { x.rotate(MG_SNU); x.globalAlpha = k; mgRamme(x, 0, 0, w, h, RTq * k); x.globalAlpha = 1; x.drawImage(im, -w / 2, -h / 2, w, h); }
+    else { if (k > 0) { x.globalAlpha = k; mgRamme(x, 0, 0, w, h, RTq * k); x.globalAlpha = 1; } x.drawImage(mg.tommel[V.par], -w / 2, -h / 2, w, h); } x.restore(); }
   else { const k = e((t - MG_T[3]) / (MG_T[4] - MG_T[3]));
-    for (const j of [1, 0]) { const [sx2, sy2, sr] = stikk[j], w = fw + (st.s - fw) * k, h = fh + (st.s - fh) * k; kortTegn(cx + (sx2 - cx) * k, cy + (sy2 - cy) * k, w, h, sr * k, j === 1 ? Math.min(1, k * 3) : 1, k < .5 && im ? im : mg.tommel[V.par]); }
-    if (k < .4) { x.save(); x.globalAlpha = 1 - k / .4; mgRamme(x, cx, cy, fw, fh, RTq); x.drawImage(im || mg.tommel[V.par], cx - fw / 2, cy - fh / 2, fw, fh); x.restore(); } }
+    for (const j of [1, 0]) { const [sx2, sy2, sr] = stikk[j], w = fh + (st.s - fh) * k, h = fw + (st.s - fw) * k; kortTegn(cx + (sx2 - cx) * k, cy + (sy2 - cy) * k, w, h, sr * k, j === 1 ? Math.min(1, k * 3) : 1, mg.tommel[V.par]); }
+    if (k < .4) { x.save(); x.globalAlpha = 1 - k / .4; x.translate(cx, cy); x.rotate(MG_SNU); mgRamme(x, 0, 0, fw, fh, RTq); x.drawImage(im || mg.tommel[V.par], -fw / 2, -fh / 2, fw, fh); x.restore(); } }
   x.restore();
 }
 function mgLayout() {
@@ -11244,7 +11249,8 @@ function mgTegn() {
   // Brettets bilde under kortene.
   // Bildene fyller det høye brettet: et utsnitt på midten (litt kuttet på sidene).
   const utsnitt = im => { const iw = im.naturalWidth, ih = im.naturalHeight, a = MG_N / MG_R; return iw / ih > a ? [(iw - ih * a) / 2, 0, ih * a, ih] : [0, (ih - iw / a) / 2, iw, iw / a]; };
-  { const [ux, uy, uw2, uh] = utsnitt(mg.under); x.drawImage(mg.under, ux, uy, uw2, uh, x0, y0, f, h); }
+  { const iw = mg.under.naturalWidth, ih = mg.under.naturalHeight, a = MG_R / MG_N, [ux, uy, uw2, uh] = iw / ih > a ? [(iw - ih * a) / 2, 0, ih * a, ih] : [0, (ih - iw / a) / 2, iw, iw / a];
+    x.save(); x.translate(x0 + f / 2, y0 + h / 2); x.rotate(MG_SNU); x.drawImage(mg.under, ux, uy, uw2, uh, -h / 2, -f / 2, h, f); x.restore(); }
   for (const k of mg.kort) { if (k.tatt) continue; const cx = k.k % MG_N, cy = (k.k / MG_N) | 0, sk = Math.abs(Math.cos(k.vis * Math.PI));
     const fu = k.flytt ? 1 - (1 - k.flytt.t) ** 3 : 1, X = x0 + (cx + (k.flytt ? k.flytt.dx * (1 - fu) : 0)) * s, Y = y0 + (cy + (k.flytt ? k.flytt.dy * (1 - fu) : 0)) * s;
     x.save(); x.translate(X + s / 2, Y + s / 2); if (skA > 0) x.rotate(Math.sin(mg.tid * 31 + k.k * 1.7) * .08 * skA); if (k.flytt) x.rotate(Math.sin(fu * Math.PI) * (k.k % 2 ? .3 : -.3)); x.scale(Math.max(.02, sk), 1);
