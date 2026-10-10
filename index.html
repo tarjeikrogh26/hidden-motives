@@ -635,6 +635,7 @@ body:has(.resultat.vis) #spill .linje{opacity:0;pointer-events:none;transition:o
 .shatter-knapp b{font-family:var(--display);font-weight:800;font-size:20px;letter-spacing:.08em;color:var(--signal)}
 .shatter-knapp span{font-size:13px;color:var(--demp)}
 #shatter{touch-action:none}
+#shatter.vegg{background:radial-gradient(ellipse at 50% 45%,#f08a2c 0%,#c9600f 100%)}
 #unwrap{touch-action:none;background:#14110d}
 #mind{touch-action:none;background:#14110d}
 #mgCanvas{position:absolute;inset:0;touch-action:none}
@@ -1284,10 +1285,19 @@ if (HIT_ALENE) modus = "hit";
 function velgModus(m) { if (HIT_ALENE) m = "hit"; modus = m; try { localStorage.setItem("sm-modus", m); } catch {} tegnMeny(); }
 function plasserVariant() { { const mt = $("modusTekst"), rad = document.querySelector(".moduser"); if (mt && rad) { mt.style.maxWidth = rad.offsetWidth + "px"; mt.style.width = rad.offsetWidth + "px"; } }
   const vr = $("variant"), valgt = $(modus === "pusle" ? "modusPuslespill" : modus === "unwrap" ? "modusUnwrap" : modus === "hit" ? "modusHit" : "modusScrub"); if (!vr || !valgt) return; vr.style.paddingLeft = ""; vr.style.marginLeft = "0px"; vr.style.minWidth = "";
-  if (innerWidth < 600) { vr.style.minWidth = valgt.offsetWidth + "px"; const gear = $("tannhjul"), W = vr.parentElement?.clientWidth || innerWidth, høyre = valgt.offsetLeft + valgt.offsetWidth / 2 > W * .66;
+  if (innerWidth < 600) {
+    // Krogh 2.26: bryteren er nøyaktig like bred som knappen over og står rett under den. Skriften krymper til den får plass.
+    const bw = valgt.offsetWidth, kn = [...vr.querySelectorAll("button")]; vr.style.width = bw + "px"; vr.style.minWidth = bw + "px"; let fs = 10.5, ls = .09;
+    const KORT = { "1 PLAYER": "1P", "2 PLAYERS": "2P" }; kn.forEach(k => { if (k.dataset.full) k.textContent = k.dataset.full; });
+    const sett = () => kn.forEach(k => { k.style.setProperty("font-size", fs + "px", "important"); k.style.setProperty("letter-spacing", ls + "em", "important"); k.style.setProperty("padding", "6px 3px", "important"); k.style.whiteSpace = "nowrap"; });
+    const passer = () => !(vr.scrollWidth > vr.clientWidth + 1 || kn.some(k => k.scrollWidth > k.clientWidth + 1));
+    sett(); while (!passer() && fs > 6.5) { fs -= .5; ls = Math.max(.02, ls - .01); sett(); }
+    // For liten skrift: korte navn (1P | 2P) i stedet, så det kan leses.
+    if (fs < 8.5 && kn.some(k => KORT[k.textContent.trim()])) { kn.forEach(k => { const t = k.textContent.trim(); if (KORT[t]) { k.dataset.full = t; k.textContent = KORT[t]; } }); fs = 10.5; ls = .09; sett(); while (!passer() && fs > 6.5) { fs -= .5; ls = Math.max(.02, ls - .01); sett(); } }
+    const gear = $("tannhjul"), W = vr.parentElement?.clientWidth || innerWidth, høyre = valgt.offsetLeft + valgt.offsetWidth / 2 > W * .66;
     if (gear) { gear.style.right = høyre ? "auto" : ""; gear.style.left = høyre ? "0px" : ""; }
-    const ml = valgt.offsetLeft + valgt.offsetWidth / 2 - vr.offsetWidth / 2 - vr.offsetLeft, lo = høyre ? 50 : 0, hi = W - vr.offsetWidth - (høyre ? 0 : 50);
-    vr.style.marginLeft = Math.max(lo, Math.min(hi, ml)) + "px"; return; }
+    vr.style.marginLeft = Math.max(0, valgt.offsetLeft - vr.offsetLeft) + "px"; return; }
+  vr.style.width = ""; vr.querySelectorAll("button").forEach(k => { if (k.dataset.full) { k.textContent = k.dataset.full; delete k.dataset.full; } k.style.removeProperty("font-size"); k.style.removeProperty("letter-spacing"); k.style.removeProperty("padding"); });
   { const gear = $("tannhjul"); if (gear) { gear.style.right = ""; gear.style.left = ""; } }
   const plass = (vr.parentElement?.clientWidth || innerWidth) - vr.offsetWidth - 66; vr.style.marginLeft = Math.max(0, Math.min(plass, valgt.offsetLeft + valgt.offsetWidth / 2 - vr.offsetWidth / 2 - vr.offsetLeft)) + "px"; } // Krogh 2.25: midtstilt under knappen.
 // Krogh 2.26: på telefon kommer bildene først. Sesongtittel og episoder rett under modusene, så sesongene på én rad
@@ -5363,7 +5373,7 @@ async function shatterStart(i, poeng = 0, liv = null) {
   const niva = Math.min(6, i * .15 + (aktiv === BRUKER ? 0 : aktiv) * .5 + (toP ? 1.2 : 0)); // Krogh 2.25: mer møkk utover i spillet.
   stoppFest(); clearInterval(timer); spill = null;
   document.querySelectorAll(".bit").forEach(e => e.remove());
-  $("meny").hidden = true; $("spill").hidden = true; $("shatter").hidden = false; oppdaterTema(); $("kraftLinje").hidden = true;
+  $("meny").hidden = true; $("spill").hidden = true; $("shatter").hidden = false; $("shatter").classList.toggle("vegg", !!SH_VEGG && variant.scrub !== "2p"); oppdaterTema(); $("kraftLinje").hidden = true;
   const img = await hentBilde(BRETT[i].src);
   const tykk = shMoekk(niva); shBalanser(tykk);
   // De tre første brettene i spillet er lettere: rammen ett lag tynnere og ingen ekstra hard leire.
@@ -12411,7 +12421,7 @@ function shBankSteg(s, dt) { const B = s.bank; if (!B) return; for (let i = 0; i
 // Hele bildet står inni rammen; gjørma ligger over både bildet og rammen og renner over kanten. SH_RAMME = false slår det av.
 const SH_RAMME = false, SH_RAMME_T = .065; // rammen inni bildet (prøvd først, dekket av gjørma)
 // Krogh 2.26: rammen står UTENFOR bildet, så den alltid synes. Hele bildet er med; gjørma renner over den nederste lista.
-const SH_RAMME_UT = true, SH_RUT = .045;
+const SH_RAMME_UT = true, SH_RUT = .045, SH_VEGG = ["#f08a2c", "#c9600f"];
 function shRammeUtTegn(x, f, iy) {
   const T = SH_RUT * f, M = T * .45, l = Math.max(1, f / 500), r = (d, farge) => { x.fillStyle = farge; x.fillRect(-d, iy - d, f + 2 * d, f + 2 * d); };
   x.save(); x.shadowColor = "rgba(0,0,0,.6)"; x.shadowBlur = T * .8; x.shadowOffsetY = T * .25; r(T + l, "#6a645d"); x.restore();
@@ -12727,7 +12737,10 @@ function shTegn(t) {
   x.setTransform(g.dpr, 0, 0, g.dpr, 0, 0); x.clearRect(0, 0, innerWidth, innerHeight);
   x.save(); x.translate(g.fx, g.fy);
   if (s.rist > 0) x.translate((Math.random() - .5) * s.rist * f * .03, (Math.random() - .5) * s.rist * f * .03);
-  x.fillStyle = "#0d0c0b"; x.fillRect(0, 0, f, SH_H * f);
+  // Krogh 2.26: oransje vegg (som BUBBLE-logoen) i stedet for svart, så bildet og rammen henger på en vegg. SH_VEGG = null gir svart igjen.
+  if (SH_VEGG && !s.toP) { const vg = x.createRadialGradient(f / 2, (SH_TOPP + .5) * f, f * .2, f / 2, (SH_TOPP + .5) * f, f * 1.3); vg.addColorStop(0, SH_VEGG[0]); vg.addColorStop(1, SH_VEGG[1]); x.fillStyle = vg; }
+  else x.fillStyle = "#0d0c0b";
+  x.fillRect(0, 0, f, SH_H * f);
   if (SH_RAMME_UT && !s.toP) shRammeUtTegn(x, f, SH_TOPP * f);
   x.beginPath(); x.rect(0, 0, f, SH_H * f); x.clip();
   // Kunsten under møkka, ferdig skalert til feltet (lages på nytt bare når størrelsen endres).
