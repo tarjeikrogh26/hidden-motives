@@ -218,6 +218,12 @@ h1 .signatur{font-size:.55em;letter-spacing:.06em;white-space:nowrap}
 /* Tre stempler per brett: PIECE IT, BUBBLE IT, UNWRAP IT. Alle tre: kortet får gullkant. */
 .brett .stempler{display:flex;gap:3px;margin-bottom:5px}
 .brett .stempler i{width:14px;height:14px;border-radius:50%;border:1.2px solid rgba(255,255,255,.5);font:600 7.5px/11.6px var(--tall);font-style:normal;text-align:center;color:rgba(255,255,255,.6);background:rgba(0,0,0,.28);text-shadow:none;box-sizing:border-box}
+body.mob-meny .faner{display:flex!important;flex:0 0 auto;min-height:max-content;flex-wrap:nowrap;overflow-x:auto;scroll-snap-type:x proximity;gap:8px;margin-top:18px;padding-bottom:4px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+body.mob-meny .faner::-webkit-scrollbar{display:none}
+body.mob-meny .faner button{flex:0 0 auto;max-width:46vw;scroll-snap-align:center}
+body.mob-meny .faner button b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;hyphens:none;-webkit-hyphens:none}
+body.mob-meny .samling-tittel{margin-top:22px}
+@media (max-width:600px){.brett .status{display:none}}
 /* Krogh 2.26: på telefon var det mer tekst enn bilde på episodebildene. Bare små stempler og EPISODE-nummeret; navnet står når du åpner den. */
 @media (max-width:600px){.brett .navn{display:none}.brett .merke{padding:16px 7px 6px;background:linear-gradient(transparent,rgba(0,0,0,.45))}.brett .kode{font-size:9.5px;letter-spacing:.06em}.brett .stempler{gap:2px;margin-bottom:3px}.brett .stempler i{width:12px;height:12px;font-size:6.5px;line-height:9.6px}.brett .status{top:5px;right:6px;font-size:9px}}
 .brett .stempler i.ja{border-color:transparent;color:#fff;background:var(--sf);box-shadow:0 0 6px var(--sf)}
@@ -1246,6 +1252,7 @@ function tegnFaner() {
     b.onclick = () => { if (!sesongApen(j)) { banner("LOCKED", "WIN A WEEKLY RACE IN " + sesNavn(SAMLINGER[j - 1].nr).toUpperCase() + " · OR BUY IT WHEN ALL BOARDS ARE PLAYED", "#ffd27a", 3000); return; } velgSamling(j); tegnMeny(); };
     f.appendChild(b);
   });
+  requestAnimationFrame(() => { if (document.body.classList.contains("mob-meny")) { const v = f.querySelector('[aria-selected="true"]'); if (v) f.scrollLeft = v.offsetLeft - (f.clientWidth - v.offsetWidth) / 2; } });
   // USER SEASON: dine egne malte brett (fra FREEZE ALL ACTIVITY i UNWRAP IT).
   if (BRUKER_BRETT.length) { const b = document.createElement("button"); b.setAttribute("role", "tab"); b.setAttribute("aria-selected", String(aktiv === BRUKER)); b.className = "bruker-fane"; b.append("/US"); const n = document.createElement("b"); n.textContent = "User Season"; b.append(n);
     b.onclick = () => { velgSamling(BRUKER); tegnMeny(); if (BRUKER_BRETT.length > BRUKER_MAKS) banner("ONE TOO MANY", "THERE'S ROOM FOR ONE PAINTING · PICK ONE TO LET GO", "#9fe9ff", 4200); }; f.appendChild(b); }
@@ -1272,9 +1279,17 @@ if (HIT_ALENE) modus = "hit";
 function velgModus(m) { if (HIT_ALENE) m = "hit"; modus = m; try { localStorage.setItem("sm-modus", m); } catch {} tegnMeny(); }
 function plasserVariant() { { const mt = $("modusTekst"), rad = document.querySelector(".moduser"); if (mt && rad) { mt.style.maxWidth = rad.offsetWidth + "px"; mt.style.width = rad.offsetWidth + "px"; } }
   const vr = $("variant"), valgt = $(modus === "pusle" ? "modusPuslespill" : modus === "unwrap" ? "modusUnwrap" : modus === "hit" ? "modusHit" : "modusScrub"); if (!vr || !valgt) return; vr.style.paddingLeft = ""; vr.style.marginLeft = "0px";
-  // Krogh 2.26: på telefon står bryteren alltid midt under modusraden, ikke under knappen som er valgt (så det ser ryddig ut).
-  if (innerWidth < 600) { const rad = document.querySelector(".moduser"); if (rad) { vr.style.marginLeft = Math.max(0, rad.offsetLeft + rad.offsetWidth / 2 - vr.offsetWidth / 2 - vr.offsetLeft) + "px"; return; } }
   const plass = (vr.parentElement?.clientWidth || innerWidth) - vr.offsetWidth - 66; vr.style.marginLeft = Math.max(0, Math.min(plass, valgt.offsetLeft + valgt.offsetWidth / 2 - vr.offsetWidth / 2 - vr.offsetLeft)) + "px"; } // Krogh 2.25: midtstilt under knappen.
+// Krogh 2.26: på telefon kommer bildene først. Sesongtittel og episoder rett under modusene, så sesongene på én rad
+// du kan bla sidelengs i (det kommer mange sesonger), og albumet under. På iPad står alt som før.
+function mobilRekkefølge(smal) {
+  const f = $("faner"), al = $("albumKnapp"), liste = $("brettliste"), t = $("samlingTittel"); if (!f || !al || !liste || !t) return;
+  const er = document.body.classList.contains("mob-meny"); if (smal === er) return;
+  document.body.classList.toggle("mob-meny", smal);
+  if (smal) { liste.after(f); f.after(al); }
+  else { t.before(f); t.before(al); }
+  if (smal) f.querySelector('[aria-selected="true"]')?.scrollIntoView({ block: "nearest", inline: "center" });
+}
 function tilpassLogo() {
   const meny = $("meny"); if (!meny || meny.hidden) return;
   const cs = getComputedStyle(meny), bredde = meny.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
@@ -1297,6 +1312,7 @@ function tilpassLogo() {
   for (const l of navn.children) { l.style.fontSize = "100px"; const ls = parseFloat(getComputedStyle(l).letterSpacing) || 0, fs = Math.floor(100 * W / (l.offsetWidth - ls) * 10) / 10; l.style.fontSize = fs + "px"; l.style.marginRight = -ls * fs / 100 + "px"; størst = Math.max(størst, fs); }
   if (av) av.style.fontSize = Math.round(Math.max(12, Math.min(17, størst * .15))) + "px";
   $("faner").style.maxWidth = HIT_ALENE || smal ? "" : R + "px"; // Krogh 2.26: på telefon like bred som albumet og episodene.
+  mobilRekkefølge(smal);
   plasserVariant();
   if (gear) gear.style.top = smal && vr ? Math.round(vr.getBoundingClientRect().top - gear.offsetParent.getBoundingClientRect().top + (vr.offsetHeight - gear.offsetHeight) / 2) + "px" : "";
 }
