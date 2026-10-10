@@ -158,10 +158,15 @@ body.peace-modus #veggNavn,body.peace-modus #veggKlokke,body.galleri #veggNavn,b
 body.peace-modus #veggMeny,body.galleri #veggMeny{display:flex;position:fixed;z-index:262;top:max(6px,env(safe-area-inset-top,0px));right:max(8px,env(safe-area-inset-right,0px));gap:2px}
 #veggMeny button{font-family:var(--brod);font-weight:400;font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:#7a7a7a;background:none;border:0;padding:9px 8px}
 body.peace-modus #veggMeny,body.galleri #veggMeny{justify-content:space-between;align-items:center}
-#veggLyd{color:#e2347f!important;text-shadow:0 0 6px rgba(226,52,127,.45);padding-left:0!important}
-#veggLyd.av{color:#9a9a9a!important;text-shadow:none}
-#veggUt{color:#27221d!important;font-weight:600!important;border:1.5px solid #27221d!important;border-radius:8px;padding:6px 12px!important;background:rgba(255,255,255,.6)!important}
-#veggUt:active{background:#27221d!important;color:#fff!important}
+/* Krogh 2.26: SOUND og MENU er speilbilder av hverandre: samme skrift, ingen boks. SOUND grå, ON/OFF og MENU i svak rosa. */
+#veggLyd{color:#8a8580!important;padding-left:0!important}
+#veggLyd b{font-weight:inherit;color:#e48fb4;margin-left:.45em}
+#veggLyd.av b{color:#d9b3c4}
+#veggUt{color:#e07aa8!important;font-weight:500!important;padding-right:0!important}
+#veggUt:active{color:#c2457e!important}
+#kraftLinje.galleri .lommebok,#kraftLinje.galleri .lommebok[class]{display:none!important}
+#kraftSaldo{position:fixed;z-index:5001;transform:translate(-50%,0);font-family:var(--brod);font-size:11px;letter-spacing:.16em;color:#b0566f;pointer-events:none;opacity:0;transition:opacity .3s,transform .3s}
+#kraftSaldo.vis{opacity:1;transform:translate(-50%,-6px)}
 /* Knappene er enkle, runde brytere på veggen, med vanlig skrift under. */
 #kraftLinje.peace{gap:0 30px}
 #kraftLinje.peace,#kraftLinje.galleri{align-items:start}
@@ -2244,7 +2249,7 @@ function visSpor(id) {
     else el.textContent = "♪ " + m.tittel;
   }
 }
-function visLydKnapp() { const k = $("lydKnapp"); k.textContent = $("veggLyd").textContent = lydPa ? "Sound on" : "Sound off"; k.setAttribute("aria-pressed", String(lydPa)); $("veggLyd").classList.toggle("av", !lydPa);
+function visLydKnapp() { const k = $("lydKnapp"); k.textContent = lydPa ? "Sound on" : "Sound off"; $("veggLyd").innerHTML = "Sound<b>" + (lydPa ? "on" : "off") + "</b>"; k.setAttribute("aria-pressed", String(lydPa)); $("veggLyd").classList.toggle("av", !lydPa);
   // BUBBLE IT: en liten høyttaler ved siden av Menu, med eller uten lydbølger.
   const sk = $("shLyd"); if (sk) { sk.setAttribute("aria-pressed", String(lydPa)); sk.setAttribute("aria-label", lydPa ? "Sound on" : "Sound off");
     sk.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor" stroke="none"/>' + (lydPa ? '<path d="M16.5 8.5a5 5 0 0 1 0 7"/><path d="M19 6a8.5 8.5 0 0 1 0 12"/>' : '<path d="M17 9l5 6"/><path d="M22 9l-5 6"/>') + '</svg>'; } }
@@ -2528,7 +2533,9 @@ function oppsett() {
   if (staaende) {
     // Stående: stripe øverst, brettet i full bredde under, bitene i rommet nederst.
     toppKant = peace ? st + 62 : panel.height ? panel.bottom : 0; hoyreKant = W;
-    const plassBunke = (H - BAR - toppKant - marg - 58 - (peace ? 2 * RT + 34 + 40 : 0)) / (1 + 1.6 / spill.r); // Krogh 2.25: +40 så bunken får luft mellom tittelen og knappene.
+    // Krogh 2.26: rammen større på mobil (i Safari ble den bare 76 % av bredden). Bunken får litt mindre plass, men står fortsatt fritt.
+    const plassBunke = W < 600 ? (H - BAR - toppKant - marg - 42 - (peace ? 2 * RT + 34 + 12 : 0)) / (1 + 1.6 / spill.r) // telefon
+      : (H - BAR - toppKant - marg - 58 - (peace ? 2 * RT + 34 + 40 : 0)) / (1 + 1.6 / spill.r); // iPad som før (Krogh 2.25: luft mellom tittelen og knappene)
     bredde = Math.min(W - 2 * marg - 2 * RT, (H - toppKant) * 0.62 * forhold, plassBunke * forhold);
     hoyde = bredde / forhold;
     x0 = (W - bredde) / 2; y0 = toppKant + marg + RT;
@@ -3097,6 +3104,10 @@ function limBrikker() {
   gnister.push({ halo: true, t: 0, liv: 1.1, c: sp.k / 2, r: sp.r / 2, lim: true }); if (!gnistRAF) gnistRAF = requestAnimationFrame(gnistSteg);
   if (lydPa) { tone(392, 0, .3, .04, "sine", .7, .8); tone(523, .08, .3, .035, "sine", .7, .8); tone(784, .16, .5, .03, "sine", .7, 1); }
 }
+// Krogh 2.26: credits står ikke lenger i knapperaden (den ble skjev). De vises kort over knappene når du bruker en effekt.
+function visSaldo() { let el = $("kraftSaldo"); if (!el) { el = document.createElement("div"); el.id = "kraftSaldo"; document.body.appendChild(el); }
+  const r = $("kraftLinje").getBoundingClientRect(); el.textContent = "◆ " + credits() + " LEFT"; el.style.left = (r.left + r.width / 2) + "px"; el.style.top = (r.top - 22) + "px";
+  el.classList.add("vis"); clearTimeout(visSaldo.t); visSaldo.t = setTimeout(() => el.classList.remove("vis"), 1600); }
 function brukKraft(type) {
   if (!spill || spill.slutt || spill.tapt) return false;
   const k = KRAFT[type], har = credits(), gratisHint = type === "hint" && (spill.gratisHint || 0) > 0, gratis = gratisHint || (!!spill.peace && type !== "hint");
@@ -3105,7 +3116,7 @@ function brukKraft(type) {
   if (type === "hint" && !nesteHint()) return false;
   if (type === "lim" && (spill.limBrukt || !spill.biter.some(b => b.ferdig))) return false;
   if (type === "familie" && (spill.familieGaar || !familieSted())) return false;
-  if (!gratis) { settCredits(har - k.pris); spill.trekk = (spill.trekk || 0) + k.trekk; spill.brukteKraft = true; }
+  if (!gratis) { settCredits(har - k.pris); spill.trekk = (spill.trekk || 0) + k.trekk; spill.brukteKraft = true; if (spill.galleri) visSaldo(); }
   // Hint trekker alltid poeng, også det gratis og også i Peace.
   if (gratisHint) { spill.gratisHint--; spill.trekk = (spill.trekk || 0) + k.trekk; }
   // Peace: Tilt og Family koster ingen credits, men trekker poeng som juks (Hint trekker allerede over).
