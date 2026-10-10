@@ -8988,9 +8988,25 @@ function shBrentTegn(x, f, s) {
     x.fillStyle = `rgba(255,220,180,${.35 * q.a})`; x.beginPath(); x.ellipse(X - R * .3, Y - R * .35, R * .22, R * .08, -.5, 0, 7); x.fill();
   }
 }
+// Krogh 2.26: kommer du borti caterpillaren, blir du smittet. Det går over av seg selv. Blir du smittet igjen før du er frisk, mister du en boble.
+const SH_SMITTE_TID = 12;
+function shSmitte(s, p) {
+  const k = p === 2 ? "smitte2" : "smitte", v = p === 2 ? "smitteVern2" : "smitteVern"; if (s.tid < (s[v] || 0) || s.tilstand !== "spill") return false;
+  s[v] = s.tid + 2.5; const y = p === 2 ? SH_P2Y + .14 : SH_PY - .14, snu = p === 2;
+  if ((s[k] || 0) > s.tid) { s[k] = 0; s.tekster.push({ txt: "INFECTED AGAIN · BUBBLE LOST", x: .5, y, liv: 2, farge: "#9dff7a", snu }); shMistetLiv(); return true; }
+  s[k] = s.tid + SH_SMITTE_TID; s[k + "Varslet"] = false; shLyd("bossTreff");
+  s.tekster.push({ txt: "YOU GOT INFECTED", x: .5, y, liv: 2, farge: "#9dff7a", snu }, { txt: "IT WILL HEAL · DON'T TOUCH IT AGAIN", x: .5, y: y + (snu ? -.05 : .05), liv: 2.4, fade: 1, farge: "#d6ffc8", liten: true, kapsel: true, snu });
+  return false; }
+function shSmitteSteg(s) { for (const [k, p] of [["smitte", 1], ["smitte2", 2]]) if (s[k] && s.tid >= s[k] && !s[k + "Varslet"]) { s[k + "Varslet"] = true; s[k] = 0;
+  s.tekster.push({ txt: "HEALED", x: .5, y: p === 2 ? SH_P2Y + .14 : SH_PY - .14, liv: 1.4, farge: "#9dff7a", snu: p === 2 }); } }
+// Smittet: flipperne pulserer rolig grønt.
+function shSmitteTegn(x, f, s) { for (const p of [1, 2]) { const slutt = p === 2 ? s.smitte2 : s.smitte; if (!slutt || slutt <= s.tid || (p === 2 && !s.toP)) continue;
+  const X = (p === 2 ? s.pad2X : s.padX) * f, Y = (p === 2 ? SH_P2Y : shPadTopp(s)) * f, w = (p === 2 ? s.pad2W : s.padW) * f, a = .22 + .16 * Math.sin(s.tid * 2.6);
+  x.save(); x.globalCompositeOperation = "lighter"; const g = x.createRadialGradient(X, Y, 0, X, Y, w * .75); g.addColorStop(0, `rgba(120,255,100,${a})`); g.addColorStop(1, "rgba(120,255,100,0)"); x.fillStyle = g;
+  x.beginPath(); x.ellipse(X, Y, w * .75, w * .3, 0, 0, 7); x.fill(); x.restore(); } }
 function shKrabbeStart() {
   const s = sh, side = Math.random() < .5 ? -1 : 1, y = SH_TOPP + .2 + Math.random() * .6;
-  s.krabbe = { x: side < 0 ? -.04 : 1.04, y, a: side < 0 ? 0 : Math.PI, v: .13, tykk: .032, hp: 3, blink: 0, t: 0, liv: 22 + Math.random() * 6, kropp: [], dritT: .4, målT: 0, mål: null, fase: Math.random() * 6 };
+  s.krabbe = { x: side < 0 ? -.04 : 1.04, y, a: side < 0 ? 0 : Math.PI, v: .13, tykk: .032, hp: 3, blink: 0, t: 0, liv: 45 + Math.random() * 15, modus: "bilde", modusT: 7 + Math.random() * 4, kropp: [], dritT: .4, målT: 0, mål: null, fase: Math.random() * 6 };
   s.tekster.push({ txt: "MUD CRAWLER!", x: .5, y: .45, liv: 1.6, farge: "#c58a4a" }); shLyd("spawn"); shBoss3DLast("folie"); shBoss3DLast("fot");
 }
 function shKrabbeSteg(dt) {
@@ -9000,25 +9016,44 @@ function shKrabbeSteg(dt) {
   K.målT -= dt;
   if (K.målT <= 0) { K.målT = 1.2; let best = null, bv = 1e9; for (let n = 0; n < 50; n++) { const k = s.klosser[(Math.random() * s.klosser.length) | 0]; if (k.liv > 0 || k.ramme || (s.tid < (K.oppTil || 0) && (K.ned ? k.y < K.y + .08 : k.y > K.y - .08))) continue; const d = Math.hypot(k.x - K.x, k.y - K.y) + Math.random() * .2; if (d < bv) { bv = d; best = k; } } K.mål = best; }
   const går = K.t > K.liv;
-  let ønsket = går ? (K.x < .5 ? Math.PI : 0) : K.mål ? Math.atan2(K.mål.y + K.mål.h / 2 - K.y, K.mål.x + K.mål.w / 2 - K.x) : K.a;
+  // Krogh 2.26: den kryper på bildet, går ut på rammen og rundt bildet, og av og til tar den av og jakter en spiller.
+  K.modusT -= dt;
+  if (!går && K.modusT <= 0) { const fra = K.modus, r = Math.random();
+    K.modus = fra === "jakt" ? "ramme" : r < .45 ? "ramme" : r < .7 && s.tid > 15 && !(s.sopp > 0) ? "jakt" : "bilde";
+    K.modusT = K.modus === "jakt" ? 8 + Math.random() * 3 : 7 + Math.random() * 5; K.rammeDir = Math.random() < .5 ? 1 : -1;
+    if (K.modus === "jakt") { K.bytte = s.toP && Math.random() < .5 ? 2 : 1; K.v = .2; const p2 = K.bytte === 2;
+      s.tekster.push({ txt: "IT'S COMING FOR YOU!", x: .5, y: p2 ? SH_P2Y + .16 : SH_PY - .16, liv: 1.6, farge: "#9dff7a", snu: p2 }); shLyd("spawn"); }
+    else K.v = .13; }
+  let ønsket;
+  if (går) ønsket = K.x < .5 ? Math.PI : 0;
+  else if (K.modus === "jakt") { const tx = K.bytte === 2 ? s.pad2X : s.padX, ty = K.bytte === 2 ? SH_P2Y + .02 : shPadTopp(s) - .02; ønsket = Math.atan2(ty - K.y, tx - K.x); }
+  else if (K.modus === "ramme") { // Mot et punkt litt lenger fram langs rammen (midt på lista rundt bildet).
+    const o = SH_RUT * .5, x0 = -o, x1 = 1 + o, y0 = SH_TOPP - o, y1 = SH_TOPP + 1 + o, W = x1 - x0, H = y1 - y0, L = 2 * (W + H);
+    const px = shClamp(K.x, x0, x1), py = shClamp(K.y, y0, y1), d = [Math.abs(py - y0), Math.abs(px - x1), Math.abs(py - y1), Math.abs(px - x0)], side = d.indexOf(Math.min(...d));
+    let u = side === 0 ? px - x0 : side === 1 ? W + py - y0 : side === 2 ? W + H + x1 - px : 2 * W + H + y1 - py; u = ((u + (K.rammeDir || 1) * .07) % L + L) % L;
+    const [tx, ty] = u < W ? [x0 + u, y0] : u < W + H ? [x1, y0 + u - W] : u < 2 * W + H ? [x1 - (u - W - H), y1] : [x0, y1 - (u - 2 * W - H)];
+    ønsket = Math.atan2(ty - K.y, tx - K.x); }
+  else ønsket = K.mål ? Math.atan2(K.mål.y + K.mål.h / 2 - K.y, K.mål.x + K.mål.w / 2 - K.x) : K.a;
   const da = ((ønsket - K.a + Math.PI * 3) % (Math.PI * 2)) - Math.PI;
   K.a += shClamp(da, -1.8 * dt, 1.8 * dt) + Math.sin(K.t * 5 + K.fase) * 1.1 * dt;
   K.x += Math.cos(K.a) * K.v * dt; K.y += Math.sin(K.a) * K.v * dt;
-  if (!går) { K.x = shClamp(K.x, -.05, 1.05); if (K.y < SH_TOPP + .04 || K.y > SH_TOPP + .96) { K.y = shClamp(K.y, SH_TOPP + .04, SH_TOPP + .96); K.a = -K.a; } }
+  if (!går && K.modus === "jakt") { K.x = shClamp(K.x, .02, .98); K.y = shClamp(K.y, .02, SH_H - .02); }
+  else if (!går) { const o = SH_RUT * .8, ute = K.x < -o - .03 || K.x > 1 + o + .03 || K.y < SH_TOPP - o - .03 || K.y > SH_TOPP + 1 + o + .03; /* utenfor (etter en jakt): den kryper tilbake av seg selv */
+    if (!ute) { K.x = shClamp(K.x, -o, 1 + o); if (K.y < SH_TOPP - o || K.y > SH_TOPP + 1 + o) { K.y = shClamp(K.y, SH_TOPP - o, SH_TOPP + 1 + o); K.a = -K.a; } } }
   K.kropp.unshift({ x: K.x, y: K.y }); if (K.kropp.length > 46) K.kropp.length = 46;
   // Krogh 2.24: boblene fra flipperne dytter den, og den blir ør i hodet: den stopper å drite og vingler.
   if (K.ør > 0) { K.ør -= dt; K.x += (K.dx || 0) * dt; K.y += (K.dy || 0) * dt; K.dx = (K.dx || 0) * Math.exp(-dt * 2); K.dy = (K.dy || 0) * Math.exp(-dt * 2); K.a += Math.sin(K.t * 9) * 3 * dt; K.x -= Math.cos(K.a) * K.v * dt * .7; K.y -= Math.sin(K.a) * K.v * dt * .7;
-    K.y = shClamp(K.y, SH_TOPP + .04, SH_TOPP + .96); }
+    if (K.modus !== "jakt") K.y = shClamp(K.y, SH_TOPP + .04, SH_TOPP + .96); }
   // Driter gjørme bak seg på bildet.
   K.dritT -= dt;
-  if (K.dritT <= 0 && K.x > .02 && K.x < .98 && !(K.ør > 0)) { K.dritT = .2; const h = K.kropp[Math.min(K.kropp.length - 1, 20)]; shNyGjorme(h.x, h.y, .03 + K.tykk * .5, 3, true); /* Krogh 2.26: mye mer jord */ if (Math.random() < .5) shLyd("plopp"); }
+  if (K.dritT <= 0 && K.x > .02 && K.x < .98 && K.y > SH_TOPP + .01 && K.y < SH_TOPP + .99 && !(K.ør > 0)) { K.dritT = .2; const h = K.kropp[Math.min(K.kropp.length - 1, 20)]; shNyGjorme(h.x, h.y, .03 + K.tykk * .5, 3, true); /* Krogh 2.26: mye mer jord */ if (Math.random() < .5) shLyd("plopp"); }
   // Krogh 2.26: boblen og skuddene biter ikke på krabben. Flipperne dytter den opp, så den graver et annet sted lenger oppe.
   if (s.toP && !(s.sopp > 0) && !går && Math.abs(K.x - s.pad2X) < s.pad2W / 2 + K.tykk * .6 + shPad2XSlakk() && K.y - K.tykk < SH_P2Y + .004 && K.y + K.tykk > SH_P2Y - .03 - shPad2Slakk(0, dt)) {
-    K.y = Math.min(SH_TOPP + .96, SH_P2Y + K.tykk + .006); K.a = Math.PI / 2 + (s.pad2X - K.x) * 2; K.oppTil = s.tid + 3.5; K.ned = true; K.målT = 0;
+    K.y = Math.max(K.y, SH_P2Y + K.tykk + .006); K.a = Math.PI / 2 + (s.pad2X - K.x) * 2; K.oppTil = s.tid + 3.5; K.ned = true; K.målT = 0; if (K.modus === "jakt") { K.modus = "bilde"; K.modusT = 6; K.v = .13; } shSmitte(s, 2);
     if (s.tid - (K.dyttT ?? -9) > 2.5) { K.dyttT = s.tid; shLyd("flipper"); shStov(K.x, K.y - K.tykk, 12, "200,150,90", .15); } }
   if (!(s.sopp > 0) && !går) { const topp = shPadTopp(s), halv = s.padW / 2 + K.tykk * .6 + shPadXSlakk();
     if (Math.abs(K.x - s.padX) < halv && K.y + K.tykk > topp - .004 && K.y - K.tykk < topp + .03 + shPadSlakk(0, dt)) {
-      K.y = Math.max(SH_TOPP + .04, topp - K.tykk - .006); K.a = -Math.PI / 2 + (K.x - s.padX) * 2; K.oppTil = s.tid + 3.5; K.ned = false; K.målT = 0;
+      K.y = Math.min(K.y, topp - K.tykk - .006); K.a = -Math.PI / 2 + (K.x - s.padX) * 2; K.oppTil = s.tid + 3.5; K.ned = false; K.målT = 0; if (K.modus === "jakt") { K.modus = "bilde"; K.modusT = 6; K.v = .13; } if (shSmitte(s, 1)) return;
       if (s.tid - (K.dyttT ?? -9) > 2.5) { K.dyttT = s.tid; shLyd("flipper"); shStov(K.x, K.y + K.tykk, 12, "200,150,90", .15); s.tekster.push({ txt: "PUSHED UP!", x: shClamp(K.x, .15, .85), y: K.y - .05, liv: .9, farge: "#c58a4a", liten: true }); } } }
   // Møter en mark: den tykkeste spiser den andre.
   for (const O of s.ormer || []) {
@@ -9746,7 +9781,7 @@ function shOppdater(dt) {
   for (const e of s.galaga?.fiender || []) if (e.tilstand === "iboble" && (!e.boble || !e.boble.voks || !s.baller.includes(e.boble))) Object.assign(e, { tilstand: "kastet", vx: (e.x < .5 ? -1 : 1) * .5, vy: -.6, spinn: 10, rot: 0, boble: null });
   if (s.wingmen.length && !s.galaga && !(s.eff.K > 0)) { for (const w of s.wingmen) shStov(shClamp(s.padX + w.side * (s.padW / 2 + .05), .03, .97), SH_PY - .02, 22, "200,240,255", .25); s.wingmen = []; shLyd("innkapsle"); }
   { const n = [s.galaga, s.bytte, s.fugl, s.hopper, s.krabbe, s.snø, s.mørke, s.sabot?.length, s.orm || s.ormer?.length].filter(Boolean).length; if (n > (s.storN || 0)) s.sistStorT = s.tid; s.storN = n; }
-  shFinaleSteg(s, dt); shKontaktSteg(s); shSjokkSteg(s, dt); shGalagaSteg(dt); if (!s.bytte) shSabotSteg(dt); shOrmSteg(dt); shKrabbeSteg(dt); shHopperSteg(dt); shFuglSteg(dt); shVaerSteg(dt); shSolSteg(dt); shSmåSteg(dt); shFlySteg(dt); shVapenSteg(dt);
+  shFinaleSteg(s, dt); shKontaktSteg(s); shSjokkSteg(s, dt); shSmitteSteg(s); shGalagaSteg(dt); if (!s.bytte) shSabotSteg(dt); shOrmSteg(dt); shKrabbeSteg(dt); shHopperSteg(dt); shFuglSteg(dt); shVaerSteg(dt); shSolSteg(dt); shSmåSteg(dt); shFlySteg(dt); shVapenSteg(dt);
   { const andel = 1 - s.igjen / s.klosser.length; if (!s.fugl && !s.toP && shHar("fiende", "fugl") && shRolig(s) && s.tilstand === "spill" && !s.bytte && !s.galaga && !s.finale && andel > .2 && andel < .8 && s.tid > (s.fuglT ?? 35 * shVanske())) { s.fuglT = s.tid + 60 + Math.random() * 30; shFuglStart(); } }
   { const andel = 1 - s.igjen / s.klosser.length; if (!s.hopper && shHar("fiende", "hopper") && shRolig(s) && s.tilstand === "spill" && !s.bytte && !s.galaga && andel > .15 && andel < .85 && s.tid > (s.hopperT ?? 20 * shVanske())) { s.hopperT = s.tid + 30 + Math.random() * 15; shHopperStart(); } }
   { const andel = 1 - s.igjen / s.klosser.length; if (!s.krabbe && shHar("fiende", "krabbe") && shRolig(s) && s.tilstand === "spill" && !s.bytte && !s.galaga && !(s.sopp > 0) && andel > .25 && andel < .85 && s.tid > (s.krabbeT ?? 18 * shVanske())) { s.krabbeT = s.tid + 25 + Math.random() * 15; shKrabbeStart(); } }
@@ -13333,10 +13368,11 @@ function shTegn(t) {
     x.fillStyle = pg; x.fillRect(0, 0, f, SH_H * f); x.restore();
   }
   if (s.orm || s.ormer?.length || s.stråler || s.ormJord?.length) shOrmTegn(x, f, s);
-  shKrabbeTegn(x, f, s); shHopperTegn(x, f, s); shVapenTegn(x, f, s);
+  shHopperTegn(x, f, s); shVapenTegn(x, f, s); shSmitteTegn(x, f, s);
   if (s.bytte) shByttetTegn(x, f, s);
   if (!SH_RAMME_UT) { x.strokeStyle = "#3a3633"; x.lineWidth = 1; x.strokeRect(0.5, 0.5, f - 1, SH_H * f - 1); } /* Krogh 2.26: kantlinja så ut som en løs strek på oransje vegg */
   x.restore();
+  if (s.krabbe) { x.save(); x.translate(g.fx, g.fy); shKrabbeTegn(x, f, s); x.restore(); } /* Krogh 2.26: tegnes utenfor klippet, så den synes oppå rammen */
 }
 function shSteg(t) {
   if (!sh || $("shatter").hidden) return;
