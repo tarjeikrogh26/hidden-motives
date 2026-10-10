@@ -10467,13 +10467,14 @@ function uwBossKøSteg(dt) {
   u.bosser.push({ modell: q.modell, nr, siste: q.siste, antall: q.antall, str: .44 + nr * .03, fart: .1 + nr * .035, treff: .09, pakker: true, x: .5, y: -.2, mx: .5, my: .4, t: 0, lappT: 9 - nr * 2, blink: 0, sett: false,
     ildF: 1 - nr * .2, malT: nr >= 1 ? 7 + Math.random() * 5 : null, snøT: nr >= 2 ? 13 + Math.random() * 5 : null });
 }
-// Bossen er lei: den dukker seg litt, og hopper så opp av skjermen mot deg (som løftet når brettet er ferdig):
-// den blir større og større, driver ut på skrå og blekner før den er helt inntil deg.
+// Bossen er lei (Krogh 2.26): den dukker seg litt, og kommer så mot deg med jevn fart. Den blir større og større,
+// heller litt og glir ut av bildet på skrå mot et hjørne. Ingen uttoning og ingen blinking: du ser den komme nærmere.
+const UW_UT_SATS = .35, UW_UT_TID = 2.75;
 function uwBossUt(B) {
-  const o = B.ut, sats = .35; if (o.R == null) { o.R = (Math.random() - .5) * 1.4; o.V = (B.x < .5 ? -1 : 1) * (.03 + Math.random() * .04); }
-  if (o.t < sats) { const k = Math.sin(o.t / sats * Math.PI); return { x: B.x, y: B.y + .015 * k, s: 1 - .08 * k, a: 1, rot: 0, z: 0 }; }
-  const τ = o.t - sats, sv = Math.min(1, τ / .4), z = .08 * sv * sv * (3 - 2 * sv) + .55 * Math.max(0, τ - .2) ** 2; if (z > .92) return null;
-  const sk = 1 / (1 - z); return { x: .5 + (B.x - .5) * sk + o.V * τ * τ, y: .5 + (B.y - .5) * sk - .06 * sv, s: sk, a: z < .6 ? 1 : Math.max(0, 1 - (z - .6) / .3), rot: o.R * τ * τ * .5, z };
+  const o = B.ut; if (o.R == null) { o.cx = B.x < .5 ? -1 : 1; o.R = o.cx * (.25 + Math.random() * .2); }
+  if (o.t < UW_UT_SATS) { const k = Math.sin(o.t / UW_UT_SATS * Math.PI); return { x: B.x, y: B.y + .015 * k, s: 1 - .08 * k, a: 1, rot: 0, z: 0 }; }
+  const τ = o.t - UW_UT_SATS, z = Math.min(.92, τ / 2.6), sk = 1 / (1 - z);
+  return { x: .5 + (B.x - .5 + o.cx * .07 * τ) * sk, y: .5 + (B.y - .5 - .06 * τ) * sk, s: sk, a: 1, rot: o.R * τ, z };
 }
 // Snøstormen fra den siste bossen: flak som faller over brettet i noen sekunder, mens hvit maling legger seg.
 function uwSnøFallSteg(dt) { const u = uw; if (!u.snøFall) return; u.snøFall.t += dt; if (u.snøFall.t > 4) u.snøFall = null; }
@@ -10584,10 +10585,11 @@ function uwEnBossSteg(B, dt) {
   const u = uw, G = UW_G; if (!window.Boss3D?.har(B.modell)) return;
   if (!B.sett) { B.sett = true; uwTekst(B.nr === 0 ? "IT WANTS IT WRAPPED" : B.siste ? "THE LAST ONE · THE WORST ONE" : "HERE COMES ANOTHER ONE", .5, .3); /* Krogh 2.25: ingen «boss» i UNWRAP. */ if (lydPa) shLyd("boss"); }
   // Lei: hopper ut av skjermen, og så kommer den neste.
-  if (B.ut) { B.ut.t += dt; if (B.ut.t > 2.4) { u.bosser.splice(u.bosser.indexOf(B), 1); u.bossNesteT = 1.2; } return; }
+  if (B.ut) { B.ut.t += dt; if (B.ut.t > UW_UT_SATS + UW_UT_TID) { u.bosser.splice(u.bosser.indexOf(B), 1); u.bossNesteT = 1.5; } return; }
   B.t += dt; B.blink = Math.max(0, B.blink - dt * 3); if (u.eff?.frys > 0) return;
-  if (!B.siste && !B.spy && B.y > .05) { const grense = u.krav * (B.nr + 1) / B.antall * .85;
-    if (B.t > 30 + B.nr * 6 || uwSynlig(u) >= grense) { B.ut = { t: 0 }; B.blink = 0; uwTekst("IT GOT BORED", B.x, B.y - .12); if (lydPa) { shGlid(160, 900, .9, .04, "sine", .5, .8, .3); shSus(.8, "bandpass", 1200, .03, .8, .5, .5, .3); } return; } }
+  // Hver boss jager deg omtrent like lenge: brettets tid delt på antall bosser (ca. ett minutt med tre).
+  if (!B.siste && !B.spy && B.y > .05) {
+    if (B.t > u.frist / B.antall - 5) { B.ut = { t: 0 }; B.blink = 0; uwTekst("IT GOT BORED", B.x, B.y - .12); if (lydPa) { shGlid(160, 900, .9, .04, "sine", .5, .8, .3); shSus(.8, "bandpass", 1200, .03, .8, .5, .5, .3); } return; } }
   // Nr. 2 og 3 kaster maling (ART ATTACK); nr. 3 sender også snøstorm.
   if (B.malT != null && !B.spy) { B.malT -= dt; if (B.malT <= 0 && u.revet) { B.malT = 15 + Math.random() * 8 - B.nr * 2; B.blink = .8; uwMalingStart(); } }
   if (B.snøT != null && !B.spy) { B.snøT -= dt; if (B.snøT <= 0 && u.revet) { B.snøT = 20 + Math.random() * 8; B.blink = .8; uwMalingStart(UW_SNØ_STIL);
@@ -10629,9 +10631,12 @@ function uwEnBossSteg(B, dt) {
 const i2 = u => Math.min(8, u.i);
 function uwBossTegn(x, P, f, nå) {
   for (const B of uw.bosser || []) { if (!window.Boss3D?.har(B.modell)) continue;
-    if (B.ut) { const L = uwBossUt(B); if (!L) continue; const [GX, GY] = P(B.x + L.z * .05, B.y + .05 + L.z * .09);
-      x.save(); x.globalAlpha = .35 * Math.max(0, 1 - L.z / .6); x.fillStyle = "#000"; x.beginPath(); x.ellipse(GX, GY, f * B.str * .22 * (1 + L.z), f * B.str * .07 * (1 + L.z), 0, 0, 7); x.fill(); x.restore();
-      const [X, Y] = P(L.x, L.y); x.save(); x.globalAlpha = L.a; window.Boss3D.tegn(x, X, Y, f * B.str * L.s, { buffer: B.buf || (B.buf = {}), modell: B.modell, vri: shBoss3DVri(B.modell, nå) + L.rot, vipp: .1 + L.z * .5, rot: L.rot, blink: 0, ...fig3D(B.modell, nå, "treff") }); x.restore(); continue; }
+    if (B.ut) { const o = B.ut, sh = o.t < UW_UT_SATS ? 1 : Math.max(0, 1 - (o.t - UW_UT_SATS) / 1.2), [GX, GY] = P(B.x, B.y + .05);
+      if (sh > 0) { x.save(); x.globalAlpha = .35 * sh; x.fillStyle = "#000"; x.beginPath(); x.ellipse(GX + (1 - sh) * f * .03, GY + (1 - sh) * f * .05, f * B.str * .22 * (2 - sh), f * B.str * .07 * (2 - sh), 0, 0, 7); x.fill(); x.restore(); }
+      if (o.t < UW_UT_SATS) { const L = uwBossUt(B), [X, Y] = P(L.x, L.y); window.Boss3D.tegn(x, X, Y, f * B.str * L.s, { modell: B.modell, vri: shBoss3DVri(B.modell, nå), vipp: .1, rot: 0, blink: 0, ...fig3D(B.modell, nå, "boss") }); }
+      // Selve hoppet tegnes på lerretet over hele skjermen, så bossen kan komme helt ut av brettet og forbi kanten.
+      else if (!o.løftet) { o.løftet = true; const [X, Y] = P(B.x, B.y); figUtFly(B.modell, X, Y, f * B.str, { kom: true, side: o.cx ?? (B.x < .5 ? -1 : 1) }); }
+      continue; }
     const [X0, Y] = P(B.x, B.y), str = f * B.str, X = X0 + (B.skjelv || 0) * Math.sin(nå * 57) * f * .006;
     // Ingen skygge-plattform under bossen (Krogh 2.18): den svever fritt over bildet.
     window.Boss3D.tegn(x, X, Y, str, { buffer: B.buf || (B.buf = {}), modell: B.modell, vri: B.pakker ? shBoss3DVri(B.modell, nå) : shBoss3DVri(B.modell, nå, 2), vipp: .1 + Math.sin(nå * 1.3) * .05 - (B.lene || 0) * .4, rot: -(B.vx || 0) * 1.5, blink: B.blink, ...fig3D(B.modell, nå, "boss") }); }
@@ -12194,7 +12199,7 @@ function shFinaleSteg(s, dt) {
 const løftAktive = []; let utFlyRAF = 0;
 function figUtFly(modell, X, Y, S, o = {}) { if (!window.Boss3D?.har(modell) || !Number.isFinite(X + Y + S)) return false;
   const side = o.side ?? (X < innerWidth / 2 ? -1 : 1);
-  løftAktive.push({ modell, X, Y, S, t0: performance.now() + (o.vent || 0) * 1000, a: .34 + Math.random() * .22, r: (Math.random() - .5) * 1.4, v: side * (.18 + Math.random() * .2), fase: Math.random() * 6, treff: o.treff });
+  løftAktive.push({ modell, X, Y, S, t0: performance.now() + (o.vent || 0) * 1000, a: .34 + Math.random() * .22, r: (Math.random() - .5) * 1.4, v: side * (.18 + Math.random() * .2), fase: Math.random() * 6, treff: o.treff, kom: o.kom, side });
   if (!utFlyRAF) { let c = document.getElementById("løftLag"); if (!c) { c = document.createElement("canvas"); c.id = "løftLag"; Object.assign(c.style, { position: "fixed", left: 0, top: 0, width: "100vw", height: "100vh", pointerEvents: "none", zIndex: 275 }); document.body.appendChild(c); }
     const steg = () => { if (figUtFlyTegn(c)) utFlyRAF = requestAnimationFrame(steg); else { utFlyRAF = 0; c.remove(); } }; utFlyRAF = requestAnimationFrame(steg); }
   return true; }
@@ -12202,6 +12207,13 @@ function figUtFlyTegn(c) { const B3 = window.Boss3D; if (!B3) return false; cons
   if (c.width !== W || c.height !== H) { c.width = W; c.height = H; } const x = c.getContext("2d"); x.setTransform(1, 0, 0, 1, 0, 0); x.clearRect(0, 0, W, H); x.setTransform(dpr, 0, 0, dpr, 0, 0);
   const nå = performance.now(), cx = innerWidth / 2, cy = innerHeight / 2;
   for (const o of løftAktive) { const τ = (nå - o.t0) / 1000; let z = 0, sv = 0;
+    // kom (Krogh 2.26, bossen i UNWRAP som er lei): kommer mot deg med jevn fart, større og større, ut på skrå mot et hjørne.
+    // Ingen uttoning: den forsvinner først når den har glidd forbi kanten av skjermen.
+    // Den vokser der den står (den kommer rett mot deg) og driver sakte ut mot hjørnet, så den rekker å bli kjempestor.
+    if (o.kom) { const t = Math.max(0, τ), zk = Math.min(.9, t / 2.8), sc = 1 / (1 - zk), S = o.S * sc,
+        X = o.X + o.side * innerWidth * .04 * t * sc, Y = o.Y - innerHeight * .025 * t * sc;
+      if (t > 2.7 || Math.abs(X - cx) - S * .45 > innerWidth / 2 || Math.abs(Y - cy) - S * .45 > innerHeight / 2 || !B3.har(o.modell)) { o.borte = true; continue; }
+      B3.tegn(x, X, Y, S, { modell: o.modell, vri: shBoss3DVri(o.modell, nå) + o.side * .3 * t, vipp: .1 + zk * .6, rot: o.side * .28 * t, ...fig3D(o.modell, nå, "flyr") }); continue; }
     if (τ > 0) { sv = Math.min(1, τ / .45); z = .05 * sv * sv * (3 - 2 * sv) + o.a * Math.max(0, τ - .3) ** 2; }
     if (z > .9 || !B3.har(o.modell)) { o.borte = true; continue; }
     const sc = 1 / (1 - z), t2 = Math.max(0, τ) ** 2, X = cx + (o.X - cx) * sc + o.v * innerWidth * t2, Y = cy + (o.Y - cy) * sc - innerHeight * .06 * t2 - o.S * .1 * sv;
