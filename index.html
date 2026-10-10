@@ -962,6 +962,8 @@ body.lys #modusDeal{--farge:#0f8f6c;--glod:15,143,108}
   </div>
   <div id="shKraftLinje" hidden>
     <button class="kraft" id="shKraftVoks">MEGA BUBBLE <span class="pris">◆ 10</span></button>
+    <button class="kraft" id="shKraftLyn">LIGHTNING <span class="pris">◆ 4</span></button>
+    <button class="kraft" id="shKraftSkjelv">EARTHQUAKE <span class="pris">◆ 5</span></button>
     <button class="kraft" id="shKraftTrip">TRIP <span class="pris">◆ 3</span></button>
     <button class="kraft" id="shKraftMissil">MISSILES <span class="pris">◆ 3</span></button>
     <button class="kraft" id="shKraftOrm">WORM <span class="pris">◆ 3</span></button>
@@ -4772,15 +4774,17 @@ const KAPSLER = [
   { t: "X", navn: "SUPER GROWING BUBBLE", hva: "IT GROWS HUGE · IT CATCHES ALIENS", farge: "#8fd8ff", vekt: 2, edel: "blaa" },
   { t: "Q", navn: "MEGA BUBBLE", hva: "A QUARTER OF THE PAINTING · IT EATS EVERYTHING", farge: "#e6a8ff", vekt: .8, edel: "gull" },
   { t: "I", navn: "FIREBALL", hva: "IT BURNS THE WEEDS · IT MELTS THE ICE", farge: "#ff8a2a", vekt: 3, edel: "gull" },
+  { t: "L", navn: "LIGHTNING ATTACK", hva: "LIGHTNING STRIKES THE ALIENS · AND THE MUD", farge: "#cfe6ff", vekt: 3, edel: "solv" },
+  { t: "E", navn: "EARTHQUAKE", hva: "IT SHAKES A QUARTER OF THE MUD LOOSE", farge: "#ffb36b", vekt: 2, edel: "gull" },
 ];
 // Når kommer hva? Tallet er brettet (fra 0) på tvers av samlingene: samling 1 er 0–9, samling 2 er 10–19 osv.
 // Sesong 1 får én ny ting omtrent per brett, og et nytt kjøpevåpen annenhver gang. Så ett nytt kjøpevåpen per sesong.
 // I BETA er alt åpent; med ?betaav kan rekkefølgen prøves.
 const SH_INN = {
-  kapsel: { W: 0, S: 0, M: 1, B: 1, Z: 2, A: 3, K: 3, J: 4, T: 0, R: 5, O: 6, I: 7, "+": 8, V: 2, X: 4, Q: 6 },
-  kjøp: { tilt: 0, orm: 2, magnet: 4, trip: 6, bombe: 8, missil: 10, laser: 20, alien: 30, boble: 0, voks: 0 },
+  kapsel: { W: 0, S: 0, M: 1, B: 1, Z: 2, A: 3, K: 3, J: 4, T: 0, R: 5, O: 6, I: 7, "+": 8, V: 2, X: 4, Q: 6, L: 2, E: 4 },
+  kjøp: { tilt: 0, orm: 2, magnet: 4, trip: 6, bombe: 8, missil: 10, laser: 20, alien: 30, boble: 0, voks: 0, lyn: 3, skjelv: 5 },
   fiende: { levende: 1, galaga: 2, sabot: 3, krabbe: 4, boss: 6, hopper: 7, fugl: 9, snø: 5, mørke: 4, deler: 3 } };
-const SH_NYNAVN = { kjøp: { tilt: "TILT", orm: "WORM", magnet: "VACUMA", trip: "TRIP", bombe: "BOMBS", missil: "MISSILES", laser: "BEAM", alien: "ALIEN", boble: "EXTRA BUBBLE", voks: "MEGA BUBBLE" },
+const SH_NYNAVN = { kjøp: { tilt: "TILT", orm: "WORM", magnet: "VACUMA", trip: "TRIP", bombe: "BOMBS", missil: "MISSILES", laser: "BEAM", alien: "ALIEN", boble: "EXTRA BUBBLE", voks: "MEGA BUBBLE", lyn: "LIGHTNING", skjelv: "EARTHQUAKE" },
   fiende: { levende: "THE ART WAKES UP", galaga: "SPACESHIPS", sabot: "SABOTEURS", krabbe: "MUD CRAWLER", boss: "THE BOSS", hopper: "PARATROOPER", fugl: "SEED BIRD", snø: "SNOW", mørke: "BLACKOUT", deler: "PINBALL PARTS" } };
 // Krogh 2.25: Season 3 var for lett. Ventetidene før fiender og hendelser krymper utover i spillet (1 på Season 1 Episode 1,
 // ned mot 0,4), og fra Season 3 får hvert brett én spesiell hendelse til.
@@ -6425,11 +6429,47 @@ function shSjokkSteg(s, dt) {
 // Bølgen tegnes som liquify: ringer der bildet buler seg litt ut, som vann.
 function shSjokkTegn(x, c, s) {
   if (!s.sjokk?.length || !shG) return; const g = shG, f = g.fw, d = g.dpr;
-  for (const S of s.sjokk) { const cx = (g.fx + S.x * f) * d, cy = (g.fy + S.y * f) * d, R0 = S.t * SH_SJOKK_FART * f * d, fade = Math.max(0, 1 - S.t / 2.2);
+  for (const S of s.sjokk) { if (S.ingenRing) continue; const cx = (g.fx + S.x * f) * d, cy = (g.fy + S.y * f) * d, R0 = S.t * SH_SJOKK_FART * f * d, fade = Math.max(0, 1 - S.t / 2.2);
     for (let i = 0; i < 3; i++) { const R = R0 - i * .09 * f * d, w = .035 * f * d; if (R <= w) continue; const a = .045 * fade * (1 - i * .3);
       x.save(); x.setTransform(1, 0, 0, 1, 0, 0); x.beginPath(); x.arc(cx, cy, R + w, 0, 7); x.arc(cx, cy, R - w, 0, 7, true); x.clip();
       x.translate(cx, cy); x.scale(1 + a, 1 + a); x.translate(-cx, -cy); x.drawImage(c, 0, 0);
       x.setTransform(1, 0, 0, 1, 0, 0); x.strokeStyle = `rgba(220,245,255,${.35 * fade * (1 - i * .3)})`; x.lineWidth = Math.max(1, d * 1.2); x.beginPath(); x.arc(cx, cy, R, 0, 7); x.stroke(); x.restore(); } } }
+// Krogh 2.26: LIGHTNING ATTACK. Sju lyn slår ut fra flipperne (i 2P annenhver fra P1 og P2). De tar aliens og det som flyr først,
+// ellers en flekk med jord. Skjermen lyser opp i et blink for hvert lyn; den blir ikke mørkere.
+function shLynStart(s) { s.lyn = { igjen: 7, neste: .15, bolter: [] }; }
+function shLynSti(x0, y0, x1, y1) { const n = 12, pts = [], dx = x1 - x0, dy = y1 - y0, L = Math.hypot(dx, dy) || 1, nx = -dy / L, ny = dx / L;
+  for (let i = 0; i <= n; i++) { const u = i / n, a = (i === 0 || i === n) ? 0 : (Math.random() - .5) * .07 * Math.sin(Math.PI * u) * Math.min(1, L * 2); pts.push([x0 + dx * u + nx * a, y0 + dy * u + ny * a]); } return pts; }
+function shLynSteg(s, dt) {
+  const L = s.lyn; if (!L) return; L.neste -= dt;
+  if (L.neste <= 0 && L.igjen > 0 && s.tilstand === "spill") { L.igjen--; L.neste = .36;
+    const p2 = s.toP && L.igjen % 2 === 1, fx = p2 ? s.pad2X : s.padX, fy = p2 ? SH_P2Y + .01 : shPadTopp(s) - .01;
+    const fi = s.galaga ? s.galaga.fiender.filter(shFangbar) : [], B = s.galaga?.boss; let mx, my;
+    if (fi.length) { const e = fi[(Math.random() * fi.length) | 0]; mx = e.x; my = e.y; e.hp = (e.hp ?? 2) - 3; e.blink = 1; if (e.hp <= 0) shInnkaps(e); }
+    else if (B && (B.tilstand === "kamp" || B.tilstand === "inn")) { mx = B.x; my = B.y; shBossTreff({ x: B.x, y: B.y }); }
+    else { const fylt = s.klosser.filter(k => k.liv > 0 && (!s.toP || (p2 ? k.y < SH_TOPP + .6 : k.y > SH_TOPP + .4))), k = fylt.length ? fylt[(Math.random() * fylt.length) | 0] : null;
+      mx = k ? k.x + k.w / 2 : .2 + Math.random() * .6; my = k ? k.y + k.h / 2 : SH_TOPP + .3 + Math.random() * .4; }
+    shVask(mx, my, .075, 3, "syre"); shStov(mx, my, 26, "210,235,255", .25);
+    L.bolter.push({ pts: shLynSti(fx, fy, mx, my), gren: Math.random() < .7 ? shLynSti(mx, my, mx + (Math.random() - .5) * .25, my + (p2 ? .12 : -.12) * Math.random()) : null, t: 0 });
+    s.lynBlits = 1; s.rist = Math.max(s.rist || 0, .25); shLyd("sprekk", 2.4); if (lydPa) shSus(.5, "lowpass", 400, .1, 1, .7, .3); }
+  for (const b of L.bolter) b.t += dt; L.bolter = L.bolter.filter(b => b.t < .32);
+  if (!L.igjen && !L.bolter.length) s.lyn = null; }
+function shLynTegn(x, f, s) {
+  const L = s.lyn; if (!L) return;
+  for (const b of L.bolter) { const a = Math.max(0, 1 - b.t / .32), linje = (pts, w) => { x.beginPath(); pts.forEach(([px, py], i) => i ? x.lineTo(px * f, py * f) : x.moveTo(px * f, py * f)); x.lineWidth = w; x.stroke(); };
+    x.save(); x.globalCompositeOperation = "lighter"; x.lineJoin = "round"; x.lineCap = "round"; x.shadowColor = "rgba(150,200,255,.95)"; x.shadowBlur = f * .03;
+    x.strokeStyle = `rgba(150,195,255,${.7 * a})`; linje(b.pts, f * .02); if (b.gren) linje(b.gren, f * .01);
+    x.shadowBlur = f * .012; x.shadowColor = "#fff"; x.strokeStyle = `rgba(255,255,255,${a})`; linje(b.pts, Math.max(2.5, f * .007)); if (b.gren) linje(b.gren, Math.max(1.5, f * .0035)); x.restore(); } }
+// Blinket lyser opp hele skjermen (tegnes utenfor feltet).
+function shLynBlitsTegn(x, s) { if (!(s.lynBlits > 0)) return; x.save(); x.setTransform(1, 0, 0, 1, 0, 0); x.globalCompositeOperation = "lighter"; x.fillStyle = `rgba(215,232,255,${.3 * s.lynBlits})`; x.fillRect(0, 0, x.canvas.width, x.canvas.height); x.restore(); s.lynBlits = Math.max(0, s.lynBlits - .09); }
+// Krogh 2.26: EARTHQUAKE. Brettet rister kraftig (og telefonen vibrerer), og en firedel av jorda som er igjen ristes løs.
+function shSkjelv(s) {
+  s.rist = Math.max(s.rist || 0, 1.5); try { navigator.vibrate?.([220, 60, 260, 60, 340]); } catch {}
+  const fylt = s.klosser.filter(k => k.liv > 0 && !k.ramme), n = Math.round(fylt.length * .25);
+  for (let i = fylt.length - 1; i > 0; i--) { const j = (Math.random() * (i + 1)) | 0; [fylt[i], fylt[j]] = [fylt[j], fylt[i]]; }
+  (s.sjokk = s.sjokk || []).push({ x: .5, y: SH_TOPP + .5, t: 0, n, ingenRing: true, kø: fylt.slice(0, n).map(k => ({ k, t: .1 + Math.random() * 1.4 })).sort((a, b) => a.t - b.t) });
+  if (s.galaga) s.galaga.bomber = [];
+  shLyd("bossTreff"); if (lydPa) { shSus(2, "lowpass", 110, .14, 1, .8, .4); shSus(1.4, "lowpass", 170, .07, 1, .8, .4, .5); }
+}
 function shVask(x, y, rad, lag, kilde) {
   const s = sh, c0 = Math.max(0, Math.floor((x - rad) * SH_KOL)), c1 = Math.min(SH_KOL - 1, Math.floor((x + rad) * SH_KOL));
   const r0 = Math.max(0, Math.floor((y - rad - SH_TOPP) * SH_RAD)), r1 = Math.min(SH_RAD - 1, Math.floor((y + rad - SH_TOPP) * SH_RAD));
@@ -7254,8 +7294,8 @@ function shByttetTegn(x, f, s) {
 // SNAKE: flipperen skyter opp en selvlysende slange. Den slynger seg mot gjørma og spiser den lag for lag,
 // blir lengre og tykkere, og når den er mett, krøller den seg til en tung, lysende klump som faller ned.
 // Tar du klumpen med flipperne, skytes den opp en siste gang og sprekker i syre der den treffer.
-const SH_KRAFT = { tilt: { pris: 2, trekk: .06 }, orm: { pris: 3, trekk: .1 }, magnet: { pris: 3, trekk: .08 }, trip: { pris: 3, trekk: .08 }, bombe: { pris: 2, trekk: .05 }, missil: { pris: 3, trekk: .08 }, laser: { pris: 3, trekk: .08 }, alien: { pris: 4, trekk: .1 }, boble: { pris: 5, trekk: .05 }, voks: { pris: 10, trekk: .15 } };
-const SH_KJØP_ID = [["shKraftTilt", "tilt"], ["shKraftOrm", "orm"], ["shKraftMagnet", "magnet"], ["shKraftTrip", "trip"], ["shKraftBombe", "bombe"], ["shKraftMissil", "missil"], ["shKraftLaser", "laser"], ["shKraftAlien", "alien"], ["shKraftBoble", "boble"], ["shKraftVoks", "voks"]];
+const SH_KRAFT = { tilt: { pris: 2, trekk: .06 }, orm: { pris: 3, trekk: .1 }, magnet: { pris: 3, trekk: .08 }, trip: { pris: 3, trekk: .08 }, bombe: { pris: 2, trekk: .05 }, missil: { pris: 3, trekk: .08 }, laser: { pris: 3, trekk: .08 }, alien: { pris: 4, trekk: .1 }, boble: { pris: 5, trekk: .05 }, voks: { pris: 10, trekk: .15 }, lyn: { pris: 4, trekk: .08 }, skjelv: { pris: 5, trekk: .1 } };
+const SH_KJØP_ID = [["shKraftTilt", "tilt"], ["shKraftOrm", "orm"], ["shKraftMagnet", "magnet"], ["shKraftTrip", "trip"], ["shKraftBombe", "bombe"], ["shKraftMissil", "missil"], ["shKraftLaser", "laser"], ["shKraftAlien", "alien"], ["shKraftBoble", "boble"], ["shKraftLyn", "lyn"], ["shKraftSkjelv", "skjelv"], ["shKraftVoks", "voks"]];
 // Tre power-ups per brett: fast for hvert brett (samme hver gang du spiller det), ulike fra brett til brett.
 // Arsenalet vokser utover i spillet (SH_INN.kjøp). Nye power-ups som legges i SH_KRAFT og SH_KJØP_ID, blir automatisk med i trekningen.
 function shKjøpTre(i) {
@@ -7287,7 +7327,7 @@ function shBrukKraft(type) {
   if ((type === "missil" || type === "laser") && s.vapenAlle?.[type]?.nivå >= 3) return;
   if (type === "laser" && s.laserBall) return;
   settCredits(har - k.pris); s.trekk = (s.trekk || 0) + k.trekk; visSaldo("shKraftLinje");
-  s.kjoptT = Math.max(s.kjoptT || 0, s.tid + ({ tilt: 3, orm: 12, magnet: 8, trip: SH_TRIP, bombe: 9, missil: 7, laser: 7, alien: 9, boble: 0, voks: 9 }[type] ?? 5));
+  s.kjoptT = Math.max(s.kjoptT || 0, s.tid + ({ tilt: 3, orm: 12, magnet: 8, trip: SH_TRIP, bombe: 9, missil: 7, laser: 7, alien: 9, boble: 0, voks: 9, lyn: 4, skjelv: 3 }[type] ?? 5));
   if (s.tilstand === "klar") s.tilstand = "spill";
   s.tekster = s.tekster.filter(tk => !tk.kapsel); const før = s.tekster.length;
   if (type === "tilt") shTilt();
@@ -7297,12 +7337,14 @@ function shBrukKraft(type) {
   if (type === "trip") { s.tripKjopt = true; shKapsel("T"); s.poeng -= 100; shHud(); }
   if (type === "boble") { shKapsel("+"); s.poeng -= 100; shHud(); }
   if (type === "voks") { shKapsel("Q"); s.poeng -= 100; shHud(); }
+  if (type === "lyn") { shKapsel("L"); s.poeng -= 100; shHud(); }
+  if (type === "skjelv") { shKapsel("E"); s.poeng -= 100; shHud(); }
   if (type === "magnet") { const b = s.baller.find(b => !b.fanget) || s.baller[0]; if (b) { b.magnet = 7; b.masse = b.masse || 0; } s.tekster.push({ txt: "VACUMA!", x: .5, y: SH_TOPP + .52, liv: 3.2, fade: 1.4, farge: "#7fe8ff", stor: true }, { txt: "IT PULLS IN THE MUD · THEN BURSTS ON THE FLIPPERS", x: .5, y: SH_TOPP + .58, liv: 3.2, fade: 1.4, farge: "#ffffff", liten: true }); shLyd("power"); }
   for (const tk of s.tekster.slice(før)) if (tk.stor || tk.liten) tk.kapsel = true;
   visShKraft();
 }
 // Krogh 2.21: i testversjonen kan kjempeflipperne slås på med en egen knapp.
-for (const [id, gjør] of [["shKraftKjempe", () => { if (sh && (sh.tilstand === "spill" || sh.tilstand === "klar")) { sh.eff.J = 25; shLyd("power"); } }], ["shKraftTilt", () => shBrukKraft("tilt")], ["shKraftOrm", () => shBrukKraft("orm")], ["shKraftMagnet", () => shBrukKraft("magnet")], ["shKraftTrip", () => shBrukKraft("trip")], ["shKraftBombe", () => shBrukKraft("bombe")], ["shKraftMissil", () => shBrukKraft("missil")], ["shKraftLaser", () => shBrukKraft("laser")], ["shKraftAlien", () => shBrukKraft("alien")], ["shKraftBoble", () => shBrukKraft("boble")], ["shKraftVoks", () => shBrukKraft("voks")], ["shLommebok", () => åpneButikk(0)]]) {
+for (const [id, gjør] of [["shKraftKjempe", () => { if (sh && (sh.tilstand === "spill" || sh.tilstand === "klar")) { sh.eff.J = 25; shLyd("power"); } }], ["shKraftTilt", () => shBrukKraft("tilt")], ["shKraftOrm", () => shBrukKraft("orm")], ["shKraftMagnet", () => shBrukKraft("magnet")], ["shKraftTrip", () => shBrukKraft("trip")], ["shKraftBombe", () => shBrukKraft("bombe")], ["shKraftMissil", () => shBrukKraft("missil")], ["shKraftLaser", () => shBrukKraft("laser")], ["shKraftAlien", () => shBrukKraft("alien")], ["shKraftBoble", () => shBrukKraft("boble")], ["shKraftVoks", () => shBrukKraft("voks")], ["shKraftLyn", () => shBrukKraft("lyn")], ["shKraftSkjelv", () => shBrukKraft("skjelv")], ["shLommebok", () => åpneButikk(0)]]) {
   const el = $(id); let sist = 0, fraPeker = false;
   const kjør = e => { e.preventDefault(); e.stopPropagation(); fraPeker = true; const nå = performance.now(); if (nå - sist < 180) return; sist = nå; ctx(); gjør(); el.classList.add("trykket"); setTimeout(() => el.classList.remove("trykket"), 160); };
   el.addEventListener("pointerdown", kjør); el.addEventListener("click", e => { e.preventDefault(); if (!fraPeker) gjør(); fraPeker = false; });
@@ -9399,6 +9441,8 @@ function shKapsel(t) {
   if (t === "J") { s.eff.J = 25; shLyd("power"); }
   if (t === "R") shRegnStart();
   if (t === "I") { s.eff.I = 10; shLyd("power"); }
+  if (t === "L") shLynStart(s);
+  if (t === "E") shSkjelv(s);
   if (SH_VOKS[t]) shVoksStart(t);
   if (t === "S") s.fart = Math.max(s.grunnfart * 0.75, s.fart * 0.7);
   if (t === "B") s.eff.B = 16;
@@ -9806,7 +9850,7 @@ function shOppdater(dt) {
   for (const e of s.galaga?.fiender || []) if (e.tilstand === "iboble" && (!e.boble || !e.boble.voks || !s.baller.includes(e.boble))) Object.assign(e, { tilstand: "kastet", vx: (e.x < .5 ? -1 : 1) * .5, vy: -.6, spinn: 10, rot: 0, boble: null });
   if (s.wingmen.length && !s.galaga && !(s.eff.K > 0)) { for (const w of s.wingmen) shStov(shClamp(s.padX + w.side * (s.padW / 2 + .05), .03, .97), SH_PY - .02, 22, "200,240,255", .25); s.wingmen = []; shLyd("innkapsle"); }
   { const n = [s.galaga, s.bytte, s.fugl, s.hopper, s.krabbe, s.snø, s.mørke, s.sabot?.length, s.orm || s.ormer?.length].filter(Boolean).length; if (n > (s.storN || 0)) s.sistStorT = s.tid; s.storN = n; }
-  shFinaleSteg(s, dt); shKontaktSteg(s); shSjokkSteg(s, dt); shSmitteSteg(s); shGalagaSteg(dt); if (!s.bytte) shSabotSteg(dt); shOrmSteg(dt); shKrabbeSteg(dt); shHopperSteg(dt); shFuglSteg(dt); shVaerSteg(dt); shSolSteg(dt); shSmåSteg(dt); shFlySteg(dt); shVapenSteg(dt);
+  shFinaleSteg(s, dt); shKontaktSteg(s); shSjokkSteg(s, dt); shSmitteSteg(s); shLynSteg(s, dt); shGalagaSteg(dt); if (!s.bytte) shSabotSteg(dt); shOrmSteg(dt); shKrabbeSteg(dt); shHopperSteg(dt); shFuglSteg(dt); shVaerSteg(dt); shSolSteg(dt); shSmåSteg(dt); shFlySteg(dt); shVapenSteg(dt);
   { const andel = 1 - s.igjen / s.klosser.length; if (!s.fugl && !s.toP && shHar("fiende", "fugl") && shRolig(s) && s.tilstand === "spill" && !s.bytte && !s.galaga && !s.finale && andel > .2 && andel < .8 && s.tid > (s.fuglT ?? 35 * shVanske())) { s.fuglT = s.tid + 60 + Math.random() * 30; shFuglStart(); } }
   { const andel = 1 - s.igjen / s.klosser.length; if (!s.hopper && shHar("fiende", "hopper") && shRolig(s) && s.tilstand === "spill" && !s.bytte && !s.galaga && andel > .15 && andel < .85 && s.tid > (s.hopperT ?? 20 * shVanske())) { s.hopperT = s.tid + 30 + Math.random() * 15; shHopperStart(); } }
   { const andel = 1 - s.igjen / s.klosser.length; if (!s.krabbe && shHar("fiende", "krabbe") && shRolig(s) && s.tilstand === "spill" && !s.bytte && !s.galaga && !(s.sopp > 0) && andel > .25 && andel < .85 && s.tid > (s.krabbeT ?? 18 * shVanske())) { s.krabbeT = s.tid + 25 + Math.random() * 15; shKrabbeStart(); } }
@@ -13289,7 +13333,7 @@ function shTegn(t) {
   shMørkeTegn(x, f, s);
   for (const b of s.baller) { shBobleTegn(x, b, f, s); shVoksTegn(x, b, f, s); shBallSnøTegn(x, b, f); }
   const tdt = Math.min(.05, Math.max(0, (t - (s.sistTegnT ?? t)) / 1000)); s.sistTegnT = t;
-  shSjokkTegn(x, c, s);
+  shSjokkTegn(x, c, s); shLynTegn(x, f, s);
   if (s.bytte) s.tekster = s.tekster.filter(tk => !/^\+\d/.test(tk.txt));
   // Teksten tegnes på et eget lag over feltet, så TRIP (farger, bølger, buling, ekko, zoom) ikke treffer den.
   { const x = shTekstLag(c, g);
@@ -13422,7 +13466,8 @@ function shTegn(t) {
   if (s.bytte) shByttetTegn(x, f, s);
   if (!SH_RAMME_UT) { x.strokeStyle = "#3a3633"; x.lineWidth = 1; x.strokeRect(0.5, 0.5, f - 1, SH_H * f - 1); } /* Krogh 2.26: kantlinja så ut som en løs strek på oransje vegg */
   x.restore();
-  if (s.krabbe) { x.save(); x.translate(g.fx, g.fy); shKrabbeTegn(x, f, s); x.restore(); } /* Krogh 2.26: tegnes utenfor klippet, så den synes oppå rammen */
+  if (s.krabbe) { x.save(); x.translate(g.fx, g.fy); shKrabbeTegn(x, f, s); x.restore(); }
+  shLynBlitsTegn(x, s); /* Krogh 2.26: tegnes utenfor klippet, så den synes oppå rammen */
 }
 function shSteg(t) {
   if (!sh || $("shatter").hidden) return;
