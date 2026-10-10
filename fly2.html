@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
 <meta name="theme-color" content="#111111">
-<title>Fly It</title>
+<title>Fly It 2</title>
 <style>
 :root { color-scheme: dark; }
 html { box-sizing: border-box; }
@@ -22,10 +22,12 @@ canvas { display: block; margin: 0 auto; touch-action: none; }
 
 const cv = document.getElementById("c"), cx = cv.getContext("2d");
 const VB = 360;           // virtuell skjermbredde
-const T = VB / 2.2;       // én bildefliss: litt over to i bredden på skjermen
-const KOL = 4;            // fliser i bredden i verden
-const WW = KOL * T;       // verdens bredde
-const FUGE = 2;           // mørk fuge mellom bildene
+// Versjon 2: ett stort bilde dekker hele verdens bredde. Skjermen viser litt over halve bildet,
+// så vi er zoomet inn, og kameraet glir ut til sidene når du styrer dit. Bildene kommer ett og ett oppover.
+const WW = Math.round(VB * 1.7); // verdens bredde = ett bilde
+const KOL = 1;
+const T = WW;             // bildene er kvadratiske
+const FUGE = 4;           // mørk fuge mellom bildene
 let VH = 640, SK = 1, DPR = 1;
 
 function resize() {
@@ -65,7 +67,7 @@ function nesteBilde() {
 // Bare bildene rundt kameraet ligger i minnet.
 const cache = new Map(); // nøkkel -> { st: 0 laster | 1 klar | 2 feil, c, t0, sist }
 const ko = []; let laster = 0;
-function oppløsning(w) { return Math.min(1024, Math.ceil(w * T * SK * DPR / 128) * 128); }
+function oppløsning(w) { return Math.min(1536, Math.ceil(w * T * SK * DPR / 128) * 128); }
 function hent(src, w) {
   const res = oppløsning(w), k = src + "@" + res;
   let e = cache.get(k);
@@ -93,30 +95,17 @@ function rydd() { for (const [k, e] of cache) if (e.st !== 0 && nå - e.sist > 4
 // Verdens y øker oppover. Rad r dekker y fra r*T til (r+1)*T. camY = hvor langt vi har flydd (bunnen av skjermen).
 let fliser = [], tårn = [], svidd = [], nesteRad = 0;
 function lagBånd() {
-  const r0 = nesteRad, p = Math.random();
+  const r0 = nesteRad;
   const legg = (c, r, w, h) => {
     const b = nesteBilde(), f = { c, r, w, h, b };
     fliser.push(f);
-    // Bakkekanoner står på bildene, men ikke på de aller første.
-    if (r0 > 3) {
-      const n = w * h > 1 ? 1 + (Math.random() < .5) : (Math.random() < .3 ? 1 : 0);
+    // Bakkekanoner står på bildene, men ikke på det første.
+    if (r0 > 0) {
+      const n = 2 + (Math.random() * 3 | 0);
       for (let i = 0; i < n; i++) tårn.push({ x: (c + .2 + Math.random() * (w - .4)) * T, gy: (r + .2 + Math.random() * (h - .4)) * T, hp: 4, ang: Math.PI / 2, skudd: 1 + Math.random() * 2, blink: 0 });
     }
   };
-  if (r0 === 0 || p < .5) { for (let c = 0; c < KOL; c++) legg(c, r0, 1, 1); nesteRad += 1; }
-  else if (p < .82) {
-    // Ett bilde over 2 × 2 fliser, resten enkle.
-    const c2 = [0, 1, 2][Math.random() * 3 | 0];
-    legg(c2, r0, 2, 2);
-    for (let c = 0; c < KOL; c++) if (c < c2 || c > c2 + 1) { legg(c, r0, 1, 1); legg(c, r0 + 1, 1, 1); }
-    nesteRad += 2;
-  } else {
-    // Et stort bilde over 3 × 3 fliser: du flyr over det lenge.
-    const c3 = Math.random() < .5 ? 0 : 1, cr = c3 === 0 ? 3 : 0;
-    legg(c3, r0, 3, 3);
-    for (let r = 0; r < 3; r++) legg(cr, r0 + r, 1, 1);
-    nesteRad += 3;
-  }
+  legg(0, r0, 1, 1); nesteRad += 1;
 }
 
 // ---------- pikselfigurer ----------
@@ -557,7 +546,7 @@ function rundRekt(x, y, w, h, r) { cx.beginPath(); cx.moveTo(x + r, y); cx.arcTo
 
 function tegnBakke() {
   cx.fillStyle = "#0b0b0b"; cx.fillRect(0, 0, VB, VH);
-  const topp = camY + VH + 3 * T; // forhåndslast et par rader foran
+  const topp = camY + VH + T * .9; // forhåndslast neste bilde
   for (const f of fliser) {
     const y0 = f.r * T, y1 = (f.r + f.h) * T;
     if (y1 < camY - 2 || y0 > topp) continue;
@@ -570,11 +559,11 @@ function tegnBakke() {
       if (a < 1) { cx.fillStyle = "#1a1a1a"; cx.fillRect(x + FUGE / 2, y + FUGE / 2, s - FUGE, s - FUGE); cx.globalAlpha = a; }
       cx.drawImage(e.c, x + FUGE / 2, y + FUGE / 2, s - FUGE, s - FUGE); cx.globalAlpha = 1;
     } else { cx.fillStyle = "#1a1a1a"; cx.fillRect(x + FUGE / 2, y + FUGE / 2, s - FUGE, s - FUGE); }
-    if (f.w > 1) {
-      // Store bilder får tittelen sin, som på kortene.
-      cx.font = "700 11px ui-monospace, Menlo, monospace"; cx.textAlign = "left"; cx.textBaseline = "bottom";
-      cx.fillStyle = "rgba(0,0,0,.55)"; cx.fillText(f.b.navn.toUpperCase(), x + 11, y + s - 9);
-      cx.fillStyle = "#ffb23a"; cx.fillText(f.b.navn.toUpperCase(), x + 10, y + s - 10);
+    {
+      // Hvert bilde får tittelen sin, som på kortene. Står fast på skjermen sidelengs, så den ikke glir ut.
+      cx.font = "700 12px ui-monospace, Menlo, monospace"; cx.textAlign = "left"; cx.textBaseline = "bottom";
+      cx.fillStyle = "rgba(0,0,0,.6)"; cx.fillText(f.b.navn.toUpperCase(), 15, y + s - 11);
+      cx.fillStyle = "#ffb23a"; cx.fillText(f.b.navn.toUpperCase(), 14, y + s - 12);
     }
   }
   // Litt mørkere bakke, så figurene står ut mot lyse bilder.
