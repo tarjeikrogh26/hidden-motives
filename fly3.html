@@ -1,0 +1,1034 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="theme-color" content="#111111">
+<title>Fly It 3</title>
+<style>
+:root { color-scheme: dark; }
+html { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; background: #111; overflow: hidden; overscroll-behavior: none;
+  touch-action: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+canvas { display: block; margin: 0 auto; touch-action: none; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script>
+"use strict";
+// FLY IT 3: vertikal shooter over Kroghs egne bilder.
+// Hver stage er en sesong: du flyr over sesongens bilder, møter figurene fra den på bakken, og bossen venter til slutt.
+// Våpen som i Raiden (rød spredning eller blå laser, målsøkende missiler, bomber) og options som i Nemesis/Salamander.
+// Alt regnes i virtuelle enheter: skjermen er alltid 360 enheter bred, høyden følger telefonen.
+
+const cv = document.getElementById("c"), cx = cv.getContext("2d");
+const VB = 360;                   // virtuell skjermbredde
+const WW = Math.round(VB * 1.7);  // verdens bredde = ett bilde
+const T = WW;                     // bildene er kvadratiske
+const OV = Math.round(T * .25);   // så mye bildene overlapper; det øverste toner ut over det under
+const STEG = T - OV;              // avstand fra ett bilde til det neste
+const ETAPPE_BILDER = 7;          // bilder i en stage før bossen kommer
+let VH = 640, SK = 1, DPR = 1;
+
+function resize() {
+  const h = document.body.clientHeight || innerHeight, w = Math.min(document.body.clientWidth || innerWidth, Math.round(h * .62));
+  DPR = Math.min(2, devicePixelRatio || 1);
+  SK = w / VB; VH = h / SK;
+  cv.width = Math.round(w * DPR); cv.height = Math.round(h * DPR);
+  cv.style.width = w + "px"; cv.style.height = h + "px";
+}
+addEventListener("resize", resize); resize();
+
+// ---------- sesonger: bilder, figurer og bosser ----------
+const til = (mappe, nr) => nr.map(n => mappe + n + ".jpg");
+const ALLE_TI = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+const SESONGER = [
+  { navn: "The Velvet Asylum", bilder: til("bilder/", ALLE_TI),
+    monstre: ["m_b3_1", "m_b5_0", "m_b6_2", "m_b7_0", "m_b8_0", "m_b9_0"], bosser: ["boss_b8", "boss_b10"] },
+  { navn: "Teeth in the Garden", bilder: til("bilder02/", ALLE_TI),
+    monstre: ["m_c2b1_1", "m_c2b2_0", "m_c2b3_0", "m_c2b6_0", "m_c2b9_1", "m_c2b9_2"], bosser: ["boss_c2b5", "boss_c2b8", "boss_c2b10"] },
+  { navn: "Creature Kingdom", bilder: til("bilder03/", ALLE_TI),
+    monstre: ["m_c3b1_0", "m_c3b3_0", "m_c3b4_0", "m_c3b7_0", "m_c3b8_0", "m_c3b9_0"], bosser: ["boss_c3b2", "boss_c3b5", "boss_c3b10"] },
+  { navn: "Dark City", bilder: til("bilder04/", ALLE_TI),
+    monstre: ["m_c4b1_1", "m_c4b1_3", "m_c4b3_0", "m_c4b5_0", "m_c4b9_0"], bosser: ["boss_c4b4", "boss_c4b5"] },
+  { navn: "A Museum of Small Lies", bilder: til("bilder05/", ALLE_TI),
+    monstre: ["m_c5b10_kirsebaer", "m_c5b2_hund", "m_c5b4_bla", "m_c5b4_gra", "m_c5b4_oye", "m_c5b4_rod", "m_c5b6_vesen", "m_c5b7_mann"],
+    bosser: ["boss_c5b3_oyne", "boss_c5b4_oransje", "boss_c5b8_blekk", "boss_c5b9_bla"] }
+];
+// Sesong 6 er Mixed Media: de fire nye bildene pluss tre fra de andre, og figurer fra alle.
+SESONGER.push({ navn: "Mixed Media", bilder: til("bilder06/", [6, 7, 8, 9]), ekstra: 3,
+  monstre: SESONGER.flatMap(s => s.monstre), bosser: SESONGER.flatMap(s => s.bosser) });
+
+const tilfeldig = a => a[Math.random() * a.length | 0];
+function bland(a) { for (let i = a.length - 1; i > 0; i--) { const j = Math.random() * (i + 1) | 0; [a[i], a[j]] = [a[j], a[i]]; } return a; }
+let stokk = [];
+function lagStokk(e) {
+  const S = SESONGER[e], a = bland(S.bilder.slice());
+  if (S.ekstra) a.push(...bland(SESONGER.slice(0, 5).flatMap(s => s.bilder)).slice(0, S.ekstra));
+  return a;
+}
+function nesteBilde() { if (!stokk.length) stokk = lagStokk(etappe); return stokk.shift(); }
+
+// ---------- lasting av bilder ----------
+// Originalene er 1500–2000 px. Hvert bilde krympes til det som trengs på skjermen, og den nederste kanten
+// tones ut, så bildet glir over i det neste. Bare bildene rundt kameraet ligger i minnet.
+const cache = new Map(); // nøkkel -> { st: 0 laster | 1 klar | 2 feil, c, t0, sist }
+const ko = []; let laster = 0;
+function oppløsning() { return Math.min(1536, Math.ceil(T * SK * DPR / 128) * 128); }
+function hent(src) {
+  const res = oppløsning(), k = src + "@" + res;
+  let e = cache.get(k);
+  if (!e) { e = { st: 0, src, res, sist: 0 }; cache.set(k, e); ko.push(e); pump(); }
+  e.sist = nå;
+  return e;
+}
+function pump() {
+  while (laster < 3 && ko.length) {
+    const e = ko.shift(); laster++;
+    const img = new Image(); img.decoding = "async";
+    img.onload = () => {
+      const c = document.createElement("canvas"); c.width = c.height = e.res;
+      const g = c.getContext("2d"), s = Math.min(img.naturalWidth, img.naturalHeight);
+      g.drawImage(img, (img.naturalWidth - s) / 2, (img.naturalHeight - s) / 2, s, s, 0, 0, e.res, e.res);
+      // Myk nederkant: dekker hele lerretet, helt synlig over overlappen og gjennomsiktig nederst.
+      const gr = g.createLinearGradient(0, 0, 0, e.res);
+      gr.addColorStop(0, "#000"); gr.addColorStop(1 - OV / T, "#000"); gr.addColorStop(1, "rgba(0,0,0,0)");
+      g.globalCompositeOperation = "destination-in"; g.fillStyle = gr; g.fillRect(0, 0, e.res, e.res);
+      e.c = c; e.st = 1; e.t0 = nå; img.onload = img.onerror = null; laster--; pump();
+    };
+    img.onerror = () => { e.st = 2; laster--; pump(); };
+    img.src = e.src;
+  }
+}
+function rydd() { for (const [k, e] of cache) if (e.st !== 0 && nå - e.sist > 4) cache.delete(k); }
+
+// Figurene er klippet ut av Kroghs egne bilder (mappa figurer/). Hver lastes én gang per størrelse,
+// med en hvit utgave for treff og en svart for skygge.
+const FIGCACHE = new Map();
+function hentFigur(navn, maks, glød) {
+  const k = navn + "@" + maks;
+  let e = FIGCACHE.get(k);
+  if (e) return e;
+  e = { st: 0, w: maks, h: maks }; FIGCACHE.set(k, e);
+  const img = new Image();
+  img.onload = () => {
+    const nw = img.naturalWidth, nh = img.naturalHeight, lang = Math.max(nw, nh);
+    e.w = maks * nw / lang; e.h = maks * nh / lang;
+    const sk = Math.min(1, maks * SK * DPR / lang), w = Math.max(1, Math.round(nw * sk)), h = Math.max(1, Math.round(nh * sk));
+    const lag = farge => {
+      const c = document.createElement("canvas"); c.width = w; c.height = h;
+      const g = c.getContext("2d"); g.drawImage(img, 0, 0, w, h);
+      if (farge) { g.globalCompositeOperation = "source-in"; g.fillStyle = farge; g.fillRect(0, 0, w, h); }
+      return c;
+    };
+    e.sp = lag(); e.hvit = lag("#fff"); e.skygge = lag("#000");
+    // Lysende kant, så figuren står ut over fotografiene. Tegnes én gang her, ikke per bilde.
+    const pad = Math.round(10 * sk * lang / maks), c = document.createElement("canvas");
+    c.width = w + pad * 2; c.height = h + pad * 2;
+    const g = c.getContext("2d");
+    g.shadowColor = glød || "rgba(0,0,0,.85)"; g.shadowBlur = pad * .8;
+    g.drawImage(e.sp, pad, pad); g.drawImage(e.sp, pad, pad);
+    e.glød = c; e.pad = pad * maks / (sk * lang); e.st = 1;
+  };
+  img.onerror = () => { e.st = 2; };
+  img.src = "figurer/" + navn + ".webp";
+  return e;
+}
+const VESEN_STR = 64, BOSS_STR = 240;
+function lastEtappeFigurer() {
+  const S = SESONGER[etappe];
+  for (const m of S.monstre) hentFigur(m, VESEN_STR);
+  hentFigur(etappeBoss, BOSS_STR, "#ff3fb4");
+}
+
+// ---------- pikselfigurer ----------
+// Egne små Galaga-aktige insekter i lufta. To bilder hver for vingeslag.
+const PAL = { Y: "#ffd23f", B: "#3a7bff", R: "#ff3b5c", W: "#bfe6ff", w: "#ffffff", P: "#b04dff", G: "#29d17a", D: "#0f6b40", M: "#ff3fb4", g: "#9aa3ad", k: "#4b525b" };
+const FIGURER = {
+  bie: { hp: 1, poeng: 100, kart: [
+    [".....B...B.....", "......B.B......", ".WW..YYYYY..WW.", "WWWW.YRYRY.WWWW", ".WWWWYYYYYWWWW.", "...WWBYBYBWW...", ".....YBYBY.....", ".....BYBYB.....", "......YBY......", ".......Y......."],
+    [".....B...B.....", "......B.B......", ".....YYYYY.....", ".....YRYRY.....", "..WWWYYYYYWWW..", ".WWWWBYBYBWWWW.", "WWWW.YBYBY.WWWW", ".WW..BYBYB..WW.", "......YBY......", ".......Y......."]] },
+  fugl: { hp: 2, poeng: 160, kart: [
+    ["....w.....w....", ".....w...w.....", "PPP...RRR...PPP", "PPPP.RwRwR.PPPP", "PYPPPRRRRRPPPYP", ".PPPPRwRwRPPPP.", "..PP.RRRRR.PP..", "......RwR......", ".......R......."],
+    ["....w.....w....", ".....w...w.....", "......RRR......", "..PP.RwRwR.PP..", ".PYPPRRRRRPPYP.", ".PPPPRwRwRPPPP.", "..PPPRRRRRPPP..", "...P..RwR..P...", ".......R......."]] },
+  sjef: { hp: 6, poeng: 400, kart: [
+    ["...M.......M...", "....M.....M....", "..GGGGGGGGGGG..", ".GGwwGGGGGwwGG.", "GGGwDGGGGGDwGGG", "GMGGGGDDDGGGGMG", "GMMGGDGGGDGGMMG", "M..GGGGGGGGG..M", "....GG...GG....", "...GG.....GG..."],
+    ["...M.......M...", "....M.....M....", "..GGGGGGGGGGG..", ".GGwwGGGGGwwGG.", "GGGwDGGGGGDwGGG", "GMGGGGDDDGGGGMG", "GMMGGDGGGDGGMMG", ".M.GGGGGGGGG.M.", "...GG.....GG...", "....GG...GG...."]] },
+  // Bæreren fra Raiden: et tregt skip som krysser skjermen med en bonus om bord.
+  bærer: { hp: 8, poeng: 500, kart: [
+    ["......ggg......", "....ggwwwgg....", "..gggwwwwwggg..", "ggggggggggggggg", "gkkggkkMkkggkkg", "..ggggggggggg..", "....M.....M...."],
+    ["......ggg......", "....ggwwwgg....", "..gggwwwwwggg..", "ggggggggggggggg", "gkkggkkYkkggkkg", "..ggggggggggg..", "..............."]] }
+};
+const PX = 2.3; // enheter per piksel
+function lagSprite(kart, farge) {
+  const c = document.createElement("canvas"); c.width = kart[0].length; c.height = kart.length;
+  const g = c.getContext("2d");
+  kart.forEach((rad, y) => [...rad].forEach((ch, x) => { if (ch !== ".") { g.fillStyle = farge || PAL[ch]; g.fillRect(x, y, 1, 1); } }));
+  return c;
+}
+for (const k in FIGURER) {
+  const f = FIGURER[k];
+  f.sp = f.kart.map(m => lagSprite(m)); f.hvit = f.kart.map(m => lagSprite(m, "#fff")); f.skygge = f.kart.map(m => lagSprite(m, "#000"));
+  f.r = f.kart[0].length * PX * .42;
+}
+
+// ---------- baner (Catmull-Rom, gått med jevn fart) ----------
+const BANER = [
+  [[.1, -.08], [.2, .3], [.6, .55], [.82, .36], [.56, .18], [.3, .34], [.22, .7], [.42, 1.15]],
+  [[.5, -.08], [.28, .22], [.72, .46], [.28, .7], [.5, 1.15]],
+  [[-.1, .12], [.3, .2], [.7, .36], [.9, .22], [.6, .08], [.4, .3], [1.15, .5]],
+  [[.25, -.08], [.25, .35], [.5, .55], [.75, .35], [.75, -.1]]
+];
+function lagBane(pkt, speil, x0) {
+  const P = pkt.map(([u, v]) => [x0 + (speil ? 1 - u : u) * VB, v * VH]);
+  const ut = [];
+  for (let i = 0; i < P.length - 1; i++) {
+    const p0 = P[Math.max(0, i - 1)], p1 = P[i], p2 = P[i + 1], p3 = P[Math.min(P.length - 1, i + 2)];
+    for (let s = 0; s < 16; s++) {
+      const t = s / 16, t2 = t * t, t3 = t2 * t;
+      ut.push([.5 * (2 * p1[0] + (-p0[0] + p2[0]) * t + (2 * p0[0] - 5 * p1[0] + 4 * p2[0] - p3[0]) * t2 + (-p0[0] + 3 * p1[0] - 3 * p2[0] + p3[0]) * t3),
+               .5 * (2 * p1[1] + (-p0[1] + p2[1]) * t + (2 * p0[1] - 5 * p1[1] + 4 * p2[1] - p3[1]) * t2 + (-p0[1] + 3 * p1[1] - 3 * p2[1] + p3[1]) * t3)]);
+    }
+  }
+  ut.push(P[P.length - 1]);
+  const L = [0];
+  for (let i = 1; i < ut.length; i++) L.push(L[i - 1] + Math.hypot(ut[i][0] - ut[i - 1][0], ut[i][1] - ut[i - 1][1]));
+  return { p: ut, L, tot: L[L.length - 1] };
+}
+function påBane(b, d) {
+  if (d <= 0) return b.p[0];
+  if (d >= b.tot) return null;
+  let lo = 0, hi = b.L.length - 1;
+  while (hi - lo > 1) { const m = (lo + hi) >> 1; if (b.L[m] < d) lo = m; else hi = m; }
+  const f = (d - b.L[lo]) / (b.L[hi] - b.L[lo] || 1);
+  return [b.p[lo][0] + (b.p[hi][0] - b.p[lo][0]) * f, b.p[lo][1] + (b.p[hi][1] - b.p[lo][1]) * f];
+}
+
+// ---------- lyd ----------
+let ac = null, musikk = null, lydPå = true;
+try { lydPå = localStorage.getItem("fly-lyd") !== "0"; } catch {}
+function startLyd() {
+  if (!ac) { try { ac = new (window.AudioContext || window.webkitAudioContext)(); } catch {} }
+  if (ac && ac.state === "suspended") ac.resume();
+  if (!musikk) { musikk = new Audio("musikk/piranha.mp4"); musikk.loop = true; musikk.volume = .55; }
+  if (lydPå) musikk.play().catch(() => {});
+}
+function pip(f0, f1, tid, vol, type) {
+  if (!ac || !lydPå) return;
+  const o = ac.createOscillator(), g = ac.createGain(), t = ac.currentTime;
+  o.type = type || "square"; o.frequency.setValueAtTime(f0, t); o.frequency.exponentialRampToValueAtTime(f1, t + tid);
+  g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(.0001, t + tid);
+  o.connect(g).connect(ac.destination); o.start(t); o.stop(t + tid);
+}
+let støyBuf = null;
+function smell(vol, tid) {
+  if (!ac || !lydPå) return;
+  if (!støyBuf) { støyBuf = ac.createBuffer(1, ac.sampleRate * .8, ac.sampleRate); const d = støyBuf.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1; }
+  const s = ac.createBufferSource(), g = ac.createGain(), f = ac.createBiquadFilter(), t = ac.currentTime;
+  s.buffer = støyBuf; f.type = "lowpass"; f.frequency.setValueAtTime(1800, t); f.frequency.exponentialRampToValueAtTime(120, t + tid);
+  g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(.0001, t + tid);
+  s.connect(f).connect(g).connect(ac.destination); s.start(t); s.stop(t + tid);
+}
+function settLyd(på) {
+  lydPå = på; try { localStorage.setItem("fly-lyd", på ? "1" : "0"); } catch {}
+  if (musikk) { if (på) musikk.play().catch(() => {}); else musikk.pause(); }
+}
+
+// ---------- tilstand ----------
+let nå = 0, tilstand = "start", pause = false;
+let camY, camX, fart, skip, spor, kuler, missiler, fiender, fkuler, bonuser, partikler, ringer, tekster, poeng, rekord = 0, tid, bølgeKlokke, bølgeNr, bærerKlokke, rist, blits;
+let fliser = [], bakke = [], svidd = [], nesteRad = 0;
+let etappe = 0, runde = 0, fase = "fly", etappeStartRad = 0, etappeRader = 0, etappeBoss = "", boss = null, banner = null, klarT = 0;
+try { rekord = +localStorage.getItem("fly3-rekord") || 0; } catch {}
+const bølger = {};
+const FART = 38; // bakken ruller så mange enheter i sekundet
+
+function nyttSpill() {
+  camY = 0; camX = (WW - VB) / 2; fart = FART; nesteRad = 0; fliser = []; bakke = []; svidd = [];
+  skip = { x: WW / 2, y: VH - 90, vx: 0, krenge: 0, liv: 3, våpen: 1, type: "v", mis: 1, opt: 0, bomber: 3, usårbar: 2, skudd: 0, mskudd: 0, død: 0 };
+  spor = [];
+  kuler = []; missiler = []; fiender = []; fkuler = []; bonuser = []; partikler = []; ringer = []; tekster = [];
+  for (const k in bølger) delete bølger[k];
+  poeng = 0; tid = 0; bølgeKlokke = 2.5; bølgeNr = 0; bærerKlokke = 14; rist = 0; blits = 0;
+  runde = 0; startEtappe(0, true);
+  fyllVerden();
+}
+function startEtappe(e, førsteGang) {
+  etappe = e; fase = "fly"; boss = null;
+  etappeBoss = tilfeldig(SESONGER[etappe].bosser);
+  stokk = lagStokk(etappe);
+  if (!førsteGang) {
+    // Kast bilder som ikke er synlige ennå, så den nye sesongen starter med en gang.
+    fliser = fliser.filter(f => f.r * STEG <= camY + VH);
+    nesteRad = fliser.length ? fliser[fliser.length - 1].r + 1 : nesteRad;
+  }
+  etappeStartRad = nesteRad; etappeRader = 0;
+  lastEtappeFigurer();
+  banner = { a: "STAGE " + (etappe + 1 + runde * SESONGER.length), b: SESONGER[etappe].navn.toUpperCase(), t: 3.2, farge: "#ffa31a" };
+}
+function fyllVerden() { while (nesteRad * STEG < camY + VH + T * .5) lagBånd(); }
+nyttSpill();
+
+const vanske = () => Math.min(7, 1 + tid / 70 + etappe * .45 + runde * 1.5);
+
+// ---------- verden ----------
+// Verdens y øker oppover. Bilde r dekker y fra r*STEG til r*STEG+T. camY = hvor langt vi har flydd (bunnen av skjermen).
+function lagBånd() {
+  const r = nesteRad, y0 = r * STEG;
+  fliser.push({ r, src: nesteBilde() });
+  nesteRad++;
+  // Fiender på bakken bare på stagens egne bilder, og ikke på det aller første.
+  if (fase !== "fly" || etappeRader >= ETAPPE_BILDER) return;
+  etappeRader++;
+  if (r === 0) return;
+  const gy = () => y0 + OV * .6 + Math.random() * (T - OV * 1.2);
+  const nt = 1 + (Math.random() * 2 | 0), nv = 1 + (Math.random() * 2 | 0) + (etappe >= 2 ? 1 : 0);
+  for (let i = 0; i < nt; i++) bakke.push({ type: "t", x: (.12 + Math.random() * .76) * WW, gy: gy(), hp: 4, ang: Math.PI / 2, skudd: 1 + Math.random() * 2, blink: 0 });
+  for (let i = 0; i < nv; i++) bakke.push({ type: "v", navn: tilfeldig(SESONGER[etappe].monstre), x: (.12 + Math.random() * .76) * WW, gy: gy(),
+    hp: 12 + etappe * 3, vx: (Math.random() < .5 ? -1 : 1) * (6 + Math.random() * 12), speil: Math.random() < .5, skudd: 1.5 + Math.random() * 2, blink: 0, t: Math.random() * 6 });
+}
+const bakkeY = gy => VH - (gy - camY);
+const påSkjerm = (x, y) => x > camX - 30 && x < camX + VB + 30 && y > -30 && y < VH + 30;
+
+// ---------- bølger ----------
+function nyBølge() {
+  bølgeNr++;
+  const d = vanske(), id = bølgeNr;
+  const valg = Math.random();
+  if (bølgeNr % 5 === 0 || (d > 2 && valg < .25)) formasjon(id, d);
+  else if (valg < .7) {
+    // En slange av insekter langs en bane.
+    const bane = lagBane(tilfeldig(BANER), Math.random() < .5, camX);
+    const type = d > 2.2 && Math.random() < .4 ? "fugl" : "bie", n = 5 + Math.min(4, d | 0);
+    for (let i = 0; i < n; i++) fiender.push(nyFiende(type, { modus: "bane", bane, d: -i * 34, fart: 120 + d * 12 }, id));
+    bølger[id] = { igjen: n, alle: n };
+  } else {
+    // En kolonne som svinger seg nedover.
+    const x0 = camX + 60 + Math.random() * (VB - 120), n = 4 + Math.min(3, d | 0);
+    for (let i = 0; i < n; i++) fiender.push(nyFiende("bie", { modus: "sinus", x0, y: -20 - i * 40, amp: 50 + Math.random() * 40, fase: i * .5, fart: 70 + d * 8 }, id));
+    bølger[id] = { igjen: n, alle: n };
+  }
+}
+function nyFiende(type, bev, bølge) {
+  const f = FIGURER[type];
+  return { type, f, hp: f.hp + (type !== "sjef" ? 0 : Math.floor(vanske())), x: -999, y: -999, ...bev, bølge, t: Math.random() * 3, treff: 0, skudd: 1.5 + Math.random() * 2.5, vx: 0, vy: 0 };
+}
+function formasjon(id, d) {
+  // Galaga: de flyr inn, stiller seg opp øverst, og stuper ned mot deg én og én.
+  const rader = d > 3 ? 3 : 2, kol = 6, mx = camX + VB / 2;
+  let n = 0;
+  for (let r = 0; r < rader; r++) for (let k = 0; k < kol; k++) {
+    const type = r === 0 && (k === 2 || k === 3) && d > 1.6 ? "sjef" : r === 0 ? "fugl" : "bie";
+    const sx = mx + (k - (kol - 1) / 2) * 40, sy = 70 + r * 36;
+    const inn = lagBane([[k < 3 ? -.1 : 1.1, .45], [k < 3 ? .25 : .75, .3], [(sx - camX) / VB, sy / VH + .08], [(sx - camX) / VB, sy / VH]], false, camX);
+    fiender.push(nyFiende(type, { modus: "inn", bane: inn, d: -(r * kol + (k % 3)) * 26, fart: 200, sx, sy }, id));
+    n++;
+  }
+  bølger[id] = { igjen: n, alle: n, formasjon: true, t: 0 };
+}
+function nyBærer() {
+  const fra = Math.random() < .5 ? -1 : 1;
+  fiender.push(nyFiende("bærer", { modus: "kryss", x: fra < 0 ? camX - 30 : camX + VB + 30, y: VH * (.18 + Math.random() * .12), retning: -fra }, 0));
+}
+
+// ---------- boss ----------
+function startBoss() {
+  fase = "boss";
+  const hp = 260 + etappe * 120 + runde * 500;
+  boss = { navn: etappeBoss, x: WW / 2, y: -140, hp, maks: hp, t: 0, mønster: 0, mt: 0, skuddT: 0, vinkel: 0, treff: 0, inn: true, død: 0 };
+  banner = { a: "WARNING", b: "", t: 2.4, farge: "#ff3fb4", blink: true };
+  pip(220, 110, .5, .12, "sawtooth"); setTimeout(() => pip(220, 110, .5, .12, "sawtooth"), 600);
+}
+function bossFig() { return hentFigur(boss.navn, BOSS_STR, "#ff3fb4"); }
+function bossR() { const f = bossFig(); return Math.min(f.w, f.h) * .4; }
+function oppdaterBoss(dt, d) {
+  const b = boss, s = skip;
+  b.t += dt; b.treff = Math.max(0, b.treff - dt);
+  if (b.død > 0) {
+    b.død -= dt;
+    if (Math.random() < dt * 14) { eksplosjon(b.x + (Math.random() - .5) * 140, b.y + (Math.random() - .5) * 140, 14, ["#fff", "#ffa31a", "#ff3fb4"], 1.2); smell(.3, .3); }
+    if (b.død <= 0) {
+      eksplosjon(b.x, b.y, 90, ["#fff", "#ffa31a", "#ff3fb4", "#ffd23f"], 3); smell(1, 1.4); rist = .8; blits = .8;
+      const bonus = 5000 * (etappe + 1) * (runde + 1); poeng += bonus; poengTekst(b.x, b.y, "+" + bonus.toLocaleString("en"));
+      slipp(b.x - 30, b.y, "P"); slipp(b.x, b.y, "M"); slipp(b.x + 30, b.y, "O");
+      boss = null; fase = "klar"; klarT = 4.5;
+      banner = { a: "STAGE CLEAR", b: "", t: 3.5, farge: "#ffa31a" };
+    }
+    return;
+  }
+  if (b.inn) { b.y += (150 - b.y) * Math.min(1, dt * 1.2); if (b.y > 140) b.inn = false; }
+  else { b.x = WW / 2 + Math.sin(b.t * .45) * (WW / 2 - 110); b.y = 150 + Math.sin(b.t * .9) * 22; }
+  if (b.inn || s.død > 0) return;
+  // Fire mønstre på rundgang. Under halv helse går alt fortere.
+  const raskt = b.hp < b.maks / 2 ? 1.5 : 1, nivå = etappe + runde * 3;
+  b.mt += dt; if (b.mt > 5) { b.mt = 0; b.mønster = (b.mønster + 1) % 4; }
+  b.skuddT -= dt * raskt;
+  if (b.skuddT > 0) return;
+  const v = 120 + d * 10;
+  if (b.mønster === 0) { // vifte rett mot deg
+    const a = Math.atan2(s.y - b.y, s.x - b.x), n = 5 + (nivå > 2 ? 2 : 0);
+    for (let i = 0; i < n; i++) skudd(b.x, b.y + 30, a + (i - (n - 1) / 2) * .16, v * 1.1);
+    b.skuddT = .8;
+  } else if (b.mønster === 1) { // ring
+    const n = 14 + nivå * 2; b.vinkel += .17;
+    for (let i = 0; i < n; i++) skudd(b.x, b.y, b.vinkel + i * 6.283 / n, v * .85);
+    b.skuddT = 1.1;
+  } else if (b.mønster === 2) { // spiral med to armer
+    b.vinkel += .38;
+    skudd(b.x, b.y, b.vinkel, v * .9); skudd(b.x, b.y, b.vinkel + Math.PI, v * .9);
+    b.skuddT = .085;
+  } else { // regn fra sidene
+    skudd(b.x + (Math.random() - .5) * 160, b.y + 40, Math.PI / 2 + (Math.random() - .5) * .3, v * (.8 + Math.random() * .5));
+    b.skuddT = .12;
+  }
+}
+function skadBoss(dmg) {
+  const b = boss;
+  if (!b || b.død > 0 || b.inn) return;
+  b.hp -= dmg; b.treff = .06;
+  if (b.hp <= 0) { b.hp = 0; b.død = 1.8; fkuler.length = 0; poeng += 2000; }
+}
+
+// ---------- skyting ----------
+function skyt() {
+  const s = skip, L = s.våpen;
+  if (s.type === "v") {
+    // Rød vulkan: sprer seg mer for hvert nivå.
+    const sk = (x, y, vinkel, dmg) => kuler.push({ x: s.x + x, y: s.y + y, vx: Math.sin(vinkel) * 620, vy: -Math.cos(vinkel) * 620, dmg });
+    const dmg = L >= 5 ? 1.4 : 1;
+    if (L === 1) sk(0, -16, 0, dmg);
+    else if (L === 2) { sk(-5, -12, 0, dmg); sk(5, -12, 0, dmg); }
+    else if (L === 3) { sk(-5, -12, 0, dmg); sk(5, -12, 0, dmg); sk(-9, -6, -.2, dmg); sk(9, -6, .2, dmg); }
+    else { sk(0, -16, 0, dmg); sk(-6, -12, -.05, dmg); sk(6, -12, .05, dmg); sk(-10, -6, -.2, dmg); sk(10, -6, .2, dmg); sk(-14, -2, -.38, dmg); sk(14, -2, .38, dmg); }
+  } else {
+    // Blå laser: rett fram, går gjennom alt den treffer.
+    const lz = (x, dmg, b) => kuler.push({ x: s.x + x, y: s.y - 20, vx: 0, vy: -980, dmg, laser: true, b, truffet: new Set() });
+    const dmg = [0, 1.5, 1.5, 1.6, 1.9, 2.1][L];
+    if (L === 1) lz(0, dmg, 3);
+    else if (L === 2) { lz(-5, dmg, 3); lz(5, dmg, 3); }
+    else if (L === 3) { lz(0, dmg, 4); lz(-9, dmg, 3); lz(9, dmg, 3); }
+    else if (L === 4) { lz(0, dmg, 5); lz(-10, dmg, 3.5); lz(10, dmg, 3.5); }
+    else { lz(0, dmg, 6); lz(-8, dmg, 4); lz(8, dmg, 4); lz(-16, dmg, 3); lz(16, dmg, 3); }
+  }
+  // Options skyter det samme enkle skuddet som skipet.
+  for (let i = 0; i < s.opt; i++) {
+    const p = optionPos(i);
+    if (s.type === "v") kuler.push({ x: p[0], y: p[1] - 6, vx: 0, vy: -620, dmg: 1 });
+    else kuler.push({ x: p[0], y: p[1] - 8, vx: 0, vy: -980, dmg: 1.4, laser: true, b: 3, truffet: new Set() });
+  }
+}
+function optionPos(i) {
+  // Options følger sporet skipet har flydd, som i Nemesis: et fast stykke bak skipet langs veien det tok.
+  let igjen = 26 * (i + 1), fx = skip.x, fy = skip.y;
+  for (let k = spor.length - 1; k >= 0; k--) {
+    const [px, py] = spor[k], d = Math.hypot(px - fx, py - fy);
+    if (d >= igjen) { const f = igjen / d; return [fx + (px - fx) * f, fy + (py - fy) * f]; }
+    igjen -= d; fx = px; fy = py;
+  }
+  return [fx, fy];
+}
+function skytMissiler() {
+  const n = [0, 2, 2, 4][skip.mis];
+  for (let i = 0; i < n; i++) {
+    const side = i % 2 ? 1 : -1, ut = i < 2 ? 1 : 1.8;
+    missiler.push({ x: skip.x + side * 12 * ut, y: skip.y, vx: side * 140 * ut, vy: 40, ang: -Math.PI / 2 + side * .9, liv: 2.2, mål: null });
+  }
+}
+function bombe() {
+  if (tilstand !== "spill" || skip.bomber <= 0 || skip.død > 0) return;
+  skip.bomber--; blits = 1; rist = .5; skip.usårbar = Math.max(skip.usårbar, 1.2);
+  ringer.push({ x: skip.x, y: skip.y, r: 10, maks: VH * 1.1, fart: 900, farge: "255,190,60", tykk: 14 });
+  fkuler.length = 0;
+  for (const f of fiender) if (påSkjerm(f.x, f.y)) skad(f, 14);
+  for (const t of bakke) { const sy = bakkeY(t.gy); if (sy > -20 && sy < VH + 20) skadBakke(t, 14); }
+  skadBoss(25);
+  smell(.9, .9); pip(90, 30, .8, .25, "sawtooth");
+}
+
+// ---------- treff og eksplosjoner ----------
+function eksplosjon(x, y, n, farger, størrelse) {
+  for (let i = 0; i < n; i++) {
+    const a = Math.random() * 6.283, v = 40 + Math.random() * 220 * størrelse;
+    partikler.push({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, liv: .35 + Math.random() * .5, maks: .85, farge: farger[i % farger.length], r: 1.2 + Math.random() * 2.4 * størrelse });
+  }
+  ringer.push({ x, y, r: 4, maks: 30 * størrelse, fart: 160 * størrelse, farge: "255,230,180", tykk: 3 });
+}
+function poengTekst(x, y, txt) { tekster.push({ x, y, txt, liv: .9 }); }
+function skad(f, dmg) {
+  if (f.hp <= 0) return;
+  f.hp -= dmg; f.treff = .07;
+  if (f.hp > 0) { pip(900, 600, .04, .03); return; }
+  poeng += f.f.poeng; poengTekst(f.x, f.y, f.f.poeng);
+  const farger = f.type === "bie" ? ["#ffd23f", "#3a7bff", "#fff"] : f.type === "fugl" ? ["#ff3b5c", "#b04dff", "#fff"] : f.type === "bærer" ? ["#9aa3ad", "#ff3fb4", "#fff"] : ["#29d17a", "#ff3fb4", "#fff"];
+  const stor = f.type === "sjef" || f.type === "bærer";
+  eksplosjon(f.x, f.y, stor ? 40 : 18, farger, stor ? 1.6 : 1);
+  smell(stor ? .6 : .32, stor ? .6 : .3);
+  if (f.type === "bærer") slipp(f.x, f.y, Math.random() < .6 ? "P" : "O");
+  else if (f.type === "sjef") { slipp(f.x, f.y, "P"); rist = .25; }
+  else if (Math.random() < .04) slipp(f.x, f.y);
+  const b = bølger[f.bølge];
+  if (b) {
+    b.igjen--; b.drept = (b.drept || 0) + 1;
+    if (b.igjen === 0 && b.drept === b.alle) { poeng += 500; poengTekst(f.x, f.y - 18, "WAVE +500"); slipp(f.x, f.y); }
+  }
+}
+function forsvant(f) { const b = bølger[f.bølge]; if (b) b.igjen--; }
+function skadBakke(t, dmg) {
+  if (t.hp <= 0) return;
+  t.hp -= dmg; t.blink = .07;
+  if (t.hp > 0) return;
+  const sy = bakkeY(t.gy), p = t.type === "v" ? 300 : 250;
+  poeng += p; poengTekst(t.x, sy, p);
+  eksplosjon(t.x, sy, t.type === "v" ? 30 : 22, ["#ff9a2e", "#ffd23f", "#555"], 1.2); smell(.45, .45);
+  svidd.push({ x: t.x, gy: t.gy, r: 16 + Math.random() * 8 });
+  if (Math.random() < .14) slipp(t.x, sy);
+}
+function slipp(x, y, type) {
+  if (!type) { const r = Math.random(); type = r < .45 ? "P" : r < .7 ? "M" : r < .85 ? "O" : "B"; }
+  bonuser.push({ x, y, type, t: Math.random() * 1.3 });
+}
+// Raiden: P-kapselen skifter mellom rød (vulkan) og blå (laser). Fargen når du tar den bestemmer våpenet.
+const bonusFarge = b => b.type === "P" ? (Math.floor(b.t / 1.3) % 2 ? "l" : "v") : null;
+function ta(b) {
+  const s = skip, ekstra = () => { poeng += 1000; poengTekst(s.x, s.y - 26, "+1000"); };
+  if (b.type === "P") {
+    const ny = bonusFarge(b);
+    if (ny !== s.type) { s.type = ny; poengTekst(s.x, s.y - 26, ny === "l" ? "LASER" : "VULCAN"); }
+    else if (s.våpen < 5) { s.våpen++; poengTekst(s.x, s.y - 26, "POWER " + s.våpen); }
+    else ekstra();
+  }
+  if (b.type === "M") { if (s.mis < 3) { s.mis++; poengTekst(s.x, s.y - 26, "MISSILES " + s.mis); } else ekstra(); }
+  if (b.type === "O") { if (s.opt < 2) { s.opt++; poengTekst(s.x, s.y - 26, "OPTION"); } else ekstra(); }
+  if (b.type === "B") { if (s.bomber < 5) { s.bomber++; poengTekst(s.x, s.y - 26, "BOMB"); } else ekstra(); }
+  pip(660, 1320, .18, .08, "triangle"); setTimeout(() => pip(990, 1980, .15, .06, "triangle"), 70);
+}
+function treffSkip() {
+  const s = skip;
+  if (s.usårbar > 0 || s.død > 0) return;
+  eksplosjon(s.x, s.y, 50, ["#fff", "#ffa31a", "#ff3fb4", "#bfe6ff"], 1.8);
+  smell(1, 1.1); rist = .6;
+  s.liv--; s.død = 1.4; fkuler.length = 0;
+  s.våpen = Math.max(1, s.våpen - 1); s.mis = Math.max(1, s.mis - 1); s.opt = Math.max(0, s.opt - 1); s.bomber = Math.max(s.bomber, 2);
+  if (s.liv < 0) { tilstand = "slutt"; s.død = 99; if (poeng > rekord) { rekord = poeng; try { localStorage.setItem("fly3-rekord", String(rekord)); } catch {} } }
+}
+
+// ---------- oppdatering ----------
+const taster = {};
+let finger = null; // { id, x, y }
+function oppdater(dt) {
+  tid += dt;
+  // Bakken stopper når bossen kommer, og ruller videre når stagen er klar.
+  fart += ((fase === "boss" ? 0 : FART) - fart) * Math.min(1, dt * .9);
+  camY += fart * dt;
+  fyllVerden();
+  fliser = fliser.filter(f => f.r * STEG + T > camY - 10);
+  bakke = bakke.filter(t => t.hp > 0 && t.gy > camY - 40);
+  svidd = svidd.filter(b => b.gy > camY - 40);
+  if (fase === "fly" && etappeRader >= ETAPPE_BILDER && camY >= (etappeStartRad + ETAPPE_BILDER - 1) * STEG) startBoss();
+  if (fase === "klar") { klarT -= dt; if (klarT <= 0) { let e = etappe + 1; if (e >= SESONGER.length) { e = 0; runde++; } startEtappe(e, false); } }
+  if (banner) { banner.t -= dt; if (banner.t <= 0) banner = null; }
+
+  const s = skip;
+  if (s.død > 0) {
+    s.død -= dt;
+    if (s.død <= 0 && tilstand === "spill") { s.x = camX + VB / 2; s.y = VH - 90; s.usårbar = 2.5; spor = []; }
+  } else {
+    // Tastatur
+    const kx = (taster.ArrowRight || taster.d ? 1 : 0) - (taster.ArrowLeft || taster.a ? 1 : 0);
+    const ky = (taster.ArrowDown || taster.s ? 1 : 0) - (taster.ArrowUp || taster.w ? 1 : 0);
+    const gx = s.x;
+    if (kx || ky) { s.x += kx * 300 * dt * KOMP; s.y += ky * 260 * dt; }
+    s.x = Math.max(14, Math.min(WW - 14, s.x)); s.y = Math.max(VH * .2, Math.min(VH - 30, s.y));
+    s.vx = s.vx * .8 + ((s.x - gx) / Math.max(dt, .001)) * .2;
+    s.usårbar = Math.max(0, s.usårbar - dt);
+    const sist = spor[spor.length - 1];
+    if (!sist || Math.hypot(sist[0] - s.x, sist[1] - s.y) > 2) { spor.push([s.x, s.y]); if (spor.length > 80) spor.shift(); }
+    s.skudd -= dt; if (s.skudd <= 0) { skyt(); s.skudd = s.type === "l" ? .1 : s.våpen >= 5 ? .085 : .11; }
+    if (s.mis) { s.mskudd -= dt; if (s.mskudd <= 0) { skytMissiler(); s.mskudd = [0, .75, .55, .5][s.mis]; } }
+  }
+  s.krenge += (Math.max(-1, Math.min(1, s.vx / 500)) - s.krenge) * Math.min(1, dt * 10);
+  // Kameraet følger skipet sidelengs, men bare delvis, så skipet også flytter seg på skjermen.
+  const mål = (s.x - 14) / (WW - 28) * (WW - VB);
+  camX += (mål - camX) * Math.min(1, dt * 8);
+
+  // Kuler
+  for (const k of kuler) { k.x += k.vx * dt; k.y += k.vy * dt; }
+  kuler = kuler.filter(k => k.y > -40 && !k.borte);
+  for (const m of missiler) {
+    m.liv -= dt;
+    if (!m.mål || m.mål.hp <= 0) m.mål = nærmeste(m.x, m.y);
+    if (m.mål) {
+      const [tx, ty] = målPos(m.mål);
+      const ønsket = Math.atan2(ty - m.y, tx - m.x);
+      let d = ønsket - m.ang; while (d > Math.PI) d -= 2 * Math.PI; while (d < -Math.PI) d += 2 * Math.PI;
+      m.ang += Math.max(-6 * dt, Math.min(6 * dt, d));
+    }
+    const v = 360; m.vx += (Math.cos(m.ang) * v - m.vx) * Math.min(1, dt * 6); m.vy += (Math.sin(m.ang) * v - m.vy) * Math.min(1, dt * 6);
+    m.x += m.vx * dt; m.y += m.vy * dt;
+    if (Math.random() < .7) partikler.push({ x: m.x, y: m.y, vx: (Math.random() - .5) * 20, vy: (Math.random() - .5) * 20, liv: .35, maks: .35, farge: "#cfc8bd", r: 2.2 });
+  }
+  missiler = missiler.filter(m => m.liv > 0 && !m.borte && m.y > -30 && m.y < VH + 30);
+
+  // Fiender i lufta
+  const d = vanske();
+  if (boss) oppdaterBoss(dt, d);
+  for (const f of fiender) {
+    f.t += dt; f.treff = Math.max(0, f.treff - dt);
+    const gx = f.x, gy = f.y;
+    if (f.modus === "bane" || f.modus === "inn" || f.modus === "stup") {
+      f.d += f.fart * dt;
+      const p = påBane(f.bane, f.d);
+      if (p) { f.x = p[0]; f.y = p[1]; }
+      else if (f.modus === "inn") { f.modus = "form"; f.x = f.sx; f.y = f.sy; }
+      else if (f.modus === "stup") { f.modus = "tilbake"; f.y = -30; }
+      else { f.borte = true; forsvant(f); }
+    } else if (f.modus === "form") {
+      const b = bølger[f.bølge];
+      f.x = f.sx + Math.sin(nå * 1.3) * 14; f.y = f.sy + Math.sin(nå * 2 + f.sx * .05) * 3;
+      // Stup mot skipet.
+      if (b && Math.random() < dt * (.06 + d * .025) && s.død <= 0) {
+        const tx = (s.x - camX) / VB, side = f.x - camX < VB / 2 ? -1 : 1;
+        f.bane = lagBane([[(f.x - camX) / VB, f.y / VH], [(f.x - camX) / VB + side * .12, f.y / VH - .06], [(f.x - camX) / VB + side * .05, .4], [tx, .75], [tx - side * .2, 1.1]], false, camX);
+        f.d = 0; f.fart = 190 + d * 14; f.modus = "stup";
+        pip(300, 1200, .25, .03, "sine");
+      }
+      if (b && b.formasjon) { b.t += dt / Math.max(1, b.igjen); if (b.t > 16) f.modus = "flukt"; }
+    } else if (f.modus === "tilbake") {
+      f.y += 140 * dt; f.x += (f.sx - f.x) * Math.min(1, dt * 2);
+      if (f.y >= f.sy) { f.y = f.sy; f.modus = "form"; }
+    } else if (f.modus === "flukt") {
+      f.y -= 160 * dt; if (f.y < -40) { f.borte = true; forsvant(f); }
+    } else if (f.modus === "sinus") {
+      f.y += f.fart * dt; f.x = f.x0 + Math.sin(f.t * 2 + f.fase) * f.amp;
+      if (f.y > VH + 40) { f.borte = true; forsvant(f); }
+    } else if (f.modus === "kryss") {
+      f.x += f.retning * 55 * dt; f.y += Math.sin(f.t * 1.5) * 8 * dt;
+      if (f.x < camX - 60 || f.x > camX + VB + 60) f.borte = true;
+    }
+    f.vx = (f.x - gx) / Math.max(dt, .001); f.vy = (f.y - gy) / Math.max(dt, .001);
+    // Fiender skyter, men bare når de er godt inne på skjermen.
+    if (f.type !== "bærer" && f.y > 10 && f.y < VH * .62 && påSkjerm(f.x, f.y) && s.død <= 0) {
+      f.skudd -= dt * (.35 + d * .18);
+      if (f.skudd <= 0) { siktSkudd(f.x, f.y, 120 + d * 12); f.skudd = 2 + Math.random() * 3; }
+    }
+    if (f.hp > 0 && s.død <= 0 && Math.hypot(f.x - s.x, f.y - s.y) < f.f.r * .7 + 6) { skad(f, 99); treffSkip(); }
+  }
+  fiender = fiender.filter(f => f.hp > 0 && !f.borte);
+  for (const k in bølger) if (bølger[k].igjen <= 0) delete bølger[k];
+
+  // Bakken: kanoner og figurer
+  for (const t of bakke) {
+    t.blink = Math.max(0, t.blink - dt);
+    const sy = bakkeY(t.gy);
+    if (t.type === "v") {
+      // Figurene rusler fram og tilbake og holder seg på bildet.
+      t.t += dt; t.x += t.vx * dt;
+      if (t.x < 40 || t.x > WW - 40) { t.vx = -t.vx; t.x = Math.max(40, Math.min(WW - 40, t.x)); }
+    }
+    if (sy < -20 || sy > VH + 20) continue;
+    const ønsket = Math.atan2(s.y - sy, s.x - t.x);
+    if (t.type === "t") {
+      let dv = ønsket - t.ang; while (dv > Math.PI) dv -= 2 * Math.PI; while (dv < -Math.PI) dv += 2 * Math.PI;
+      t.ang += Math.max(-2 * dt, Math.min(2 * dt, dv));
+    }
+    if (sy < VH * .75 && s.død <= 0) {
+      t.skudd -= dt * (.3 + d * .12);
+      if (t.skudd <= 0) {
+        const a = t.type === "t" ? t.ang : ønsket, v = 110 + d * 10, ut = t.type === "t" ? 14 : 10;
+        fkuler.push({ x: t.x + Math.cos(a) * ut, y: sy + Math.sin(a) * ut, vx: Math.cos(a) * v, vy: Math.sin(a) * v + fart });
+        t.skudd = (t.type === "t" ? 2.2 : 2.8) + Math.random();
+      }
+    }
+  }
+
+  // Treff: våre kuler. Laseren går gjennom og treffer hvert mål én gang.
+  const bR = boss ? bossR() : 0;
+  for (const k of kuler) {
+    const lang = k.laser ? 14 : 0;
+    for (const f of fiender) {
+      if (f.hp <= 0 || Math.abs(k.x - f.x) > f.f.r + (k.b || 0) || Math.abs(k.y - f.y) > f.f.r + lang) continue;
+      if (k.laser) { if (k.truffet.has(f)) continue; k.truffet.add(f); skad(f, k.dmg); }
+      else { skad(f, k.dmg); k.borte = true; break; }
+    }
+    if (k.borte) continue;
+    if (boss && !boss.inn && boss.død <= 0 && Math.hypot(k.x - boss.x, k.y - boss.y) < bR + lang) {
+      if (k.laser) { if (!k.truffet.has(boss)) { k.truffet.add(boss); skadBoss(k.dmg); } }
+      else { skadBoss(k.dmg); k.borte = true; gnist(k.x, k.y); continue; }
+    }
+    for (const t of bakke) {
+      if (t.hp <= 0 || bakkeY(t.gy) < 24 || Math.hypot(k.x - t.x, k.y - bakkeY(t.gy)) > (t.type === "v" ? 22 : 13) + lang) continue;
+      if (k.laser) { if (k.truffet.has(t)) continue; k.truffet.add(t); skadBakke(t, k.dmg); }
+      else { skadBakke(t, k.dmg); k.borte = true; break; }
+    }
+  }
+  for (const m of missiler) {
+    for (const f of fiender) if (f.hp > 0 && Math.hypot(m.x - f.x, m.y - f.y) < f.f.r + 3) { skad(f, 2.5); m.borte = true; break; }
+    if (!m.borte && boss && !boss.inn && boss.død <= 0 && Math.hypot(m.x - boss.x, m.y - boss.y) < bR) { skadBoss(3); m.borte = true; }
+    if (!m.borte) for (const t of bakke) if (t.hp > 0 && bakkeY(t.gy) > 24 && Math.hypot(m.x - t.x, m.y - bakkeY(t.gy)) < 18) { skadBakke(t, 2); m.borte = true; break; }
+    if (m.borte) eksplosjon(m.x, m.y, 8, ["#ffd9a0", "#fff"], .7);
+  }
+  if (boss && !boss.inn && boss.død <= 0 && s.død <= 0 && Math.hypot(boss.x - s.x, boss.y - s.y) < bR * .8) treffSkip();
+
+  // Fiendekuler
+  for (const k of fkuler) {
+    k.x += k.vx * dt; k.y += k.vy * dt;
+    if (s.død <= 0 && Math.hypot(k.x - s.x, k.y - s.y) < 6) { k.borte = true; treffSkip(); }
+  }
+  fkuler = fkuler.filter(k => !k.borte && k.y > -20 && k.y < VH + 20 && k.x > camX - 40 && k.x < camX + VB + 40);
+
+  // Bonuser: de faller litt, så kommer de til deg.
+  for (const b of bonuser) {
+    b.t += dt; b.alder = (b.alder || 0) + dt;
+    if (b.alder < .6 || s.død > 0) { b.y += 34 * dt; b.x += Math.sin(b.t * 2.4) * 20 * dt; }
+    else {
+      const dx = s.x - b.x, dy = s.y - b.y, dd = Math.hypot(dx, dy) || 1, v = Math.min(460, 140 + (b.alder - .6) * 300);
+      b.x += dx / dd * v * dt; b.y += dy / dd * v * dt;
+    }
+    if (s.død <= 0 && Math.hypot(b.x - s.x, b.y - s.y) < 22) { b.borte = true; ta(b); }
+  }
+  bonuser = bonuser.filter(b => !b.borte && b.y < VH + 40);
+
+  // Effekter
+  for (const p of partikler) { p.x += p.vx * dt; p.y += p.vy * dt; p.vx *= .92; p.vy *= .92; p.liv -= dt; }
+  partikler = partikler.filter(p => p.liv > 0);
+  if (partikler.length > 700) partikler.splice(0, partikler.length - 700);
+  for (const r of ringer) r.r += r.fart * dt;
+  ringer = ringer.filter(r => r.r < r.maks);
+  for (const t of tekster) { t.y -= 30 * dt; t.liv -= dt; }
+  tekster = tekster.filter(t => t.liv > 0);
+  rist = Math.max(0, rist - dt); blits = Math.max(0, blits - dt * 2.5);
+
+  if (fase === "fly" && tilstand === "spill") {
+    bølgeKlokke -= dt;
+    if (bølgeKlokke <= 0 && fiender.length < 14) { nyBølge(); bølgeKlokke = Math.max(2.4, 5.2 - d * .45); }
+    bærerKlokke -= dt;
+    if (bærerKlokke <= 0) { nyBærer(); bærerKlokke = 20 + Math.random() * 8; }
+  }
+}
+function skudd(x, y, a, v) { fkuler.push({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v }); }
+function siktSkudd(x, y, v) { skudd(x, y, Math.atan2(skip.y - y, skip.x - x), v); }
+function gnist(x, y) { for (let i = 0; i < 3; i++) partikler.push({ x, y, vx: (Math.random() - .5) * 160, vy: -Math.random() * 120, liv: .2, maks: .2, farge: "#fff6d8", r: 1.6 }); }
+const målPos = m => m === boss ? [boss.x, boss.y] : m.gy !== undefined ? [m.x, bakkeY(m.gy)] : [m.x, m.y];
+function nærmeste(x, y) {
+  let best = null, bd = 1e9;
+  for (const f of fiender) if (f.hp > 0 && f.y > 0 && påSkjerm(f.x, f.y)) { const dd = Math.hypot(f.x - x, f.y - y); if (dd < bd) { bd = dd; best = f; } }
+  if (boss && !boss.inn && boss.død <= 0) { const dd = Math.hypot(boss.x - x, boss.y - y) - 40; if (dd < bd) { bd = dd; best = boss; } }
+  for (const t of bakke) { const sy = bakkeY(t.gy); if (t.hp > 0 && sy > VH * .22 && sy < VH && sy < y) { const dd = Math.hypot(t.x - x, sy - y) + 60; if (dd < bd) { bd = dd; best = t; } } }
+  return best;
+}
+
+// ---------- tegning ----------
+function tegnSkip(g, krenge, skygge) {
+  // Et lite jagerfly sett ovenfra. Krenger ved å klemme vingen på den siden det svinger mot.
+  g.save();
+  g.scale(1 - Math.abs(krenge) * .28, 1);
+  const lys = skygge ? "#000" : null;
+  // Vinger
+  g.fillStyle = lys || "#ffa31a"; g.strokeStyle = "rgba(0,0,0,.55)"; g.lineWidth = 1.2;
+  g.beginPath(); g.moveTo(4, -3); g.lineTo(18, 7); g.lineTo(18, 12); g.lineTo(5, 10); g.closePath(); if (!skygge) g.stroke(); g.fill();
+  g.beginPath(); g.moveTo(-4, -3); g.lineTo(-18, 7); g.lineTo(-18, 12); g.lineTo(-5, 10); g.closePath(); if (!skygge) g.stroke(); g.fill();
+  if (!skygge) {
+    g.fillStyle = "#ff3fb4"; g.fillRect(14, 8, 4, 4); g.fillRect(-18, 8, 4, 4);
+    g.fillStyle = krenge > 0 ? "rgba(0,0,0,.28)" : "rgba(255,255,255,.25)";
+    g.beginPath(); g.moveTo(4, -3); g.lineTo(18, 7); g.lineTo(5, 6); g.closePath(); g.fill();
+    g.fillStyle = krenge < 0 ? "rgba(0,0,0,.28)" : "rgba(255,255,255,.25)";
+    g.beginPath(); g.moveTo(-4, -3); g.lineTo(-18, 7); g.lineTo(-5, 6); g.closePath(); g.fill();
+  }
+  // Haleror
+  g.fillStyle = lys || "#d8d4cc";
+  g.beginPath(); g.moveTo(3, 11); g.lineTo(9, 17); g.lineTo(3, 16); g.closePath(); g.fill();
+  g.beginPath(); g.moveTo(-3, 11); g.lineTo(-9, 17); g.lineTo(-3, 16); g.closePath(); g.fill();
+  // Kropp
+  if (!skygge) { const gr = g.createLinearGradient(-6, 0, 6, 0); gr.addColorStop(0, "#9a968e"); gr.addColorStop(.45 - krenge * .25, "#fbf8f0"); gr.addColorStop(1, "#8a867e"); g.fillStyle = gr; }
+  g.beginPath(); g.moveTo(0, -19); g.lineTo(4.5, -8); g.lineTo(5.5, 9); g.lineTo(3, 16); g.lineTo(-3, 16); g.lineTo(-5.5, 9); g.lineTo(-4.5, -8); g.closePath(); g.fill();
+  if (!skygge) { g.strokeStyle = "rgba(0,0,0,.55)"; g.lineWidth = .9; g.stroke(); }
+  if (!skygge) {
+    g.fillStyle = "#1d2b3a"; g.beginPath(); g.ellipse(krenge * 1.2, -6, 2.6, 5, 0, 0, 6.283); g.fill();
+    g.fillStyle = "#7fe0ff"; g.beginPath(); g.ellipse(krenge * 1.2 - .8, -7.5, 1, 2.2, 0, 0, 6.283); g.fill();
+  }
+  g.restore();
+}
+function tegnFlamme(g) {
+  const l = 7 + Math.random() * 6;
+  g.globalCompositeOperation = "lighter";
+  g.fillStyle = "rgba(255,140,40,.8)"; g.beginPath(); g.moveTo(-2.6, 16); g.lineTo(2.6, 16); g.lineTo(0, 16 + l); g.closePath(); g.fill();
+  g.fillStyle = "rgba(255,240,200,.9)"; g.beginPath(); g.moveTo(-1.2, 16); g.lineTo(1.2, 16); g.lineTo(0, 16 + l * .55); g.closePath(); g.fill();
+  g.globalCompositeOperation = "source-over";
+}
+function tegnOption(x, y) {
+  // En glødende kule med en ring som går rundt, som i Nemesis.
+  const p = .7 + .3 * Math.sin(nå * 9);
+  cx.fillStyle = "rgba(0,0,0,.45)"; cx.beginPath(); cx.arc(x, y, 7.5, 0, 6.283); cx.fill();
+  const gr = cx.createRadialGradient(x - 1.5, y - 1.5, .5, x, y, 6.5);
+  gr.addColorStop(0, "#fff6d8"); gr.addColorStop(.5, "#ffa31a"); gr.addColorStop(1, "#c4321a");
+  cx.fillStyle = gr; cx.beginPath(); cx.arc(x, y, 6.2, 0, 6.283); cx.fill();
+  cx.strokeStyle = `rgba(255,63,180,${p})`; cx.lineWidth = 1.5;
+  cx.beginPath(); cx.ellipse(x, y, 10, 4, nå * 3, 0, 6.283); cx.stroke();
+}
+const BONUSFARGER = { v: "#ff4a2e", l: "#3a9bff", M: "#3ad1ff", O: "#ffa31a", B: "#ff3fb4" };
+function tegnBonus(b) {
+  const x = b.x - camX, y = b.y, puls = .5 + .5 * Math.sin(b.t * 8);
+  const nøkkel = bonusFarge(b) || b.type, farge = BONUSFARGER[nøkkel];
+  const bokstav = b.type === "P" ? (nøkkel === "l" ? "L" : "V") : b.type;
+  cx.save(); cx.translate(x, y); cx.rotate(Math.sin(b.t * 3) * .25);
+  cx.fillStyle = b.type === "P" ? farge : "rgba(0,0,0,.6)"; rundRekt(-11, -11, 22, 22, 6); cx.fill();
+  cx.lineWidth = 2.5; cx.strokeStyle = b.type === "P" ? "#fff" : farge; cx.globalAlpha = .7 + puls * .3; rundRekt(-11, -11, 22, 22, 6); cx.stroke(); cx.globalAlpha = 1;
+  cx.fillStyle = "#fff"; cx.font = "800 14px ui-monospace, Menlo, monospace"; cx.textAlign = "center"; cx.textBaseline = "middle"; cx.fillText(bokstav, 0, 1);
+  cx.restore();
+}
+function rundRekt(x, y, w, h, r) { cx.beginPath(); cx.moveTo(x + r, y); cx.arcTo(x + w, y, x + w, y + h, r); cx.arcTo(x + w, y + h, x, y + h, r); cx.arcTo(x, y + h, x, y, r); cx.arcTo(x, y, x + w, y, r); cx.closePath(); }
+
+function tegnBakke() {
+  cx.fillStyle = "#0b0b0b"; cx.fillRect(0, 0, VB, VH);
+  const topp = camY + VH + T * .9; // forhåndslast neste bilde
+  // Nederste bilde først; hvert bilde over toner ut nederst og glir over i det under.
+  for (const f of fliser) {
+    const y0 = f.r * STEG, y1 = y0 + T;
+    if (y1 < camY - 2 || y0 > topp) continue;
+    const e = hent(f.src);
+    if (y0 > camY + VH) continue; // bare lastet, ikke synlig ennå
+    const x = -camX, y = VH - (y1 - camY);
+    if (e.st === 1) {
+      cx.globalAlpha = Math.min(1, (nå - e.t0) / .35);
+      cx.drawImage(e.c, x, y, T, T); cx.globalAlpha = 1;
+    }
+  }
+  // Litt mørkere bakke, så figurene står ut mot lyse bilder.
+  cx.fillStyle = "rgba(0,0,0,.16)"; cx.fillRect(0, 0, VB, VH);
+  for (const b of svidd) {
+    const y = bakkeY(b.gy), x = b.x - camX;
+    if (y < -30 || y > VH + 30) continue;
+    const gr = cx.createRadialGradient(x, y, 0, x, y, b.r);
+    gr.addColorStop(0, "rgba(10,6,4,.75)"); gr.addColorStop(.6, "rgba(20,12,6,.45)"); gr.addColorStop(1, "rgba(0,0,0,0)");
+    cx.fillStyle = gr; cx.beginPath(); cx.arc(x, y, b.r, 0, 6.283); cx.fill();
+  }
+  for (const t of bakke) {
+    const y = bakkeY(t.gy), x = t.x - camX;
+    if (y < -40 || y > VH + 40 || x < -40 || x > VB + 40) continue;
+    if (t.type === "v") {
+      const f = hentFigur(t.navn, VESEN_STR);
+      if (f.st !== 1) continue;
+      const hopp = Math.abs(Math.sin(t.t * 5)) * 2.5;
+      cx.save(); cx.translate(x, y); if (t.speil !== (t.vx < 0)) cx.scale(-1, 1);
+      cx.globalAlpha = .4; cx.drawImage(f.skygge, -f.w / 2 + 4, -f.h / 2 + 6, f.w, f.h); cx.globalAlpha = 1;
+      if (t.blink > 0) cx.drawImage(f.hvit, -f.w / 2, -f.h / 2 - hopp, f.w, f.h);
+      else cx.drawImage(f.glød, -f.w / 2 - f.pad, -f.h / 2 - hopp - f.pad, f.w + f.pad * 2, f.h + f.pad * 2);
+      cx.restore();
+      continue;
+    }
+    cx.fillStyle = "rgba(0,0,0,.4)"; cx.beginPath(); cx.arc(x + 2, y + 3, 12, 0, 6.283); cx.fill();
+    cx.fillStyle = t.blink > 0 ? "#fff" : "#2b2e33"; cx.beginPath(); cx.arc(x, y, 11, 0, 6.283); cx.fill();
+    cx.strokeStyle = "#ff3fb4"; cx.lineWidth = 1.5; cx.beginPath(); cx.arc(x, y, 11, 0, 6.283); cx.stroke();
+    cx.save(); cx.translate(x, y); cx.rotate(t.ang);
+    cx.fillStyle = t.blink > 0 ? "#fff" : "#575c66"; cx.fillRect(2, -2.5, 13, 5);
+    cx.fillStyle = "#8b919c"; cx.beginPath(); cx.arc(0, 0, 6, 0, 6.283); cx.fill();
+    cx.restore();
+  }
+}
+function tegnBoss() {
+  const b = boss, f = bossFig(), x = b.x - camX;
+  if (f.st !== 1) { cx.fillStyle = "#2b2e33"; cx.beginPath(); cx.arc(x, b.y, 60, 0, 6.283); cx.fill(); return; }
+  const skjelv = b.død > 0 ? (Math.random() - .5) * 8 : 0;
+  cx.globalAlpha = .35; cx.drawImage(f.skygge, x - f.w / 2 + 22, b.y - f.h / 2 + 40, f.w, f.h); cx.globalAlpha = 1;
+  cx.drawImage(f.glød, x - f.w / 2 - f.pad + skjelv, b.y - f.h / 2 - f.pad + skjelv, f.w + f.pad * 2, f.h + f.pad * 2);
+  if (b.treff > 0 || b.død > 0) { cx.globalAlpha = b.død > 0 ? .5 * Math.random() : .35; cx.drawImage(f.hvit, x - f.w / 2 + skjelv, b.y - f.h / 2 + skjelv, f.w, f.h); cx.globalAlpha = 1; }
+}
+
+function tegn() {
+  cx.setTransform(DPR * SK, 0, 0, DPR * SK, 0, 0);
+  cx.imageSmoothingEnabled = true;
+  if (rist > 0) cx.translate((Math.random() - .5) * rist * 14, (Math.random() - .5) * rist * 14);
+  tegnBakke();
+
+  // Skygger på bakken: alt som flyr, kaster skygge ned og til høyre.
+  cx.imageSmoothingEnabled = false;
+  cx.globalAlpha = .35;
+  for (const f of fiender) { const sp = f.f.skygge[(nå * 6 + f.t) % 2 | 0]; cx.drawImage(sp, f.x - camX - sp.width * PX * .4 + 12, f.y - sp.height * PX * .4 + 22, sp.width * PX * .8, sp.height * PX * .8); }
+  if (skip.død <= 0) { cx.save(); cx.translate(skip.x - camX + 16, skip.y + 28); cx.scale(.75, .75); tegnSkip(cx, skip.krenge, true); cx.restore(); }
+  cx.globalAlpha = 1;
+  cx.imageSmoothingEnabled = true;
+
+  if (boss) tegnBoss();
+
+  cx.imageSmoothingEnabled = false;
+  for (const f of fiender) {
+    const fr = (nå * 6 + f.t) % 2 | 0, sp = (f.treff > 0 ? f.f.hvit : f.f.sp)[fr], w = sp.width * PX, h = sp.height * PX;
+    cx.save(); cx.translate(f.x - camX, f.y);
+    // Snu nesen dit den flyr når den stuper eller følger en bane.
+    if (f.modus !== "form" && f.modus !== "kryss") { const v = Math.hypot(f.vx, f.vy); if (v > 20) cx.rotate(Math.atan2(f.vy, f.vx) - Math.PI / 2); }
+    cx.drawImage(sp, -w / 2, -h / 2, w, h);
+    cx.restore();
+  }
+  cx.imageSmoothingEnabled = true;
+
+  // Våre kuler: mørk kant og lys kjerne, så de synes både over lyse og mørke bilder.
+  for (const k of kuler) {
+    const x = k.x - camX;
+    if (k.laser) {
+      cx.fillStyle = "rgba(0,0,0,.4)"; cx.fillRect(x - k.b / 2 - 1, k.y - 16, k.b + 2, 32);
+      cx.fillStyle = "#3a9bff"; cx.fillRect(x - k.b / 2, k.y - 15, k.b, 30);
+      cx.fillStyle = "#e6f6ff"; cx.fillRect(x - k.b / 5, k.y - 14, k.b / 2.5, 28);
+      continue;
+    }
+    const a = Math.atan2(k.vx, -k.vy);
+    cx.save(); cx.translate(x, k.y); cx.rotate(a);
+    cx.fillStyle = "rgba(0,0,0,.45)"; cx.fillRect(-2.8, -8.5, 5.6, 17);
+    cx.fillStyle = "#ff6a2e"; cx.fillRect(-1.9, -7.5, 3.8, 15);
+    cx.fillStyle = "#fff6d8"; cx.fillRect(-.9, -6.5, 1.8, 13);
+    cx.restore();
+  }
+  for (const m of missiler) {
+    cx.save(); cx.translate(m.x - camX, m.y); cx.rotate(Math.atan2(m.vy, m.vx));
+    cx.fillStyle = "rgba(0,0,0,.5)"; cx.fillRect(-7, -2.6, 14, 5.2);
+    cx.fillStyle = "#e8e4dc"; cx.fillRect(-6, -2, 11, 4);
+    cx.fillStyle = "#ff3fb4"; cx.fillRect(4, -2, 3, 4);
+    cx.fillStyle = "#ffd23f"; cx.fillRect(-9, -1, 3, 2);
+    cx.restore();
+  }
+
+  // Skipet og options
+  const s = skip;
+  if (s.død <= 0) {
+    for (let i = s.opt - 1; i >= 0; i--) { const p = optionPos(i); tegnOption(p[0] - camX, p[1]); }
+    if (s.usårbar <= 0 || (nå * 14 | 0) % 2) { cx.save(); cx.translate(s.x - camX, s.y); tegnFlamme(cx); tegnSkip(cx, s.krenge, false); cx.restore(); }
+  }
+
+  for (const b of bonuser) tegnBonus(b);
+
+  // Fiendekuler øverst, så de alltid synes over bildene.
+  for (const k of fkuler) {
+    const x = k.x - camX;
+    cx.fillStyle = "rgba(0,0,0,.6)"; cx.beginPath(); cx.arc(x, k.y, 5.2, 0, 6.283); cx.fill();
+    cx.fillStyle = "#ff3fb4"; cx.beginPath(); cx.arc(x, k.y, 4, 0, 6.283); cx.fill();
+    cx.fillStyle = "#fff"; cx.beginPath(); cx.arc(x, k.y, 1.8, 0, 6.283); cx.fill();
+  }
+
+  cx.globalCompositeOperation = "lighter";
+  for (const p of partikler) { cx.globalAlpha = Math.max(0, p.liv / p.maks); cx.fillStyle = p.farge; cx.fillRect(p.x - camX - p.r / 2, p.y - p.r / 2, p.r, p.r); }
+  cx.globalAlpha = 1;
+  for (const r of ringer) { cx.strokeStyle = `rgba(${r.farge},${(1 - r.r / r.maks) * .8})`; cx.lineWidth = r.tykk * (1 - r.r / r.maks) + .5; cx.beginPath(); cx.arc(r.x - camX, r.y, r.r, 0, 6.283); cx.stroke(); }
+  cx.globalCompositeOperation = "source-over";
+  if (blits > 0) { cx.fillStyle = `rgba(255,235,200,${blits * .55})`; cx.fillRect(-20, -20, VB + 40, VH + 40); }
+
+  cx.font = "700 11px ui-monospace, Menlo, monospace"; cx.textAlign = "center"; cx.textBaseline = "middle";
+  for (const t of tekster) { cx.globalAlpha = Math.min(1, t.liv * 2); cx.fillStyle = "#000"; cx.fillText(t.txt, t.x - camX + 1, t.y + 1); cx.fillStyle = "#fff"; cx.fillText(t.txt, t.x - camX, t.y); }
+  cx.globalAlpha = 1;
+
+  cx.setTransform(DPR * SK, 0, 0, DPR * SK, 0, 0);
+  tegnHUD();
+}
+
+const BOMBEKNAPP = () => ({ x: VB - 40, y: VH - 46, r: 26 });
+const LYDKNAPP = () => ({ x: VB / 2, y: 24, r: 16 });
+function tekst(t, x, y, str, farge, just, vekt) {
+  cx.font = `${vekt || 700} ${str}px ui-monospace, Menlo, monospace`; cx.textAlign = just || "left"; cx.textBaseline = "middle";
+  cx.fillStyle = "rgba(0,0,0,.65)"; cx.fillText(t, x + 1, y + 1); cx.fillStyle = farge; cx.fillText(t, x, y);
+}
+function tegnHUD() {
+  if (tilstand === "start") {
+    cx.fillStyle = "rgba(10,10,10,.62)"; cx.fillRect(0, 0, VB, VH);
+    const m = VH * .28;
+    tekst("HIDDEN MOTIVES", VB / 2, m - 34, 14, "#efe9df", "center", 800);
+    tekst("FLY IT", VB / 2, m + 6, 52, "#ffa31a", "center", 900);
+    tekst("Fly over the art. Beat the boss of every season.", VB / 2, m + 58, 11, "#efe9df", "center", 400);
+    tekst("Drag anywhere to steer. Guns fire by themselves.", VB / 2, m + 80, 11, "#bdb6aa", "center", 400);
+    tekst("V red = vulcan · L blue = laser", VB / 2, m + 104, 11, "#bdb6aa", "center", 400);
+    tekst("M = missiles · O = option · B = bomb", VB / 2, m + 122, 11, "#bdb6aa", "center", 400);
+    const p = .6 + .4 * Math.sin(nå * 4);
+    tekst("TAP TO FLY", VB / 2, VH * .74, 20, `rgba(255,163,26,${p})`, "center", 900);
+    if (rekord) tekst("BEST " + rekord.toLocaleString("en"), VB / 2, VH * .74 + 34, 12, "#efe9df", "center", 700);
+    tekst("♪ Piranha · KroghX", VB / 2, VH - 30, 11, "#bdb6aa", "center", 400);
+    return;
+  }
+  const gr = cx.createLinearGradient(0, 0, 0, 70); gr.addColorStop(0, "rgba(0,0,0,.55)"); gr.addColorStop(1, "rgba(0,0,0,0)");
+  cx.fillStyle = gr; cx.fillRect(0, 0, VB, 70);
+  tekst(poeng.toLocaleString("en"), 14, 22, 16, "#fff", "left", 800);
+  tekst("BEST " + Math.max(rekord, poeng).toLocaleString("en"), VB - 14, 22, 10, "#bdb6aa", "right", 700);
+  tekst("STAGE " + (etappe + 1 + runde * SESONGER.length), VB - 14, 40, 10, "#ffa31a", "right", 700);
+  const lk = LYDKNAPP(); tekst(lydPå ? "♪ ON" : "♪ OFF", lk.x, lk.y, 10, lydPå ? "#efe9df" : "#777", "center", 700);
+  tekst(`${skip.type === "l" ? "L" : "V"}${skip.våpen}  M${skip.mis}  O${skip.opt}`, 14, 42, 10, skip.type === "l" ? "#6cb6ff" : "#ff7a4a", "left", 700);
+  if (boss && !boss.inn) {
+    const w = VB - 28, andel = boss.hp / boss.maks;
+    cx.fillStyle = "rgba(0,0,0,.55)"; cx.fillRect(14, 56, w, 6);
+    cx.fillStyle = "#ff3fb4"; cx.fillRect(14, 56, w * andel, 6);
+  }
+  // Liv nede til venstre
+  for (let i = 0; i < Math.max(0, skip.liv); i++) { cx.save(); cx.translate(22 + i * 22, VH - 26); cx.scale(.55, .55); tegnSkip(cx, 0, false); cx.restore(); }
+  // Bombeknapp
+  const b = BOMBEKNAPP();
+  cx.fillStyle = skip.bomber ? "rgba(255,63,180,.25)" : "rgba(80,80,80,.25)"; cx.beginPath(); cx.arc(b.x, b.y, b.r, 0, 6.283); cx.fill();
+  cx.strokeStyle = skip.bomber ? "#ff3fb4" : "#555"; cx.lineWidth = 2; cx.beginPath(); cx.arc(b.x, b.y, b.r, 0, 6.283); cx.stroke();
+  tekst("BOMB", b.x, b.y - 5, 10, "#fff", "center", 800);
+  tekst("×" + skip.bomber, b.x, b.y + 9, 11, "#fff", "center", 700);
+  if (banner && tilstand === "spill") {
+    const a = Math.min(1, banner.t * 2, (3.6 - banner.t) * 3);
+    if (!banner.blink || (nå * 5 | 0) % 2) {
+      cx.globalAlpha = Math.max(0, a);
+      tekst(banner.a, VB / 2, VH * .4, 34, banner.farge, "center", 900);
+      if (banner.b) tekst(banner.b, VB / 2, VH * .4 + 34, 12, "#efe9df", "center", 700);
+      cx.globalAlpha = 1;
+    }
+  }
+  if (pause) { cx.fillStyle = "rgba(10,10,10,.6)"; cx.fillRect(0, 0, VB, VH); tekst("PAUSED", VB / 2, VH * .45, 28, "#ffa31a", "center", 900); tekst("tap to continue", VB / 2, VH * .45 + 30, 12, "#efe9df", "center", 400); }
+  if (tilstand === "slutt") {
+    cx.fillStyle = "rgba(10,10,10,.6)"; cx.fillRect(0, 0, VB, VH);
+    tekst("GAME OVER", VB / 2, VH * .38, 34, "#ff3fb4", "center", 900);
+    tekst(poeng.toLocaleString("en"), VB / 2, VH * .38 + 44, 26, "#fff", "center", 800);
+    tekst(poeng >= rekord && poeng > 0 ? "NEW BEST" : "BEST " + rekord.toLocaleString("en"), VB / 2, VH * .38 + 74, 12, "#ffa31a", "center", 700);
+    if (skip.dødTid === undefined) skip.dødTid = nå;
+    if (nå - skip.dødTid > 1.2) tekst("TAP TO FLY AGAIN", VB / 2, VH * .66, 16, "#efe9df", "center", 800);
+  }
+}
+
+// ---------- styring ----------
+// Fingeren styrer relativt: dra hvor som helst, så fingeren ikke dekker skipet.
+// Kameraet glir etter skipet, så verdens-bevegelsen forsterkes for at skipet skal følge fingeren 1:1 på skjermen.
+const KOMP = 1 / (1 - (WW - VB) / (WW - 28));
+function tilVirtuell(e) { const r = cv.getBoundingClientRect(); return [(e.clientX - r.left) / SK, (e.clientY - r.top) / SK]; }
+cv.addEventListener("pointerdown", e => {
+  e.preventDefault();
+  const [x, y] = tilVirtuell(e);
+  startLyd();
+  if (tilstand === "start") { tilstand = "spill"; nyttSpill(); return; }
+  if (tilstand === "slutt") { if (nå - (skip.dødTid ?? nå) > 1.2) { tilstand = "spill"; nyttSpill(); } return; }
+  if (pause) { pause = false; return; }
+  const b = BOMBEKNAPP(), l = LYDKNAPP();
+  if (Math.hypot(x - b.x, y - b.y) < b.r + 8) { bombe(); return; }
+  if (Math.hypot(x - l.x, y - l.y) < l.r + 6) { settLyd(!lydPå); return; }
+  if (!finger) { finger = { id: e.pointerId, x, y }; try { cv.setPointerCapture(e.pointerId); } catch {} }
+});
+cv.addEventListener("pointermove", e => {
+  if (!finger || e.pointerId !== finger.id) return;
+  const [x, y] = tilVirtuell(e);
+  if (tilstand === "spill" && skip.død <= 0 && !pause) { skip.x += (x - finger.x) * 1.15 * KOMP; skip.y += (y - finger.y) * 1.15; }
+  finger.x = x; finger.y = y;
+});
+const slippFinger = e => { if (finger && e.pointerId === finger.id) finger = null; };
+cv.addEventListener("pointerup", slippFinger); cv.addEventListener("pointercancel", slippFinger);
+addEventListener("keydown", e => {
+  taster[e.key] = true;
+  if (e.key === " " || e.key === "b") { e.preventDefault(); if (tilstand === "spill") bombe(); else { startLyd(); tilstand = "spill"; nyttSpill(); } }
+  if (e.key === "p" && tilstand === "spill") pause = !pause;
+  if (e.key === "m") settLyd(!lydPå);
+});
+addEventListener("keyup", e => { taster[e.key] = false; });
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) { if (tilstand === "spill") pause = true; if (musikk) musikk.pause(); }
+  else if (musikk && lydPå && tilstand !== "start") musikk.play().catch(() => {});
+});
+
+// ---------- løkke ----------
+let sistT = performance.now(), ryddKlokke = 0;
+function løkke(t) {
+  const dt = Math.min(1 / 30, (t - sistT) / 1000); sistT = t; nå += dt;
+  if (tilstand !== "start" && !pause) oppdater(dt);
+  else if (tilstand === "start") { camY += FART * .6 * dt; fyllVerden(); fliser = fliser.filter(f => f.r * STEG + T > camY - 10); camX = (WW - VB) / 2 + Math.sin(nå * .3) * 60; }
+  ryddKlokke += dt; if (ryddKlokke > 2) { ryddKlokke = 0; rydd(); }
+  tegn();
+  requestAnimationFrame(løkke);
+}
+requestAnimationFrame(løkke);
+</script>
+</body>
+</html>
