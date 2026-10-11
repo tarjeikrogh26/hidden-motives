@@ -359,8 +359,8 @@ function nyBærer() {
 // ---------- boss ----------
 function startBoss() {
   fase = "boss";
-  const hp = 260 + etappe * 120 + runde * 500;
-  boss = { navn: etappeBoss, x: WW / 2, y: -140, hp, maks: hp, t: 0, mønster: 0, mt: 0, skuddT: 0, vinkel: 0, treff: 0, inn: true, død: 0 };
+  const hp = 170 + etappe * 80 + runde * 400;
+  boss = { navn: etappeBoss, x: camX + VB / 2, y: -140, hp, maks: hp, t: 0, mønster: 0, mt: 0, skuddT: 0, vinkel: 0, treff: 0, inn: true, død: 0 };
   banner = { a: "WARNING", b: "", t: 2.4, farge: "#ff3fb4", blink: true };
   pip(220, 110, .5, .12, "sawtooth"); setTimeout(() => pip(220, 110, .5, .12, "sawtooth"), 600);
 }
@@ -381,8 +381,12 @@ function oppdaterBoss(dt, d) {
     }
     return;
   }
-  if (b.inn) { b.y += (150 - b.y) * Math.min(1, dt * 1.2); if (b.y > 140) b.inn = false; }
-  else { b.x = WW / 2 + Math.sin(b.t * .45) * (WW / 2 - 110); b.y = 150 + Math.sin(b.t * .9) * 22; }
+  if (b.inn) { b.x += (camX + VB / 2 - b.x) * Math.min(1, dt * 3); b.y += (150 - b.y) * Math.min(1, dt * 1.6); if (b.y > 140) b.inn = false; }
+  else {
+    // Bossen holder seg alltid inne på skjermen, uansett hvor kameraet er.
+    const målX = camX + VB / 2 + Math.sin(b.t * .45) * (VB / 2 - 80);
+    b.x += (målX - b.x) * Math.min(1, dt * 3); b.y = 150 + Math.sin(b.t * .9) * 22;
+  }
   if (b.inn || s.død > 0) return;
   // Fire mønstre på rundgang. Under halv helse går alt fortere.
   const raskt = b.hp < b.maks / 2 ? 1.5 : 1, nivå = etappe + runde * 3;
@@ -566,7 +570,7 @@ let finger = null; // { id, x, y }
 function oppdater(dt) {
   tid += dt;
   // Bakken bremser nesten helt opp når bossen kommer, og ruller videre når stagen er klar.
-  fart += ((fase === "boss" ? 9 : FART) - fart) * Math.min(1, dt * .9);
+  fart += ((fase === "boss" ? 16 : FART) - fart) * Math.min(1, dt * .9);
   camY += fart * dt;
   fyllVerden();
   fliser = fliser.filter(f => f.r * STEG + T > camY - 10);
