@@ -1,0 +1,2897 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="theme-color" content="#111111">
+<title>Microcosm 10</title>
+<style>
+:root { color-scheme: dark; }
+html { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; background: #111; overflow: hidden; overscroll-behavior: none;
+  touch-action: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+/* Himmelen bak bakken: synes når kameraet ser fram mot horisonten. */
+#scene { position: relative; margin: 0 auto; touch-action: none; background: linear-gradient(#5f7590 0%, #8d9db0 38%, #a6afba 52%, #a6afba 100%); }
+#scene canvas { position: absolute; left: 0; top: 0; display: block; touch-action: none; }
+</style>
+</head>
+<body>
+<div id="scene"><canvas id="bakke"></canvas><canvas id="c"></canvas></div>
+<script>
+"use strict";
+// MICROCOSM (FLY IT 7): AirAttack 2 møter Sky Force. Hver stage er sin egen verden.
+// Stage 3, Night Streets: en neonby om natten med regn og våt asfalt. Kameraet går lavt mellom husene,
+// Kroghs bilder henger som plakater på veggene og på et luftskip, og businessmannen er en kjempe som kommer nedover gata.
+// Stage 2, The Deep: du flyr over en strand, kameraet stuper under vann, og havet er fullt av maneter, haier,
+// fiskestimer og en hval som passerer, før en breiflabb så stor som skjermen venter på bunnen.
+// Versjon 6: alt som står på bakken er laget av Kroghs bilder og figurer, i ekte 3D: skulpturer kledd med utsnitt
+// av fotografiene, statuer av de utklipte figurene, og figurene som flåter som seiler over bildene.
+// Bakken er et gulv av fotografier i ekte perspektiv (WebGL). Kameraet filmer som i AirAttack: det svinger (yaw),
+// stuper ned tett over bildene, stiger høyt opp, ser fram mot horisonten (pitch) og krenger (roll).
+// Bygninger og tog reiser seg fra bildene i 3D. Kanonene treffer lufta, bomber treffer bakken.
+// Sky Force: oppdrag per sesong, fire vanskelighetsgrader, fire medaljer, mynter, magnet, hangar med åtte oppgraderinger,
+// fly å låse opp og kort å samle. Bossene er Kroghs 3D-figurer med kanontårn rundt seg.
+// Lufta regnes i virtuelle skjermenheter (360 bred). Bakken har egne enheter og projiseres gjennom kameraet.
+
+const scene = document.getElementById("scene"), cv = document.getElementById("c"), cx = cv.getContext("2d");
+const gcv = document.getElementById("bakke");
+const VB = 360;
+const WW = Math.round(VB * 1.7);  // verdens bredde = ett bilde
+const T = WW;                     // bildene er kvadratiske
+const OV = Math.round(T * .25);   // overlapp; det fjerneste bildet toner ut over det nærmeste
+const STEG = T - OV;
+const ETAPPE_BILDER = 15;
+const FART = 44;
+const FJERN = T * 4.2;            // så langt fram bakken tegnes; resten er dis og himmel
+const HAZE = [0.651, 0.686, 0.729]; // samme farge som himmelen ved horisonten (#a6afba)
+let VH = 640, SK = 1, DPR = 1;
+
+// ---------- innhold ----------
+const til = (mappe, nr) => nr.map(n => mappe + n + ".jpg");
+const ALLE_TI = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+const SESONGER = [
+  { navn: "The Velvet Asylum", bilder: til("bilder/", ALLE_TI), monstre: ["m_b3_1", "m_b5_0", "m_b6_2", "m_b7_0", "m_b8_0", "m_b9_0"], bosser: ["boss_b8", "boss_b10"] },
+  { navn: "Teeth in the Garden", bilder: til("bilder02/", ALLE_TI), monstre: ["m_c2b1_1", "m_c2b2_0", "m_c2b3_0", "m_c2b6_0", "m_c2b9_1", "m_c2b9_2"], bosser: ["boss_c2b5", "boss_c2b8", "boss_c2b10"] },
+  { navn: "Creature Kingdom", bilder: til("bilder03/", ALLE_TI), monstre: ["m_c3b1_0", "m_c3b3_0", "m_c3b4_0", "m_c3b7_0", "m_c3b8_0", "m_c3b9_0"], bosser: ["boss_c3b2", "boss_c3b5", "boss_c3b10"] },
+  { navn: "Dark City", bilder: til("bilder04/", ALLE_TI), monstre: ["m_c4b1_1", "m_c4b1_3", "m_c4b3_0", "m_c4b5_0", "m_c4b9_0"], bosser: ["boss_c4b4", "boss_c4b5"] },
+  { navn: "A Museum of Small Lies", bilder: til("bilder05/", ALLE_TI), monstre: ["m_c5b10_kirsebaer", "m_c5b2_hund", "m_c5b4_bla", "m_c5b4_gra", "m_c5b4_oye", "m_c5b4_rod", "m_c5b6_vesen", "m_c5b7_mann"],
+    bosser: ["boss_c5b3_oyne", "boss_c5b4_oransje", "boss_c5b8_blekk", "boss_c5b9_bla"] }
+];
+SESONGER.push({ navn: "Mixed Media", bilder: til("bilder06/", [6, 7, 8, 9]), ekstra: 3, monstre: SESONGER.flatMap(s => s.monstre), bosser: SESONGER.flatMap(s => s.bosser) });
+const BOSS_3D = [
+  { navn: "snorkel", anim: "swim", stor: 1.3, lys: .8 },
+  { navn: "fluemann", anim: "fire", stor: 1.3, lys: .8 },
+  { navn: "trane", anim: "cast_a_spell", stor: 1.25, lys: .7 },
+  { navn: "blekksprut", anim: "cast_a_spell", stor: 1.35, lys: .7, tentakler: true },
+  { navn: "businessmann", anim: "dance_01", stor: 1.5, lys: .5 },
+  { navn: "flue", anim: "cheer", stor: 1.4, lys: .8 }
+];
+// Vanskelighetsgrader (Sky Force): mer helse og flere skudd hos fiendene, mer betalt.
+const VANSK = [
+  { navn: "NORMAL", hp: 1, skudd: 1, mynt: 1, farge: "#7fe0ff" },
+  { navn: "HARD", hp: 1.6, skudd: 1.3, mynt: 2, farge: "#ffa31a" },
+  { navn: "INSANE", hp: 2.4, skudd: 1.65, mynt: 3, farge: "#ff3fb4" },
+  { navn: "NIGHTMARE", hp: 3.4, skudd: 2.1, mynt: 4, farge: "#b04dff" }
+];
+// Stage 2 er havet. Kroghs bilder ligger på havbunnen som sunkne malerier.
+SESONGER.splice(1, 0, { navn: "The Deep", dyp: true, bilder: til("bilder05/", ALLE_TI), monstre: [], bosser: [] });
+SESONGER.splice(2, 0, { navn: "Night Streets", by: true, bilder: til("bilder04/", ALLE_TI), monstre: ["m_c4b1_1", "m_c4b1_3", "m_c4b3_0", "m_c4b5_0", "m_c4b9_0", "m_c5b7_mann", "m_c3b9_0"], bosser: ["boss_c4b4"], boss3d: "businessmann" });
+const KRAV = [0, 0, 0, 3, 7, 12, 18, 24];
+// Hvilken 3D-figur er bossen på en stage.
+const bossModell = e => (SESONGER[e].boss3d && BOSS_3D.find(b => b.navn === SESONGER[e].boss3d)) || BOSS_3D[e % BOSS_3D.length]; // medaljer totalt for å låse opp hver stage
+const MEDALJER = ["Destroy 70%", "Destroy 100%", "Rescue all", "Untouched"];
+// Hangaren: åtte oppgraderinger. Prisen stiger 70 % for hvert nivå.
+const OPPG = [
+  { id: "hull", navn: "Hull", tekst: "+1 health per level", maks: 5, pris: 150 },
+  { id: "kanon", navn: "Main cannon", tekst: "+15% damage, starts stronger", maks: 5, pris: 120 },
+  { id: "ving", navn: "Wing cannons", tekst: "Side guns firing in a V", maks: 4, pris: 200, krever: ["kanon", 2] },
+  { id: "bombe", navn: "Bombs", tekst: "Bigger blast, faster reload", maks: 5, pris: 120 },
+  { id: "mis", navn: "Missiles", tekst: "Homing missiles from the start", maks: 3, pris: 180 },
+  { id: "magnet", navn: "Magnet", tekst: "Pulls stars from further away", maks: 5, pris: 80 },
+  { id: "skjold", navn: "Shield", tekst: "Tap to block every bullet", maks: 5, pris: 250 },
+  { id: "laser", navn: "Heavy laser", tekst: "Tap for a beam that melts bosses", maks: 5, pris: 300 }
+];
+const prisFor = (o, n) => Math.round(o.pris * Math.pow(1.7, n));
+// Flyene arver alle oppgraderingene fra hangaren.
+const FLY = [
+  { id: "kestrel", navn: "Kestrel", tekst: "All-rounder", pris: 0, vinge: "#ffa31a", hull: 0, rate: 1, dmg: 1, str: 1 },
+  { id: "ironclad", navn: "Ironclad", tekst: "+3 health, slower guns", pris: 1500, vinge: "#8a9a6a", hull: 3, rate: .85, dmg: 1.1, str: 1.15 },
+  { id: "gladius", navn: "Gladius", tekst: "Very fast guns, -1 health", pris: 2500, vinge: "#ff3b5c", hull: -1, rate: 1.45, dmg: .9, str: .92 },
+  { id: "pyro", navn: "Pyro", tekst: "Flamethrower: short range, huge damage", pris: 4000, vinge: "#3a3a3a", hull: 1, rate: 1, dmg: 1, str: 1.05, flamme: true }
+];
+// Kort (Sky Force Reloaded): faller av og til fra fiender, og gjelder for alltid.
+const KORT = [
+  { id: "rate", navn: "Trigger Happy", tekst: "+10% fire rate" },
+  { id: "dmg", navn: "Hot Lead", tekst: "+10% damage" },
+  { id: "magnet", navn: "Sticky Stars", tekst: "+40 magnet range" },
+  { id: "hull", navn: "Thick Skin", tekst: "+1 health" },
+  { id: "bombe", navn: "Big Bang", tekst: "+20% bomb blast" },
+  { id: "redning", navn: "Quick Rope", tekst: "Rescue twice as fast" },
+  { id: "skjold", navn: "Lucky Start", tekst: "3 s shield at start" },
+  { id: "mynt", navn: "Gold Rush", tekst: "Stars sometimes count double" }
+];
+// Kameraet filmer som i AirAttack: en rekke innstillinger det glir mellom. tilt: vinkel fra loddrett (høy = ser framover),
+// yaw: sving, k: skala midt på skjermen (høy = lavt over bakken).
+const SCENER = [
+  { tilt: .66, yaw: 0, k: .8, t: 8 },        // marsj
+  { tilt: .74, yaw: -.34, k: .86, t: 7 },    // sving til venstre
+  { tilt: 1.02, yaw: -.08, k: 1.28, t: 6 },  // stup ned tett over bildene
+  { tilt: .36, yaw: .06, k: .56, t: 7 },     // stig høyt opp, nesten rett ned
+  { tilt: .8, yaw: .36, k: .92, t: 7 },      // sving til høyre
+  { tilt: 1.16, yaw: 0, k: 1.1, t: 6 }       // lavt, horisonten synes
+];
+
+const BIOM = {
+  land: { dis: [0.651, 0.686, 0.729], z: [.7, .95], modus: 0, himmel: "linear-gradient(#5f7590 0%, #8d9db0 38%, #a6afba 52%, #a6afba 100%)" },
+  strand: { dis: [.78, .86, .92], z: [.8, 1], modus: 1, himmel: "linear-gradient(#3f86c4 0%, #8fc0e2 40%, #c4dcec 52%, #c4dcec 100%)" },
+  hav: { dis: [.02, .13, .2], z: [.3, .42], modus: 2, himmel: "linear-gradient(#0d3550 0%, #06202f 50%, #030f18 100%)" },
+  by: { dis: [.09, .06, .15], z: [.45, .6], modus: 3, himmel: "linear-gradient(#170b2a 0%, #2b1546 45%, #170d26 60%, #170d26 100%)" }
+};
+// Kameraet i gatene: lavt mellom husene.
+const BY_SCENER = [
+  { tilt: 1.0, yaw: 0, k: 1.25, t: 8 }, { tilt: 1.12, yaw: -.2, k: 1.35, t: 6 },
+  { tilt: .82, yaw: .14, k: 1.0, t: 7 }, { tilt: 1.06, yaw: .22, k: 1.3, t: 6 }
+];
+// Kameraet under vann: nærmere bunnen og mer framover.
+const HAV_SCENER = [
+  { tilt: 1.12, yaw: 0, k: 1.25, t: 9 }, { tilt: 1.0, yaw: -.2, k: 1.15, t: 7 },
+  { tilt: 1.18, yaw: .14, k: 1.3, t: 8 }, { tilt: .9, yaw: .26, k: 1.05, t: 6 }
+];
+const tilfeldig = a => a[Math.random() * a.length | 0];
+function bland(a) { for (let i = a.length - 1; i > 0; i--) { const j = Math.random() * (i + 1) | 0; [a[i], a[j]] = [a[j], a[i]]; } return a; }
+
+// ---------- lagret fremdrift ----------
+let data = { bank: 0, rekord: 0, oppg: {}, fly: { eid: ["kestrel"], valgt: "kestrel" }, kort: [], medaljer: {} };
+try { const d = JSON.parse(localStorage.getItem("fly5-data") || "null"); if (d) data = { ...data, ...d, fly: { ...data.fly, ...(d.fly || {}) } }; } catch {}
+function lagre() { try { localStorage.setItem("fly5-data", JSON.stringify(data)); } catch {} }
+const har = id => data.kort.includes(id);
+const nivå = id => data.oppg[id] || 0;
+const medaljerFor = (e, v) => (data.medaljer[e] && data.medaljer[e][v]) || [false, false, false, false];
+const totalMedaljer = () => { let n = 0; for (const e in data.medaljer) for (const v in data.medaljer[e]) n += data.medaljer[e][v].filter(Boolean).length; return n; };
+const stageÅpen = e => totalMedaljer() >= KRAV[e];
+const vanskÅpen = (e, v) => v === 0 || medaljerFor(e, v - 1).every(Boolean);
+
+// ---------- tilstand (alt deklareres før noe kjøres) ----------
+// tilstand: "meny" (oppdrag), "hangar", "spill", "slutt". fase i spillet: "fly", "boss", "klar".
+let nå = 0, tilstand = "meny", pause = false, tidsFaktor = 1, berøring = false;
+let camY = 0, camX = 0, fart = FART, skip = null, mods = null, spor = [], kuler = [], missiler = [], fiender = [], fkuler = [], bonuser = [], mynter = [], bomber = [], folk = [];
+let partikler = [], ringer = [], tekster = [], ild = [], røyk = [], skyer = [], skyKlokke = 1, materialer = [];
+let poeng = 0, tid = 0, bølgeKlokke = 0, bølgeNr = 0, bærerKlokke = 0, rist = 0, blits = 0;
+let fliser = [], bakke = [], nesteRad = 0, stokk = [];
+let etappe = 0, vansk = 0, valgtStage = 0, valgtVansk = 0, fase = "fly", etappeStartRad = 0, etappeRader = 0, etappeBoss = "", boss = null, banner = null, klarT = 0, st = null;
+let sceneI = 0, sceneT = 0, hangarFane = 0, knapper = [], melding = null;
+// Biomet styrer bakken, disen og himmelen: "land" (bildene), "strand" (sand og hav), "hav" (havbunnen).
+let biom = "land", kystY = 0, dykk = null, bobler = [], snø = [], tang = [], hval = null, bygg = [], lykter = [], regn = [], pynt = [];
+let bobX = 0, bobY = 0, bobK = 0, finger = null;
+const bølger = {}, taster = {};
+
+// ---------- kamera ----------
+const KAM = { tilt: .66, yaw: 0, k: .8, roll: 0, foc: 600, D0: 750, C: [0, 0, 0], R: [1, 0, 0], U: [0, 1, 0], F: [0, 0, -1], L: [0, 0], cr: 1, sr: 0, ctrX: VB / 2, ctrY: 320 };
+function oppdaterKamera() {
+  const sT = Math.sin(KAM.tilt), cT = Math.cos(KAM.tilt), sP = Math.sin(KAM.yaw), cP = Math.cos(KAM.yaw);
+  KAM.foc = VH * 1.15; KAM.D0 = KAM.foc / KAM.k;
+  KAM.R = [cP, -sP, 0]; KAM.F = [sP * sT, cP * sT, -cT]; KAM.U = [sP * cT, cP * cT, sT];
+  // Kameraet følger flyet sidelengs langs skjermens vannrette retning, selv når det har svingt.
+  const lat = camX + VB / 2 - WW / 2;
+  KAM.L = [WW / 2 + KAM.R[0] * lat, camY + KAM.R[1] * lat];
+  KAM.C = [KAM.L[0] - KAM.F[0] * KAM.D0, KAM.L[1] - KAM.F[1] * KAM.D0, -KAM.F[2] * KAM.D0];
+  KAM.cr = Math.cos(KAM.roll); KAM.sr = Math.sin(KAM.roll);
+  KAM.ctrX = VB / 2; KAM.ctrY = VH * .5;
+}
+function prosjiser(X, Y, Z = 0) {
+  const C = KAM.C, R = KAM.R, U = KAM.U, F = KAM.F;
+  const dx = X - C[0], dy = Y - C[1], dz = Z - C[2];
+  const x = dx * R[0] + dy * R[1], y = dx * U[0] + dy * U[1] + dz * U[2], z = dx * F[0] + dy * F[1] + dz * F[2];
+  if (z < 8) return null;
+  const px = KAM.cr * x - KAM.sr * y, py = KAM.sr * x + KAM.cr * y, k = KAM.foc / z;
+  return { x: KAM.ctrX + px * k, y: KAM.ctrY - py * k, s: k, z };
+}
+function bakkePunkt(sx, sy) {
+  const a = (sx - KAM.ctrX) / KAM.foc, b = -(sy - KAM.ctrY) / KAM.foc;
+  const x = KAM.cr * a + KAM.sr * b, y = -KAM.sr * a + KAM.cr * b;
+  const R = KAM.R, U = KAM.U, F = KAM.F;
+  const dx = F[0] + x * R[0] + y * U[0], dy = F[1] + x * R[1] + y * U[1], dz = F[2] + y * U[2];
+  if (dz >= -1e-4) return null;
+  const t = -KAM.C[2] / dz, p = [KAM.C[0] + t * dx, KAM.C[1] + t * dy];
+  return Math.hypot(p[0] - KAM.L[0], p[1] - KAM.L[1]) > FJERN ? null : p;
+}
+function synligBakke() {
+  // Laveste og høyeste bakke-y på skjermen. Over horisonten regnes det som så langt bakken tegnes.
+  let lo = Infinity, hi = -Infinity;
+  for (const [sx, sy] of [[0, VH + 30], [VB, VH + 30], [VB / 2, VH + 30], [0, VH / 2], [VB, VH / 2], [0, -30], [VB, -30], [VB / 2, -30]]) {
+    const p = bakkePunkt(sx, sy);
+    const y = p ? p[1] : KAM.L[1] + FJERN;
+    lo = Math.min(lo, y); hi = Math.max(hi, y);
+  }
+  return [lo, Math.min(hi, KAM.L[1] + FJERN)];
+}
+function filmKamera(dt) {
+  // Velg innstilling: egen for bossen og stage-slutt, ellers rundgang gjennom scenene.
+  let mål;
+  let fort = false;
+  if (tilstand === "spill" && dykk) { mål = dykk.t < 1.9 ? { tilt: .1, yaw: 0, k: 1.35 } : { tilt: 1.12, yaw: 0, k: 1.25 }; fort = true; }
+  else if (tilstand === "spill" && krakenAktiv()) mål = { tilt: 1.05, yaw: Math.sin(nå * .3) * .08, k: .95 };
+  else if (tilstand === "spill" && biom === "strand") mål = { tilt: 1.12, yaw: Math.sin(nå * .2) * .12, k: .95 };
+  else if (tilstand === "spill" && fase === "boss" && biom === "hav") mål = { tilt: .74, yaw: 0, k: .9 };
+  else if (tilstand === "spill" && fase === "boss" && biom === "by") mål = { tilt: .9, yaw: 0, k: 1.0 };
+  else if (tilstand === "spill" && fase === "boss") mål = { tilt: .7, yaw: 0, k: .74 };
+  else if (tilstand === "spill" && fase === "klar") mål = { tilt: .98, yaw: Math.sin(nå * .3) * .45, k: .95 };
+  else { const L = biom === "hav" ? HAV_SCENER : biom === "by" ? BY_SCENER : SCENER; sceneT += dt; if (sceneT > L[sceneI % L.length].t) { sceneT = 0; sceneI = (sceneI + 1) % L.length; } mål = L[sceneI % L.length]; }
+  const glatt = Math.min(1, dt * (fort ? 2.2 : .55)), gYaw = KAM.yaw;
+  KAM.tilt += (mål.tilt + (skip && tilstand === "spill" ? (skip.y / VH - .7) * .1 : 0) - KAM.tilt) * glatt;
+  KAM.yaw += (mål.yaw - KAM.yaw) * glatt;
+  KAM.k += (mål.k - KAM.k) * glatt;
+  // Krenger inn i svingene, og med flyet.
+  const yawFart = (KAM.yaw - gYaw) / Math.max(dt, 1e-3);
+  let mRoll = -yawFart * 1.4;
+  if (skip && tilstand === "spill") mRoll += -(skip.krenge + bobK * .5) * .1 - ((skip.x - camX) - VB / 2) / VB * .16;
+  KAM.roll += (mRoll - KAM.roll) * Math.min(1, dt * 3);
+  // Flyet vises fra samme vinkel som kameraet: ovenfra, eller bakfra når kameraet ligger lavt under vann.
+  const vMål = biom === "hav" ? Math.max(0, Math.min(1, (KAM.tilt - .55) / .5)) : Math.max(0, Math.min(.4, (KAM.tilt - .85) / .7));
+  skipVipp += (vMål - skipVipp) * Math.min(1, dt * 4);
+}
+let skipVipp = 0;
+
+// ---------- WebGL-bakken ----------
+let gl = null, glProg = null, glBuf = null, glLoc = {}, aniso = null;
+function lagGL() {
+  try { gl = gcv.getContext("webgl", { alpha: true, antialias: true, premultipliedAlpha: true, depth: true }); } catch { gl = null; }
+  if (!gl) return;
+  const vs = `attribute vec2 aP; attribute vec2 aT;
+    uniform vec3 uC; uniform vec3 uR; uniform vec3 uU; uniform vec3 uF; uniform vec2 uRoll; uniform float uFoc; uniform vec2 uCtr; uniform vec2 uView;
+    varying vec2 vT; varying float vZ; varying vec2 vW;
+    void main() {
+      vW = aP;
+      vec3 d = vec3(aP, 0.0) - uC;
+      float x = dot(d, uR), y = dot(d, uU), z = dot(d, uF);
+      float px = uRoll.x * x - uRoll.y * y, py = uRoll.y * x + uRoll.x * y;
+      vec2 s = uCtr + vec2(px, -py) * uFoc / z;
+      vec2 n = vec2(s.x / uView.x * 2.0 - 1.0, 1.0 - s.y / uView.y * 2.0);
+      gl_Position = vec4(n * z, 0.0, z);
+      vT = aT; vZ = z;
+    }`;
+  const fs = `precision mediump float;
+    uniform sampler2D uTex; uniform sampler2D uTex2; uniform float uMork; uniform vec3 uDis; uniform vec2 uZ; uniform float uModus; uniform float uTid; uniform float uKyst;
+    varying vec2 vT; varying float vZ; varying vec2 vW;
+    void main() {
+      vec4 c;
+      if (uModus < 0.5) c = texture2D(uTex, vT);
+      else {
+        vec3 sand = texture2D(uTex, vW / 260.0).rgb;
+        // Lavfrekvent støy som blander to teksturer, så gjentakelsen ikke synes.
+        float blot = 0.5 + 0.25 * sin(vW.x * 0.0061 + sin(vW.y * 0.0043) * 2.0) + 0.25 * sin(vW.y * 0.0077 + sin(vW.x * 0.0052) * 2.0);
+        if (uModus < 1.5) {
+          // Stranda: tørr sand, våt sand, skum i strandkanten, og havet med glitter ut mot horisonten.
+          float kyst = uKyst + sin(vW.x * 0.02 + uTid * 1.3) * 14.0 + sin(vW.x * 0.051 - uTid) * 6.0;
+          float d = vW.y - kyst;
+          sand = mix(texture2D(uTex, vW / 340.0).rgb, texture2D(uTex, vW / 150.0).rgb, 0.35) * vec3(1.18, 1.06, 0.86) * 1.12;
+          vec3 vaat = texture2D(uTex2, vW / 300.0).rgb * vec3(0.95, 0.92, 0.85) * 0.85;
+          float dyb = clamp(d / 900.0, 0.0, 1.0);
+          // Bølger i flere retninger, pluss fin uro fra en tekstur, gir en normal som speiler himmel og sol.
+          vec2 q = vW;
+          float hx = 0.0, hy = 0.0;
+          hx += cos(q.x * 0.021 + q.y * 0.012 + uTid * 1.1) * 0.021 * 1.0;  hy += cos(q.x * 0.021 + q.y * 0.012 + uTid * 1.1) * 0.012 * 1.0;
+          hx += cos(-q.x * 0.013 + q.y * 0.03 - uTid * 1.4) * -0.013 * 0.8; hy += cos(-q.x * 0.013 + q.y * 0.03 - uTid * 1.4) * 0.03 * 0.8;
+          hx += cos(q.x * 0.047 - q.y * 0.031 + uTid * 2.3) * 0.047 * 0.35; hy += cos(q.x * 0.047 - q.y * 0.031 + uTid * 2.3) * -0.031 * 0.35;
+          vec2 uro = texture2D(uTex2, q / 210.0 + vec2(uTid * 0.013, uTid * 0.02)).rg - texture2D(uTex2, q / 330.0 - vec2(uTid * 0.011, -uTid * 0.009)).gb;
+          vec3 nrm = normalize(vec3(-hx * 9.0 - uro.x * 0.9, -hy * 9.0 - uro.y * 0.9, 1.0));
+          vec3 dypF = mix(vec3(0.1, 0.52, 0.58), vec3(0.02, 0.2, 0.36), dyb);
+          float fres = 1.0 - nrm.z;
+          vec3 vann = mix(dypF, vec3(0.62, 0.82, 0.9), clamp(fres * 2.2, 0.0, 0.6));
+          vec3 sol = normalize(vec3(0.35, 0.55, 0.76));
+          float glit = pow(max(0.0, dot(reflect(vec3(0.0, 0.0, -1.0), nrm), sol)), 90.0);
+          vann += vec3(1.0, 0.97, 0.9) * glit * 1.4 * (1.0 - dyb * 0.3);
+          vec3 rgb = d < 0.0 ? mix(sand, vaat, smoothstep(-70.0, 0.0, d)) : mix(vaat, vann, smoothstep(0.0, 45.0, d));
+          float skum = smoothstep(16.0, 0.0, abs(d - 8.0)) * (0.65 + 0.35 * sin(vW.x * 0.1 + uTid * 3.0));
+          c = vec4(mix(rgb, vec3(0.96), skum), 1.0);
+        } else if (uModus > 2.5) {
+          // Gata om natten: våt asfalt med neonrefleksjoner, gule midtstriper, hvite kantlinjer og fortau med heller.
+          float vx = abs(vW.x - uKyst);
+          vec3 asf = texture2D(uTex, vW / 210.0).rgb;
+          vec3 rgb = asf * vec3(0.36, 0.34, 0.42);
+          // Sølepytter: mørkere og blanke, de speiler himmelen og neonet.
+          float pytt = smoothstep(0.62, 0.7, blot + (asf.r - 0.4) * 0.5);
+          rgb = mix(rgb, vec3(0.05, 0.04, 0.09) + vec3(0.2, 0.1, 0.32) * (0.5 + 0.5 * sin(vW.y * 0.01 + uTid * 0.2)), pytt * 0.75);
+          rgb += vec3(0.55, 0.15, 0.6) * pow(0.5 + 0.5 * sin(vW.x * 0.013 + vW.y * 0.004 + 1.0), 7.0) * 0.16;
+          rgb += vec3(0.1, 0.5, 0.7) * pow(0.5 + 0.5 * sin(vW.y * 0.009 + vW.x * 0.021 - uTid * 0.3), 9.0) * 0.12;
+          rgb = mix(rgb, vec3(0.95, 0.8, 0.3), step(vx, 3.5) * step(0.45, fract(vW.y / 90.0)) * 0.85);
+          rgb = mix(rgb, vec3(0.85), step(abs(vx - 62.0), 1.5) * step(0.5, fract(vW.y / 60.0)) * 0.5);
+          rgb = mix(rgb, vec3(0.9), step(abs(vx - 126.0), 2.5) * 0.8);
+          if (vx > 132.0) {
+            rgb = texture2D(uTex2, vW / 170.0).rgb * vec3(0.42, 0.4, 0.48);
+            rgb = mix(rgb, rgb * 0.55 + vec3(0.06, 0.04, 0.1), smoothstep(0.55, 0.7, blot) * 0.6);
+          }
+          c = vec4(rgb, 1.0);
+        } else {
+          // Havbunnen: blågrønn sand med lysmønsteret fra overflaten (kaustikk).
+          vec3 b1 = texture2D(uTex, vW / 280.0).rgb, b2 = texture2D(uTex2, vW / 240.0).rgb;
+          vec3 b = mix(b1, b2, smoothstep(0.4, 0.65, blot)) * vec3(0.42, 0.66, 0.74);
+          vec2 p = vW * 0.011; float k = 0.0;
+          for (int i = 0; i < 2; i++) {
+            float fi = float(i);
+            vec2 q = p * (1.0 + fi * 0.7) + vec2(sin(p.y * 2.1 + uTid * 0.9 + fi), cos(p.x * 1.7 - uTid * 0.7));
+            k += pow(0.5 + 0.5 * sin(q.x * 3.0) * sin(q.y * 3.0), 6.0);
+          }
+          c = vec4(b + vec3(0.5, 0.8, 0.85) * k * 0.4, 1.0);
+        }
+      }
+      float f = clamp((vZ - uZ.x) / (uZ.y - uZ.x), 0.0, 1.0);
+      gl_FragColor = vec4(mix(c.rgb * uMork, uDis * c.a, f * f * 0.95), c.a);
+    }`;
+  const sh = (type, src) => { const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s); if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw gl.getShaderInfoLog(s); return s; };
+  try {
+    glProg = gl.createProgram();
+    gl.attachShader(glProg, sh(gl.VERTEX_SHADER, vs)); gl.attachShader(glProg, sh(gl.FRAGMENT_SHADER, fs));
+    gl.linkProgram(glProg);
+    if (!gl.getProgramParameter(glProg, gl.LINK_STATUS)) throw gl.getProgramInfoLog(glProg);
+  } catch (e) { console.warn("WebGL:", e); gl = null; return; }
+  for (const n of ["aP", "aT"]) glLoc[n] = gl.getAttribLocation(glProg, n);
+  for (const n of ["uC", "uR", "uU", "uF", "uRoll", "uFoc", "uCtr", "uView", "uTex", "uMork", "uDis", "uZ", "uModus", "uTid", "uKyst", "uTex2"]) glLoc[n] = gl.getUniformLocation(glProg, n);
+  glBuf = gl.createBuffer();
+  sandTex = lagSandTekstur();
+  aniso = gl.getExtension("EXT_texture_filter_anisotropic") || gl.getExtension("WEBKIT_EXT_texture_filter_anisotropic");
+}
+// Program nummer to: 3D-ting med dybde, lys og utsnitt av bildene som tekstur.
+let objProg = null, objBuf = null, objLoc = {}, hvitTex = null;
+function lagObjGL() {
+  const vs = `attribute vec3 aP; attribute vec2 aT; attribute float aS;
+    uniform vec3 uC; uniform vec3 uR; uniform vec3 uU; uniform vec3 uF; uniform vec2 uRoll; uniform float uFoc; uniform vec2 uCtr; uniform vec2 uView;
+    varying vec2 vT; varying float vZ; varying float vS;
+    void main() {
+      vec3 d = aP - uC;
+      float x = dot(d, uR), y = dot(d, uU), z = dot(d, uF);
+      float px = uRoll.x * x - uRoll.y * y, py = uRoll.y * x + uRoll.x * y;
+      vec2 s = uCtr + vec2(px, -py) * uFoc / z;
+      vec2 n = vec2(s.x / uView.x * 2.0 - 1.0, 1.0 - s.y / uView.y * 2.0);
+      float dz = clamp(z / 9000.0, 0.0, 1.0) * 2.0 - 1.0;
+      gl_Position = vec4(n * z, dz * z, z);
+      vT = aT; vZ = z; vS = aS;
+    }`;
+  const fs = `precision mediump float;
+    uniform sampler2D uTex; uniform vec3 uDis; uniform vec2 uZ; uniform float uBlink; uniform float uSkygge; uniform vec3 uFarge; uniform float uGlod;
+    varying vec2 vT; varying float vZ; varying float vS;
+    void main() {
+      vec4 c = texture2D(uTex, vT);
+      if (c.a < 0.5) discard;
+      if (uSkygge > 0.0) { gl_FragColor = vec4(0.0, 0.0, 0.0, uSkygge); return; }
+      vec3 base = c.rgb / c.a;
+      float lys = uGlod * smoothstep(0.55, 0.85, max(base.r, max(base.g, base.b)));
+      vec3 rgb = mix(base * mix(vS, 1.0, lys) * uFarge, vec3(1.0), uBlink);
+      float f = clamp((vZ - uZ.x) / (uZ.y - uZ.x), 0.0, 1.0);
+      gl_FragColor = vec4(mix(rgb, uDis, f * f * 0.95), 1.0);
+    }`;
+  const sh = (type, src) => { const x = gl.createShader(type); gl.shaderSource(x, src); gl.compileShader(x); if (!gl.getShaderParameter(x, gl.COMPILE_STATUS)) throw gl.getShaderInfoLog(x); return x; };
+  try {
+    objProg = gl.createProgram();
+    gl.attachShader(objProg, sh(gl.VERTEX_SHADER, vs)); gl.attachShader(objProg, sh(gl.FRAGMENT_SHADER, fs));
+    gl.linkProgram(objProg);
+    if (!gl.getProgramParameter(objProg, gl.LINK_STATUS)) throw gl.getProgramInfoLog(objProg);
+  } catch (e) { console.warn("WebGL 3D:", e); objProg = null; return; }
+  for (const n of ["aP", "aT", "aS"]) objLoc[n] = gl.getAttribLocation(objProg, n);
+  for (const n of ["uC", "uR", "uU", "uF", "uRoll", "uFoc", "uCtr", "uView", "uTex", "uDis", "uZ", "uBlink", "uSkygge", "uFarge", "uGlod"]) objLoc[n] = gl.getUniformLocation(objProg, n);
+  objBuf = gl.createBuffer();
+  vinduTex = [0, 1, 2].map(lagVindusTekstur);
+  hvitTex = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, hvitTex);
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array([255, 255, 255, 255]));
+}
+// Figurene som teksturer (til statuer og flåter).
+const FIGTEX = {};
+function hentFigTex(navn) {
+  if (FIGTEX[navn] || !gl) return FIGTEX[navn];
+  const e = FIGTEX[navn] = { st: 0, asp: 1 };
+  const img = new Image();
+  img.onload = () => {
+    e.asp = img.naturalWidth / img.naturalHeight;
+    const t = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, t);
+    gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, true);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    e.tex = t; e.st = 1;
+  };
+  img.onerror = () => { e.st = 2; };
+  img.src = "figurer/" + navn + ".webp";
+  return e;
+}
+// Ekte foto-teksturer (Poly Haven, CC0). De kan flislegges, og blandes i shaderen.
+const EKTE_BIOM = { strand: ["sand", "vaatsand"], hav: ["bunn", "stein"], by: ["asfalt", "fortau"] };
+const ekte = {};
+function lastEkte() {
+  for (const navn of ["sand", "vaatsand", "bunn", "stein", "asfalt", "fortau", "mur"]) {
+    const img = new Image();
+    img.onload = () => {
+      img.onload = img.onerror = null;
+      if (navn === "mur") { ekteMur = img; if (gl && objProg) vinduTex = [0, 1, 2].map(lagVindusTekstur); return; }
+      const t = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, t);
+      gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, true);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img);
+      gl.generateMipmap(gl.TEXTURE_2D);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
+      if (aniso) gl.texParameterf(gl.TEXTURE_2D, aniso.TEXTURE_MAX_ANISOTROPY_EXT, Math.min(8, gl.getParameter(aniso.MAX_TEXTURE_MAX_ANISOTROPY_EXT)));
+      ekte[navn] = t;
+    };
+    img.onerror = () => { img.onload = img.onerror = null; };
+    img.src = "tekstur/" + navn + ".jpg";
+  }
+}
+let ekteMur = null;
+// Sand som kan flislegges: krusninger av vind og vann, og korn. Alle bølgene går opp i 512, så den henger sammen.
+let sandTex = null;
+function lagSandTekstur() {
+  const N = 512, c = document.createElement("canvas"); c.width = c.height = N;
+  const g = c.getContext("2d"), id = g.createImageData(N, N), d = id.data, TO = Math.PI * 2 / N;
+  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+    const rip = .5 + .5 * Math.sin(TO * y * 6 + 1.3 * Math.sin(TO * x * 3) + .6 * Math.sin(TO * x * 7 + 1));
+    const k = .8 + .14 * rip + .1 * Math.random(), i = (y * N + x) * 4;
+    d[i] = 214 * k; d[i + 1] = 190 * k; d[i + 2] = 148 * k; d[i + 3] = 255;
+  }
+  g.putImageData(id, 0, 0);
+  const t = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, t);
+  gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, true);
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, c);
+  gl.generateMipmap(gl.TEXTURE_2D);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
+  return t;
+}
+function lagTekstur(c) {
+  const t = gl.createTexture();
+  gl.bindTexture(gl.TEXTURE_2D, t);
+  gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, true);
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, c);
+  gl.generateMipmap(gl.TEXTURE_2D);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+  if (aniso) gl.texParameterf(gl.TEXTURE_2D, aniso.TEXTURE_MAX_ANISOTROPY_EXT, Math.min(8, gl.getParameter(aniso.MAX_TEXTURE_MAX_ANISOTROPY_EXT)));
+  return t;
+}
+const RUTER = 5; // hvert bilde deles i 5 × 5 ruter, så ruter bak kameraet kan hoppes over når det svinger
+const glData = new Float32Array(RUTER * RUTER * 5 * 24);
+function dybde(X, Y) { const C = KAM.C, F = KAM.F; return (X - C[0]) * F[0] + (Y - C[1]) * F[1] - C[2] * F[2]; }
+function tegnBakkeGL(yMin, yMaks) {
+  gl.viewport(0, 0, gcv.width, gcv.height);
+  gl.clearColor(0, 0, 0, 0); gl.depthMask(true); gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+  gl.disable(gl.DEPTH_TEST); gl.depthMask(false);
+  gl.useProgram(glProg);
+  gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+  gl.uniform3fv(glLoc.uC, KAM.C); gl.uniform3fv(glLoc.uR, KAM.R); gl.uniform3fv(glLoc.uU, KAM.U); gl.uniform3fv(glLoc.uF, KAM.F);
+  gl.uniform2f(glLoc.uRoll, KAM.cr, KAM.sr);
+  gl.uniform1f(glLoc.uFoc, KAM.foc);
+  gl.uniform2f(glLoc.uCtr, KAM.ctrX, KAM.ctrY);
+  gl.uniform2f(glLoc.uView, VB, VH);
+  const B = BIOM[biom], prosedyre = B.modus > 0;
+  gl.uniform3f(glLoc.uDis, B.dis[0], B.dis[1], B.dis[2]);
+  gl.uniform2f(glLoc.uZ, KAM.D0 * B.z[0], KAM.D0 + FJERN * B.z[1]);
+  gl.uniform1f(glLoc.uModus, B.modus); gl.uniform1f(glLoc.uTid, nå); gl.uniform1f(glLoc.uKyst, biom === "by" ? WW / 2 : kystY);
+  const ek = EKTE_BIOM[biom];
+  gl.uniform1i(glLoc.uTex2, 1); gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, (ek && ekte[ek[1]]) || sandTex);
+  gl.uniform1i(glLoc.uTex, 0); gl.activeTexture(gl.TEXTURE0);
+  gl.bindBuffer(gl.ARRAY_BUFFER, glBuf);
+  gl.enableVertexAttribArray(glLoc.aP); gl.enableVertexAttribArray(glLoc.aT);
+  gl.vertexAttribPointer(glLoc.aP, 2, gl.FLOAT, false, 16, 0); gl.vertexAttribPointer(glLoc.aT, 2, gl.FLOAT, false, 16, 8);
+  for (const f of fliser) {
+    const y0 = f.r * STEG, y1 = y0 + T;
+    if (y1 < yMin || y0 > yMaks) continue;
+    // Sand og hav tegnes av shaderen selv, i verdenskoordinater, så flisene henger sammen uten skjøter.
+    const e = prosedyre ? { tex: (ek && ekte[ek[0]]) || sandTex, t0: -9 } : hent(f.src);
+    if (!prosedyre && e.st !== 1) continue;
+    gl.bindTexture(gl.TEXTURE_2D, e.tex);
+    const lys = prosedyre ? 1 : Math.min(1, (nå - e.t0) / .35) * .92;
+    // Midten er selve bildet. Ut til sidene ligger speilvendte, mørkere kopier, så bakken aldri tar slutt når kameraet svinger.
+    for (const midt of [true, false]) {
+      let n = 0;
+      for (let kopi = -2; kopi <= 2; kopi++) {
+        if ((kopi === 0) !== midt) continue;
+        const speil = kopi % 2 !== 0, xa = kopi * T;
+        for (let i = 0; i < RUTER; i++) for (let j = 0; j < RUTER; j++) {
+          const ax = xa + T * i / RUTER, bx = xa + T * (i + 1) / RUTER, ay = y0 + T * j / RUTER, by = y0 + T * (j + 1) / RUTER;
+          if (by < yMin || ay > yMaks) continue;
+          if (dybde(ax, ay) < 20 || dybde(bx, ay) < 20 || dybde(ax, by) < 20 || dybde(bx, by) < 20) continue;
+          let ua = i / RUTER, ub = (i + 1) / RUTER; if (speil) { ua = 1 - ua; ub = 1 - ub; }
+          const va = 1 - j / RUTER, vb = 1 - (j + 1) / RUTER;
+          glData.set([ax, ay, ua, va, bx, ay, ub, va, ax, by, ua, vb, bx, ay, ub, va, bx, by, ub, vb, ax, by, ua, vb], n); n += 24;
+        }
+      }
+      if (!n) continue;
+      gl.bufferData(gl.ARRAY_BUFFER, glData.subarray(0, n), gl.DYNAMIC_DRAW);
+      gl.uniform1f(glLoc.uMork, lys * (midt || prosedyre ? 1 : .55));
+      gl.drawArrays(gl.TRIANGLES, 0, n / 4);
+    }
+  }
+}
+
+// ---------- 3D-ting laget av bildene ----------
+// Utsnitt: et rektangel i den øvre delen av bildet (nederkanten er tonet ut), med samme form som flaten det skal på.
+function utsnitt(bredde, høyde) {
+  let w = .28 + Math.random() * .4, h = w * høyde / bredde;
+  if (h > .7) { w *= .7 / h; h = .7; }
+  const u0 = Math.random() * (1 - w), v0 = Math.random() * (.72 - h);
+  return [u0, v0, u0 + w, v0 + h];
+}
+const FORMER = ["blokk", "tårn", "søyle", "pyramide", "trapp"];
+function lagSkulptur(x, gy, V) {
+  const form = tilfeldig(FORMER), o = { type: "kunst", form, x, gy, rot: Math.random() * Math.PI, src: tilfeldig(materialer), hp: 14 * V.hp };
+  if (form === "blokk") { o.bw = 46 + Math.random() * 36; o.bd = 46 + Math.random() * 36; o.h = 34 + Math.random() * 40; }
+  else if (form === "tårn") { o.bw = o.bd = 28 + Math.random() * 14; o.h = 95 + Math.random() * 60; o.hp = 12 * V.hp; }
+  else if (form === "søyle") { o.r = 18 + Math.random() * 12; o.bw = o.bd = o.r * 2; o.h = 55 + Math.random() * 60; o.hp = 12 * V.hp; }
+  else if (form === "pyramide") { o.bw = o.bd = 62 + Math.random() * 30; o.h = 50 + Math.random() * 40; o.hp = 16 * V.hp; }
+  else { o.bw = o.bd = 70 + Math.random() * 22; o.h = 66 + Math.random() * 30; o.hp = 18 * V.hp; }
+  o.w = Math.max(o.bw, o.bd);
+  // Ett utsnitt per flate, valgt én gang, så skulpturen ser lik ut hele veien.
+  o.uv = Array.from({ length: 16 }, (_, i) => utsnitt(i < 4 ? o.bw : 40, i < 4 ? Math.max(20, o.h) : 40));
+  return o;
+}
+const objData = new Float32Array(6 * 4000);
+let objN = 0;
+function punkt(x, y, z, u, v, s) { if (objN + 6 > objData.length) return; objData.set([x, y, z, u, v, s], objN); objN += 6; }
+function firkant(a, b, c, d, uv, s0, s1) {
+  // a,b nederst (venstre, høyre), c,d øverst (høyre, venstre). uv = [u0, v0, u1, v1], v0 er toppen av utsnittet.
+  punkt(...a, uv[0], uv[3], s0); punkt(...b, uv[2], uv[3], s0); punkt(...c, uv[2], uv[1], s1);
+  punkt(...a, uv[0], uv[3], s0); punkt(...c, uv[2], uv[1], s1); punkt(...d, uv[0], uv[1], s1);
+}
+const lysFor = (nx, ny, nz) => .42 + .58 * Math.max(0, nx * LYS[0] + ny * LYS[1] + nz * LYS[2]);
+function verden(o, lx, ly, lz) { const c = Math.cos(o.rot), s = Math.sin(o.rot); return [o.x + lx * c - ly * s, o.gy + lx * s + ly * c, lz]; }
+function kasse(o, w, d, z0, h, uvStart) {
+  const c = Math.cos(o.rot), s = Math.sin(o.rot), hw = w / 2, hd = d / 2;
+  const P = (x, y, z) => verden(o, x, y, z);
+  const sider = [[[-hw, -hd], [hw, -hd], [0, -1]], [[hw, -hd], [hw, hd], [1, 0]], [[hw, hd], [-hw, hd], [0, 1]], [[-hw, hd], [-hw, -hd], [-1, 0]]];
+  sider.forEach(([p, q, n], i) => {
+    const nx = n[0] * c - n[1] * s, ny = n[0] * s + n[1] * c, l = lysFor(nx, ny, 0);
+    firkant(P(p[0], p[1], z0), P(q[0], q[1], z0), P(q[0], q[1], z0 + h), P(p[0], p[1], z0 + h), o.uv[(uvStart + i) % 16], l * (z0 ? .9 : .62), l);
+  });
+  const t = lysFor(0, 0, 1);
+  firkant(P(-hw, -hd, z0 + h), P(hw, -hd, z0 + h), P(hw, hd, z0 + h), P(-hw, hd, z0 + h), o.uv[(uvStart + 4) % 16], t, t);
+}
+function byggSkulptur(o) {
+  if (o.form === "blokk" || o.form === "tårn" || o.form === "maleri") kasse(o, o.bw, o.bd, 0, o.h, 0);
+  else if (o.form === "trapp") { const h = o.h / 3; kasse(o, o.bw, o.bd, 0, h, 0); kasse(o, o.bw * .68, o.bd * .68, h, h, 5); kasse(o, o.bw * .4, o.bd * .4, h * 2, h, 10); }
+  else if (o.form === "søyle") {
+    // Rund søyle med bildet viklet rundt, og et utsnitt på toppen.
+    const n = 14, uv = o.uv[0], uvt = o.uv[5], tl = lysFor(0, 0, 1);
+    for (let i = 0; i < n; i++) {
+      const a0 = i / n * 6.283, a1 = (i + 1) / n * 6.283, am = (a0 + a1) / 2;
+      const p0 = [Math.cos(a0) * o.r, Math.sin(a0) * o.r], p1 = [Math.cos(a1) * o.r, Math.sin(a1) * o.r];
+      const l = lysFor(Math.cos(am + o.rot), Math.sin(am + o.rot), 0), u0 = uv[0] + (uv[2] - uv[0]) * i / n, u1 = uv[0] + (uv[2] - uv[0]) * (i + 1) / n;
+      firkant(verden(o, ...p0, 0), verden(o, ...p1, 0), verden(o, ...p1, o.h), verden(o, ...p0, o.h), [u0, uv[1], u1, uv[3]], l * .62, l);
+      const mu = (uvt[0] + uvt[2]) / 2, mv = (uvt[1] + uvt[3]) / 2, ru = (uvt[2] - uvt[0]) / 2, rv = (uvt[3] - uvt[1]) / 2;
+      punkt(...verden(o, 0, 0, o.h), mu, mv, tl);
+      punkt(...verden(o, ...p0, o.h), mu + Math.cos(a0) * ru, mv + Math.sin(a0) * rv, tl);
+      punkt(...verden(o, ...p1, o.h), mu + Math.cos(a1) * ru, mv + Math.sin(a1) * rv, tl);
+    }
+  } else if (o.form === "pyramide") {
+    const hw = o.bw / 2, top = verden(o, 0, 0, o.h), k = [[-hw, -hd(o)], [hw, -hd(o)], [hw, hd(o)], [-hw, hd(o)]];
+    for (let i = 0; i < 4; i++) {
+      const a = k[i], b = k[(i + 1) % 4], uv = o.uv[i];
+      const nx0 = (a[0] + b[0]) / 2, ny0 = (a[1] + b[1]) / 2, len = Math.hypot(nx0, ny0) || 1, c = Math.cos(o.rot), s = Math.sin(o.rot);
+      const nx = nx0 / len * c - ny0 / len * s, ny = nx0 / len * s + ny0 / len * c, l = lysFor(nx * .7, ny * .7, .7);
+      punkt(...verden(o, ...a, 0), uv[0], uv[3], l * .62); punkt(...verden(o, ...b, 0), uv[2], uv[3], l * .62); punkt(...top, (uv[0] + uv[2]) / 2, uv[1], l);
+    }
+  }
+}
+const hd = o => o.bd / 2;
+function byggFigur(o, f) {
+  // Figuren som en tykk utskåret plate: mange lag oppå hverandre, så den har dybde fra alle vinkler.
+  const lag = 9;
+  if (o.type === "statue") {
+    const h = o.h, w = h * f.asp, tykk = Math.min(16, w * .22);
+    for (let i = 0; i < lag; i++) {
+      const y = -tykk / 2 + tykk * i / (lag - 1), ytre = i === 0 || i === lag - 1, l = ytre ? lysFor(-Math.sin(o.rot) * (i ? 1 : -1), Math.cos(o.rot) * (i ? 1 : -1), .3) : .45;
+      firkant(verden(o, -w / 2, y, 0), verden(o, w / 2, y, 0), verden(o, w / 2, y, h), verden(o, -w / 2, y, h), [i === 0 ? 1 : 0, 0, i === 0 ? 0 : 1, 1], l * .75, l);
+    }
+  } else {
+    // Flåten: figuren liggende flatt, med lag oppover som et skrog, og en liten gynging.
+    const len = o.len, w = len / f.asp, gyng = Math.sin(o.t * 2) * 1.5;
+    for (let i = 0; i < lag; i++) {
+      const z = 1 + o.h * i / (lag - 1) + gyng, l = i === lag - 1 ? lysFor(0, 0, 1) : .35 + .3 * i / lag;
+      firkant(verden(o, -len / 2, w / 2, z), verden(o, len / 2, w / 2, z), verden(o, len / 2, -w / 2, z), verden(o, -len / 2, -w / 2, z), [0, 0, 1, 1], l, l);
+    }
+  }
+}
+function skyggeFor(o, f) {
+  // Skyggen kastes bort fra lyset. Bokser og søyler: grunnflaten dratt ut. Figurer: silhuetten lagt ned på bakken.
+  const sx = -LYS[0] / LYS[2], sy = -LYS[1] / LYS[2], z = .4;
+  if (o.type === "statue") {
+    const h = o.h, w = h * f.asp;
+    const a = verden(o, -w / 2, 0, 0), b = verden(o, w / 2, 0, 0);
+    firkant([a[0], a[1], z], [b[0], b[1], z], [b[0] + sx * h, b[1] + sy * h, z], [a[0] + sx * h, a[1] + sy * h, z], [0, 0, 1, 1], 1, 1);
+    return;
+  }
+  if (o.type === "båt" || o.type === "bil") return;
+  const hw = o.bw / 2, hdd = o.bd / 2, h = o.form === "pyramide" ? o.h * .6 : o.h;
+  const k = [verden(o, -hw, -hdd, 0), verden(o, hw, -hdd, 0), verden(o, hw, hdd, 0), verden(o, -hw, hdd, 0)];
+  const flytt = p => [p[0] + sx * h, p[1] + sy * h, z], uv = [0, 0, 1, 1];
+  firkant([k[0][0], k[0][1], z], [k[1][0], k[1][1], z], [k[2][0], k[2][1], z], [k[3][0], k[3][1], z], uv, 1, 1);
+  firkant(flytt(k[0]), flytt(k[1]), flytt(k[2]), flytt(k[3]), uv, 1, 1);
+  for (let i = 0; i < 4; i++) { const a = k[i], b = k[(i + 1) % 4]; firkant([a[0], a[1], z], [b[0], b[1], z], flytt(b), flytt(a), uv, 1, 1); }
+}
+function tegnObjekterGL() {
+  if (!objProg) return;
+  const synlige = bakke.filter(t => I_3D[t.type] && t.sy > -260 && t.sy < VH + 120 && t.sx > -200 && t.sx < VB + 200);
+  if (!synlige.length && !bygg.length) return;
+  gl.useProgram(objProg);
+  gl.uniform3f(objLoc.uFarge, 1, 1, 1);
+  gl.uniform3fv(objLoc.uC, KAM.C); gl.uniform3fv(objLoc.uR, KAM.R); gl.uniform3fv(objLoc.uU, KAM.U); gl.uniform3fv(objLoc.uF, KAM.F);
+  gl.uniform2f(objLoc.uRoll, KAM.cr, KAM.sr); gl.uniform1f(objLoc.uFoc, KAM.foc);
+  gl.uniform2f(objLoc.uCtr, KAM.ctrX, KAM.ctrY); gl.uniform2f(objLoc.uView, VB, VH);
+  const B = BIOM[biom]; gl.uniform3f(objLoc.uDis, B.dis[0], B.dis[1], B.dis[2]); gl.uniform2f(objLoc.uZ, KAM.D0 * B.z[0], KAM.D0 + FJERN * B.z[1]);
+  gl.uniform1i(objLoc.uTex, 0); gl.activeTexture(gl.TEXTURE0);
+  gl.bindBuffer(gl.ARRAY_BUFFER, objBuf);
+  gl.enableVertexAttribArray(objLoc.aP); gl.enableVertexAttribArray(objLoc.aT); gl.enableVertexAttribArray(objLoc.aS);
+  gl.vertexAttribPointer(objLoc.aP, 3, gl.FLOAT, false, 24, 0); gl.vertexAttribPointer(objLoc.aT, 2, gl.FLOAT, false, 24, 12); gl.vertexAttribPointer(objLoc.aS, 1, gl.FLOAT, false, 24, 20);
+  gl.enable(gl.DEPTH_TEST); gl.depthFunc(gl.LESS); gl.depthMask(true);
+  const tekstur = t => {
+    if (t.type === "bil") return { tex: hvitTex };
+    if (t.type === "kunst") { const e = hent(t.src); return e.st === 1 ? { tex: e.tex } : null; }
+    const f = hentFigTex(t.navn); return f && f.st === 1 ? f : null;
+  };
+  const tegn = (t, tex) => { if (!objN) return; gl.bindTexture(gl.TEXTURE_2D, tex); gl.bufferData(gl.ARRAY_BUFFER, objData.subarray(0, objN), gl.DYNAMIC_DRAW); gl.drawArrays(gl.TRIANGLES, 0, objN / 6); };
+  const nærNok = t => { const r = (t.w || 60) * .8; return dybde(t.x - r, t.gy - r) > 15 && dybde(t.x + r, t.gy - r) > 15 && dybde(t.x - r, t.gy + r) > 15 && dybde(t.x + r, t.gy + r) > 15; };
+  if (bygg.length) tegnByGL(tegn);
+  // Skyggene først, halvgjennomsiktige. Dybdetesten gjør at overlappende skygger ikke blir dobbelt mørke.
+  gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+  gl.uniform1f(objLoc.uSkygge, .32); gl.uniform1f(objLoc.uBlink, 0);
+  for (const t of synlige) {
+    const tx = tekstur(t); if (!tx || !nærNok(t)) continue;
+    objN = 0; skyggeFor(t, tx); tegn(t, t.type === "statue" ? tx.tex : hvitTex);
+  }
+  gl.disable(gl.BLEND); gl.uniform1f(objLoc.uSkygge, 0);
+  for (const t of synlige) {
+    const tx = tekstur(t); if (!tx || !nærNok(t)) continue;
+    objN = 0;
+    if (t.type === "kunst") byggSkulptur(t); else if (t.type === "bil") byggBil(t); else byggFigur(t, tx);
+    gl.uniform1f(objLoc.uBlink, t.blink > 0 ? .8 : 0);
+    if (t.type === "bil") gl.uniform3f(objLoc.uFarge, ...t.farge);
+    tegn(t, tx.tex);
+    gl.uniform3f(objLoc.uFarge, 1, 1, 1);
+  }
+  gl.disable(gl.DEPTH_TEST); gl.depthMask(false);
+}
+
+// ---------- lasting av bilder og figurer ----------
+const cache = new Map(), ko = []; let laster = 0;
+const RES = 1024;
+function hent(src) {
+  let e = cache.get(src);
+  if (!e) { e = { st: 0, src, sist: 0 }; cache.set(src, e); ko.push(e); pump(); }
+  e.sist = nå;
+  return e;
+}
+function pump() {
+  while (laster < 3 && ko.length) {
+    const e = ko.shift(); laster++;
+    const img = new Image(); img.decoding = "async";
+    img.onload = () => {
+      const c = document.createElement("canvas"); c.width = c.height = RES;
+      const g = c.getContext("2d"), s = Math.min(img.naturalWidth, img.naturalHeight);
+      g.drawImage(img, (img.naturalWidth - s) / 2, (img.naturalHeight - s) / 2, s, s, 0, 0, RES, RES);
+      const gr = g.createLinearGradient(0, 0, 0, RES);
+      gr.addColorStop(0, "#000"); gr.addColorStop(1 - OV / T, "#000"); gr.addColorStop(1, "rgba(0,0,0,0)");
+      g.globalCompositeOperation = "destination-in"; g.fillStyle = gr; g.fillRect(0, 0, RES, RES);
+      if (gl) e.tex = lagTekstur(c); else e.c = c;
+      e.st = 1; e.t0 = nå; img.onload = img.onerror = null; laster--; pump();
+    };
+    img.onerror = () => { e.st = 2; laster--; pump(); };
+    img.src = e.src;
+  }
+}
+function rydd() { for (const [k, e] of cache) if (e.st !== 0 && nå - e.sist > 4) { if (e.tex && gl) gl.deleteTexture(e.tex); cache.delete(k); } }
+// Små bilder til oppdragsmenyen.
+const miniatyr = {};
+function hentMini(src) { if (!miniatyr[src]) { const i = new Image(); i.src = src; miniatyr[src] = i; } return miniatyr[src]; }
+
+const FIGCACHE = new Map();
+function hentFigur(navn, maks, glød) {
+  const k = navn + "@" + maks;
+  let e = FIGCACHE.get(k);
+  if (e) return e;
+  e = { st: 0, w: maks, h: maks }; FIGCACHE.set(k, e);
+  const img = new Image();
+  img.onload = () => {
+    const nw = img.naturalWidth, nh = img.naturalHeight, lang = Math.max(nw, nh);
+    e.w = maks * nw / lang; e.h = maks * nh / lang;
+    const sk = Math.min(1, maks * 1.6 * SK * DPR / lang), w = Math.max(1, Math.round(nw * sk)), h = Math.max(1, Math.round(nh * sk));
+    const lag = farge => {
+      const c = document.createElement("canvas"); c.width = w; c.height = h;
+      const g = c.getContext("2d"); g.drawImage(img, 0, 0, w, h);
+      if (farge) { g.globalCompositeOperation = "source-in"; g.fillStyle = farge; g.fillRect(0, 0, w, h); }
+      return c;
+    };
+    e.sp = lag(); e.hvit = lag("#fff");
+    const pad = Math.round(10 * sk * lang / maks), c = document.createElement("canvas");
+    c.width = w + pad * 2; c.height = h + pad * 2;
+    const g = c.getContext("2d");
+    g.shadowColor = glød || "rgba(0,0,0,.85)"; g.shadowBlur = pad * .8;
+    g.drawImage(e.sp, pad, pad); g.drawImage(e.sp, pad, pad);
+    e.glød = c; e.pad = pad * maks / (sk * lang); e.st = 1;
+  };
+  img.onerror = () => { e.st = 2; };
+  img.src = "figurer/" + navn + ".webp";
+  return e;
+}
+const VESEN_STR = 70, BOSS_STR = 220;
+let motor3D = null; const modeller = {};
+const skript = src => new Promise((ok, nei) => { const s = document.createElement("script"); s.src = src; s.async = true; s.onload = ok; s.onerror = nei; document.head.appendChild(s); });
+function last3D(b) {
+  if (modeller[b.navn]) return;
+  modeller[b.navn] = "laster";
+  motor3D = motor3D || skript("3d/boss3d.js");
+  Promise.all([motor3D, skript("3d/" + b.navn + ".js")]).then(() => {
+    const b64 = window.Glb3D?.[b.navn];
+    if (!b64 || !window.Boss3D) throw new Error("mangler");
+    const bin = atob(b64), u = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);
+    window.Glb3D[b.navn] = null;
+    return window.Boss3D.last(b.navn, u.buffer, Math.min(512, Math.round(BOSS_STR * SK * Math.min(DPR, 2))), { tentakler: !!b.tentakler });
+  }).then(() => { modeller[b.navn] = window.Boss3D?.har(b.navn) ? "klar" : "feil"; }).catch(() => { modeller[b.navn] = "feil"; });
+}
+
+// ---------- pikselinsekter i lufta ----------
+const PAL = { Y: "#ffd23f", B: "#3a7bff", R: "#ff3b5c", W: "#bfe6ff", w: "#ffffff", P: "#b04dff", G: "#29d17a", D: "#0f6b40", M: "#ff3fb4", g: "#9aa3ad", k: "#4b525b" };
+const FIGURER = {
+  bie: { hp: 1, poeng: 100, mynt: 1, kart: [
+    [".....B...B.....", "......B.B......", ".WW..YYYYY..WW.", "WWWW.YRYRY.WWWW", ".WWWWYYYYYWWWW.", "...WWBYBYBWW...", ".....YBYBY.....", ".....BYBYB.....", "......YBY......", ".......Y......."],
+    [".....B...B.....", "......B.B......", ".....YYYYY.....", ".....YRYRY.....", "..WWWYYYYYWWW..", ".WWWWBYBYBWWWW.", "WWWW.YBYBY.WWWW", ".WW..BYBYB..WW.", "......YBY......", ".......Y......."]] },
+  fugl: { hp: 2, poeng: 160, mynt: 2, kart: [
+    ["....w.....w....", ".....w...w.....", "PPP...RRR...PPP", "PPPP.RwRwR.PPPP", "PYPPPRRRRRPPPYP", ".PPPPRwRwRPPPP.", "..PP.RRRRR.PP..", "......RwR......", ".......R......."],
+    ["....w.....w....", ".....w...w.....", "......RRR......", "..PP.RwRwR.PP..", ".PYPPRRRRRPPYP.", ".PPPPRwRwRPPPP.", "..PPPRRRRRPPP..", "...P..RwR..P...", ".......R......."]] },
+  sjef: { hp: 6, poeng: 400, mynt: 5, kart: [
+    ["...M.......M...", "....M.....M....", "..GGGGGGGGGGG..", ".GGwwGGGGGwwGG.", "GGGwDGGGGGDwGGG", "GMGGGGDDDGGGGMG", "GMMGGDGGGDGGMMG", "M..GGGGGGGGG..M", "....GG...GG....", "...GG.....GG..."],
+    ["...M.......M...", "....M.....M....", "..GGGGGGGGGGG..", ".GGwwGGGGGwwGG.", "GGGwDGGGGGDwGGG", "GMGGGGDDDGGGGMG", "GMMGGDGGGDGGMMG", ".M.GGGGGGGGG.M.", "...GG.....GG...", "....GG...GG...."]] },
+  bærer: { hp: 8, poeng: 500, mynt: 8, kart: [
+    ["......ggg......", "....ggwwwgg....", "..gggwwwwwggg..", "ggggggggggggggg", "gkkggkkMkkggkkg", "..ggggggggggg..", "....M.....M...."],
+    ["......ggg......", "....ggwwwgg....", "..gggwwwwwggg..", "ggggggggggggggg", "gkkggkkYkkggkkg", "..ggggggggggg..", "..............."]] }
+};
+const PX = 2.3;
+function lagSprite(kart, farge) {
+  const c = document.createElement("canvas"); c.width = kart[0].length; c.height = kart.length;
+  const g = c.getContext("2d");
+  kart.forEach((rad, y) => [...rad].forEach((ch, x) => { if (ch !== ".") { g.fillStyle = farge || PAL[ch]; g.fillRect(x, y, 1, 1); } }));
+  return c;
+}
+FIGURER.kjempe = { hp: 1, poeng: 5000, mynt: 40, skyter: false, kart: FIGURER.sjef.kart };
+FIGURER.kraken = { hp: 1, poeng: 6000, mynt: 45, skyter: false, kart: FIGURER.sjef.kart };
+for (const k in FIGURER) {
+  const f = FIGURER[k];
+  f.sp = f.kart.map(m => lagSprite(m)); f.hvit = f.kart.map(m => lagSprite(m, "#fff")); f.skygge = f.kart.map(m => lagSprite(m, "#000"));
+  f.r = f.kart[0].length * PX * .42;
+}
+
+FIGURER.kjempe.r = 92; FIGURER.kraken.r = 100;
+
+// ---------- 3D-fugler fra three.js-eksemplene, rendret til animasjonsark ----------
+// Papegøye, flamingo og stork erstatter pikselinsektene. Til de er lastet vises pikslene.
+const FUGL3D = { bie: { navn: "papegoye", str: 60 }, fugl: { navn: "flamingo", str: 72 }, sjef: { navn: "stork", str: 98 }, bærer: { navn: "stork", str: 132 }, kjempe: { navn: "stork", str: 360 } };
+const FUGL_N = 12, fuglInfo = {};
+function lastFugler() {
+  motor3D = motor3D || skript("3d/boss3d.js");
+  for (const navn of new Set(Object.values(FUGL3D).map(f => f.navn))) {
+    Promise.all([motor3D, skript("3d/" + navn + ".js")]).then(() => {
+      const b64 = window.Glb3D?.[navn];
+      if (!b64 || !window.Boss3D) throw new Error("mangler");
+      const bin = atob(b64), u = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);
+      window.Glb3D[navn] = null;
+      return window.Boss3D.last(navn, u.buffer, Math.min(512, Math.round(BOSS_STR * SK * Math.min(DPR, 2))));
+    }).then(ok => { if (ok) lagArk(navn); }).catch(() => {});
+  }
+}
+const FUGL_VINKEL = { vipp: -1.25, vri: Math.PI };
+function lagArk(navn) {
+  const B = window.Boss3D, info = B.info(navn), anim = Object.keys(info.anim)[0], lengde = info.anim[anim];
+  const S = B.lerret.width, tmp = document.createElement("canvas"); tmp.width = tmp.height = S;
+  const tg = tmp.getContext("2d", { willReadFrequently: true }), rå = [];
+  let x0 = S, y0 = S, x1 = 0, y1 = 0;
+  for (let i = 0; i < FUGL_N; i++) {
+    tg.clearRect(0, 0, S, S);
+    B.tegn(tg, S / 2, S / 2, S / 1.5, { modell: navn, anim, tid: i / FUGL_N * lengde, ...FUGL_VINKEL, lys: 1.15 });
+    const d = tg.getImageData(0, 0, S, S).data;
+    for (let y = 0; y < S; y += 2) for (let x = 0; x < S; x += 2) if (d[(y * S + x) * 4 + 3] > 24) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+    const c = document.createElement("canvas"); c.width = c.height = S; c.getContext("2d").drawImage(tmp, 0, 0); rå.push(c);
+  }
+  x0 = Math.max(0, x0 - 6); y0 = Math.max(0, y0 - 6); x1 = Math.min(S, x1 + 7); y1 = Math.min(S, y1 + 7);
+  const bw = x1 - x0, bh = y1 - y0, k = Math.min(1, 256 / Math.max(bw, bh)), cw = Math.ceil(bw * k), ch = Math.ceil(bh * k);
+  const kopi = (kilde, farge, op) => {
+    const c = document.createElement("canvas"); c.width = cw; c.height = ch;
+    const g = c.getContext("2d");
+    if (op !== "source-in") {
+      // Mørk kant rundt fuglen så den skiller seg fra bildene under.
+      const m = document.createElement("canvas"); m.width = cw; m.height = ch;
+      const mg = m.getContext("2d"); mg.drawImage(kilde, x0, y0, bw, bh, 0, 0, cw, ch);
+      mg.globalCompositeOperation = "source-in"; mg.fillStyle = "rgba(20,10,30,.85)"; mg.fillRect(0, 0, cw, ch);
+      for (const [ox, oy] of [[-2, 0], [2, 0], [0, -2], [0, 2], [-1.5, -1.5], [1.5, 1.5], [-1.5, 1.5], [1.5, -1.5]]) g.drawImage(m, ox, oy);
+    }
+    g.drawImage(kilde, x0, y0, bw, bh, 0, 0, cw, ch);
+    if (farge) { g.globalCompositeOperation = op; g.fillStyle = farge; g.fillRect(0, 0, cw, ch); }
+    return c;
+  };
+  const ark = { sp: rå.map(c => kopi(c)), hvit: rå.map(c => kopi(c, "rgba(255,255,255,.75)", "source-atop")), skygge: rå.map(c => kopi(c, "#000", "source-in")), asp: bh / bw, fyll: bw / S, dx: ((x0 + x1) / 2 - S / 2) / S, dy: ((y0 + y1) / 2 - S / 2) / S };
+  fuglInfo[navn] = { anim, lengde };
+  for (const t in FUGL3D) if (FUGL3D[t].navn === navn) FIGURER[t].ark = ark;
+}
+const fuglFr = f => ((nå * 10 + f.t * 7) % FUGL_N) | 0;
+const kjempeAktiv = () => fiender.some(f => f.type === "kjempe" || f.type === "kraken");
+const krakenAktiv = () => fiender.some(f => f.type === "kraken");
+function nyKraken() {
+  const f = nyFiende("kraken", { modus: "kraken", x: camX + VB / 2, y: 250, fase2: 0, mønster: 0, stig: 0 }, 0);
+  f.hp = f.maks = Math.ceil(420 * VANSK[vansk].hp);
+  f.skudd = 3; f.buf = {};
+  fiender.push(f); fkuler.length = 0;
+  banner = { a: "KRAKEN", b: "IT CAME FROM THE DEEP", t: 2.8, farge: "#ff3fb4" };
+  pip(140, 50, 1.6, .12, "sawtooth"); rist = .6;
+  for (let i = 0; i < 50; i++) partikler.push({ x: f.x + (Math.random() - .5) * 200, y: 200, vx: (Math.random() - .5) * 300, vy: -Math.random() * 380, liv: 1, maks: 1, farge: "#e8fbff", r: 2 + Math.random() * 4 });
+}
+function tegnKraken(f) {
+  const x = f.x - camX, y = f.y, str = 330 * (.35 + .65 * f.stig);
+  if (modeller.blekksprut === "klar" && window.Boss3D)
+    window.Boss3D.tegn(cx, x, y, str, { modell: "blekksprut", anim: "cast_a_spell", tid: f.t, vri: Math.sin(f.t * .6) * .3, blink: f.treff > 0 ? 1 : 0, lys: .75, buffer: f.buf, bufferMs: 33 });
+  // Skum rundt der den bryter vannflaten
+  const by = y + str * .3;
+  cx.fillStyle = "rgba(235,250,255,.7)";
+  for (let i = 0; i < 16; i++) {
+    const a = i / 16 * 6.283 + f.t * .8, rr = str * .32 * (1 + .08 * Math.sin(f.t * 5 + i * 2));
+    cx.beginPath(); cx.ellipse(x + Math.cos(a) * rr, by + Math.sin(a) * rr * .2, 12 + 6 * Math.sin(f.t * 7 + i), 5, 0, 0, 6.283); cx.fill();
+  }
+}
+
+// ---------- 3D-skipene (Quaternius, CC0): forhåndsrendret i krengning × synsvinkel ----------
+const SKIP3D = { kestrel: "skip_kestrel", ironclad: "skip_ironclad", gladius: "skip_gladius", pyro: "skip_pyro" };
+const SKIP_R = 9, SKIP_P = 5, SKIP_B = 68, skipArk = {};
+let skipKø = Promise.resolve();
+function lastSkip(id) {
+  const navn = SKIP3D[id];
+  if (!navn || skipArk[id]) return;
+  skipArk[id] = "laster";
+  motor3D = motor3D || skript("3d/boss3d.js");
+  Promise.all([motor3D, skript("3d/" + navn + ".js")]).then(() => {
+    const b64 = window.Glb3D?.[navn];
+    if (!b64 || !window.Boss3D) throw new Error("mangler");
+    const bin = atob(b64), u = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);
+    window.Glb3D[navn] = null;
+    return window.Boss3D.last(navn, u.buffer, Math.min(512, Math.round(BOSS_STR * SK * Math.min(DPR, 2))));
+  }).then(ok => {
+    // Ett skip om gangen, så det ikke hakker.
+    skipKø = skipKø.then(() => new Promise(r => setTimeout(() => { skipArk[id] = ok ? lagSkipArk(navn) : "feil"; r(); }, 30)));
+  }).catch(() => { skipArk[id] = "feil"; });
+}
+function lagSkipArk(navn) {
+  const B = window.Boss3D, S = B.lerret.width, tmp = document.createElement("canvas"); tmp.width = tmp.height = S;
+  const tg = tmp.getContext("2d", { willReadFrequently: true }), rå = [];
+  let ex = 0, ey = 0;
+  for (let p = 0; p < SKIP_P; p++) for (let r = 0; r < SKIP_R; r++) {
+    tg.clearRect(0, 0, S, S);
+    B.tegn(tg, S / 2, S / 2, S / 1.5, { modell: navn, vipp: Math.PI / 2 + (.32 - Math.PI / 2) * p / (SKIP_P - 1), vri: Math.PI, rot: (r - (SKIP_R - 1) / 2) / ((SKIP_R - 1) / 2) * .65, lys: .78 });
+    const d = tg.getImageData(0, 0, S, S).data;
+    for (let y = 0; y < S; y += 2) for (let x = 0; x < S; x += 2) if (d[(y * S + x) * 4 + 3] > 24) { ex = Math.max(ex, Math.abs(x - S / 2)); ey = Math.max(ey, Math.abs(y - S / 2)); }
+    const c = document.createElement("canvas"); c.width = c.height = S; c.getContext("2d").drawImage(tmp, 0, 0); rå.push(c);
+  }
+  ex += 4; ey += 4;
+  const bw = ex * 2, bh = ey * 2, k = Math.min(1, 220 / Math.max(bw, bh)), cw = Math.ceil(bw * k), ch = Math.ceil(bh * k);
+  const kopi = (kilde, svart) => {
+    const c = document.createElement("canvas"); c.width = cw; c.height = ch;
+    const g = c.getContext("2d"); g.drawImage(kilde, S / 2 - ex, S / 2 - ey, bw, bh, 0, 0, cw, ch);
+    if (svart) { g.globalCompositeOperation = "source-in"; g.fillStyle = "#000"; g.fillRect(0, 0, cw, ch); }
+    return c;
+  };
+  return { f: rå.map(c => kopi(c)), sk: rå.slice(0, SKIP_R).map(c => kopi(c, true)), asp: bh / bw };
+}
+function tegnSkip3D(g, krenge, str, id, skygge, vipp = skipVipp) {
+  const a = skipArk[id]; if (!a || !a.f) return false;
+  const p = Math.round(Math.max(0, Math.min(1, vipp)) * (SKIP_P - 1)), r = Math.max(0, Math.min(SKIP_R - 1, Math.round((krenge + 1) / 2 * (SKIP_R - 1))));
+  const w = SKIP_B * str * (1 + vipp * .35), h = w * a.asp;
+  g.drawImage(skygge ? a.sk[r] : a.f[p * SKIP_R + r], -w / 2, -h / 2, w, h);
+  return true;
+}
+function tegnMotor(g, str, asp, vipp = skipVipp) {
+  const w = SKIP_B * str * (1 + vipp * .35), h = w * asp, y = (.4 - vipp * .36) * h, r = (5 + vipp * 4) * str * (1 + Math.random() * .3), bak = vipp > .5;
+  g.globalCompositeOperation = "lighter";
+  for (const dx of [-.11, .11]) g.drawImage(GLØD_MOTOR, dx * w - r, y - (bak ? r : r * .5), r * 2, bak ? r * 2 : r * 3.4);
+  g.globalCompositeOperation = "source-over";
+}
+function tegnSpiller(g, krenge, str, fly, vipp = skipVipp) {
+  const a = skipArk[fly.id];
+  if (a && a.f) {
+    const bak = vipp > .5;
+    if (!bak) tegnMotor(g, str, a.asp, vipp);
+    tegnSkip3D(g, krenge, str, fly.id, false, vipp);
+    if (bak) tegnMotor(g, str, a.asp, vipp);
+  } else { tegnFlamme(g); tegnSkip(g, krenge, false, fly.vinge, str); }
+}
+const dykkSkala = () => !dykk ? 1 : dykk.t < .5 ? 1 : dykk.t < 1.9 ? 1 - .5 * (dykk.t - .5) / 1.4 : dykk.t < 3.4 ? .5 + .5 * (dykk.t - 1.9) / 1.5 : 1;
+function nyKjempe() {
+  const f = nyFiende("kjempe", { modus: "kjempe", x: camX + VB / 2, y: -200, fase2: 0, mønster: 0 }, 0);
+  f.hp = f.maks = Math.ceil(260 * VANSK[vansk].hp * (1 + etappe * .2));
+  f.skudd = 2.2; f.buf = {};
+  fiender.push(f);
+  banner = { a: "WARNING", b: "SOMETHING HUGE IS COMING", t: 2.6, farge: "#ff3fb4" };
+  pip(220, 70, 1.2, .1, "sawtooth");
+}
+function tegnKjempe(f) {
+  const x = f.x - camX, y = f.y, str = FUGL3D.kjempe.str, a = f.f.ark;
+  cx.imageSmoothingEnabled = true;
+  if (a) { cx.globalAlpha = .22; const w = str * .62, h = w * a.asp; cx.drawImage(a.skygge[fuglFr(f)], x - w / 2 + 40, y - h / 2 + 95, w, h); cx.globalAlpha = 1; }
+  const fi = fuglInfo.stork;
+  if (fi && a && window.Boss3D?.har("stork")) {
+    const u = str / a.fyll;
+    window.Boss3D.tegn(cx, x - a.dx * u, y - a.dy * u, u / 1.5, { modell: "stork", anim: fi.anim, tid: f.t * .8, ...FUGL_VINKEL, lys: 1.15, blink: f.treff > 0 ? .8 : 0, buffer: f.buf, bufferMs: 33 });
+  } else if (a) { const h = str * a.asp; cx.drawImage((f.treff > 0 ? a.hvit : a.sp)[fuglFr(f)], x - str / 2, y - h / 2, str, h); }
+  cx.imageSmoothingEnabled = false;
+}
+
+// ---------- THE DEEP: havet ----------
+const GLØD_ROSA = lagGlød0([[0, "rgba(255,150,230,.9)"], [.4, "rgba(220,90,220,.35)"], [1, "rgba(150,40,200,0)"]]);
+const GLØD_MOTOR = lagGlød0([[0, "rgba(255,255,255,1)"], [.25, "rgba(140,220,255,.85)"], [1, "rgba(40,120,255,0)"]]);
+const GLØD_BLÅ = lagGlød0([[0, "rgba(220,255,255,1)"], [.3, "rgba(120,230,255,.6)"], [1, "rgba(40,120,255,0)"]]);
+function lagGlød0(stopp) {
+  const c = document.createElement("canvas"); c.width = c.height = 64;
+  const g = c.getContext("2d"), gr = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+  stopp.forEach(([o, f]) => gr.addColorStop(o, f)); g.fillStyle = gr; g.fillRect(0, 0, 64, 64);
+  return c;
+}
+FIGURER.manet = { hp: 3, poeng: 150, mynt: 2, r: 20, tegn: tegnManet };
+FIGURER.hai = { hp: 8, poeng: 400, mynt: 6, r: 26, tegn: tegnHai, skyter: false };
+FIGURER.fisk = { hp: 1, poeng: 60, mynt: 1, r: 9, tegn: tegnFisk, skyter: false };
+FIGURER.rur = { hp: 10, poeng: 500, mynt: 6, r: 16, tegn: tegnRur };
+function lagHavBånd(r, gx, gy, ny, V) {
+  // Havbunnen: skjell som skyter perler, sunkne malerier (Kroghs bilder), dykkere som skal reddes, og tang.
+  for (let i = 0, n = 1 + (Math.random() * 2 | 0); i < n; i++) ny({ type: "t", skjell: true, x: gx(), gy: gy(), hp: 6 * V.hp, ang: Math.PI / 2, skudd: 1 + Math.random() * 2, t: Math.random() * 6 });
+  if (Math.random() < .8) {
+    const o = { type: "kunst", form: "maleri", x: gx(), gy: gy(), rot: (Math.random() - .5) * 1.4, src: tilfeldig(materialer), bw: 84 + Math.random() * 30, bd: 84 + Math.random() * 30, h: 7, hp: 10 * V.hp };
+    o.w = Math.max(o.bw, o.bd); o.uv = Array.from({ length: 16 }, () => utsnitt(40, 8)); o.uv[4] = [.02, .02, .98, .7];
+    ny(o);
+  }
+  for (let i = 0; i < 6; i++) tang.push({ x: (Math.random() * 1.4 - .2) * WW, gy: r * STEG + Math.random() * T, h: 50 + Math.random() * 90, fase: Math.random() * 6, g: .7 + Math.random() * .3 });
+  if (r % 2 === 0) { folk.push({ x: (.2 + Math.random() * .6) * WW, gy: gy(), sx: 0, sy: -999, ss: 1, fram: 0, t: Math.random() * 5, dykker: true }); st.folk++; }
+}
+function oppdaterHav(dt) {
+  const s = skip;
+  // Dykket: når vi har flydd et stykke ut over havet, stuper kameraet og vi går under.
+  if (biom === "strand" && !st.kraken && camY > kystY - 300) { st.kraken = true; nyKraken(); }
+  if (biom === "strand" && !dykk && st.kraken && !krakenAktiv() && camY > kystY + 360) {
+    dykk = { t: 0 }; banner = { a: "DIVE!", b: "", t: 1.4, farge: "#7fe0ff" };
+    fiender = fiender.filter(f => f.hp <= 0); fkuler.length = 0; pip(900, 120, 1.1, .08, "sine");
+  }
+  if (dykk) {
+    dykk.t += dt; s.usårbar = Math.max(s.usårbar, .4);
+    if (dykk.t > 1.9 && biom !== "hav") {
+      settBiom("hav"); blits = .5; smell(.6, 1.4); pynt = [];
+      // Havbunnen lages på nytt foran oss mens blinket skjuler skiftet, så den er full av liv med en gang.
+      fliser = fliser.filter(f => f.r * STEG < camY + 60);
+      nesteRad = fliser.length ? fliser[fliser.length - 1].r + 1 : nesteRad;
+      etappeStartRad = nesteRad - 1; etappeRader = 0; bakke = []; folk = []; tang = [];
+      for (let i = 0; i < 70; i++) bobler.push({ x: camX + Math.random() * VB, y: VH * (.3 + Math.random() * .8), r: 2 + Math.random() * 6, vx: (Math.random() - .5) * 30, vy: -60 - Math.random() * 120, liv: 1.5 + Math.random() });
+    }
+    if (dykk.t > 4.4) { dykk = null; bølgeKlokke = 1.5; banner = { a: "THE DEEP", b: "MIND THE JELLYFISH", t: 2.6, farge: "#7fe0ff" }; }
+  }
+  if (biom === "by") { oppdaterBy(dt); return; }
+  if (biom !== "hav") return;
+  // Boblene fra flyet, og havsnø som driver forbi
+  if (s.død <= 0 && Math.random() < dt * 22) bobler.push({ x: s.x + bobX + (Math.random() - .5) * 6, y: s.y + bobY + 18, r: 1.2 + Math.random() * 2.4, vx: (Math.random() - .5) * 16, vy: 40 + Math.random() * 30, liv: 1 + Math.random() * .6 });
+  for (const b of bobler) { b.x += (b.vx + Math.sin(b.liv * 8) * 8) * dt; b.y += b.vy * dt; b.liv -= dt; }
+  bobler = bobler.filter(b => b.liv > 0);
+  for (const p of snø) { p.y += (fart * 1.3 * p.z + 8) * dt; p.x += Math.sin(nå * .5 + p.z * 9) * 6 * dt; if (p.y > VH + 4) { p.y = -4; p.x = Math.random() * VB; } }
+  const [bunn] = synligBakke();
+  tang = tang.filter(k => k.gy > bunn - 120);
+  // Hvalen kommer forbi midt i stagen. Den kan ikke skades, men ruren på ryggen skyter, og gir mye.
+  if (fase === "fly" && !dykk && !st.hval && etappeRader >= 3) {
+    st.hval = true; const dir = Math.random() < .5 ? 1 : -1;
+    hval = { x: dir > 0 ? camX - 330 : camX + VB + 330, y: VH * .3, dir, t: 0 };
+    for (const [ox, oy] of [[-120, -14], [10, 10], [140, -8]]) fiender.push(nyFiende("rur", { modus: "hval", ox, oy }, 0));
+    banner = { a: "WHALE", b: "SHOOT THE BARNACLES", t: 2.2, farge: "#7fe0ff" };
+  }
+  if (hval) { hval.t += dt; hval.x += hval.dir * 42 * dt; hval.y = VH * .3 + Math.sin(hval.t * .4) * 18; if ((hval.dir > 0 && hval.x > camX + VB + 360) || (hval.dir < 0 && hval.x < camX - 360)) hval = null; }
+}
+function tegnManet(f, x, y) {
+  const puls = Math.sin(f.t * 3 + (f.fase || 0)), w = 22 + puls * 3, h = 17 - puls * 3;
+  cx.strokeStyle = "rgba(255,180,230,.5)"; cx.lineWidth = 1.5;
+  for (let i = 0; i < 7; i++) {
+    const tx = x + (i - 3) * w * .26; cx.beginPath(); cx.moveTo(tx, y + 2);
+    for (let k = 1; k <= 7; k++) cx.lineTo(tx + Math.sin(f.t * 3 + k * .8 + i) * (1.5 + k * 1.1), y + 2 + k * 7.5);
+    cx.stroke();
+  }
+  cx.globalCompositeOperation = "lighter"; cx.globalAlpha = .4 + .2 * puls; cx.drawImage(GLØD_ROSA, x - w * 1.7, y - h * 2, w * 3.4, h * 3.4); cx.globalAlpha = 1; cx.globalCompositeOperation = "source-over";
+  const gr = cx.createRadialGradient(x, y - h * .5, 2, x, y - h * .2, w * 1.1);
+  gr.addColorStop(0, "rgba(255,235,250,.95)"); gr.addColorStop(.5, "rgba(240,130,215,.6)"); gr.addColorStop(1, "rgba(140,60,200,.25)");
+  cx.fillStyle = f.treff > 0 ? "#fff" : gr;
+  cx.beginPath(); cx.ellipse(x, y, w, h, 0, Math.PI, 0); cx.quadraticCurveTo(x, y + h * .45, x - w, y); cx.fill();
+  cx.strokeStyle = "rgba(255,255,255,.55)"; cx.lineWidth = 1; cx.beginPath(); cx.ellipse(x, y - h * .4, w * .45, h * .28, 0, 0, 6.283); cx.stroke();
+}
+function tegnHai(f, x, y) {
+  const a = Math.hypot(f.vx, f.vy) > 10 ? Math.atan2(f.vy, f.vx) : (f.retning > 0 ? 0 : Math.PI), sv = Math.sin(f.t * (f.angrep ? 16 : 8)) * .3;
+  cx.save(); cx.translate(x, y); cx.rotate(a);
+  cx.fillStyle = "rgba(0,20,30,.25)"; cx.beginPath(); cx.ellipse(-4, 16, 40, 10, 0, 0, 6.283); cx.fill();
+  cx.save(); cx.translate(-34, 0); cx.rotate(sv); cx.fillStyle = f.treff > 0 ? "#fff" : "#4a6272";
+  cx.beginPath(); cx.moveTo(2, -3); cx.lineTo(-20, -17); cx.lineTo(-13, 0); cx.lineTo(-20, 15); cx.lineTo(2, 3); cx.fill(); cx.restore();
+  cx.fillStyle = f.treff > 0 ? "#fff" : "#4f6878";
+  cx.beginPath(); cx.moveTo(14, -10); cx.lineTo(-4, -30); cx.lineTo(4, -9); cx.fill();
+  cx.beginPath(); cx.moveTo(14, 10); cx.lineTo(-4, 30); cx.lineTo(4, 9); cx.fill();
+  const gr = cx.createLinearGradient(0, -13, 0, 13);
+  gr.addColorStop(0, "#5a7484"); gr.addColorStop(.35, "#3a5262"); gr.addColorStop(.5, "#2e4554"); gr.addColorStop(.65, "#3a5262"); gr.addColorStop(1, "#6b8796");
+  cx.fillStyle = f.treff > 0 ? "#fff" : gr;
+  cx.beginPath(); cx.moveTo(46, 0); cx.quadraticCurveTo(40, -12, 10, -13); cx.quadraticCurveTo(-24, -11, -36, -3); cx.lineTo(-36, 3); cx.quadraticCurveTo(-24, 11, 10, 13); cx.quadraticCurveTo(40, 12, 46, 0); cx.fill();
+  cx.fillStyle = "#24343f"; cx.beginPath(); cx.moveTo(8, -3); cx.lineTo(-12, 0); cx.lineTo(8, 3); cx.fill();
+  cx.fillStyle = "#080c0f"; cx.beginPath(); cx.arc(34, -6.5, 1.9, 0, 6.283); cx.arc(34, 6.5, 1.9, 0, 6.283); cx.fill();
+  cx.strokeStyle = "rgba(15,25,32,.6)"; cx.lineWidth = 1;
+  for (let k = 0; k < 3; k++) for (const side of [-1, 1]) { cx.beginPath(); cx.moveTo(22 - k * 3.5, side * 9); cx.lineTo(20 - k * 3.5, side * 4); cx.stroke(); }
+  if (f.angrep) { cx.fillStyle = "#7a1520"; cx.beginPath(); cx.ellipse(42, 0, 4, 6, 0, 0, 6.283); cx.fill(); }
+  cx.restore();
+}
+function tegnFisk(f, x, y) {
+  const a = Math.hypot(f.vx, f.vy) > 5 ? Math.atan2(f.vy, f.vx) : Math.PI / 2, sv = Math.sin(f.t * 14) * .4;
+  cx.save(); cx.translate(x, y); cx.rotate(a);
+  cx.fillStyle = f.treff > 0 ? "#fff" : "#7d97a8";
+  cx.save(); cx.translate(-9, 0); cx.rotate(sv); cx.beginPath(); cx.moveTo(1, 0); cx.lineTo(-7, -5); cx.lineTo(-7, 5); cx.fill(); cx.restore();
+  const gr = cx.createLinearGradient(0, -5, 0, 5); gr.addColorStop(0, "#5f7d90"); gr.addColorStop(.45, "#e8f2f6"); gr.addColorStop(1, "#9ab3c1");
+  cx.fillStyle = f.treff > 0 ? "#fff" : gr; cx.beginPath(); cx.ellipse(0, 0, 11, 4.6, 0, 0, 6.283); cx.fill();
+  cx.fillStyle = "#101418"; cx.beginPath(); cx.arc(7, -1.4, 1, 0, 6.283); cx.fill();
+  cx.restore();
+}
+function tegnRur(f, x, y) {
+  cx.globalCompositeOperation = "lighter"; cx.globalAlpha = .55 + .25 * Math.sin(f.t * 5); cx.drawImage(GLØD_ROSA, x - 22, y - 22, 44, 44); cx.globalAlpha = 1; cx.globalCompositeOperation = "source-over";
+  for (const [dx, dy, r] of [[-7, 3, 7], [6, 4, 6], [0, -5, 8]]) {
+    cx.fillStyle = f.treff > 0 ? "#fff" : "#c9c2b4"; cx.beginPath(); cx.arc(x + dx, y + dy, r, 0, 6.283); cx.fill();
+    cx.fillStyle = "#3a2a24"; cx.beginPath(); cx.arc(x + dx, y + dy, r * .42, 0, 6.283); cx.fill();
+    cx.fillStyle = "#ff7a3a"; cx.beginPath(); cx.arc(x + dx, y + dy, r * .2, 0, 6.283); cx.fill();
+  }
+}
+function tegnSkjell(t, x, y, k) {
+  // Et stort skjell som åpner seg og skyter perler.
+  const åpen = .25 + .25 * Math.max(0, Math.sin(nå * 1.8 + t.gy)), w = 20 * k, h = 13 * k;
+  cx.fillStyle = "rgba(0,0,0,.35)"; cx.beginPath(); cx.ellipse(x + 2 * k, y + 3 * k, w * 1.1, h * .8, 0, 0, 6.283); cx.fill();
+  const lag = (dy, lys) => {
+    cx.fillStyle = t.blink > 0 ? "#fff" : lys; cx.beginPath(); cx.ellipse(x, y + dy, w, h, 0, 0, 6.283); cx.fill();
+    cx.strokeStyle = "rgba(60,30,40,.45)"; cx.lineWidth = 1;
+    for (let i = -3; i <= 3; i++) { cx.beginPath(); cx.moveTo(x, y + dy + h * .8); cx.lineTo(x + i * w * .3, y + dy - h * .85); cx.stroke(); }
+  };
+  lag(0, "#c9a3a6");
+  cx.fillStyle = "#3a1018"; cx.beginPath(); cx.ellipse(x, y - h * åpen, w * .8, h * åpen * 1.2, 0, 0, 6.283); cx.fill();
+  cx.globalCompositeOperation = "lighter"; cx.drawImage(GLØD_BLÅ, x - 9 * k, y - h * åpen - 9 * k, 18 * k, 18 * k); cx.globalCompositeOperation = "source-over";
+  lag(-h * åpen * 2.2, "#e6c4c4");
+}
+function tegnDykker(p, x, y, k) {
+  cx.save(); cx.translate(x, y); cx.scale(k, k); cx.rotate(Math.sin(p.t * 1.5) * .2);
+  cx.fillStyle = "#11161b"; cx.beginPath(); cx.ellipse(0, -6, 4, 9, 0, 0, 6.283); cx.fill();
+  cx.fillStyle = "#ffd23f"; cx.fillRect(-2.5, -13, 5, 9);
+  cx.fillStyle = "#11161b"; cx.beginPath(); cx.arc(0, -17, 3.4, 0, 6.283); cx.fill();
+  cx.strokeStyle = "#11161b"; cx.lineWidth = 2.2; cx.lineCap = "round";
+  const v = Math.sin(p.t * 9) * 3; cx.beginPath(); cx.moveTo(-3, -10); cx.lineTo(-9, -16 + v); cx.moveTo(3, -10); cx.lineTo(9, -18 - v); cx.moveTo(-2, 2); cx.lineTo(-4, 9); cx.moveTo(2, 2); cx.lineTo(4, 9); cx.stroke();
+  cx.restore();
+  cx.strokeStyle = "rgba(220,245,255,.6)"; cx.lineWidth = 1;
+  for (let i = 0; i < 3; i++) { const u = (p.t * .8 + i / 3) % 1; cx.beginPath(); cx.arc(x + Math.sin(p.t * 3 + i) * 4 * k, y - (20 + u * 30) * k, (1.5 + u * 2) * k, 0, 6.283); cx.stroke(); }
+}
+function tegnTang() {
+  // Tang som står opp fra bunnen og vaier, i perspektiv.
+  for (const k of tang) {
+    const p = prosjiser(k.x, k.gy); if (!p || p.y < -40 || p.y > VH + 60 || p.x < -60 || p.x > VB + 60) continue;
+    const h = k.h * p.s, b = 3.2 * p.s;
+    cx.strokeStyle = `rgba(${30 + k.g * 20},${100 + k.g * 50},${70 + k.g * 20},.8)`; cx.lineWidth = Math.max(1, b); cx.lineCap = "round";
+    for (let j = 0; j < 3; j++) {
+      cx.beginPath(); cx.moveTo(p.x + (j - 1) * b * 2, p.y);
+      for (let i = 1; i <= 8; i++) { const u = i / 8; cx.lineTo(p.x + (j - 1) * b * 2 + Math.sin(nå * 1.2 + k.fase + u * 3 + j) * u * h * .18, p.y - u * h * (.8 + j * .12)); }
+      cx.stroke();
+    }
+  }
+}
+function tegnHavLys() {
+  // Lysstråler fra overflaten og havsnø.
+  cx.globalCompositeOperation = "lighter";
+  for (let i = 0; i < 5; i++) {
+    const x0 = ((i * 97 + nå * 10) % (VB + 220)) - 110 - camX * .2, b = 40 + (i % 3) * 22;
+    const gr = cx.createLinearGradient(0, 0, 0, VH);
+    gr.addColorStop(0, `rgba(150,220,255,${.09 + .04 * Math.sin(nå + i)})`); gr.addColorStop(1, "rgba(150,220,255,0)");
+    cx.fillStyle = gr; cx.beginPath(); cx.moveTo(x0, -10); cx.lineTo(x0 + b, -10); cx.lineTo(x0 + b * 2.2 + 120, VH); cx.lineTo(x0 + 120, VH); cx.closePath(); cx.fill();
+  }
+  cx.fillStyle = "rgba(220,240,255,.5)";
+  for (const p of snø) { cx.globalAlpha = .25 + p.z * .35; cx.fillRect(p.x, p.y, 1.2 + p.z * 1.4, 1.2 + p.z * 1.4); }
+  cx.globalAlpha = 1; cx.globalCompositeOperation = "source-over";
+}
+function tegnBobler() {
+  if (!bobler.length) return;
+  cx.strokeStyle = "rgba(220,245,255,.7)"; cx.lineWidth = 1;
+  for (const b of bobler) { cx.globalAlpha = Math.min(1, b.liv); cx.beginPath(); cx.arc(b.x - camX, b.y, b.r, 0, 6.283); cx.stroke(); }
+  cx.globalAlpha = 1;
+}
+function tegnDykk() {
+  const u = dykk.t, sx = skip ? skip.x - camX : VB / 2, sy = skip ? skip.y : VH * .7;
+  if (u > 1.1 && u < 1.95) {
+    // Vannet krusner under flyet før det treffer.
+    const a = (u - 1.1) / .85;
+    cx.strokeStyle = `rgba(255,255,255,${.6 * a})`; cx.lineWidth = 2;
+    for (let i = 0; i < 3; i++) { const r = 8 + i * 14 + a * 26; cx.beginPath(); cx.ellipse(sx, sy + 6, r, r * .5, 0, 0, 6.283); cx.stroke(); }
+  }
+  if (u > 1.6 && u < 1.95) {
+    // Plasket: en krone av vann og dråper som spruter ut.
+    const a = (u - 1.6) / .35;
+    cx.fillStyle = `rgba(240,253,255,${.85 - a * .4})`;
+    for (let i = 0; i < 26; i++) {
+      const v = i * 2.4, rr = (20 + (i % 5) * 9) * (.3 + a * 1.4);
+      cx.beginPath(); cx.arc(sx + Math.cos(v) * rr, sy + 4 + Math.sin(v) * rr * .55 - a * 22 * (i % 3), 2.5 + (i % 4), 0, 6.283); cx.fill();
+    }
+    cx.strokeStyle = `rgba(255,255,255,${.9 - a * .5})`; cx.lineWidth = 4;
+    cx.beginPath(); cx.ellipse(sx, sy + 6, 14 + a * 60, (14 + a * 60) * .5, 0, 0, 6.283); cx.stroke();
+  }
+  if (u > 1.9 && u < 3.8) {
+    // Under vann: lys fra overflaten, solstråler, og undersiden av vannflaten som glir opp og ut av bildet.
+    const a = 1 - (u - 1.9) / 1.9;
+    const g = cx.createLinearGradient(0, 0, 0, VH);
+    g.addColorStop(0, `rgba(170,240,255,${.7 * a})`); g.addColorStop(.45, `rgba(60,170,200,${.35 * a})`); g.addColorStop(1, `rgba(10,60,90,${.25 * a})`);
+    cx.fillStyle = g; cx.fillRect(0, 0, VB, VH);
+    cx.globalCompositeOperation = "lighter";
+    for (let i = 0; i < 7; i++) {
+      const x0 = (i / 7) * VB + Math.sin(nå * .7 + i) * 30;
+      const gr = cx.createLinearGradient(0, 0, 0, VH * .85); gr.addColorStop(0, `rgba(200,250,255,${.25 * a})`); gr.addColorStop(1, "rgba(200,250,255,0)");
+      cx.fillStyle = gr; cx.beginPath(); cx.moveTo(x0 - 8, 0); cx.lineTo(x0 + 16, 0); cx.lineTo(x0 + 70, VH * .85); cx.lineTo(x0 + 12, VH * .85); cx.closePath(); cx.fill();
+    }
+    cx.globalCompositeOperation = "source-over";
+    const y0 = 60 - (u - 1.9) * VH * .5;
+    cx.fillStyle = `rgba(225,252,255,${.6 * a})`;
+    cx.beginPath(); cx.moveTo(VB, -10); cx.lineTo(0, -10);
+    for (let x = 0; x <= VB; x += 10) cx.lineTo(x, y0 + Math.sin(x * .05 + u * 7) * 10 + Math.sin(x * .13 - u * 5) * 4);
+    cx.closePath(); cx.fill();
+  }
+}
+function tegnHval() {
+  if (hval.luftskip) { tegnLuftskip(); return; }
+  // Hvalen sett ovenfra: lang og mørk, med hvite flekker, lange luffer og en hale som slår sakte.
+  const h = hval, x = h.x - camX, y = h.y;
+  cx.save(); cx.translate(x, y); cx.scale(h.dir, 1);
+  cx.fillStyle = "rgba(0,10,20,.3)"; cx.beginPath(); cx.ellipse(10, 40, 270, 50, 0, 0, 6.283); cx.fill();
+  const slag = Math.sin(h.t * 1.4) * .25;
+  cx.save(); cx.translate(-250, 0); cx.rotate(slag);
+  cx.fillStyle = "#23323d"; cx.beginPath(); cx.moveTo(10, -10); cx.quadraticCurveTo(-40, -70, -80, -60); cx.quadraticCurveTo(-50, 0, -80, 60); cx.quadraticCurveTo(-40, 70, 10, 10); cx.fill();
+  cx.restore();
+  for (const side of [-1, 1]) {
+    cx.save(); cx.translate(90, side * 40); cx.rotate(side * (.9 + Math.sin(h.t * .9) * .12));
+    cx.fillStyle = "#cfd6da"; cx.beginPath(); cx.ellipse(-70, 0, 80, 13, 0, 0, 6.283); cx.fill();
+    cx.fillStyle = "#2a3a46"; cx.beginPath(); cx.ellipse(-70, -3, 78, 10, 0, 0, 6.283); cx.fill();
+    cx.restore();
+  }
+  const gr = cx.createLinearGradient(0, -64, 0, 64);
+  gr.addColorStop(0, "#3a4f5e"); gr.addColorStop(.5, "#1f2c36"); gr.addColorStop(1, "#3a4f5e");
+  cx.fillStyle = gr;
+  cx.beginPath(); cx.moveTo(270, 0); cx.quadraticCurveTo(260, -62, 120, -64); cx.quadraticCurveTo(-120, -60, -250, -12); cx.lineTo(-250, 12); cx.quadraticCurveTo(-120, 60, 120, 64); cx.quadraticCurveTo(260, 62, 270, 0); cx.fill();
+  cx.fillStyle = "rgba(220,230,235,.35)";
+  for (const [fx, fy, r] of [[160, -20, 9], [120, 26, 7], [40, -34, 6], [-40, 18, 8], [-130, -10, 5], [200, 10, 6], [70, 4, 4]]) { cx.beginPath(); cx.arc(fx, fy, r, 0, 6.283); cx.fill(); }
+  cx.fillStyle = "#0e161c"; cx.beginPath(); cx.ellipse(215, 0, 7, 3, 0, 0, 6.283); cx.fill();
+  cx.restore();
+}
+function tegnBreiflabb(b, x, y) {
+  // Breiflabben: et klumpete, mørkt hode med gap og tenner, øyne på toppen og et lysagn på en stilk.
+  const t = b.t, gap = .5 + .5 * Math.sin(t * 1.7);
+  for (const side of [-1, 1]) {
+    cx.save(); cx.translate(x + side * 150, y + 10); cx.rotate(side * (.3 + Math.sin(t * 3 + side) * .15));
+    cx.fillStyle = "#2a1a12"; cx.beginPath(); cx.moveTo(0, -30); cx.quadraticCurveTo(side * 70, -10, side * 60, 40); cx.quadraticCurveTo(side * 20, 30, 0, 30); cx.fill(); cx.restore();
+  }
+  const gr = cx.createRadialGradient(x, y - 110, 20, x, y - 40, 210);
+  gr.addColorStop(0, "#6a4a36"); gr.addColorStop(.55, "#2e1d14"); gr.addColorStop(1, "#0d0705");
+  cx.fillStyle = gr; cx.beginPath();
+  for (let i = 0; i <= 48; i++) { const a = i / 48 * 6.283, r = 1 + .05 * Math.sin(a * 7 + 1) + .03 * Math.sin(a * 13); const px = x + Math.cos(a) * 175 * r, py = y - 40 + Math.sin(a) * 130 * r; if (i) cx.lineTo(px, py); else cx.moveTo(px, py); }
+  cx.closePath(); cx.fill();
+  cx.fillStyle = "rgba(0,0,0,.25)";
+  for (const [dx, dy, r] of [[-90, -110, 14], [60, -130, 10], [110, -60, 12], [-120, -20, 9], [20, -90, 7]]) { cx.beginPath(); cx.arc(x + dx, y + dy, r, 0, 6.283); cx.fill(); }
+  // Gapet
+  const gh = 26 + gap * 38;
+  cx.fillStyle = "#1a0306"; cx.beginPath(); cx.ellipse(x, y + 28, 128, gh, 0, 0, 6.283); cx.fill();
+  cx.globalCompositeOperation = "lighter"; cx.globalAlpha = .25 + gap * .2; cx.drawImage(GLØD_ROSA, x - 90, y + 28 - gh, 180, gh * 2); cx.globalAlpha = 1; cx.globalCompositeOperation = "source-over";
+  cx.fillStyle = "#efe8d8";
+  for (let i = -6; i <= 6; i++) {
+    const tx = x + i * 19, ty = y + 28 - Math.sqrt(Math.max(0, 1 - (i * 19 / 128) ** 2)) * gh;
+    cx.beginPath(); cx.moveTo(tx - 6, ty - 2); cx.lineTo(tx + 6, ty - 2); cx.lineTo(tx + (i % 2) * 2, ty + 14 + (i % 3) * 5); cx.fill();
+    const by = y + 28 + Math.sqrt(Math.max(0, 1 - (i * 19 / 128) ** 2)) * gh;
+    cx.beginPath(); cx.moveTo(tx - 5, by + 2); cx.lineTo(tx + 5, by + 2); cx.lineTo(tx, by - 12 - (i % 2) * 4); cx.fill();
+  }
+  // Øyne og lysagn (de sårbare punktene)
+  for (const tå of b.tårn) {
+    const tx = tå.x - camX, ty = tå.y;
+    if (tå.navn === "øye") {
+      if (tå.hp > 0) {
+        cx.fillStyle = tå.treff > 0 ? "#fff" : "#e8e2b0"; cx.beginPath(); cx.arc(tx, ty, 13, 0, 6.283); cx.fill();
+        const a = Math.atan2(skip.y - ty, skip.x - tå.x); cx.fillStyle = "#0b0805"; cx.beginPath(); cx.arc(tx + Math.cos(a) * 5, ty + Math.sin(a) * 5, 6, 0, 6.283); cx.fill();
+        cx.globalCompositeOperation = "lighter"; cx.globalAlpha = .4; cx.drawImage(GLØD_BLÅ, tx - 22, ty - 22, 44, 44); cx.globalAlpha = 1; cx.globalCompositeOperation = "source-over";
+      } else { cx.fillStyle = "#0b0805"; cx.beginPath(); cx.arc(tx, ty, 11, 0, 6.283); cx.fill(); }
+    } else {
+      cx.strokeStyle = "#3a2618"; cx.lineWidth = 5; cx.lineCap = "round";
+      cx.beginPath(); cx.moveTo(x, y - 150); cx.quadraticCurveTo(x + (tx - x) * .3, ty - 70, tx, ty - 12); cx.stroke();
+      if (tå.hp > 0) {
+        cx.globalCompositeOperation = "lighter"; const p = .7 + .3 * Math.sin(t * 6);
+        cx.globalAlpha = p; cx.drawImage(GLØD_BLÅ, tx - 40, ty - 40, 80, 80); cx.globalAlpha = 1; cx.globalCompositeOperation = "source-over";
+        cx.fillStyle = tå.treff > 0 ? "#fff" : "#dffcff"; cx.beginPath(); cx.arc(tx, ty, 9, 0, 6.283); cx.fill();
+      }
+    }
+    if (tå.hp > 0) { cx.fillStyle = "rgba(0,0,0,.6)"; cx.fillRect(tx - 16, ty + 18, 32, 4); cx.fillStyle = "#7fe0ff"; cx.fillRect(tx - 16, ty + 18, 32 * tå.hp / tå.maks, 4); }
+  }
+  if (bossSkjermet() && !b.inn) { cx.strokeStyle = `rgba(127,224,255,${.3 + .25 * Math.sin(nå * 6)})`; cx.lineWidth = 3; cx.beginPath(); cx.ellipse(x, y + 28, 136, gh + 8, 0, 0, 6.283); cx.stroke(); }
+  if (b.treff > 0) { cx.fillStyle = "rgba(255,255,255,.25)"; cx.beginPath(); cx.ellipse(x, y + 28, 128, gh, 0, 0, 6.283); cx.fill(); }
+}
+
+// ---------- NIGHT STREETS: gata ----------
+const BILFARGER = [[.75, .12, .14], [.12, .3, .7], [.85, .85, .82], [.15, .15, .17], [.9, .6, .1], [.2, .55, .35]];
+FIGURER.drone = { hp: 2, poeng: 150, mynt: 2, r: 14, tegn: tegnDrone };
+FIGURER.gondol = { hp: 12, poeng: 500, mynt: 6, r: 16, tegn: tegnGondol };
+let vinduTex = [];
+function lagVindusTekstur(variant) {
+  // Fasader: vegg med vinduer i rutenett, noen lyse (varme og kalde), noen mørke, og av og til neon. Den kan flislegges.
+  const N = 512, cell = 64, c = document.createElement("canvas"); c.width = c.height = N;
+  const g = c.getContext("2d"), mur = [["#2b2733", "#3b3545"], ["#3d2722", "#4f3129"], ["#1d2a39", "#283a4e"]][variant];
+  g.fillStyle = mur[0]; g.fillRect(0, 0, N, N);
+  if (ekteMur) {
+    // Ekte murstein, mørknet og farget etter varianten.
+    g.globalAlpha = .55; g.drawImage(ekteMur, 0, 0, N, N); g.globalAlpha = 1;
+    g.globalCompositeOperation = "multiply"; g.fillStyle = mur[1]; g.fillRect(0, 0, N, N); g.globalCompositeOperation = "source-over";
+  } else for (let i = 0; i < 2500; i++) { g.fillStyle = `rgba(255,255,255,${Math.random() * .05})`; g.fillRect(Math.random() * N, Math.random() * N, 2, 2); }
+  for (let y = 0; y < 8; y++) for (let x = 0; x < 8; x++) {
+    const r = Math.random(), farge = r < .45 ? "#0b0c11" : r < .78 ? `hsl(${38 + Math.random() * 14},95%,${58 + Math.random() * 18}%)` : r < .93 ? `hsl(${190 + Math.random() * 25},85%,${58 + Math.random() * 14}%)` : `hsl(${300 + Math.random() * 40},95%,62%)`;
+    g.fillStyle = mur[1]; g.fillRect(x * cell + 9, y * cell + 9, cell - 18, cell - 14);
+    g.fillStyle = farge; g.fillRect(x * cell + 12, y * cell + 12, cell - 24, cell - 20);
+    if (r >= .45) { g.fillStyle = "rgba(0,0,0,.25)"; g.fillRect(x * cell + 12 + (cell - 24) / 2 - 1, y * cell + 12, 2, cell - 20); }
+  }
+  g.fillStyle = "rgba(0,0,0,.4)"; for (let y = 0; y < 8; y++) g.fillRect(0, y * cell, N, 3);
+  const t = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, t);
+  gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, true);
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, c);
+  gl.generateMipmap(gl.TEXTURE_2D);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
+  if (aniso) gl.texParameterf(gl.TEXTURE_2D, aniso.TEXTURE_MAX_ANISOTROPY_EXT, Math.min(8, gl.getParameter(aniso.MAX_TEXTURE_MAX_ANISOTROPY_EXT)));
+  return t;
+}
+function lagBygg(y0) {
+  // Husrekker på begge sider av gata, med smug innimellom. Hvert tredje hus har en av Kroghs plakater mot gata.
+  const vei = WW / 2;
+  for (const side of [-1, 1]) {
+    let y = y0;
+    while (y < y0 + STEG) {
+      const len = 70 + Math.random() * 90, bw = 110 + Math.random() * 70, h = 90 + Math.random() * 230;
+      bygg.push({ x: vei + side * (168 + bw / 2), gy: y + len / 2, bw, bd: len, h, tex: Math.random() * 3 | 0, side, skilt: materialer.length && Math.random() < .38 ? tilfeldig(materialer) : null, skiltH: .35 + Math.random() * .4 });
+      y += len + (Math.random() < .22 ? 26 : 3);
+    }
+    for (let ly = y0 + 30; ly < y0 + STEG; ly += 115) lykter.push({ x: vei + side * 146, gy: ly });
+  }
+}
+function lagByBånd(r, gy, ny, V) {
+  const vei = WW / 2, fortau = () => vei + (Math.random() < .5 ? -1 : 1) * (142 + Math.random() * 18), S = SESONGER[etappe];
+  // Biler i begge retninger. Politibilene skyter.
+  for (let i = 0, n = 2 + (Math.random() * 2 | 0); i < n; i++) {
+    const mot = Math.random() < .5, felt = Math.random() < .5 ? 32 : 94;
+    ny({ type: "bil", x: vei + (mot ? -felt : felt), gy: gy(), bw: 24, bd: 44, h: 15, rot: 0, w: 44, vy: mot ? -60 - Math.random() * 40 : 15 + Math.random() * 25, farge: tilfeldig(BILFARGER), politi: Math.random() < .3, hp: 8 * V.hp, skudd: 1.5 + Math.random() * 2 });
+  }
+  if (Math.random() < .6) ny({ type: "t", x: fortau(), gy: gy(), hp: 5 * V.hp, ang: Math.PI / 2, skudd: 1 + Math.random() * 2 });
+  for (let i = 0, n = 1 + (Math.random() * 2 | 0); i < n; i++)
+    ny({ type: "v", navn: tilfeldig(S.monstre), x: fortau(), gy: gy(), hp: (10 + etappe * 3) * V.hp, vx: 0, speil: Math.random() < .5, skudd: 1.5 + Math.random() * 2, t: Math.random() * 6 });
+  if (r % 2 === 0) { folk.push({ x: fortau(), gy: gy(), sx: 0, sy: -999, ss: 1, fram: 0, t: Math.random() * 5 }); st.folk++; }
+}
+function byBølge(id, d) {
+  let n;
+  if (Math.random() < .55) {
+    const bane = lagBane(tilfeldig(BANER), Math.random() < .5, camX); n = 6 + Math.min(4, d | 0);
+    for (let i = 0; i < n; i++) fiender.push(nyFiende("drone", { modus: "bane", bane, d: -i * 32, fart: 130 + d * 12 }, id));
+  } else {
+    const x0 = camX + 60 + Math.random() * (VB - 120); n = 4 + Math.min(3, d | 0);
+    for (let i = 0; i < n; i++) fiender.push(nyFiende("drone", { modus: "sinus", x0, y: -20 - i * 42, amp: 60 + Math.random() * 30, fase: i * .6, fart: 75 + d * 8 }, id));
+  }
+  bølger[id] = { igjen: n, alle: n };
+}
+function oppdaterBy(dt) {
+  const [bunn] = synligBakke();
+  bygg = bygg.filter(b => b.gy + b.bd / 2 > bunn - 150);
+  lykter = lykter.filter(l => l.gy > bunn - 100);
+  for (const r of regn) { r.y += 820 * dt; r.x -= 140 * dt; if (r.y > VH + 20) { r.y = -20; r.x = Math.random() * (VB + 100); } if (r.x < -20) r.x += VB + 100; }
+  // Luftskipet med Kroghs bilde på kommer forbi midt i stagen, med kanoner i gondolen.
+  if (fase === "fly" && !st.hval && etappeRader >= 3) {
+    st.hval = true; const dir = Math.random() < .5 ? 1 : -1;
+    hval = { luftskip: true, x: dir > 0 ? camX - 320 : camX + VB + 320, y: VH * .28, dir, t: 0, bilde: tilfeldig(materialer) };
+    for (const [ox, oy] of [[-90, 52], [0, 58], [90, 52]]) fiender.push(nyFiende("gondol", { modus: "hval", ox, oy }, 0));
+    banner = { a: "AIRSHIP", b: "TAKE OUT THE GONDOLA GUNS", t: 2.2, farge: "#ff3fb4" };
+  }
+  if (hval) { hval.t += dt; hval.x += hval.dir * 40 * dt; hval.y = VH * .28 + Math.sin(hval.t * .5) * 12; if ((hval.dir > 0 && hval.x > camX + VB + 360) || (hval.dir < 0 && hval.x < camX - 360)) hval = null; }
+}
+function byggHus(b, uvSkala) {
+  // Fire vegger med vinduer som gjentas, så taket.
+  const hw = b.bw / 2, hd = b.bd / 2, h = b.h, X = b.x, Y = b.gy, rep = l => l / uvSkala;
+  const v = [[X - hw, Y - hd], [X + hw, Y - hd], [X + hw, Y + hd], [X - hw, Y + hd]], n = [[0, -1], [1, 0], [0, 1], [-1, 0]];
+  for (let i = 0; i < 4; i++) {
+    const a = v[i], c = v[(i + 1) % 4], l = lysFor(n[i][0], n[i][1], 0), len = Math.hypot(c[0] - a[0], c[1] - a[1]);
+    firkant([a[0], a[1], 0], [c[0], c[1], 0], [c[0], c[1], h], [a[0], a[1], h], [0, 0, rep(len), rep(h)], l * .55, l);
+  }
+}
+function tegnByGL(tegn) {
+  const synlig = b => {
+    const p = prosjiser(b.x, b.gy, b.h * .5); if (!p || p.y < -500 || p.y > VH + 400 || p.x < -400 || p.x > VB + 400) return false;
+    const hw = b.bw / 2, hd = b.bd / 2;
+    return dybde(b.x - hw, b.gy - hd) > 15 && dybde(b.x + hw, b.gy - hd) > 15 && dybde(b.x - hw, b.gy + hd) > 15 && dybde(b.x + hw, b.gy + hd) > 15;
+  };
+  const vis = bygg.filter(synlig);
+  gl.uniform1f(objLoc.uSkygge, 0); gl.uniform1f(objLoc.uBlink, 0); gl.disable(gl.BLEND);
+  // Bare vinduene lyser av seg selv.
+  gl.uniform1f(objLoc.uGlod, 1);
+  for (let k = 0; k < 3; k++) { objN = 0; for (const b of vis) if (b.tex === k) byggHus(b, 190); tegn(null, vinduTex[k]); }
+  gl.uniform1f(objLoc.uGlod, 0);
+  // Takene, mørke
+  objN = 0;
+  for (const b of vis) { const hw = b.bw / 2, hd = b.bd / 2, h = b.h; firkant([b.x - hw, b.gy - hd, h], [b.x + hw, b.gy - hd, h], [b.x + hw, b.gy + hd, h], [b.x - hw, b.gy + hd, h], [0, 0, 1, 1], .14, .14); }
+  tegn(null, hvitTex);
+  // Plakatene: Kroghs bilder på veggen mot gata
+  for (const b of vis) {
+    if (!b.skilt) continue; const e = hent(b.skilt); if (e.st !== 1) continue;
+    const fx = b.x - b.side * (b.bw / 2 + 1.2), w = Math.min(b.bd * .8, 130), h = Math.min(b.h * b.skiltH, w * 1.1), z0 = Math.min(b.h - h - 6, b.h * .3), hd = w / 2;
+    objN = 0;
+    const p0 = [fx, b.gy - b.side * hd, z0], p1 = [fx, b.gy + b.side * hd, z0];
+    firkant(p0, p1, [p1[0], p1[1], z0 + h], [p0[0], p0[1], z0 + h], [.04, .04, .96, .68], 1, 1);
+    tegn(null, e.tex);
+  }
+  // Lyktestolper
+  objN = 0;
+  for (const l of lykter) {
+    const p = prosjiser(l.x, l.gy, 40); if (!p || p.y < -200 || p.y > VH + 100 || dybde(l.x, l.gy) < 15) continue;
+    for (const [dx, dy] of [[-1.6, 0], [1.6, 0]]) firkant([l.x + dx, l.gy - 1.6, 0], [l.x + dx, l.gy + 1.6, 0], [l.x + dx, l.gy + 1.6, 78], [l.x + dx, l.gy - 1.6, 78], [0, 0, 1, 1], .22, .3);
+  }
+  gl.uniform3f(objLoc.uFarge, .55, .55, .6); tegn(null, hvitTex); gl.uniform3f(objLoc.uFarge, 1, 1, 1);
+}
+function byggBil(t) {
+  // Bilen: et karosseri og en lavere førerhytte med mørke vinduer.
+  const boks = (w, d, z0, h, mørk) => {
+    const hw = w / 2, hd = d / 2, X = t.x, Y = t.gy;
+    const v = [[X - hw, Y - hd], [X + hw, Y - hd], [X + hw, Y + hd], [X - hw, Y + hd]], n = [[0, -1], [1, 0], [0, 1], [-1, 0]];
+    for (let i = 0; i < 4; i++) { const a = v[i], c = v[(i + 1) % 4], l = lysFor(n[i][0], n[i][1], 0) * mørk; firkant([a[0], a[1], z0], [c[0], c[1], z0], [c[0], c[1], z0 + h], [a[0], a[1], z0 + h], [0, 0, 1, 1], l * .6, l); }
+    const l = lysFor(0, 0, 1) * mørk; firkant([X - hw, Y - hd, z0 + h], [X + hw, Y - hd, z0 + h], [X + hw, Y + hd, z0 + h], [X - hw, Y + hd, z0 + h], [0, 0, 1, 1], l, l);
+  };
+  boks(t.bw, t.bd, 0, t.h * .55, 1);
+  boks(t.bw * .84, t.bd * .5, t.h * .55, t.h * .45, .35);
+}
+function tegnBilLys(t) {
+  const front = Math.sign(t.vy) || 1, p = prosjiser(t.x, t.gy + front * t.bd / 2, 5), q = prosjiser(t.x, t.gy - front * t.bd / 2, 5);
+  cx.globalCompositeOperation = "lighter";
+  if (p) for (const dx of [-7, 7]) {
+    const a = prosjiser(t.x + dx, t.gy + front * t.bd / 2, 5); if (!a) continue;
+    const r = 14 * a.s; cx.globalAlpha = .9; cx.drawImage(GLØD_BLÅ, a.x - r, a.y - r, r * 2, r * 2);
+    // Frontlysene speiler seg i den våte asfalten foran bilen.
+    const m = prosjiser(t.x + dx, t.gy + front * (t.bd / 2 + 40), 0);
+    if (m) { const rm = 22 * m.s; cx.globalAlpha = .3; cx.drawImage(GLØD_BLÅ, m.x - rm * .5, m.y - rm * 1.8, rm, rm * 3.6); }
+  }
+  if (q) { const r = 10 * q.s; cx.globalAlpha = .7; cx.drawImage(GLØD_ROSA, q.x - r * 1.6, q.y - r, r * 3.2, r * 2); }
+  if (t.politi) { const top = prosjiser(t.x, t.gy, t.h + 2); if (top) { const blå = (nå * 6 | 0) % 2, r = 16 * top.s; cx.globalAlpha = 1; cx.drawImage(blå ? GLØD_BLÅ : GLØD_ROSA, top.x - r, top.y - r, r * 2, r * 2); } }
+  cx.globalAlpha = 1; cx.globalCompositeOperation = "source-over";
+}
+function tegnLykteLys() {
+  // Gatelys med glorie, og lyskjegler på fortauet.
+  cx.globalCompositeOperation = "lighter";
+  for (const l of lykter) {
+    const p = prosjiser(l.x, l.gy, 80), g = prosjiser(l.x, l.gy, 0); if (!p || !g || p.y < -60 || p.y > VH + 60) continue;
+    const r = 34 * p.s; cx.globalAlpha = .85; cx.drawImage(LYKT, p.x - r, p.y - r, r * 2, r * 2);
+    const rg = 60 * g.s; cx.globalAlpha = .35; cx.drawImage(LYKT, g.x - rg, g.y - rg * .5, rg * 2, rg);
+    const m = prosjiser(l.x, l.gy, -80);
+    if (m) { const rm = 30 * m.s; cx.globalAlpha = .38; cx.drawImage(LYKT, m.x - rm * .45, m.y - rm * 2.2, rm * .9, rm * 4.4); }
+  }
+  cx.globalAlpha = 1; cx.globalCompositeOperation = "source-over";
+}
+const LYKT = lagGlød0([[0, "rgba(255,240,200,1)"], [.25, "rgba(255,200,120,.55)"], [1, "rgba(255,150,60,0)"]]);
+function tegnRegn() {
+  cx.strokeStyle = "rgba(190,200,240,.28)"; cx.lineWidth = 1;
+  cx.beginPath(); for (const r of regn) { cx.moveTo(r.x, r.y); cx.lineTo(r.x - r.l * .17, r.y + r.l); } cx.stroke();
+}
+function tegnDrone(f, x, y) {
+  // En quadkopter sett ovenfra: kryss, fire rotorer som snurrer, rødt lys.
+  cx.save(); cx.translate(x, y); cx.rotate(f.t * .5);
+  cx.fillStyle = "rgba(0,0,0,.25)"; cx.beginPath(); cx.arc(6, 10, 15, 0, 6.283); cx.fill();
+  cx.strokeStyle = f.treff > 0 ? "#fff" : "#2a2d33"; cx.lineWidth = 4; cx.lineCap = "round";
+  cx.beginPath(); cx.moveTo(-11, -11); cx.lineTo(11, 11); cx.moveTo(11, -11); cx.lineTo(-11, 11); cx.stroke();
+  for (const [dx, dy] of [[-11, -11], [11, -11], [11, 11], [-11, 11]]) {
+    cx.fillStyle = "rgba(200,210,230,.25)"; cx.beginPath(); cx.arc(dx, dy, 8, 0, 6.283); cx.fill();
+    cx.strokeStyle = "rgba(230,235,245,.7)"; cx.lineWidth = 1.2; const a = nå * 40 + dx;
+    cx.beginPath(); cx.moveTo(dx + Math.cos(a) * 8, dy + Math.sin(a) * 8); cx.lineTo(dx - Math.cos(a) * 8, dy - Math.sin(a) * 8); cx.stroke();
+  }
+  cx.fillStyle = f.treff > 0 ? "#fff" : "#3b3f48"; cx.beginPath(); cx.arc(0, 0, 6, 0, 6.283); cx.fill();
+  cx.restore();
+  cx.globalCompositeOperation = "lighter"; cx.globalAlpha = (nå * 3 | 0) % 2 ? .9 : .4; cx.drawImage(GLØD_ROSA, x - 10, y - 10, 20, 20); cx.globalAlpha = 1; cx.globalCompositeOperation = "source-over";
+}
+function tegnGondol(f, x, y) {
+  cx.fillStyle = f.treff > 0 ? "#fff" : "#34363d"; cx.beginPath(); cx.arc(x, y, 12, 0, 6.283); cx.fill();
+  cx.strokeStyle = "#ff3fb4"; cx.lineWidth = 2; cx.beginPath(); cx.arc(x, y, 12, 0, 6.283); cx.stroke();
+  const a = Math.atan2(skip.y - y, skip.x - f.x); cx.save(); cx.translate(x, y); cx.rotate(a); cx.fillStyle = "#8b919c"; cx.fillRect(4, -3, 13, 6); cx.restore();
+}
+function tegnLuftskip() {
+  // Luftskipet: sølvskrog, finner bak, og Kroghs bilde som en lysende reklameflate på siden.
+  const h = hval, x = h.x - camX, y = h.y;
+  cx.save(); cx.translate(x, y); cx.scale(h.dir, 1);
+  cx.fillStyle = "rgba(0,0,0,.3)"; cx.beginPath(); cx.ellipse(20, 70, 230, 40, 0, 0, 6.283); cx.fill();
+  cx.fillStyle = "#3a3e48";
+  for (const s of [-1, 1]) { cx.beginPath(); cx.moveTo(-170, s * 20); cx.lineTo(-250, s * 70); cx.lineTo(-235, s * 8); cx.closePath(); cx.fill(); }
+  const gr = cx.createLinearGradient(0, -70, 0, 70);
+  gr.addColorStop(0, "#c9ced8"); gr.addColorStop(.35, "#8a909c"); gr.addColorStop(.7, "#4a4f5a"); gr.addColorStop(1, "#2a2d34");
+  cx.fillStyle = gr; cx.beginPath(); cx.ellipse(0, 0, 250, 68, 0, 0, 6.283); cx.fill();
+  cx.strokeStyle = "rgba(0,0,0,.25)"; cx.lineWidth = 1; for (let i = -4; i <= 4; i++) { cx.beginPath(); cx.ellipse(i * 50, 0, 6, 66, 0, 0, 6.283); cx.stroke(); }
+  cx.restore();
+  const img = hentMini(h.bilde);
+  if (img.complete && img.naturalWidth) {
+    const w = 170, hh = 96;
+    cx.save(); rundRekt(x - w / 2, y - hh / 2 - 4, w, hh, 8); cx.clip();
+    cx.drawImage(img, 0, img.naturalHeight * .1, img.naturalWidth, img.naturalWidth * hh / w, x - w / 2, y - hh / 2 - 4, w, hh);
+    cx.restore();
+    cx.strokeStyle = `rgba(255,63,180,${.7 + .3 * Math.sin(nå * 4)})`; cx.lineWidth = 3; rundRekt(x - w / 2, y - hh / 2 - 4, w, hh, 8); cx.stroke();
+  }
+  cx.fillStyle = "#2a2c33"; cx.beginPath(); cx.ellipse(x, y + 56, 110, 14, 0, 0, 6.283); cx.fill();
+}
+
+// ---------- baner ----------
+const BANER = [
+  [[.1, -.08], [.2, .3], [.6, .55], [.82, .36], [.56, .18], [.3, .34], [.22, .7], [.42, 1.15]],
+  [[.5, -.08], [.28, .22], [.72, .46], [.28, .7], [.5, 1.15]],
+  [[-.1, .12], [.3, .2], [.7, .36], [.9, .22], [.6, .08], [.4, .3], [1.15, .5]],
+  [[.25, -.08], [.25, .35], [.5, .55], [.75, .35], [.75, -.1]]
+];
+function lagBane(pkt, speil, x0) {
+  const P = pkt.map(([u, v]) => [x0 + (speil ? 1 - u : u) * VB, v * VH]);
+  const ut = [];
+  for (let i = 0; i < P.length - 1; i++) {
+    const p0 = P[Math.max(0, i - 1)], p1 = P[i], p2 = P[i + 1], p3 = P[Math.min(P.length - 1, i + 2)];
+    for (let s = 0; s < 16; s++) {
+      const t = s / 16, t2 = t * t, t3 = t2 * t;
+      ut.push([.5 * (2 * p1[0] + (-p0[0] + p2[0]) * t + (2 * p0[0] - 5 * p1[0] + 4 * p2[0] - p3[0]) * t2 + (-p0[0] + 3 * p1[0] - 3 * p2[0] + p3[0]) * t3),
+               .5 * (2 * p1[1] + (-p0[1] + p2[1]) * t + (2 * p0[1] - 5 * p1[1] + 4 * p2[1] - p3[1]) * t2 + (-p0[1] + 3 * p1[1] - 3 * p2[1] + p3[1]) * t3)]);
+    }
+  }
+  ut.push(P[P.length - 1]);
+  const L = [0];
+  for (let i = 1; i < ut.length; i++) L.push(L[i - 1] + Math.hypot(ut[i][0] - ut[i - 1][0], ut[i][1] - ut[i - 1][1]));
+  return { p: ut, L, tot: L[L.length - 1] };
+}
+function påBane(b, d) {
+  if (d <= 0) return b.p[0];
+  if (d >= b.tot) return null;
+  let lo = 0, hi = b.L.length - 1;
+  while (hi - lo > 1) { const m = (lo + hi) >> 1; if (b.L[m] < d) lo = m; else hi = m; }
+  const f = (d - b.L[lo]) / (b.L[hi] - b.L[lo] || 1);
+  return [b.p[lo][0] + (b.p[hi][0] - b.p[lo][0]) * f, b.p[lo][1] + (b.p[hi][1] - b.p[lo][1]) * f];
+}
+
+// ---------- lyd ----------
+let ac = null, musikk = null, lydPå = true, støyBuf = null, lydKjede = null, sistSmell = 0;
+try { lydPå = localStorage.getItem("fly-lyd") !== "0"; } catch {}
+function startLyd() {
+  if (!ac) { try { ac = new (window.AudioContext || window.webkitAudioContext)(); } catch {} }
+  if (ac && ac.state === "suspended") ac.resume();
+  if (!musikk) { musikk = new Audio("musikk/piranha.mp4"); musikk.loop = true; musikk.volume = .55; }
+  if (lydPå) musikk.play().catch(() => {});
+}
+function lydUt() {
+  if (!lydKjede) { lydKjede = ac.createDynamicsCompressor(); lydKjede.threshold.value = -14; lydKjede.ratio.value = 6; lydKjede.connect(ac.destination); }
+  return lydKjede;
+}
+function pip(f0, f1, tid, vol, type) {
+  if (!ac || !lydPå) return;
+  const o = ac.createOscillator(), g = ac.createGain(), t = ac.currentTime;
+  o.type = type || "square"; o.frequency.setValueAtTime(f0, t); o.frequency.exponentialRampToValueAtTime(f1, t + tid);
+  g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(.0001, t + tid);
+  o.connect(g).connect(lydUt()); o.start(t); o.stop(t + tid);
+}
+function smell(vol, tid) {
+  if (!ac || !lydPå) return;
+  const t = ac.currentTime;
+  if (t - sistSmell < .05) return;
+  sistSmell = t;
+  if (!støyBuf) { støyBuf = ac.createBuffer(1, ac.sampleRate * 2, ac.sampleRate); const d = støyBuf.getChannelData(0); let b = 0; for (let i = 0; i < d.length; i++) { b = b * .6 + (Math.random() * 2 - 1) * .4; d[i] = b * 2; } }
+  const lengde = Math.max(.55, tid * 1.7);
+  const s = ac.createBufferSource(), g = ac.createGain(), f = ac.createBiquadFilter();
+  s.buffer = støyBuf; s.playbackRate.value = .7 + Math.random() * .4;
+  f.type = "lowpass"; f.frequency.setValueAtTime(1600, t); f.frequency.exponentialRampToValueAtTime(70, t + lengde);
+  g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + .008); g.gain.exponentialRampToValueAtTime(.0001, t + lengde);
+  s.connect(f).connect(g).connect(lydUt()); s.start(t, Math.random() * .5); s.stop(t + lengde);
+  const o = ac.createOscillator(), og = ac.createGain();
+  o.type = "sine"; o.frequency.setValueAtTime(120, t); o.frequency.exponentialRampToValueAtTime(30, t + lengde * .5);
+  og.gain.setValueAtTime(vol * 1.1, t); og.gain.exponentialRampToValueAtTime(.0001, t + lengde * .6);
+  o.connect(og).connect(lydUt()); o.start(t); o.stop(t + lengde * .6);
+}
+function myntLyd() { pip(1320 + Math.random() * 300, 2400, .06, .025, "triangle"); }
+function settLyd(på) {
+  lydPå = på; try { localStorage.setItem("fly-lyd", på ? "1" : "0"); } catch {}
+  if (musikk) { if (på) musikk.play().catch(() => {}); else musikk.pause(); }
+}
+
+// ---------- verden ----------
+function lagStokk(e) {
+  const S = SESONGER[e], a = bland(S.bilder.slice());
+  if (S.ekstra) a.push(...bland(SESONGER.slice(0, 5).flatMap(s => s.bilder)).slice(0, S.ekstra));
+  return a;
+}
+function nesteBilde() { if (!stokk.length) stokk = lagStokk(etappe); return stokk.shift(); }
+// Bilde r dekker y fra r*STEG til r*STEG+T.
+function lagBånd() {
+  const r = nesteRad, y0 = r * STEG;
+  fliser.push({ r, src: nesteBilde() });
+  nesteRad++;
+  if (tilstand === "spill" && SESONGER[etappe].by) lagBygg(y0);
+  if (tilstand !== "spill" || fase !== "fly" || etappeRader >= ETAPPE_BILDER) return;
+  if (SESONGER[etappe].dyp && biom !== "hav") { lagStrandBånd(r, y0); return; }
+  etappeRader++;
+  if (r - etappeStartRad < 1) return;
+  const V = VANSK[vansk];
+  const gy = () => y0 + OV * .6 + Math.random() * (T - OV * 1.2), gx = () => (.12 + Math.random() * .76) * WW;
+  const ny = o => { bakke.push({ sx: 0, sy: -999, sz: 1e9, ss: 1, blink: 0, ...o }); st.fiender++; };
+  if (SESONGER[etappe].dyp) { lagHavBånd(r, gx, gy, ny, V); return; }
+  if (SESONGER[etappe].by) { lagByBånd(r, gy, ny, V); return; }
+  for (let i = 0, n = Math.random() < .6 ? 1 : 0; i < n; i++) ny({ type: "t", x: gx(), gy: gy(), hp: 5 * V.hp, ang: Math.PI / 2, skudd: 1 + Math.random() * 2 });
+  for (let i = 0, n = 1 + (Math.random() * 2 | 0); i < n; i++)
+    ny({ type: "v", navn: tilfeldig(SESONGER[etappe].monstre), x: gx(), gy: gy(), hp: (10 + etappe * 3) * V.hp, vx: (Math.random() < .5 ? -1 : 1) * (12 + Math.random() * 16), speil: Math.random() < .5, skudd: 1.5 + Math.random() * 2, t: Math.random() * 6 });
+  // Skulpturer kledd med Kroghs bilder (AirAttack-bygningene, men av kunsten). De må bombes.
+  for (let i = 0, n = 1 + (Math.random() * 2 | 0); i < n; i++) ny(lagSkulptur(gx(), gy(), V));
+  // Statuer: de utklipte figurene, stående og med tykkelse.
+  if (Math.random() < .55) {
+    const h = 70 + Math.random() * 45;
+    ny({ type: "statue", navn: tilfeldig(SESONGER[etappe].monstre), x: gx(), gy: gy(), rot: (Math.random() - .5) * .9, h, w: h * .6, hp: 12 * V.hp });
+  }
+  // En flåte av figurer som seiler tvers over bildet hvert tredje bilde.
+  if (r % 3 === 0) {
+    const ty = gy(), retning = Math.random() < .5 ? 1 : -1, fart = 30 + Math.random() * 18, navn = tilfeldig(SESONGER[etappe].monstre);
+    for (let i = 0; i < 3; i++) {
+      const len = 70 + Math.random() * 30;
+      ny({ type: "båt", lok: i === 0, navn: i === 1 ? tilfeldig(SESONGER[etappe].monstre) : navn, x: (retning > 0 ? -90 : WW + 90) - retning * i * 120, gy: ty, len, w: len, h: 14,
+        vx: retning * fart, rot: retning > 0 ? 0 : Math.PI, hp: 10 * V.hp, skudd: 2 + Math.random() * 2, t: Math.random() * 6 });
+    }
+  }
+  if (r % 2 === 0) { folk.push({ x: (.2 + Math.random() * .6) * WW, gy: gy(), sx: 0, sy: -999, ss: 1, fram: 0, t: Math.random() * 5 }); st.folk++; }
+}
+// Stranda før dykket: parasoller og håndklær, badegjester å redde, livvakttårn som skyter, og vannscootere.
+const STRAND_FARGER = [["#ff4a6b", "#fff"], ["#ffc93a", "#ff7a1a"], ["#3ad1ff", "#fff"], ["#7a5cff", "#ffd1f0"], ["#3ddc84", "#fff8d0"], ["#ff3fb4", "#ffe14a"]];
+function lagStrandBånd(r, y0) {
+  if (tilstand !== "spill" || r < 1) return;
+  const V = VANSK[vansk], ny = o => { bakke.push({ sx: 0, sy: -999, sz: 1e9, ss: 1, blink: 0, ...o }); st.fiender++; };
+  for (let i = 0; i < 10; i++) {
+    const gy = y0 + Math.random() * STEG, x = (.08 + Math.random() * .84) * WW;
+    if (gy > kystY - 80) continue;
+    pynt.push({ type: "parasoll", x, gy, r: 22 + Math.random() * 10, f: tilfeldig(STRAND_FARGER), rot: Math.random() * 6 });
+    if (Math.random() < .8) pynt.push({ type: "håndkle", x: x + 16 + Math.random() * 12, gy: gy + 10 + Math.random() * 10, w: 20, l: 42, f: tilfeldig(STRAND_FARGER), rot: (Math.random() - .5) * .8 });
+  }
+  for (let i = 0; i < 2; i++) { const gy = y0 + Math.random() * STEG; if (gy < kystY - 70) ny({ type: "t", x: (.12 + Math.random() * .76) * WW, gy, hp: 6 * V.hp, ang: Math.PI / 2, skudd: 1 + Math.random() * 2 }); }
+  for (let i = 0, n = Math.random() < .5 ? 2 : 1; i < n; i++) {
+    const gy = y0 + Math.random() * STEG;
+    if (gy < kystY - 60) ny({ type: "v", navn: tilfeldig(SESONGER[0].monstre), x: (.12 + Math.random() * .76) * WW, gy, hp: 10 * V.hp, vx: (Math.random() < .5 ? -1 : 1) * (12 + Math.random() * 16), speil: Math.random() < .5, skudd: 1.5 + Math.random() * 2, t: Math.random() * 6 });
+  }
+  { const gy = y0 + Math.random() * STEG; if (gy < kystY - 60) { folk.push({ x: (.2 + Math.random() * .6) * WW, gy, sx: 0, sy: -999, ss: 1, fram: 0, t: Math.random() * 5 }); st.folk++; } }
+  if (y0 + STEG > kystY - 300) for (let i = 0, n = 1 + (Math.random() < .5 ? 1 : 0); i < n; i++) {
+    const dir = Math.random() < .5 ? 1 : -1;
+    ny({ type: "jetski", x: dir > 0 ? -60 - i * 160 : WW + 60 + i * 160, gy: kystY + 50 + Math.random() * 160, vx: dir * (90 + Math.random() * 60), hp: 3 * V.hp, skudd: 1.5 + Math.random() * 2, t: 0, farge: tilfeldig(STRAND_FARGER)[0] });
+  }
+}
+function tegnPynt() {
+  for (const p of pynt) {
+    if (p.type === "håndkle") {
+      const c = Math.cos(p.rot), s = Math.sin(p.rot), hw = p.w / 2, hl = p.l / 2;
+      const hj = [[-hw, -hl], [hw, -hl], [hw, hl], [-hw, hl]].map(([a, b]) => prosjiser(p.x + a * c - b * s, p.gy + a * s + b * c, .5));
+      if (hj.some(q => !q) || hj[0].y < -40 || hj[0].y > VH + 40) continue;
+      cx.fillStyle = p.f[0]; cx.beginPath(); hj.forEach((q, i) => i ? cx.lineTo(q.x, q.y) : cx.moveTo(q.x, q.y)); cx.closePath(); cx.fill();
+      cx.strokeStyle = p.f[1]; cx.lineWidth = 2 * hj[0].s; cx.stroke();
+      continue;
+    }
+    const sentrum = prosjiser(p.x, p.gy, 34); if (!sentrum || sentrum.y < -60 || sentrum.y > VH + 60) continue;
+    // Skyggen på sanden, forskjøvet etter lyset
+    const sk = [], ring = [];
+    for (let i = 0; i < 16; i++) {
+      const a = i / 16 * 6.283;
+      sk.push(prosjiser(p.x + Math.cos(a) * p.r + 14, p.gy + Math.sin(a) * p.r + 10, 0));
+      ring.push(prosjiser(p.x + Math.cos(a + p.rot) * p.r, p.gy + Math.sin(a + p.rot) * p.r, 30));
+    }
+    if (sk.some(q => !q) || ring.some(q => !q)) continue;
+    cx.fillStyle = "rgba(40,25,10,.28)"; cx.beginPath(); sk.forEach((q, i) => i ? cx.lineTo(q.x, q.y) : cx.moveTo(q.x, q.y)); cx.closePath(); cx.fill();
+    for (let i = 0; i < 16; i += 2) {
+      cx.fillStyle = p.f[(i / 2) % 2];
+      cx.beginPath(); cx.moveTo(sentrum.x, sentrum.y); cx.lineTo(ring[i].x, ring[i].y); cx.lineTo(ring[i + 1].x, ring[i + 1].y); cx.lineTo(ring[(i + 2) % 16].x, ring[(i + 2) % 16].y); cx.closePath(); cx.fill();
+    }
+    cx.fillStyle = "rgba(255,255,255,.18)"; cx.beginPath(); cx.arc(sentrum.x - 3 * sentrum.s, sentrum.y - 3 * sentrum.s, p.r * .3 * sentrum.s, 0, 6.283); cx.fill();
+  }
+}
+function tegnJetski(t, x, y, k) {
+  const dir = Math.sign(t.vx) || 1;
+  cx.save(); cx.translate(x, y); cx.rotate(KAM.roll); cx.scale(k * dir, k);
+  cx.strokeStyle = "rgba(255,255,255,.8)"; cx.lineWidth = 2;
+  for (let i = 1; i <= 4; i++) { cx.globalAlpha = .7 - i * .15; cx.beginPath(); cx.moveTo(-14 - i * 14, -5 - i * 5); cx.lineTo(-12, 0); cx.lineTo(-14 - i * 14, 5 + i * 5); cx.stroke(); }
+  cx.globalAlpha = 1;
+  cx.fillStyle = "rgba(0,30,40,.3)"; cx.beginPath(); cx.ellipse(2, 4, 16, 6, 0, 0, 6.283); cx.fill();
+  cx.fillStyle = t.blink > 0 ? "#fff" : t.farge; cx.beginPath(); cx.moveTo(17, 0); cx.quadraticCurveTo(8, -8, -12, -6); cx.lineTo(-12, 6); cx.quadraticCurveTo(8, 8, 17, 0); cx.fill();
+  cx.fillStyle = "#1b1f27"; cx.fillRect(-7, -3, 11, 6);
+  cx.fillStyle = "#ffd9b8"; cx.beginPath(); cx.arc(-3, 0, 3.2, 0, 6.283); cx.fill();
+  cx.restore();
+}
+function fyllVerden() { const [, topp] = synligBakke(); while (nesteRad * STEG < topp + T * .3) lagBånd(); }
+function settBiom(b) { biom = b; scene.style.background = BIOM[b].himmel; }
+function nullstillVerden(e) {
+  etappe = e; stokk = lagStokk(e); settBiom("land"); dykk = null; hval = null; tang = []; bobler = []; bygg = []; lykter = []; regn = []; pynt = [];
+  camY = 0; camX = (WW - VB) / 2; fart = FART; nesteRad = 0; fliser = []; bakke = []; folk = [];
+  oppdaterKamera(); const [bunn] = synligBakke(); camY += 20 - bunn; oppdaterKamera();
+}
+const vanske = () => Math.min(8, 1 + tid / 55 + etappe * .5 + vansk * 1.2);
+
+// ---------- oppdrag ----------
+function startOppdrag(e, v) {
+  tilstand = "spill"; vansk = v; boss = null; fase = "fly"; klarT = 0;
+  nullstillVerden(e);
+  etappeBoss = tilfeldig(SESONGER[e].bosser) || "";
+  for (const m of SESONGER[e].monstre) hentFigur(m, VESEN_STR);
+  if (etappeBoss) { hentFigur(etappeBoss, BOSS_STR, "#ff3fb4"); last3D(bossModell(e)); }
+  const fl = FLY.find(f => f.id === data.fly.valgt) || FLY[0];
+  lastSkip(fl.id);
+  mods = {
+    fly: fl,
+    dmg: (1 + .15 * nivå("kanon")) * fl.dmg * (har("dmg") ? 1.1 : 1),
+    rate: fl.rate * (har("rate") ? 1.1 : 1),
+    ving: nivå("ving"),
+    bombeR: 85 * (1 + .12 * nivå("bombe")) * (har("bombe") ? 1.2 : 1),
+    bombePause: 1.1 * (1 - .1 * nivå("bombe")),
+    bombeDmg: 20 + 5 * nivå("bombe"),
+    magnet: 130 + 30 * nivå("magnet") + (har("magnet") ? 40 : 0),
+    skjoldTid: 3 + .7 * nivå("skjold"), laserTid: 2 + .5 * nivå("laser"),
+    redning: har("redning") ? .6 : 1.2
+  };
+  const hpMaks = Math.max(1, 3 + nivå("hull") + fl.hull + (har("hull") ? 1 : 0));
+  skip = { x: WW / 2, y: VH - 120, vx: 0, krenge: 0, hp: hpMaks, hpMaks, våpen: 1 + Math.min(2, nivå("kanon") >> 1), type: fl.flamme ? "f" : "v", mis: nivå("mis"), opt: 0, mega: 1,
+    skjold: nivå("skjold") ? 1 + (nivå("skjold") >> 1) : 0, laser: nivå("laser") ? 1 + (nivå("laser") >> 1) : 0, skjoldT: har("skjold") ? 3 : 0, laserT: 0,
+    bombeKlar: 0, usårbar: 1.5, skudd: 0, mskudd: 0, død: 0 };
+  spor = []; kuler = []; missiler = []; fiender = []; fkuler = []; bonuser = []; mynter = []; bomber = [];
+  partikler = []; ringer = []; tekster = []; ild = []; røyk = []; skyer = [];
+  for (const k in bølger) delete bølger[k];
+  poeng = 0; tid = 0; bølgeKlokke = 3; bølgeNr = 0; bærerKlokke = 16; rist = 0; blits = 0; tidsFaktor = 1; sceneI = 0; sceneT = 0;
+  const mangler = KORT.filter(k => !har(k.id));
+  st = { fiender: 0, drept: 0, folk: 0, reddet: 0, truffet: false, mynter: 0, kort: mangler.length ? tilfeldig(mangler).id : null, kortSluppet: false };
+  etappeStartRad = 0; etappeRader = 0;
+  materialer = bland(SESONGER[e].bilder.slice()).slice(0, 3);
+  if (SESONGER[e].by) {
+    settBiom("by");
+    regn = Array.from({ length: 90 }, () => ({ x: Math.random() * (VB + 100), y: Math.random() * VH, l: 10 + Math.random() * 14 }));
+  }
+  if (SESONGER[e].dyp) {
+    // The Deep starter på stranda. Havet begynner et stykke foran, og der stuper vi.
+    settBiom("strand"); kystY = camY + 520 + STEG * 2.6; last3D(BOSS_3D[3]);
+    snø = Array.from({ length: 70 }, () => ({ x: Math.random() * VB, y: Math.random() * VH, z: .3 + Math.random() * .7 }));
+  }
+  for (const m of SESONGER[e].monstre) hentFigTex(m);
+  fyllVerden();
+  banner = { a: "STAGE " + (e + 1), b: SESONGER[e].navn.toUpperCase() + " · " + VANSK[v].navn, t: 3.2, farge: VANSK[v].farge };
+}
+function tilMeny() {
+  tilstand = "meny"; boss = null; skip = null; finger = null; tidsFaktor = 1; fiender = []; fkuler = []; kuler = []; missiler = []; bonuser = []; mynter = []; bomber = [];
+  nullstillVerden(valgtStage); fyllVerden(); lagre();
+}
+function stageKlar() {
+  const andel = st.fiender ? st.drept / st.fiender : 1;
+  const m = [andel >= .7, andel >= .999, st.reddet >= st.folk, !st.truffet];
+  data.medaljer[etappe] = data.medaljer[etappe] || {};
+  const før = medaljerFor(etappe, vansk);
+  data.medaljer[etappe][vansk] = før.map((x, i) => x || m[i]);
+  const bonus = m.filter(Boolean).length * 25 * VANSK[vansk].mynt;
+  data.bank += bonus; st.mynter += bonus;
+  data.rekord = Math.max(data.rekord, poeng);
+  fase = "klar"; klarT = 0; st.resultat = { m, andel, bonus };
+  lagre();
+}
+
+// ---------- bølger ----------
+function nyBølge() {
+  bølgeNr++;
+  if (biom === "hav") { havBølge(bølgeNr, vanske()); return; }
+  if (biom === "by" && Math.random() < .65) { byBølge(bølgeNr, vanske()); return; }
+  const d = vanske(), id = bølgeNr, valg = Math.random();
+  if (bølgeNr % 5 === 0 || (d > 2 && valg < .25)) formasjon(id, d);
+  else if (valg < .7) {
+    const bane = lagBane(tilfeldig(BANER), Math.random() < .5, camX);
+    const type = d > 2.2 && Math.random() < .4 ? "fugl" : "bie", n = 6 + Math.min(5, d | 0);
+    for (let i = 0; i < n; i++) fiender.push(nyFiende(type, { modus: "bane", bane, d: -i * 34, fart: 120 + d * 12 }, id));
+    bølger[id] = { igjen: n, alle: n };
+  } else {
+    const x0 = camX + 60 + Math.random() * (VB - 120), n = 5 + Math.min(4, d | 0);
+    for (let i = 0; i < n; i++) fiender.push(nyFiende("bie", { modus: "sinus", x0, y: -20 - i * 40, amp: 50 + Math.random() * 40, fase: i * .5, fart: 70 + d * 8 }, id));
+    bølger[id] = { igjen: n, alle: n };
+  }
+}
+function nyFiende(type, bev, bølge) {
+  const f = FIGURER[type];
+  st.fiender++;
+  return { type, f, hp: Math.ceil((f.hp + (type === "sjef" ? Math.floor(vanske()) : 0)) * VANSK[vansk].hp), x: -999, y: -999, ...bev, bølge, t: Math.random() * 3, treff: 0, skudd: 1.5 + Math.random() * 2.5, vx: 0, vy: 0 };
+}
+function formasjon(id, d) {
+  const rader = d > 3 ? 3 : 2, kol = 6, mx = camX + VB / 2;
+  let n = 0;
+  for (let r = 0; r < rader; r++) for (let k = 0; k < kol; k++) {
+    const type = r === 0 && (k === 2 || k === 3) && d > 1.6 ? "sjef" : r === 0 ? "fugl" : "bie";
+    const sx = mx + (k - (kol - 1) / 2) * 40, sy = 90 + r * 36;
+    const inn = lagBane([[k < 3 ? -.1 : 1.1, .45], [k < 3 ? .25 : .75, .3], [(sx - camX) / VB, sy / VH + .08], [(sx - camX) / VB, sy / VH]], false, camX);
+    fiender.push(nyFiende(type, { modus: "inn", bane: inn, d: -(r * kol + (k % 3)) * 26, fart: 200, sx, sy }, id));
+    n++;
+  }
+  bølger[id] = { igjen: n, alle: n, formasjon: true, t: 0 };
+}
+function havBølge(id, d) {
+  const valg = Math.random();
+  let n;
+  if (valg < .35) {
+    // En stim av sølvfisk langs en bane
+    const bane = lagBane(tilfeldig(BANER), Math.random() < .5, camX); n = 8 + Math.min(6, d | 0);
+    for (let i = 0; i < n; i++) fiender.push(nyFiende("fisk", { modus: "bane", bane, d: -i * 20, fart: 150 + d * 12 }, id));
+  } else if (valg < .72) {
+    n = 3 + Math.min(3, d | 0);
+    for (let i = 0; i < n; i++) fiender.push(nyFiende("manet", { modus: "manet", x: camX + 40 + Math.random() * (VB - 80), y: -40 - i * 75, fase: Math.random() * 6 }, id));
+  } else {
+    n = 1 + (d > 2 ? 1 : 0) + (Math.random() < .4 ? 1 : 0);
+    for (let i = 0; i < n; i++) { const fra = Math.random() < .5 ? -1 : 1; fiender.push(nyFiende("hai", { modus: "hai", x: fra < 0 ? camX - 90 - i * 120 : camX + VB + 90 + i * 120, y: VH * (.12 + Math.random() * .3), retning: -fra }, id)); }
+  }
+  bølger[id] = { igjen: n, alle: n };
+}
+function nyBærer() {
+  const fra = Math.random() < .5 ? -1 : 1;
+  fiender.push(nyFiende("bærer", { modus: "kryss", x: fra < 0 ? camX - 30 : camX + VB + 30, y: VH * (.18 + Math.random() * .12), retning: -fra }, 0));
+}
+
+// ---------- bossen ----------
+function startBoss() {
+  fase = "boss";
+  if (SESONGER[etappe].dyp) {
+    // Breiflabben: større enn skjermen. Lysagnet og øynene må skytes ut før gapet kan treffes.
+    const V = VANSK[vansk], kjerne = 180 * V.hp, th = 28 * V.hp;
+    boss = { custom: "breiflabb", b3: { stor: 1.55 }, x: camX + VB / 2, y: -260, hp: kjerne, maks: kjerne, t: 0, mønster: 0, mt: 0, skuddT: 1, vinkel: 0, treff: 0, inn: true, død: 0, buf: {},
+      tårn: [{ i: 0, ox: 0, oy: -150, navn: "agn" }, { i: 1, ox: -78, oy: -62, navn: "øye" }, { i: 2, ox: 78, oy: -62, navn: "øye" }].map(t => ({ ...t, hp: th, maks: th, x: 0, y: 0, skudd: 1 + t.i * .4, treff: 0, ang: Math.PI / 2 })) };
+    banner = { a: "WARNING", b: "SOMETHING BIG IS COMING UP", t: 2.6, farge: "#7fe0ff", blink: true };
+    pip(110, 40, 1.2, .14, "sawtooth");
+    return;
+  }
+  const b3 = SESONGER[etappe].by ? { ...bossModell(etappe), stor: 2.1 } : bossModell(etappe), V = VANSK[vansk];
+  const kjerne = (130 + etappe * 55) * V.hp, tårnHp = (24 + etappe * 8) * V.hp;
+  boss = { b3, x: camX + VB / 2, y: -160, hp: kjerne, maks: kjerne, t: 0, mønster: 0, mt: 0, skuddT: 1, vinkel: 0, treff: 0, inn: true, død: 0, buf: {},
+    tårn: [0, 1, 2, 3].map(i => ({ i, hp: tårnHp, maks: tårnHp, x: 0, y: 0, skudd: 1 + i * .35, treff: 0, ang: Math.PI / 2 })) };
+  banner = { a: "WARNING", b: "", t: 2.4, farge: "#ff3fb4", blink: true };
+  pip(220, 110, .5, .12, "sawtooth"); setTimeout(() => pip(220, 110, .5, .12, "sawtooth"), 600);
+}
+const bossStr = () => boss ? BOSS_STR * (boss.b3.stor || 1) : 0;
+const bossSkjermet = () => boss && boss.tårn.some(t => t.hp > 0);
+const bossR = () => bossStr() * .22;
+function oppdaterBoss(dt, d) {
+  const b = boss, s = skip, V = VANSK[vansk];
+  b.t += dt; b.treff = Math.max(0, b.treff - dt);
+  if (b.død > 0) {
+    b.død -= dt;
+    if (Math.random() < dt * 14) { eksplosjon(b.x + (Math.random() - .5) * 140, b.y + (Math.random() - .5) * 140, 1.2); smell(.3, .3); }
+    if (b.død <= 0) {
+      eksplosjon(b.x, b.y, 3); smell(1, 1.4); rist = .8; blits = .8;
+      const bonus = 5000 * (etappe + 1) * (vansk + 1); poeng += bonus; poengTekst(b.x, b.y, "+" + bonus.toLocaleString("en"));
+      slippMynter(b.x, b.y, 40);
+      if (st.kort && !st.kortSluppet) { st.kortSluppet = true; bonuser.push({ x: b.x, y: b.y, type: "K", t: 0 }); }
+      boss = null; stageKlar();
+    }
+    return;
+  }
+  const by = b.custom ? 205 : 170, sving = b.custom ? 40 : VB / 2 - 90;
+  if (b.inn) { b.x += (camX + VB / 2 - b.x) * Math.min(1, dt * 3); b.y += (by - b.y) * Math.min(1, dt * 1.6); if (b.y > by - 10) b.inn = false; }
+  else { const mx = camX + VB / 2 + Math.sin(b.t * .45) * sving; b.x += (mx - b.x) * Math.min(1, dt * 3); b.y = by + Math.sin(b.t * .9) * 16; }
+  const R = bossStr() * .36;
+  for (const t of b.tårn) {
+    const a = b.t * .6 + t.i * Math.PI / 2;
+    if (b.custom) { t.x = b.x + t.ox + (t.navn === "agn" ? Math.sin(b.t * 1.3) * 34 : 0); t.y = b.y + t.oy + (t.navn === "agn" ? Math.cos(b.t * 1.7) * 10 : 0); }
+    else { t.x = b.x + Math.cos(a) * R; t.y = b.y + Math.sin(a) * R * .55 + 10; }
+    t.treff = Math.max(0, t.treff - dt);
+    if (t.hp <= 0 || b.inn || s.død > 0) continue;
+    t.ang = Math.atan2(s.y - t.y, s.x - t.x);
+    t.skudd -= dt * V.skudd;
+    if (t.skudd <= 0) { for (let k = -1; k <= 1; k++) skudd(t.x, t.y, t.ang + k * .14, 125 + d * 8); t.skudd = 1.6 + Math.random() * .6; }
+  }
+  if (b.inn || s.død > 0) return;
+  const raskt = (bossSkjermet() ? .5 : b.hp < b.maks / 2 ? 1.5 : 1) * V.skudd, nv = etappe + vansk * 2;
+  b.mt += dt; if (b.mt > 5) { b.mt = 0; b.mønster = (b.mønster + 1) % 4; }
+  b.skuddT -= dt * raskt;
+  if (b.skuddT > 0) return;
+  const v = 120 + d * 10;
+  if (bossSkjermet()) { const n = 10 + nv; b.vinkel += .2; for (let i = 0; i < n; i++) skudd(b.x, b.y, b.vinkel + i * 6.283 / n, v * .7); b.skuddT = 2; }
+  else if (b.mønster === 0) { const a = Math.atan2(s.y - b.y, s.x - b.x), n = 5 + (nv > 2 ? 2 : 0); for (let i = 0; i < n; i++) skudd(b.x, b.y + 30, a + (i - (n - 1) / 2) * .16, v * 1.1); b.skuddT = .8; }
+  else if (b.mønster === 1) { const n = 14 + nv * 2; b.vinkel += .17; for (let i = 0; i < n; i++) skudd(b.x, b.y, b.vinkel + i * 6.283 / n, v * .85); b.skuddT = 1.1; }
+  else if (b.mønster === 2) { b.vinkel += .38; skudd(b.x, b.y, b.vinkel, v * .9); skudd(b.x, b.y, b.vinkel + Math.PI, v * .9); b.skuddT = .085; }
+  else { skudd(b.x + (Math.random() - .5) * 160, b.y + 40, Math.PI / 2 + (Math.random() - .5) * .3, v * (.8 + Math.random() * .5)); b.skuddT = .12; }
+}
+function skadBoss(dmg, x, y) {
+  const b = boss;
+  if (!b || b.død > 0 || b.inn) return;
+  if (bossSkjermet()) { if (Math.random() < .3) gnist(x ?? b.x, y ?? b.y, "#ff3fb4"); return; }
+  b.hp -= dmg; b.treff = .06;
+  if (b.hp <= 0) { b.hp = 0; b.død = 1.8; fkuler.length = 0; poeng += 2000; }
+}
+function skadTårn(t, dmg) {
+  if (t.hp <= 0) return;
+  t.hp -= dmg; t.treff = .06;
+  if (t.hp > 0) return;
+  eksplosjon(t.x, t.y, 1.4); smell(.6, .6); rist = .3; poeng += 800; poengTekst(t.x, t.y, 800); slippMynter(t.x, t.y, 6);
+  if (!bossSkjermet()) { banner = { a: "CORE EXPOSED", b: "", t: 1.8, farge: "#ff3fb4" }; boss.skuddT = 1; }
+}
+
+// ---------- skyting, bomber og spesialvåpen ----------
+function skyt() {
+  const s = { ...skip, x: skip.x + bobX, y: skip.y + bobY }, L = s.våpen, D = mods.dmg;
+  if (s.type === "f") {
+    // Pyro: flammekaster. Kort rekkevidde, går gjennom, mye skade.
+    const n = 2 + Math.min(3, L), bredde = .16 + L * .05;
+    for (let i = 0; i < n; i++) { const a = (Math.random() - .5) * 2 * bredde; kuler.push({ x: s.x, y: s.y - 18, vx: Math.sin(a) * 470, vy: -Math.cos(a) * 470, dmg: .55 * D, flamme: true, liv: .3, truffet: new Set() }); }
+  } else if (s.type === "v") {
+    const sk = (x, y, vinkel, dmg) => kuler.push({ x: s.x + x, y: s.y + y, vx: Math.sin(vinkel) * 620, vy: -Math.cos(vinkel) * 620, dmg });
+    const dmg = (L >= 5 ? 1.4 : 1) * D;
+    if (L === 1) sk(0, -16, 0, dmg);
+    else if (L === 2) { sk(-5, -12, 0, dmg); sk(5, -12, 0, dmg); }
+    else if (L === 3) { sk(-5, -12, 0, dmg); sk(5, -12, 0, dmg); sk(-9, -6, -.2, dmg); sk(9, -6, .2, dmg); }
+    else { sk(0, -16, 0, dmg); sk(-6, -12, -.05, dmg); sk(6, -12, .05, dmg); sk(-10, -6, -.2, dmg); sk(10, -6, .2, dmg); sk(-14, -2, -.38, dmg); sk(14, -2, .38, dmg); }
+  } else {
+    const lz = (x, dmg, b) => kuler.push({ x: s.x + x, y: s.y - 20, vx: 0, vy: -980, dmg: dmg * D, laser: true, b, truffet: new Set() });
+    const dmg = [0, 1.5, 1.5, 1.6, 1.9, 2.1][L];
+    if (L === 1) lz(0, dmg, 3);
+    else if (L === 2) { lz(-5, dmg, 3); lz(5, dmg, 3); }
+    else if (L === 3) { lz(0, dmg, 4); lz(-9, dmg, 3); lz(9, dmg, 3); }
+    else if (L === 4) { lz(0, dmg, 5); lz(-10, dmg, 3.5); lz(10, dmg, 3.5); }
+    else { lz(0, dmg, 6); lz(-8, dmg, 4); lz(8, dmg, 4); lz(-16, dmg, 3); lz(16, dmg, 3); }
+  }
+  // Vingekanoner (Sky Force): skrått utover i en V.
+  if (mods.ving) {
+    const n = mods.ving >= 3 ? 2 : 1, dmg = (.7 + mods.ving * .1) * D;
+    for (const side of [-1, 1]) for (let i = 0; i < n; i++) { const a = side * (.32 + i * .14); kuler.push({ x: s.x + side * 14, y: s.y, vx: Math.sin(a) * 560, vy: -Math.cos(a) * 560, dmg, ving: true }); }
+  }
+  for (let i = 0; i < s.opt; i++) {
+    const p = optionPos(i);
+    if (s.type === "l") kuler.push({ x: p[0], y: p[1] - 8, vx: 0, vy: -980, dmg: 1.4 * D, laser: true, b: 3, truffet: new Set() });
+    else kuler.push({ x: p[0], y: p[1] - 6, vx: 0, vy: -620, dmg: D });
+  }
+}
+function optionPos(i) {
+  let igjen = 26 * (i + 1), fx = skip.x, fy = skip.y;
+  for (let k = spor.length - 1; k >= 0; k--) {
+    const [px, py] = spor[k], d = Math.hypot(px - fx, py - fy);
+    if (d >= igjen) { const f = igjen / d; return [fx + (px - fx) * f, fy + (py - fy) * f]; }
+    igjen -= d; fx = px; fy = py;
+  }
+  return [fx + Math.cos(nå * 3 + i * 3) * 9 + bobX, fy + Math.sin(nå * 3 + i * 3) * 5 + bobY];
+}
+function skytMissiler() {
+  const n = [0, 2, 2, 4][skip.mis];
+  for (let i = 0; i < n; i++) {
+    const side = i % 2 ? 1 : -1, ut = i < 2 ? 1 : 1.8;
+    missiler.push({ x: skip.x + side * 12 * ut, y: skip.y, vx: side * 140 * ut, vy: 40, ang: -Math.PI / 2 + side * .9, liv: 2.2, mål: null });
+  }
+}
+const BOMBE_TID = .75;
+function sikte() { return bakkePunkt(skip.x - camX + bobX, skip.y + bobY - 95); }
+function slippBombe() {
+  if (tilstand !== "spill" || fase === "klar" || skip.død > 0 || skip.bombeKlar > 0) return;
+  const m = sikte(); if (!m) return;
+  skip.bombeKlar = mods.bombePause;
+  bomber.push({ x0: skip.x + bobX, y0: skip.y + bobY, mx: m[0], my: m[1], t: 0 });
+  pip(600, 140, .7, .05, "sine");
+}
+function megaBombe() {
+  if (tilstand !== "spill" || skip.mega <= 0 || skip.død > 0) return;
+  skip.mega--; blits = 1; rist = .5; skip.usårbar = Math.max(skip.usårbar, 1.2);
+  ringer.push({ x: skip.x, y: skip.y, r: 10, maks: VH * 1.1, fart: 900, farge: "255,190,60", tykk: 14 });
+  fkuler.length = 0;
+  for (const f of fiender) if (påSkjerm(f.x, f.y)) skad(f, 14);
+  for (const t of bakke) if (t.sy > -20 && t.sy < VH + 20) skadBakke(t, 30);
+  if (boss) { for (const t of boss.tårn) skadTårn(t, 12); skadBoss(25); }
+  smell(.9, .9); pip(90, 30, .8, .25, "sawtooth");
+}
+function brukSkjold() { if (tilstand === "spill" && skip.skjold > 0 && skip.skjoldT <= 0 && skip.død <= 0) { skip.skjold--; skip.skjoldT = mods.skjoldTid; pip(300, 900, .4, .08, "sine"); } }
+function brukLaser() { if (tilstand === "spill" && skip.laser > 0 && skip.laserT <= 0 && skip.død <= 0) { skip.laser--; skip.laserT = mods.laserTid; pip(80, 400, .6, .1, "sawtooth"); rist = .3; } }
+const påSkjerm = (x, y) => x > camX - 30 && x < camX + VB + 30 && y > -30 && y < VH + 30;
+
+// ---------- treff, eksplosjoner, mynter ----------
+function lagGlød(stopp) {
+  const c = document.createElement("canvas"); c.width = c.height = 64;
+  const g = c.getContext("2d"), gr = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+  stopp.forEach(([o, f]) => gr.addColorStop(o, f)); g.fillStyle = gr; g.fillRect(0, 0, 64, 64);
+  return c;
+}
+const ILD = lagGlød([[0, "rgba(255,255,235,1)"], [.22, "rgba(255,232,140,1)"], [.48, "rgba(255,138,36,.95)"], [.75, "rgba(196,48,18,.55)"], [1, "rgba(110,20,10,0)"]]);
+const RØYK = lagGlød([[0, "rgba(58,52,48,.8)"], [.6, "rgba(44,40,38,.45)"], [1, "rgba(30,30,30,0)"]]);
+const SKYBILDER = [0, 1, 2, 3].map(() => {
+  const c = document.createElement("canvas"); c.width = 256; c.height = 160;
+  const g = c.getContext("2d"), dott = lagGlød([[0, "rgba(255,255,255,.55)"], [.5, "rgba(255,255,255,.25)"], [1, "rgba(255,255,255,0)"]]);
+  for (let k = 0; k < 14; k++) { const r = 26 + Math.random() * 40, x = 50 + Math.random() * 156, y = 50 + Math.random() * 60; g.drawImage(dott, x - r, y - r, r * 2, r * 2); }
+  return c;
+});
+const MYNT = (() => {
+  const c = document.createElement("canvas"); c.width = c.height = 32;
+  const g = c.getContext("2d"); g.translate(16, 16);
+  g.beginPath(); for (let i = 0; i < 10; i++) { const r = i % 2 ? 6 : 14, a = -Math.PI / 2 + i * Math.PI / 5; g.lineTo(Math.cos(a) * r, Math.sin(a) * r); } g.closePath();
+  const gr = g.createLinearGradient(-10, -12, 10, 12); gr.addColorStop(0, "#fff6c0"); gr.addColorStop(.5, "#ffc93a"); gr.addColorStop(1, "#d98a00");
+  g.fillStyle = gr; g.fill(); g.strokeStyle = "rgba(60,30,0,.8)"; g.lineWidth = 2; g.stroke();
+  return c;
+})();
+function eksplosjon(x, y, størrelse) {
+  const nIld = Math.round(3 + størrelse * 3);
+  for (let i = 0; i < nIld; i++) {
+    const a = Math.random() * 6.283, d = i ? Math.random() * 14 * størrelse : 0;
+    ild.push({ x: x + Math.cos(a) * d, y: y + Math.sin(a) * d, r0: 3 * størrelse, r1: (17 + Math.random() * 14) * størrelse, liv: 0, maks: .32 + Math.random() * .25, vent: i * .045 });
+  }
+  if (størrelse >= .8) for (let i = 0; i < Math.round(1 + størrelse * 1.5); i++)
+    røyk.push({ x: x + (Math.random() - .5) * 16 * størrelse, y: y + (Math.random() - .5) * 16 * størrelse, r: (9 + Math.random() * 8) * størrelse, vx: (Math.random() - .5) * 14, vy: -8 - Math.random() * 10, liv: 0, maks: .9 + Math.random() * .6, vent: .12 + i * .05 });
+  const farger = ["#fff6d8", "#ffd23f", "#ff9a2e"];
+  for (let i = 0; i < 10 + størrelse * 10; i++) {
+    const a = Math.random() * 6.283, v = 40 + Math.random() * 220 * størrelse;
+    partikler.push({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, liv: .35 + Math.random() * .5, maks: .85, farge: farger[i % 3], r: 1.2 + Math.random() * 2.4 * Math.min(2, størrelse) });
+  }
+  ringer.push({ x, y, r: 4, maks: 30 * størrelse, fart: 160 * størrelse, farge: "255,230,180", tykk: 3 });
+}
+function gnist(x, y, farge) { for (let i = 0; i < 3; i++) partikler.push({ x, y, vx: (Math.random() - .5) * 160, vy: -Math.random() * 120, liv: .2, maks: .2, farge: farge || "#fff6d8", r: 1.6 }); }
+function poengTekst(x, y, txt) { tekster.push({ x, y, txt, liv: .9 }); }
+function slippMynter(x, y, n) {
+  for (let i = 0; i < n; i++) { const a = Math.random() * 6.283, v = 40 + Math.random() * 110; mynter.push({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 30, t: 0, rot: Math.random() * 6 }); }
+}
+function kanskjeKort(x, y) {
+  // Ett skjult kort per oppdrag. Det faller fra en tilfeldig fiende et stykke ut i stagen, ellers fra bossen.
+  if (st.kort && !st.kortSluppet && etappeRader >= 3 && Math.random() < .07) { st.kortSluppet = true; bonuser.push({ x, y, type: "K", t: 0 }); }
+}
+function skad(f, dmg) {
+  if (f.hp <= 0) return;
+  f.hp -= dmg; f.treff = .07;
+  if (f.hp > 0) return;
+  st.drept++;
+  poeng += f.f.poeng; poengTekst(f.x, f.y, f.f.poeng);
+  if (f.type === "kjempe" || f.type === "kraken") {
+    for (let i = 0; i < 10; i++) eksplosjon(f.x + (Math.random() - .5) * 240, f.y + (Math.random() - .5) * 90, 1.3 + Math.random() * 1.2);
+    rist = .8; slipp(f.x, f.y, "P"); slipp(f.x + 50, f.y, "O"); poengTekst(f.x, f.y - 30, "GIANT DOWN");
+  }
+  const stor = f.type === "sjef" || f.type === "bærer" || f.type === "kjempe" || f.type === "kraken";
+  eksplosjon(f.x, f.y, stor ? 1.6 : 1); smell(stor ? .6 : .32, stor ? .6 : .3);
+  slippMynter(f.x, f.y, f.f.mynt);
+  kanskjeKort(f.x, f.y);
+  if (f.type === "bærer") slipp(f.x, f.y, Math.random() < .6 ? "P" : "O");
+  else if (f.type === "sjef") { slipp(f.x, f.y, "P"); rist = .25; }
+  else if (Math.random() < .04) slipp(f.x, f.y);
+  const b = bølger[f.bølge];
+  if (b) {
+    b.igjen--; b.drept = (b.drept || 0) + 1;
+    if (b.igjen === 0 && b.drept === b.alle) { poeng += 500; poengTekst(f.x, f.y - 18, "WAVE +500"); slipp(f.x, f.y); slippMynter(f.x, f.y, 5); }
+  }
+}
+function forsvant(f) { const b = bølger[f.bølge]; if (b) b.igjen--; }
+const BAKKEPOENG = { t: 250, v: 300, kunst: 400, statue: 350, båt: 350, bil: 300, jetski: 300 }, BAKKEMYNT = { t: 4, v: 5, kunst: 7, statue: 6, båt: 5, bil: 5, jetski: 4 };
+function skadBakke(t, dmg) {
+  if (t.hp <= 0) return;
+  t.hp -= dmg; t.blink = .07;
+  if (t.hp > 0) return;
+  st.drept++;
+  const p = BAKKEPOENG[t.type], x = t.sx + camX, y = t.sy;
+  poeng += p; poengTekst(x, y, p);
+  const stor = t.type === "kunst" || t.type === "statue";
+  eksplosjon(x, y - (t.h ? t.h * t.ss * .4 : 0), stor ? 1.8 : 1.2); smell(stor ? .7 : .45, .5);
+  if (stor) for (let i = 0; i < 3; i++) setTimeout(() => eksplosjon(x + (Math.random() - .5) * 40, y - Math.random() * (t.h || 20) * t.ss * .8, 1), 90 + i * 110);
+  slippMynter(x, y, BAKKEMYNT[t.type]);
+  kanskjeKort(x, y);
+  if (Math.random() < .14) slipp(x, y);
+}
+function slipp(x, y, type) {
+  if (!type) { const r = Math.random(); type = r < .45 ? "P" : r < .7 ? "M" : r < .85 ? "O" : "B"; }
+  bonuser.push({ x, y, type, t: Math.random() * 1.3 });
+}
+const bonusFarge = b => b.type === "P" && skip.type !== "f" ? (Math.floor(b.t / 1.3) % 2 ? "l" : "v") : null;
+function ta(b) {
+  const s = skip, ekstra = () => { poeng += 1000; poengTekst(s.x, s.y - 26, "+1000"); };
+  if (b.type === "K") {
+    const k = KORT.find(k => k.id === st.kort);
+    if (k && !har(k.id)) { data.kort.push(k.id); lagre(); banner = { a: "NEW CARD", b: k.navn.toUpperCase() + " · " + k.tekst, t: 3, farge: "#ffc93a" }; }
+    pip(520, 2080, .5, .08, "triangle"); return;
+  }
+  if (b.type === "P") {
+    const ny = bonusFarge(b);
+    if (ny && ny !== s.type) { s.type = ny; poengTekst(s.x, s.y - 26, ny === "l" ? "LASER" : "VULCAN"); }
+    else if (s.våpen < 5) { s.våpen++; poengTekst(s.x, s.y - 26, "POWER " + s.våpen); }
+    else ekstra();
+  }
+  if (b.type === "M") { if (s.mis < 3) { s.mis++; poengTekst(s.x, s.y - 26, "MISSILES " + s.mis); } else ekstra(); }
+  if (b.type === "O") { if (s.opt < 2) { s.opt++; poengTekst(s.x, s.y - 26, "WINGMAN"); } else ekstra(); }
+  if (b.type === "B") { if (s.mega < 4) { s.mega++; poengTekst(s.x, s.y - 26, "MEGA BOMB"); } else ekstra(); }
+  pip(660, 1320, .18, .08, "triangle"); setTimeout(() => pip(990, 1980, .15, .06, "triangle"), 70);
+}
+function treffSkip() {
+  const s = skip;
+  if (s.usårbar > 0 || s.død > 0 || s.skjoldT > 0) return;
+  st.truffet = true;
+  s.hp--; rist = .45; s.usårbar = 1.1;
+  eksplosjon(s.x, s.y, .9); smell(.7, .6);
+  if (s.hp > 0) { pip(200, 80, .3, .1, "sawtooth"); return; }
+  // Helsa er tom: flyet går ned, og oppdraget er over (myntene du har tatt beholder du).
+  eksplosjon(s.x, s.y, 2); smell(1, 1.2); rist = .8;
+  s.død = 99; fkuler.length = 0; tilstand = "slutt"; s.dødTid = nå;
+  data.rekord = Math.max(data.rekord, poeng); lagre();
+}
+
+// ---------- oppdatering ----------
+function oppdater(dt) {
+  tid += dt;
+  fart += ((fase === "boss" ? 16 : krakenAktiv() ? 6 : fase === "klar" ? 30 : FART * (.85 + KAM.k * .25)) - fart) * Math.min(1, dt * .9);
+  camY += fart * dt;
+  const s = skip;
+  filmKamera(dt);
+  oppdaterKamera();
+  fyllVerden();
+  const [bunn] = synligBakke();
+  fliser = fliser.filter(f => f.r * STEG + T > bunn - 20);
+  bakke = bakke.filter(t => t.hp > 0 && t.gy > bunn - 80 && !((t.type === "båt" || t.type === "jetski") && (t.x < -700 || t.x > WW + 700)));
+  pynt = pynt.filter(p => p.gy > bunn - 80);
+  folk = folk.filter(p => !p.borte && p.gy > bunn - 60);
+  if (fase === "fly" && etappeRader >= ETAPPE_BILDER && camY >= (etappeStartRad + ETAPPE_BILDER - 1) * STEG + T * .3) startBoss();
+  oppdaterHav(dt);
+  if (fase === "klar") klarT += dt;
+  if (banner) { banner.t -= dt; if (banner.t <= 0) banner = null; }
+  skyKlokke -= dt;
+  if (skyKlokke <= 0) { skyKlokke = 2.5 + Math.random() * 4; const sk = .8 + Math.random() * 1.2; skyer.push({ x: Math.random() * WW, y: -90 * sk, sp: tilfeldig(SKYBILDER), sk, a: .22 + Math.random() * .25 }); }
+  for (const k of skyer) k.y += (fart * 2.6 + 26) * dt;
+  skyer = skyer.filter(k => k.y < VH + 100 * k.sk);
+
+  if (s.død <= 0) {
+    const kx = (taster.ArrowRight || taster.d ? 1 : 0) - (taster.ArrowLeft || taster.a ? 1 : 0);
+    const ky = (taster.ArrowDown || taster.s ? 1 : 0) - (taster.ArrowUp || taster.w ? 1 : 0);
+    const gx = s.x;
+    if (kx || ky) { s.x += kx * 300 * dt * KOMP; s.y += ky * 260 * dt; }
+    s.x = Math.max(14, Math.min(WW - 14, s.x)); s.y = Math.max(VH * .2, Math.min(VH - 40, s.y));
+    s.vx = s.vx * .8 + ((s.x - gx) / Math.max(dt, .001)) * .2;
+    s.usårbar = Math.max(0, s.usårbar - dt); s.bombeKlar = Math.max(0, s.bombeKlar - dt);
+    s.skjoldT = Math.max(0, s.skjoldT - dt); s.laserT = Math.max(0, s.laserT - dt);
+    const sist = spor[spor.length - 1];
+    if (!sist || Math.hypot(sist[0] - s.x, sist[1] - s.y) > 2) { spor.push([s.x, s.y]); if (spor.length > 80) spor.shift(); }
+    if (fase !== "klar") {
+      s.skudd -= dt; if (s.skudd <= 0) { skyt(); s.skudd = (s.type === "f" ? .05 : s.type === "l" ? .1 : s.våpen >= 5 ? .085 : .11) / mods.rate; }
+      if (s.mis) { s.mskudd -= dt; if (s.mskudd <= 0) { skytMissiler(); s.mskudd = [0, .75, .55, .5][s.mis]; } }
+    }
+  }
+  s.krenge += (Math.max(-1, Math.min(1, s.vx / 500)) - s.krenge) * Math.min(1, dt * 10);
+  camX += ((s.x - 14) / (WW - 28) * (WW - VB) - camX) * Math.min(1, dt * 8);
+
+  // Bakken. Posisjonen på skjermen regnes én gang per bilde.
+  const d = vanske(), V = VANSK[vansk];
+  for (const t of bakke) {
+    t.blink = Math.max(0, t.blink - dt);
+    if (t.type === "v") { t.t += dt; t.x += t.vx * dt; if (t.x < 40 || t.x > WW - 40) { t.vx = -t.vx; t.x = Math.max(40, Math.min(WW - 40, t.x)); } }
+    if (t.type === "båt" || t.type === "jetski") { t.x += t.vx * dt; t.t += dt; if (t.type === "jetski" && Math.random() < dt * 20 && t.sy > 0) partikler.push({ x: t.sx + camX - Math.sign(t.vx) * 12 * t.ss, y: t.sy, vx: (Math.random() - .5) * 40, vy: -Math.random() * 40, liv: .5, maks: .5, farge: "#f2fdff", r: 2 + Math.random() * 2 }); }
+    if (t.type === "bil") { t.gy += t.vy * dt; t.t = (t.t || 0) + dt; }
+    const p = prosjiser(t.x, t.gy);
+    if (!p) { t.sy = -999; continue; }
+    t.sx = p.x; t.sy = p.y; t.ss = p.s; t.sz = p.z;
+    if (t.sy < -20 || t.sy > VH + 20 || t.type === "kunst" || t.type === "statue") continue;
+    if (t.type === "båt" && !t.lok) continue;
+    if (t.type === "bil" && !t.politi) continue;
+    const ønsket = Math.atan2(s.y - t.sy, s.x - camX - t.sx);
+    if (t.type === "t") { let dv = ønsket - t.ang; while (dv > Math.PI) dv -= 2 * Math.PI; while (dv < -Math.PI) dv += 2 * Math.PI; t.ang += Math.max(-2 * dt, Math.min(2 * dt, dv)); }
+    if (t.sy > 40 && t.sy < VH * .75 && s.død <= 0 && fase !== "klar") {
+      t.skudd -= dt * (.42 + d * .15) * V.skudd;
+      if (t.skudd <= 0) {
+        const a = t.type === "t" ? t.ang : ønsket, v = 118 + d * 12;
+        fkuler.push({ x: t.sx + camX, y: t.sy, vx: Math.cos(a) * v, vy: Math.sin(a) * v, stig: 0 });
+        t.skudd = (t.type === "t" ? 2.2 : 2.6) + Math.random();
+      }
+    }
+  }
+  for (const p of folk) {
+    p.t += dt;
+    const q = prosjiser(p.x, p.gy);
+    if (!q) { p.sy = -999; continue; }
+    p.sx = q.x; p.sy = q.y; p.ss = q.s; p.sz = q.z;
+    const nær = s.død <= 0 && Math.hypot(p.sx - (s.x - camX), p.sy - s.y) < 44;
+    p.nær = nær;
+    p.fram = nær ? p.fram + dt : Math.max(0, p.fram - dt * .5);
+    if (p.fram >= mods.redning) {
+      p.borte = true; st.reddet++; poeng += 1000; poengTekst(s.x, s.y - 30, "RESCUED");
+      slippMynter(s.x, s.y - 10, 12); pip(880, 1760, .25, .06, "triangle");
+    }
+  }
+
+  for (const b of bomber) {
+    b.t += dt;
+    if (b.t >= BOMBE_TID) {
+      b.borte = true;
+      for (const t of bakke) if (t.hp > 0 && Math.hypot(t.x - b.mx, t.gy - b.my) < mods.bombeR + (t.w || 0) * .4) skadBakke(t, mods.bombeDmg);
+      const p = prosjiser(b.mx, b.my);
+      if (p) { eksplosjon(p.x + camX, p.y, 1.6 * Math.min(1.4, p.s * 1.3)); smell(.7, .7); rist = Math.max(rist, .2); }
+    }
+  }
+  bomber = bomber.filter(b => !b.borte);
+
+  for (const k of kuler) { k.x += k.vx * dt; k.y += k.vy * dt; if (k.flamme) k.liv -= dt; }
+  kuler = kuler.filter(k => k.y > -40 && !k.borte && (!k.flamme || k.liv > 0));
+  for (const m of missiler) {
+    m.liv -= dt;
+    if (!m.mål || m.mål.hp <= 0) m.mål = nærmeste(m.x, m.y);
+    if (m.mål) {
+      const [tx, ty] = målPos(m.mål);
+      const ønsket = Math.atan2(ty - m.y, tx - m.x);
+      let dv = ønsket - m.ang; while (dv > Math.PI) dv -= 2 * Math.PI; while (dv < -Math.PI) dv += 2 * Math.PI;
+      m.ang += Math.max(-6 * dt, Math.min(6 * dt, dv));
+    }
+    const v = 360; m.vx += (Math.cos(m.ang) * v - m.vx) * Math.min(1, dt * 6); m.vy += (Math.sin(m.ang) * v - m.vy) * Math.min(1, dt * 6);
+    m.x += m.vx * dt; m.y += m.vy * dt;
+    if (Math.random() < .7) partikler.push({ x: m.x, y: m.y, vx: (Math.random() - .5) * 20, vy: (Math.random() - .5) * 20, liv: .35, maks: .35, farge: "#cfc8bd", r: 2.2 });
+  }
+  missiler = missiler.filter(m => m.liv > 0 && !m.borte && m.y > -30 && m.y < VH + 30);
+
+  if (boss) oppdaterBoss(dt, d);
+  for (const f of fiender) {
+    f.t += dt; f.treff = Math.max(0, f.treff - dt);
+    const gx = f.x, gy = f.y;
+    if (f.modus === "bane" || f.modus === "inn" || f.modus === "stup") {
+      f.d += f.fart * dt;
+      const p = påBane(f.bane, f.d);
+      if (p) { f.x = p[0]; f.y = p[1]; }
+      else if (f.modus === "inn") { f.modus = "form"; f.x = f.sx; f.y = f.sy; }
+      else if (f.modus === "stup") { f.modus = "tilbake"; f.y = -30; }
+      else { f.borte = true; forsvant(f); }
+    } else if (f.modus === "form") {
+      const b = bølger[f.bølge];
+      f.x = f.sx + Math.sin(nå * 1.3) * 14; f.y = f.sy + Math.sin(nå * 2 + f.sx * .05) * 3;
+      if (b && Math.random() < dt * (.06 + d * .025) && s.død <= 0) {
+        const tx = (s.x - camX) / VB, side = f.x - camX < VB / 2 ? -1 : 1;
+        f.bane = lagBane([[(f.x - camX) / VB, f.y / VH], [(f.x - camX) / VB + side * .12, f.y / VH - .06], [(f.x - camX) / VB + side * .05, .4], [tx, .75], [tx - side * .2, 1.1]], false, camX);
+        f.d = 0; f.fart = 190 + d * 14; f.modus = "stup";
+      }
+      if (b && b.formasjon) { b.t += dt / Math.max(1, b.igjen); if (b.t > 16) f.modus = "flukt"; }
+    } else if (f.modus === "tilbake") {
+      f.y += 140 * dt; f.x += (f.sx - f.x) * Math.min(1, dt * 2);
+      if (f.y >= f.sy) { f.y = f.sy; f.modus = "form"; }
+    } else if (f.modus === "flukt") {
+      f.y -= 160 * dt; if (f.y < -40) { f.borte = true; forsvant(f); }
+    } else if (f.modus === "sinus") {
+      f.y += f.fart * dt; f.x = f.x0 + Math.sin(f.t * 2 + f.fase) * f.amp;
+      if (f.y > VH + 40) { f.borte = true; forsvant(f); }
+    } else if (f.modus === "manet") {
+      // Maneten pulserer seg nedover og driver litt fra side til side.
+      f.y += (30 + Math.max(0, Math.sin(f.t * 2.2 + f.fase)) * 50) * dt; f.x += Math.sin(f.t * .7 + f.fase) * 22 * dt;
+      if (f.y > VH + 60) { f.borte = true; forsvant(f); }
+    } else if (f.modus === "hai") {
+      // Haien svømmer på tvers, og når den er rett over deg, snur den og går til angrep.
+      if (!f.angrep) {
+        f.x += f.retning * 115 * dt; f.y += Math.sin(f.t * 1.3) * 16 * dt;
+        if (f.t > .8 && s.død <= 0 && Math.abs(f.x - s.x) < 46 && f.y < s.y) { f.angrep = true; f.ang = Math.atan2(s.y - f.y, s.x - f.x); pip(160, 60, .4, .06, "sawtooth"); }
+        if (f.x < camX - 160 || f.x > camX + VB + 160) { f.borte = true; forsvant(f); }
+      } else {
+        f.x += Math.cos(f.ang) * 340 * dt; f.y += Math.sin(f.ang) * 340 * dt;
+        if (f.y > VH + 90 || f.y < -90) { f.borte = true; forsvant(f); }
+      }
+    } else if (f.modus === "kjempe") {
+      f.fase2 += dt;
+      const ute = f.fase2 > 38, målY = ute ? -320 : 165;
+      f.y += (målY - f.y) * Math.min(1, dt * (ute ? .6 : .7));
+      f.x = camX + VB / 2 + Math.sin(f.fase2 * .42) * 72;
+      if (ute && f.y < -260) f.borte = true;
+      if (!ute && f.y > 70 && s.død <= 0) {
+        f.skudd -= dt * V.skudd * (1 + d * .07);
+        if (f.skudd <= 0) {
+          const v = 118 + d * 10, m = f.mønster++ % 4;
+          if (m === 0) for (let i = 0; i < 20; i++) skudd(f.x, f.y + 20, i / 20 * 6.283 + f.fase2, v * .8);
+          else if (m === 1) { vifte(f.x - 95, f.y + 10, v, 3, .16); vifte(f.x + 95, f.y + 10, v, 3, .16); }
+          else if (m === 2) for (let i = 0; i < 9; i++) skudd(f.x, f.y + 40, Math.PI / 2 + (i - 4) * .2, v * 1.05);
+          else { vifte(f.x, f.y + 40, v * 1.2, 5, .09); }
+          f.skudd = 1.05;
+        }
+      }
+    } else if (f.modus === "kraken") {
+      f.fase2 += dt;
+      const ute = f.fase2 > 42, stig = Math.min(1, f.fase2 / 2.5);
+      f.x = camX + VB / 2 + Math.sin(f.fase2 * .5) * 50;
+      if (ute) { f.y += 80 * dt; f.stig = Math.max(0, f.stig - dt * .6); if (f.stig <= 0) f.borte = true; }
+      else { f.y = 250 - stig * 95; f.stig = stig; }
+      if (!ute && stig >= 1 && s.død <= 0) {
+        f.skudd -= dt * V.skudd * (1 + d * .07);
+        if (f.skudd <= 0) {
+          const v = 112 + d * 10, m = f.mønster++ % 4;
+          if (m === 0) for (let i = 0; i < 16; i++) skudd(f.x, f.y + 30, i / 16 * 6.283 + f.fase2, v * .8);
+          else if (m === 1) { vifte(f.x - 120, f.y + 60, v, 4, .14); vifte(f.x + 120, f.y + 60, v, 4, .14); }
+          else if (m === 2) for (let i = 0; i < 11; i++) skudd(f.x + (i - 5) * 26, f.y + 70, Math.PI / 2, v * (.8 + (i % 2) * .25));
+          else vifte(f.x, f.y + 40, v * 1.15, 7, .1);
+          f.skudd = 1.15;
+        }
+      }
+    } else if (f.modus === "hval") {
+      // Rur som sitter fast på hvalen og følger den.
+      if (!hval) { f.borte = true; forsvant(f); }
+      else { f.x = hval.x + f.ox * hval.dir; f.y = hval.y + f.oy; }
+    } else if (f.modus === "kryss") {
+      f.x += f.retning * 55 * dt; f.y += Math.sin(f.t * 1.5) * 8 * dt;
+      if (f.x < camX - 60 || f.x > camX + VB + 60) f.borte = true;
+    }
+    f.vx = (f.x - gx) / Math.max(dt, .001); f.vy = (f.y - gy) / Math.max(dt, .001);
+    if (f.type !== "bærer" && f.f.skyter !== false && f.y > 10 && f.y < VH * .62 && påSkjerm(f.x, f.y) && s.død <= 0) {
+      f.skudd -= dt * (.5 + d * .22) * V.skudd;
+      if (f.skudd <= 0) { const v = 135 + d * 14; if (f.type !== "bie" && d > 2) vifte(f.x, f.y, v, d > 4 ? 5 : 3, .2); else siktSkudd(f.x, f.y, v); f.skudd = 1.6 + Math.random() * 2.4; }
+    }
+    if (f.hp > 0 && s.død <= 0 && Math.hypot(f.x - s.x, f.y - s.y) < f.f.r * .7 + (s.skjoldT > 0 ? 30 : 6)) { skad(f, 99); treffSkip(); }
+  }
+  fiender = fiender.filter(f => f.hp > 0 && !f.borte);
+  for (const k in bølger) if (bølger[k].igjen <= 0) delete bølger[k];
+
+  // Kanonene treffer bare lufta. Laser og flammer går gjennom.
+  const bR = boss ? bossR() : 0;
+  for (const k of kuler) {
+    const lang = k.laser ? 14 : k.flamme ? 6 : 0, gjennom = k.laser || k.flamme;
+    for (const f of fiender) {
+      if (f.hp <= 0 || Math.abs(k.x - f.x) > f.f.r + (k.b || 0) || Math.abs(k.y - f.y) > f.f.r + lang) continue;
+      if (gjennom) { if (k.truffet.has(f)) continue; k.truffet.add(f); skad(f, k.dmg); }
+      else { skad(f, k.dmg); k.borte = true; break; }
+    }
+    if (k.borte || !boss || boss.inn || boss.død > 0) continue;
+    for (const t of boss.tårn) {
+      if (t.hp <= 0 || Math.hypot(k.x - t.x, k.y - t.y) > 16 + lang) continue;
+      if (gjennom) { if (k.truffet.has(t)) continue; k.truffet.add(t); skadTårn(t, k.dmg); }
+      else { skadTårn(t, k.dmg); k.borte = true; gnist(k.x, k.y); break; }
+    }
+    if (k.borte) continue;
+    if (Math.hypot(k.x - boss.x, k.y - boss.y) < bR + lang) {
+      if (gjennom) { if (!k.truffet.has(boss)) { k.truffet.add(boss); skadBoss(k.dmg, k.x, k.y); } }
+      else { skadBoss(k.dmg, k.x, k.y); k.borte = true; gnist(k.x, k.y); }
+    }
+  }
+  // Tung laser (Sky Force): en stråle rett fram som smelter alt i lufta.
+  if (s.laserT > 0 && s.død <= 0) {
+    const lx = s.x + bobX, dmg = 28 * mods.dmg * dt;
+    for (const f of fiender) if (f.hp > 0 && f.y < s.y && Math.abs(f.x - lx) < 18 + f.f.r) skad(f, dmg);
+    if (boss && !boss.inn && boss.død <= 0) {
+      for (const t of boss.tårn) if (t.hp > 0 && Math.abs(t.x - lx) < 30) skadTårn(t, dmg);
+      if (Math.abs(boss.x - lx) < bR + 18) skadBoss(dmg * 1.5, lx, boss.y + 20);
+    }
+    for (const k of fkuler) if (Math.abs(k.x - lx) < 20 && k.y < s.y) k.borte = true;
+  }
+  for (const m of missiler) {
+    for (const f of fiender) if (f.hp > 0 && Math.hypot(m.x - f.x, m.y - f.y) < f.f.r + 3) { skad(f, 2.5 * mods.dmg); m.borte = true; break; }
+    if (!m.borte && boss && !boss.inn && boss.død <= 0) {
+      for (const t of boss.tårn) if (t.hp > 0 && Math.hypot(m.x - t.x, m.y - t.y) < 18) { skadTårn(t, 3 * mods.dmg); m.borte = true; break; }
+      if (!m.borte && Math.hypot(m.x - boss.x, m.y - boss.y) < bR) { skadBoss(3 * mods.dmg, m.x, m.y); m.borte = true; }
+    }
+    if (!m.borte) for (const t of bakke) if (t.hp > 0 && t.sy > 24 && Math.hypot(m.x - camX - t.sx, m.y - t.sy) < 18 + (t.w || 0) * t.ss * .4) { skadBakke(t, 2 * mods.dmg); m.borte = true; break; }
+    if (m.borte) eksplosjon(m.x, m.y, .5);
+  }
+  if (boss && !boss.inn && boss.død <= 0 && s.død <= 0 && Math.hypot(boss.x - s.x, boss.y - s.y) < bR * .8) treffSkip();
+
+  // Fiendekuler. Skjoldet sluker dem. De fra bakken stiger opp og treffer ikke før de har nådd flyhøyden.
+  for (const k of fkuler) {
+    k.x += k.vx * dt; k.y += k.vy * dt;
+    if (k.stig !== undefined) k.stig += dt;
+    if (s.død > 0) continue;
+    const dd = Math.hypot(k.x - s.x, k.y - s.y);
+    if (s.skjoldT > 0 && dd < 34) { k.borte = true; gnist(k.x, k.y, "#7fe0ff"); continue; }
+    if ((k.stig === undefined || k.stig > .6) && dd < 6) { k.borte = true; treffSkip(); }
+  }
+  fkuler = fkuler.filter(k => !k.borte && k.y > -20 && k.y < VH + 20 && k.x > camX - 40 && k.x < camX + VB + 40);
+
+  for (const b of bonuser) {
+    b.t += dt; b.alder = (b.alder || 0) + dt;
+    if (b.alder < .6 || s.død > 0) { b.y += 34 * dt; b.x += Math.sin(b.t * 2.4) * 20 * dt; }
+    else { const dx = s.x - b.x, dy = s.y - b.y, dd = Math.hypot(dx, dy) || 1, v = Math.min(460, 140 + (b.alder - .6) * 300); b.x += dx / dd * v * dt; b.y += dy / dd * v * dt; }
+    if (s.død <= 0 && Math.hypot(b.x - s.x, b.y - s.y) < 22) { b.borte = true; ta(b); }
+  }
+  bonuser = bonuser.filter(b => !b.borte && b.y < VH + 40);
+  // Mynter: magneten drar dem inn når de er nær nok. Ellers faller de og forsvinner.
+  for (const m of mynter) {
+    m.t += dt; m.rot += dt * 5;
+    const dx = s.x - m.x, dy = s.y - m.y, dd = Math.hypot(dx, dy) || 1;
+    if (s.død <= 0 && dd < mods.magnet) { const v = 220 + m.t * 120; m.vx += (dx / dd * v - m.vx) * Math.min(1, dt * 7); m.vy += (dy / dd * v - m.vy) * Math.min(1, dt * 7); }
+    else { m.vx *= .94; m.vy = m.vy * .96 + 110 * dt; }
+    m.x += m.vx * dt; m.y += m.vy * dt;
+    if (s.død <= 0 && dd < 18) {
+      m.borte = true;
+      const n = VANSK[vansk].mynt * (har("mynt") && Math.random() < .25 ? 2 : 1);
+      data.bank += n; st.mynter += n; poeng += 10; myntLyd();
+    }
+  }
+  mynter = mynter.filter(m => !m.borte && m.y < VH + 30 && m.t < 7);
+
+  oppdaterEffekter(dt);
+
+  if (fase === "fly" && !dykk) {
+    bølgeKlokke -= dt;
+    if (bølgeKlokke <= 0 && fiender.length < 22 && !kjempeAktiv()) { nyBølge(); bølgeKlokke = Math.max(1.4, 3.8 - d * .34); }
+    if (!st.kjempe && camY >= (etappeStartRad + 7) * STEG && biom !== "hav" && !SESONGER[etappe].dyp) { st.kjempe = true; nyKjempe(); }
+    bærerKlokke -= dt;
+    if (bærerKlokke <= 0) { if (biom !== "hav") nyBærer(); bærerKlokke = 20 + Math.random() * 8; }
+  }
+}
+function oppdaterEffekter(dt) {
+  for (const e of ild) { if (e.vent > 0) e.vent -= dt; else e.liv += dt; }
+  ild = ild.filter(e => e.liv < e.maks);
+  for (const e of røyk) { if (e.vent > 0) e.vent -= dt; else { e.liv += dt; e.x += e.vx * dt; e.y += e.vy * dt; } }
+  røyk = røyk.filter(e => e.liv < e.maks);
+  if (ild.length > 160) ild.splice(0, ild.length - 160);
+  for (const p of partikler) { p.x += p.vx * dt; p.y += p.vy * dt; p.vx *= .92; p.vy *= .92; p.liv -= dt; }
+  partikler = partikler.filter(p => p.liv > 0);
+  if (partikler.length > 700) partikler.splice(0, partikler.length - 700);
+  for (const r of ringer) r.r += r.fart * dt;
+  ringer = ringer.filter(r => r.r < r.maks);
+  for (const t of tekster) { t.y -= 30 * dt; t.liv -= dt; }
+  tekster = tekster.filter(t => t.liv > 0);
+  rist = Math.max(0, rist - dt); blits = Math.max(0, blits - dt * 2.5);
+}
+function skudd(x, y, a, v) { fkuler.push({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v }); }
+function siktSkudd(x, y, v) { skudd(x, y, Math.atan2(skip.y - y, skip.x - x), v); }
+function vifte(x, y, v, n, sp) { const a = Math.atan2(skip.y - y, skip.x - x); for (let i = 0; i < n; i++) skudd(x, y, a + (i - (n - 1) / 2) * sp, v); }
+const målPos = m => m === boss ? [boss.x, boss.y] : m.gy !== undefined ? [m.sx + camX, m.sy] : [m.x, m.y];
+function nærmeste(x, y) {
+  let best = null, bd = 1e9;
+  for (const f of fiender) if (f.hp > 0 && f.y > 0 && påSkjerm(f.x, f.y)) { const dd = Math.hypot(f.x - x, f.y - y); if (dd < bd) { bd = dd; best = f; } }
+  if (boss && !boss.inn && boss.død <= 0) {
+    for (const t of boss.tårn) if (t.hp > 0) { const dd = Math.hypot(t.x - x, t.y - y) - 30; if (dd < bd) { bd = dd; best = t; } }
+    if (!bossSkjermet()) { const dd = Math.hypot(boss.x - x, boss.y - y) - 40; if (dd < bd) { bd = dd; best = boss; } }
+  }
+  for (const t of bakke) if (t.hp > 0 && t.sy > VH * .22 && t.sy < VH && t.sy < y && t.sx > -20 && t.sx < VB + 20) { const dd = Math.hypot(t.sx + camX - x, t.sy - y) + 60; if (dd < bd) { bd = dd; best = t; } }
+  return best;
+}
+
+// ---------- tegning ----------
+function tegnSkip(g, krenge, skygge, vinge, str = 1) {
+  g.save();
+  g.scale((1 - Math.abs(krenge) * .28) * str, str);
+  const lys = skygge ? "#000" : null;
+  g.fillStyle = lys || vinge || "#ffa31a"; g.strokeStyle = "rgba(0,0,0,.55)"; g.lineWidth = 1.2;
+  g.beginPath(); g.moveTo(4, -3); g.lineTo(18, 7); g.lineTo(18, 12); g.lineTo(5, 10); g.closePath(); if (!skygge) g.stroke(); g.fill();
+  g.beginPath(); g.moveTo(-4, -3); g.lineTo(-18, 7); g.lineTo(-18, 12); g.lineTo(-5, 10); g.closePath(); if (!skygge) g.stroke(); g.fill();
+  if (!skygge) {
+    g.fillStyle = "#ff3fb4"; g.fillRect(14, 8, 4, 4); g.fillRect(-18, 8, 4, 4);
+    g.fillStyle = krenge > 0 ? "rgba(0,0,0,.28)" : "rgba(255,255,255,.25)";
+    g.beginPath(); g.moveTo(4, -3); g.lineTo(18, 7); g.lineTo(5, 6); g.closePath(); g.fill();
+    g.fillStyle = krenge < 0 ? "rgba(0,0,0,.28)" : "rgba(255,255,255,.25)";
+    g.beginPath(); g.moveTo(-4, -3); g.lineTo(-18, 7); g.lineTo(-5, 6); g.closePath(); g.fill();
+  }
+  g.fillStyle = lys || "#d8d4cc";
+  g.beginPath(); g.moveTo(3, 11); g.lineTo(9, 17); g.lineTo(3, 16); g.closePath(); g.fill();
+  g.beginPath(); g.moveTo(-3, 11); g.lineTo(-9, 17); g.lineTo(-3, 16); g.closePath(); g.fill();
+  if (!skygge) { const gr = g.createLinearGradient(-6, 0, 6, 0); gr.addColorStop(0, "#9a968e"); gr.addColorStop(.45 - krenge * .25, "#fbf8f0"); gr.addColorStop(1, "#8a867e"); g.fillStyle = gr; }
+  g.beginPath(); g.moveTo(0, -19); g.lineTo(4.5, -8); g.lineTo(5.5, 9); g.lineTo(3, 16); g.lineTo(-3, 16); g.lineTo(-5.5, 9); g.lineTo(-4.5, -8); g.closePath(); g.fill();
+  if (!skygge) {
+    g.strokeStyle = "rgba(0,0,0,.55)"; g.lineWidth = .9; g.stroke();
+    g.fillStyle = "#1d2b3a"; g.beginPath(); g.ellipse(krenge * 1.2, -6, 2.6, 5, 0, 0, 6.283); g.fill();
+    g.fillStyle = "#7fe0ff"; g.beginPath(); g.ellipse(krenge * 1.2 - .8, -7.5, 1, 2.2, 0, 0, 6.283); g.fill();
+  }
+  g.restore();
+}
+function tegnFlamme(g) {
+  const l = 7 + Math.random() * 6;
+  g.globalCompositeOperation = "lighter";
+  g.fillStyle = "rgba(255,140,40,.8)"; g.beginPath(); g.moveTo(-2.6, 16); g.lineTo(2.6, 16); g.lineTo(0, 16 + l); g.closePath(); g.fill();
+  g.fillStyle = "rgba(255,240,200,.9)"; g.beginPath(); g.moveTo(-1.2, 16); g.lineTo(1.2, 16); g.lineTo(0, 16 + l * .55); g.closePath(); g.fill();
+  g.globalCompositeOperation = "source-over";
+}
+const BONUSFARGER = { v: "#ff4a2e", l: "#3a9bff", P: "#ffa31a", M: "#3ad1ff", O: "#ffa31a", B: "#ff3fb4", K: "#ffc93a" };
+function rundRekt(x, y, w, h, r) { cx.beginPath(); cx.moveTo(x + r, y); cx.arcTo(x + w, y, x + w, y + h, r); cx.arcTo(x + w, y + h, x, y + h, r); cx.arcTo(x, y + h, x, y, r); cx.arcTo(x, y, x + w, y, r); cx.closePath(); }
+function tegnBonus(b) {
+  const x = b.x - camX, y = b.y, puls = .5 + .5 * Math.sin(b.t * 8);
+  if (b.type === "K") {
+    // Kortet snurrer i lufta.
+    const w = 20 * Math.abs(Math.cos(b.t * 3)) + 2;
+    cx.fillStyle = "#ffc93a"; rundRekt(x - w / 2, y - 14, w, 28, 3); cx.fill();
+    cx.strokeStyle = "#fff"; cx.lineWidth = 2; rundRekt(x - w / 2, y - 14, w, 28, 3); cx.stroke();
+    if (w > 10) { cx.fillStyle = "#3a2200"; cx.font = "900 14px ui-monospace, Menlo, monospace"; cx.textAlign = "center"; cx.textBaseline = "middle"; cx.fillText("?", x, y + 1); }
+    return;
+  }
+  const nøkkel = bonusFarge(b) || b.type, farge = BONUSFARGER[nøkkel];
+  const bokstav = b.type === "P" ? (nøkkel === "l" ? "L" : nøkkel === "v" ? "V" : "P") : b.type === "O" ? "W" : b.type;
+  cx.save(); cx.translate(x, y); cx.rotate(Math.sin(b.t * 3) * .25);
+  cx.fillStyle = b.type === "P" ? farge : "rgba(0,0,0,.6)"; rundRekt(-11, -11, 22, 22, 6); cx.fill();
+  cx.lineWidth = 2.5; cx.strokeStyle = b.type === "P" ? "#fff" : farge; cx.globalAlpha = .7 + puls * .3; rundRekt(-11, -11, 22, 22, 6); cx.stroke(); cx.globalAlpha = 1;
+  cx.fillStyle = "#fff"; cx.font = "800 14px ui-monospace, Menlo, monospace"; cx.textAlign = "center"; cx.textBaseline = "middle"; cx.fillText(bokstav, 0, 1);
+  cx.restore();
+}
+function ringPåBakken(X, Y, r, farge, bredde) {
+  cx.beginPath();
+  for (let i = 0; i <= 24; i++) { const a = i / 24 * 6.283, p = prosjiser(X + Math.cos(a) * r, Y + Math.sin(a) * r); if (!p) return; if (i) cx.lineTo(p.x, p.y); else cx.moveTo(p.x, p.y); }
+  cx.strokeStyle = farge; cx.lineWidth = bredde; cx.stroke();
+}
+// Lyset kommer ovenfra, litt fra venstre og forfra.
+const LYS = (() => { const v = [-.45, -.35, .82], l = Math.hypot(...v); return v.map(x => x / l); })();
+const I_3D = { kunst: true, statue: true, båt: true, bil: true };
+function tegnBakkeTing() {
+  if (pynt.length) tegnPynt();
+  for (const t of bakke) if (t.type === "båt" && t.sy > -60 && t.sy < VH + 60) {
+    const bak = -Math.sign(t.vx);
+    for (let i = 1; i <= 4; i++) {
+      const p = prosjiser(t.x + bak * (t.len * .5 + i * 16), t.gy); if (!p) continue;
+      cx.strokeStyle = `rgba(255,255,255,${.35 - i * .07})`; cx.lineWidth = 1.5;
+      cx.beginPath(); cx.ellipse(p.x, p.y, (8 + i * 6) * p.s, (3 + i * 2) * p.s, KAM.roll, 0, 6.283); cx.stroke();
+    }
+  }
+  // Fjerneste først, så de nære står foran.
+  const ting = [...bakke.filter(t => t.sy > -150 && t.sy < VH + 80 && !I_3D[t.type]), ...folk.filter(p => p.sy > -60 && p.sy < VH + 60)].sort((a, b) => b.sz - a.sz);
+  for (const t of bakke) if (t.type === "bil" && t.sy > -40 && t.sy < VH + 40) tegnBilLys(t);
+  for (const t of ting) {
+    const x = t.sx, y = t.sy, k = t.ss / .8;
+    if (t.type === "jetski") { tegnJetski(t, x, y, k); continue; }
+    if (t.fram !== undefined) {
+      const p = .5 + .5 * Math.sin(t.t * 5);
+      cx.strokeStyle = `rgba(120,230,255,${.5 + p * .4})`; cx.lineWidth = 2;
+      cx.beginPath(); cx.ellipse(x, y, 20 * k, 11 * k, 0, 0, 6.283); cx.stroke();
+      if (t.fram > 0) { cx.strokeStyle = "#7fe0ff"; cx.lineWidth = 3.5; cx.beginPath(); cx.ellipse(x, y, 24 * k, 13 * k, 0, -Math.PI / 2, -Math.PI / 2 + t.fram / mods.redning * 6.283); cx.stroke(); }
+      if (t.dykker) { tegnDykker(t, x, y, k); continue; }
+      cx.save(); cx.translate(x, y); cx.scale(k, k);
+      cx.strokeStyle = "#fff"; cx.lineWidth = 2; cx.lineCap = "round";
+      cx.beginPath(); cx.arc(0, -15, 3, 0, 6.283); cx.stroke();
+      cx.beginPath(); cx.moveTo(0, -12); cx.lineTo(0, -4); cx.lineTo(-3, 2); cx.moveTo(0, -4); cx.lineTo(3, 2);
+      const v = Math.sin(t.t * 9) * .6; cx.moveTo(0, -10); cx.lineTo(-5, -14 + v * 3); cx.moveTo(0, -10); cx.lineTo(6, -16 - v * 4); cx.stroke();
+      cx.restore();
+      continue;
+    }
+    if (t.type === "v") {
+      const f = hentFigur(t.navn, VESEN_STR);
+      if (f.st !== 1) continue;
+      const w = f.w * k, h = f.h * k, hopp = Math.abs(Math.sin(t.t * 7)) * 1.5 * k;
+      cx.fillStyle = "rgba(0,0,0,.35)"; cx.beginPath(); cx.ellipse(x, y, w * .4, w * .12, 0, 0, 6.283); cx.fill();
+      cx.save(); cx.translate(x, y); cx.rotate(Math.sin(t.t * 9) * .09 + KAM.roll); if (t.speil !== (t.vx < 0)) cx.scale(-1, 1);
+      if (t.blink > 0) cx.drawImage(f.hvit, -w / 2, -h - hopp, w, h);
+      else cx.drawImage(f.glød, -w / 2 - f.pad * k, -h - hopp - f.pad * k, w + f.pad * 2 * k, h + f.pad * 2 * k);
+      cx.restore();
+      continue;
+    }
+    if (t.skjell) { tegnSkjell(t, x, y, k); continue; }
+    const r = 13 * k, flat = .62;
+    cx.fillStyle = "rgba(0,0,0,.4)"; cx.beginPath(); cx.ellipse(x + 2 * k, y + 3 * k, r * 1.1, r * flat * 1.1, 0, 0, 6.283); cx.fill();
+    cx.fillStyle = t.blink > 0 ? "#fff" : "#2b2e33"; cx.beginPath(); cx.ellipse(x, y, r, r * flat, 0, 0, 6.283); cx.fill();
+    cx.strokeStyle = "#ff3fb4"; cx.lineWidth = 1.5; cx.beginPath(); cx.ellipse(x, y, r, r * flat, 0, 0, 6.283); cx.stroke();
+    cx.save(); cx.translate(x, y - 3 * k); cx.rotate(t.ang);
+    cx.fillStyle = t.blink > 0 ? "#fff" : "#575c66"; cx.fillRect(2 * k, -2.5 * k, 14 * k, 5 * k);
+    cx.fillStyle = "#8b919c"; cx.beginPath(); cx.arc(0, 0, 6.5 * k, 0, 6.283); cx.fill();
+    cx.restore();
+  }
+}
+function tegnBoss() {
+  const b = boss, x = b.x - camX, str = bossStr(), skjelv = b.død > 0 ? (Math.random() - .5) * 8 : 0;
+  if (b.custom === "breiflabb") { tegnBreiflabb(b, x + skjelv, b.y + skjelv); return; }
+  if (bossSkjermet() && !b.inn) {
+    const p = .5 + .5 * Math.sin(nå * 6);
+    cx.strokeStyle = `rgba(255,63,180,${.35 + p * .35})`; cx.lineWidth = 3;
+    cx.beginPath(); cx.ellipse(x, b.y, str * .3, str * .33, 0, 0, 6.283); cx.stroke();
+  }
+  let tegnet = false;
+  if (modeller[b.b3.navn] === "klar" && window.Boss3D) {
+    tegnet = window.Boss3D.tegn(cx, x + skjelv, b.y + skjelv, str, { modell: b.b3.navn, anim: b.b3.anim, tid: b.t, vri: Math.sin(b.t * .7) * .4, blink: b.treff > 0 ? 1 : 0, lys: b.b3.lys, buffer: b.buf, bufferMs: 33 });
+  }
+  if (!tegnet) {
+    const f = hentFigur(etappeBoss, BOSS_STR, "#ff3fb4");
+    if (f.st === 1) {
+      const w = f.w * .8, h = f.h * .8;
+      cx.drawImage(f.glød, x - w / 2 - f.pad * .8 + skjelv, b.y - h / 2 - f.pad * .8 + skjelv, w + f.pad * 1.6, h + f.pad * 1.6);
+      if (b.treff > 0) { cx.globalAlpha = .35; cx.drawImage(f.hvit, x - w / 2, b.y - h / 2, w, h); cx.globalAlpha = 1; }
+    } else { cx.fillStyle = "#2b2e33"; cx.beginPath(); cx.arc(x, b.y, 60, 0, 6.283); cx.fill(); }
+  }
+  for (const t of b.tårn) {
+    if (t.hp <= 0) continue;
+    const tx = t.x - camX;
+    cx.strokeStyle = "rgba(255,63,180,.35)"; cx.lineWidth = 1; cx.beginPath(); cx.moveTo(x, b.y); cx.lineTo(tx, t.y); cx.stroke();
+    cx.fillStyle = "rgba(0,0,0,.5)"; cx.beginPath(); cx.arc(tx, t.y, 15, 0, 6.283); cx.fill();
+    cx.fillStyle = t.treff > 0 ? "#fff" : "#3a3f47"; cx.beginPath(); cx.arc(tx, t.y, 12.5, 0, 6.283); cx.fill();
+    cx.strokeStyle = "#ff3fb4"; cx.lineWidth = 2; cx.beginPath(); cx.arc(tx, t.y, 12.5, 0, 6.283); cx.stroke();
+    cx.save(); cx.translate(tx, t.y); cx.rotate(t.ang); cx.fillStyle = "#8b919c"; cx.fillRect(4, -3, 13, 6); cx.restore();
+    cx.fillStyle = "#ffd23f"; cx.beginPath(); cx.arc(tx, t.y, 4, 0, 6.283); cx.fill();
+    cx.fillStyle = "rgba(0,0,0,.6)"; cx.fillRect(tx - 14, t.y + 18, 28, 4);
+    cx.fillStyle = "#ff3fb4"; cx.fillRect(tx - 14, t.y + 18, 28 * t.hp / t.maks, 4);
+  }
+}
+
+function tegnVerden() {
+  if (gl) { const [bunn, topp] = synligBakke(); tegnBakkeGL(bunn - 20, topp); if (tilstand === "spill" || tilstand === "slutt") tegnObjekterGL(); }
+  cx.setTransform(DPR * SK, 0, 0, DPR * SK, 0, 0);
+  cx.clearRect(0, 0, VB, VH);
+  if (rist > 0) cx.translate((Math.random() - .5) * rist * 14, (Math.random() - .5) * rist * 14);
+  cx.imageSmoothingEnabled = true;
+  if (tilstand !== "spill" && tilstand !== "slutt") return;
+
+  if (tilstand === "spill" && skip.død <= 0 && fase !== "klar") {
+    const m = sikte();
+    if (m) {
+      const klar = skip.bombeKlar <= 0, p = .5 + .5 * Math.sin(nå * 6);
+      ringPåBakken(m[0], m[1], mods.bombeR * .55, klar ? `rgba(255,63,180,${.55 + p * .35})` : "rgba(255,255,255,.25)", klar ? 2.5 : 1.5);
+      const q = prosjiser(m[0], m[1]);
+      if (q && klar) { cx.strokeStyle = "rgba(255,63,180,.8)"; cx.lineWidth = 2; cx.beginPath(); cx.moveTo(q.x - 8, q.y); cx.lineTo(q.x + 8, q.y); cx.moveTo(q.x, q.y - 5); cx.lineTo(q.x, q.y + 5); cx.stroke(); }
+    }
+  }
+  if (biom === "hav") tegnTang();
+  tegnBakkeTing();
+  for (const b of bomber) {
+    const p = prosjiser(b.mx, b.my); if (!p) continue;
+    const u = b.t / BOMBE_TID, e = u * u, x = (b.x0 - camX) + (p.x - (b.x0 - camX)) * e, y = b.y0 + (p.y - b.y0) * u, r = 5 * (1 - u * .6);
+    cx.fillStyle = "rgba(0,0,0,.6)"; cx.beginPath(); cx.arc(x, y, r + 1.5, 0, 6.283); cx.fill();
+    cx.fillStyle = "#55595f"; cx.beginPath(); cx.arc(x, y, r, 0, 6.283); cx.fill();
+    cx.fillStyle = "#ff3fb4"; cx.beginPath(); cx.arc(x, y - r * .4, r * .45, 0, 6.283); cx.fill();
+  }
+
+  cx.imageSmoothingEnabled = false;
+  cx.globalAlpha = .24;
+  for (const f of fiender) {
+    if (f.f.tegn || f.type === "kjempe" || f.type === "kraken") continue;
+    if (f.f.ark) { const a = f.f.ark, w = FUGL3D[f.type].str * .6, h = w * a.asp; cx.drawImage(a.skygge[fuglFr(f)], f.x - camX - w / 2 + 30, f.y - h / 2 + 52, w, h); continue; }
+    const sp = f.f.skygge[(nå * 6 + f.t) % 2 | 0]; cx.drawImage(sp, f.x - camX - sp.width * PX * .3 + 30, f.y - sp.height * PX * .3 + 52, sp.width * PX * .6, sp.height * PX * .6); }
+  if (skip.død <= 0) { const ds = dykkSkala(), sa = dykk ? Math.max(0, 1 - dykk.t / 1.9) : 1; if (sa > 0) { cx.save(); cx.translate(skip.x - camX + bobX + 38 * sa, skip.y + bobY + 66 * sa); cx.scale(.55 * ds, .55 * ds); if (!tegnSkip3D(cx, skip.krenge + bobK, mods.fly.str, mods.fly.id, true, 0)) tegnSkip(cx, skip.krenge + bobK, true); cx.restore(); } }
+  cx.globalAlpha = 1;
+  cx.imageSmoothingEnabled = true;
+
+  if (biom !== "hav") for (const k of skyer) { const w = 256 * k.sk * .9, h = 160 * k.sk * .9; cx.globalAlpha = k.a; cx.drawImage(k.sp, k.x - camX * 1.25 - w / 2, k.y - h / 2, w, h); }
+  cx.globalAlpha = 1;
+  if (biom === "hav") tegnHavLys();
+  if (biom === "by") tegnLykteLys();
+  if (hval) tegnHval();
+  if (boss) tegnBoss();
+
+  cx.imageSmoothingEnabled = false;
+  for (const f of fiender) {
+    if (f.f.tegn) { cx.imageSmoothingEnabled = true; f.f.tegn(f, f.x - camX, f.y); cx.imageSmoothingEnabled = false; continue; }
+    if (f.type === "kjempe") { tegnKjempe(f); continue; }
+    if (f.type === "kraken") { tegnKraken(f); continue; }
+    if (f.f.ark) {
+      const a = f.f.ark, w = FUGL3D[f.type].str, h = w * a.asp;
+      cx.save(); cx.translate(f.x - camX, f.y); cx.imageSmoothingEnabled = true;
+      if (f.modus !== "form" && f.modus !== "kryss") { const v = Math.hypot(f.vx, f.vy); if (v > 20) cx.rotate(Math.atan2(f.vy, f.vx) - Math.PI / 2); }
+      else if (f.modus === "kryss") cx.rotate(f.retning > 0 ? -Math.PI / 2 : Math.PI / 2);
+      cx.drawImage((f.treff > 0 ? a.hvit : a.sp)[fuglFr(f)], -w / 2, -h / 2, w, h);
+      cx.restore(); cx.imageSmoothingEnabled = false;
+      continue;
+    }
+    const fr = (nå * 6 + f.t) % 2 | 0, sp = (f.treff > 0 ? f.f.hvit : f.f.sp)[fr], w = sp.width * PX, h = sp.height * PX;
+    cx.save(); cx.translate(f.x - camX, f.y);
+    if (f.modus !== "form" && f.modus !== "kryss") { const v = Math.hypot(f.vx, f.vy); if (v > 20) cx.rotate(Math.atan2(f.vy, f.vx) - Math.PI / 2); }
+    cx.drawImage(sp, -w / 2, -h / 2, w, h);
+    cx.restore();
+  }
+  cx.imageSmoothingEnabled = true;
+
+  for (const k of kuler) {
+    const x = k.x - camX;
+    if (k.flamme) {
+      const u = 1 - k.liv / .3, r = 5 + u * 12;
+      cx.globalAlpha = Math.min(1, k.liv * 6); cx.drawImage(ILD, x - r, k.y - r, r * 2, r * 2); cx.globalAlpha = 1;
+      continue;
+    }
+    if (k.laser) {
+      cx.fillStyle = "rgba(0,0,0,.4)"; cx.fillRect(x - k.b / 2 - 1, k.y - 16, k.b + 2, 32);
+      cx.fillStyle = "#3a9bff"; cx.fillRect(x - k.b / 2, k.y - 15, k.b, 30);
+      cx.fillStyle = "#e6f6ff"; cx.fillRect(x - k.b / 5, k.y - 14, k.b / 2.5, 28);
+      continue;
+    }
+    const a = Math.atan2(k.vx, -k.vy);
+    cx.save(); cx.translate(x, k.y); cx.rotate(a);
+    cx.fillStyle = "rgba(0,0,0,.45)"; cx.fillRect(-2.8, -8.5, 5.6, 17);
+    cx.fillStyle = k.ving ? "#ffd23f" : "#ff6a2e"; cx.fillRect(-1.9, -7.5, 3.8, 15);
+    cx.fillStyle = "#fff6d8"; cx.fillRect(-.9, -6.5, 1.8, 13);
+    cx.restore();
+  }
+  for (const m of missiler) {
+    cx.save(); cx.translate(m.x - camX, m.y); cx.rotate(Math.atan2(m.vy, m.vx));
+    cx.fillStyle = "rgba(0,0,0,.5)"; cx.fillRect(-7, -2.6, 14, 5.2);
+    cx.fillStyle = "#e8e4dc"; cx.fillRect(-6, -2, 11, 4);
+    cx.fillStyle = "#ff3fb4"; cx.fillRect(4, -2, 3, 4);
+    cx.fillStyle = "#ffd23f"; cx.fillRect(-9, -1, 3, 2);
+    cx.restore();
+  }
+  for (const p of folk) if (p.nær && p.fram > 0) {
+    cx.strokeStyle = "rgba(127,224,255,.85)"; cx.lineWidth = 1.5; cx.setLineDash([4, 3]);
+    cx.beginPath(); cx.moveTo(skip.x - camX + bobX, skip.y + bobY + 8); cx.lineTo(p.sx, p.sy - 14 * p.ss / .8); cx.stroke(); cx.setLineDash([]);
+  }
+
+  const s = skip;
+  if (s.død <= 0) {
+    const sx = s.x - camX + bobX, sy = s.y + bobY;
+    if (s.laserT > 0) {
+      // Den tunge laseren
+      const b = 22 + Math.sin(nå * 40) * 4;
+      cx.globalCompositeOperation = "lighter";
+      const gr = cx.createLinearGradient(sx - b, 0, sx + b, 0);
+      gr.addColorStop(0, "rgba(58,155,255,0)"); gr.addColorStop(.3, "rgba(58,155,255,.6)"); gr.addColorStop(.5, "rgba(230,246,255,.95)"); gr.addColorStop(.7, "rgba(58,155,255,.6)"); gr.addColorStop(1, "rgba(58,155,255,0)");
+      cx.fillStyle = gr; cx.fillRect(sx - b, 0, b * 2, sy - 14);
+      cx.globalCompositeOperation = "source-over";
+    }
+    const ds = dykkSkala();
+    for (let i = s.opt - 1; i >= 0; i--) { const p = optionPos(i); cx.save(); cx.translate(p[0] - camX, p[1]); cx.scale(.55 * ds, .55 * ds); tegnSpiller(cx, Math.sin(nå * 2 + i) * .2, 1, mods.fly); cx.restore(); }
+    if (s.usårbar <= 0 || (nå * 14 | 0) % 2) { cx.save(); cx.translate(sx, sy); cx.scale(ds, ds); tegnSpiller(cx, s.krenge + bobK, mods.fly.str, mods.fly); cx.restore(); }
+    if (s.skjoldT > 0) {
+      const p = .5 + .5 * Math.sin(nå * 10), a = s.skjoldT < 1 ? (nå * 10 | 0) % 2 : 1;
+      cx.globalAlpha = a; cx.strokeStyle = `rgba(127,224,255,${.6 + p * .4})`; cx.lineWidth = 3; cx.beginPath(); cx.arc(sx, sy, 32, 0, 6.283); cx.stroke();
+      cx.fillStyle = "rgba(127,224,255,.12)"; cx.fill(); cx.globalAlpha = 1;
+    }
+  }
+  for (const b of bonuser) tegnBonus(b);
+  for (const m of mynter) { const w = 14 * Math.abs(Math.cos(m.rot)) + 3; cx.drawImage(MYNT, m.x - camX - w / 2, m.y - 7, w, 14); }
+  for (const k of fkuler) {
+    const x = k.x - camX, sk = k.stig === undefined ? 1 : .3 + .7 * Math.min(1, k.stig / .6);
+    cx.fillStyle = "rgba(0,0,0,.6)"; cx.beginPath(); cx.arc(x, k.y, 5.2 * sk, 0, 6.283); cx.fill();
+    cx.fillStyle = "#ff3fb4"; cx.beginPath(); cx.arc(x, k.y, 4 * sk, 0, 6.283); cx.fill();
+    cx.fillStyle = "#fff"; cx.beginPath(); cx.arc(x, k.y, 1.8 * sk, 0, 6.283); cx.fill();
+  }
+  for (const e of røyk) { if (e.vent > 0) continue; const p = e.liv / e.maks, r = e.r * (1 + p * .8); cx.globalAlpha = .75 * (1 - p); cx.drawImage(RØYK, e.x - camX - r, e.y - r, r * 2, r * 2); }
+  for (const e of ild) { if (e.vent > 0) continue; const p = e.liv / e.maks, r = e.r0 + (e.r1 - e.r0) * (1 - (1 - p) * (1 - p)); cx.globalAlpha = 1 - p * p; cx.drawImage(ILD, e.x - camX - r, e.y - r, r * 2, r * 2); }
+  cx.globalAlpha = 1;
+  cx.globalCompositeOperation = "lighter";
+  for (const p of partikler) { cx.globalAlpha = Math.max(0, p.liv / p.maks); cx.fillStyle = p.farge; cx.fillRect(p.x - camX - p.r / 2, p.y - p.r / 2, p.r, p.r); }
+  cx.globalAlpha = 1;
+  for (const r of ringer) { cx.strokeStyle = `rgba(${r.farge},${(1 - r.r / r.maks) * .8})`; cx.lineWidth = r.tykk * (1 - r.r / r.maks) + .5; cx.beginPath(); cx.arc(r.x - camX, r.y, r.r, 0, 6.283); cx.stroke(); }
+  cx.globalCompositeOperation = "source-over";
+  tegnBobler();
+  if (biom === "by") tegnRegn();
+  if (dykk) tegnDykk();
+  if (blits > 0) { cx.fillStyle = biom === "hav" ? `rgba(200,240,255,${blits * .6})` : `rgba(255,235,200,${blits * .55})`; cx.fillRect(-20, -20, VB + 40, VH + 40); }
+  cx.font = "700 11px ui-monospace, Menlo, monospace"; cx.textAlign = "center"; cx.textBaseline = "middle";
+  for (const t of tekster) { cx.globalAlpha = Math.min(1, t.liv * 2); cx.fillStyle = "#000"; cx.fillText(t.txt, t.x - camX + 1, t.y + 1); cx.fillStyle = "#fff"; cx.fillText(t.txt, t.x - camX, t.y); }
+  cx.globalAlpha = 1;
+}
+
+// ---------- grensesnitt ----------
+// Knappene tegnes på lerretet. Hver knapp registreres mens den tegnes, og trykk sjekkes mot lista.
+function knapp(x, y, w, h, gjør) { knapper.push({ x, y, w, h, gjør }); }
+function tekst(t, x, y, str, farge, just, vekt) {
+  cx.font = `${vekt || 700} ${str}px ui-monospace, Menlo, monospace`; cx.textAlign = just || "left"; cx.textBaseline = "middle";
+  cx.fillStyle = "rgba(0,0,0,.65)"; cx.fillText(t, x + 1, y + 1); cx.fillStyle = farge; cx.fillText(t, x, y);
+}
+function rundKnapp(x, y, r, tittel, under, farge, aktiv, andel, gjør) {
+  cx.fillStyle = aktiv ? "rgba(0,0,0,.4)" : "rgba(40,40,40,.35)"; cx.beginPath(); cx.arc(x, y, r, 0, 6.283); cx.fill();
+  cx.strokeStyle = aktiv ? farge : "rgba(120,120,120,.6)"; cx.lineWidth = 2.5;
+  cx.beginPath(); cx.arc(x, y, r, -Math.PI / 2, -Math.PI / 2 + (andel ?? 1) * 6.283); cx.stroke();
+  tekst(tittel, x, y - (under ? 4 : 0), r > 24 ? 10 : 8, aktiv ? "#fff" : "#999", "center", 800);
+  if (under) tekst(under, x, y + 7, 9, aktiv ? "#fff" : "#999", "center", 700);
+  knapp(x - r - 6, y - r - 6, r * 2 + 12, r * 2 + 12, gjør);
+}
+function tegnSpillHUD() {
+  const gr = cx.createLinearGradient(0, 0, 0, 78); gr.addColorStop(0, "rgba(0,0,0,.55)"); gr.addColorStop(1, "rgba(0,0,0,0)");
+  cx.fillStyle = gr; cx.fillRect(0, 0, VB, 78);
+  tekst(poeng.toLocaleString("en"), 14, 20, 16, "#fff", "left", 800);
+  tekst("★ " + data.bank.toLocaleString("en"), VB - 14, 20, 11, "#ffc93a", "right", 700);
+  tekst("STAGE " + (etappe + 1) + " · " + VANSK[vansk].navn, VB - 14, 37, 9, VANSK[vansk].farge, "right", 700);
+  tekst(lydPå ? "♪ ON" : "♪ OFF", VB / 2, 20, 10, lydPå ? "#efe9df" : "#777", "center", 700);
+  knapp(VB / 2 - 24, 4, 48, 32, () => settLyd(!lydPå));
+  // Helse som i Sky Force
+  for (let i = 0; i < skip.hpMaks; i++) { cx.fillStyle = i < skip.hp ? "#3ddc84" : "rgba(255,255,255,.18)"; cx.fillRect(14 + i * 13, 34, 10, 6); }
+  const w = skip.type === "f" ? "F" : skip.type === "l" ? "L" : "V";
+  tekst(`${w}${skip.våpen}  M${skip.mis}  W${skip.opt}`, 14, 52, 10, skip.type === "l" ? "#6cb6ff" : "#ff7a4a", "left", 700);
+  const kj = !boss && fiender.find(f => f.type === "kjempe" || f.type === "kraken");
+  if (kj) { cx.fillStyle = "rgba(0,0,0,.55)"; cx.fillRect(14, 64, VB - 28, 6); cx.fillStyle = "#ffa31a"; cx.fillRect(14, 64, (VB - 28) * Math.max(0, kj.hp) / kj.maks, 6); }
+  if (boss && !boss.inn) {
+    cx.fillStyle = "rgba(0,0,0,.55)"; cx.fillRect(14, 64, VB - 28, 6);
+    cx.fillStyle = bossSkjermet() ? "#777" : "#ff3fb4"; cx.fillRect(14, 64, (VB - 28) * boss.hp / boss.maks, 6);
+  }
+  if (fase !== "klar" && skip.død <= 0) {
+    rundKnapp(VB - 42, VH - 48, 28, "BOMB", null, "#ff3fb4", true, 1 - skip.bombeKlar / mods.bombePause, slippBombe);
+    rundKnapp(VB - 42, VH - 116, 21, "MEGA", "×" + skip.mega, "#ffbe3c", skip.mega > 0, 1, megaBombe);
+    if (nivå("laser")) rundKnapp(42, VH - 48, 24, "LASER", "×" + skip.laser, "#3a9bff", skip.laser > 0 || skip.laserT > 0, skip.laserT > 0 ? skip.laserT / mods.laserTid : 1, brukLaser);
+    if (nivå("skjold")) rundKnapp(42, VH - 112, 21, "SHIELD", "×" + skip.skjold, "#7fe0ff", skip.skjold > 0 || skip.skjoldT > 0, skip.skjoldT > 0 ? skip.skjoldT / mods.skjoldTid : 1, brukSkjold);
+  }
+  if (banner) {
+    const a = Math.min(1, banner.t * 2, (3.6 - banner.t) * 3);
+    if (!banner.blink || (nå * 5 | 0) % 2) {
+      cx.globalAlpha = Math.max(0, a);
+      tekst(banner.a, VB / 2, VH * .4, 30, banner.farge, "center", 900);
+      if (banner.b) tekst(banner.b, VB / 2, VH * .4 + 30, 11, "#efe9df", "center", 700);
+      cx.globalAlpha = 1;
+    }
+  }
+  if (tidsFaktor < .95) {
+    const a = (1 - tidsFaktor) * .5, g2 = cx.createRadialGradient(VB / 2, VH / 2, VH * .25, VB / 2, VH / 2, VH * .75);
+    g2.addColorStop(0, "rgba(10,20,40,0)"); g2.addColorStop(1, `rgba(10,20,40,${a})`); cx.fillStyle = g2; cx.fillRect(0, 0, VB, VH);
+  }
+  if (fase === "klar" && st.resultat) tegnResultat();
+  if (pause) { cx.fillStyle = "rgba(10,10,10,.6)"; cx.fillRect(0, 0, VB, VH); tekst("PAUSED", VB / 2, VH * .45, 28, "#ffa31a", "center", 900); tekst("tap to continue", VB / 2, VH * .45 + 30, 12, "#efe9df", "center", 400); }
+}
+function tegnResultat() {
+  const r = st.resultat, inn = Math.min(1, klarT * 2), y0 = VH * .18;
+  cx.globalAlpha = inn;
+  cx.fillStyle = "rgba(10,10,10,.75)"; rundRekt(24, y0, VB - 48, 310, 14); cx.fill();
+  tekst("STAGE CLEAR", VB / 2, y0 + 34, 26, "#ffa31a", "center", 900);
+  tekst(SESONGER[etappe].navn.toUpperCase() + " · " + VANSK[vansk].navn, VB / 2, y0 + 60, 10, VANSK[vansk].farge, "center", 700);
+  const navn = [`Destroy 70% (${Math.round(r.andel * 100)}%)`, "Destroy 100%", `Rescue all (${st.reddet}/${st.folk})`, "Untouched"];
+  navn.forEach((n, i) => {
+    const y = y0 + 98 + i * 36, ok = r.m[i];
+    cx.fillStyle = ok ? "#ffc93a" : "rgba(255,255,255,.12)"; cx.beginPath(); cx.arc(56, y, 11, 0, 6.283); cx.fill();
+    if (ok) tekst("✓", 56, y + 1, 13, "#3a2200", "center", 900);
+    tekst(n, 78, y, 12, ok ? "#efe9df" : "#8a857c", "left", 700);
+  });
+  tekst("★ +" + st.mynter + " this stage", VB / 2, y0 + 254, 12, "#ffc93a", "center", 700);
+  if (klarT > 1.5) { tekst("TAP TO CONTINUE", VB / 2, y0 + 286, 13, `rgba(239,233,223,${.6 + .4 * Math.sin(nå * 4)})`, "center", 800); knapp(0, 0, VB, VH, tilMeny); }
+  cx.globalAlpha = 1;
+}
+function tegnSlutt() {
+  cx.fillStyle = "rgba(10,10,10,.62)"; cx.fillRect(0, 0, VB, VH);
+  tekst("SHOT DOWN", VB / 2, VH * .36, 32, "#ff3fb4", "center", 900);
+  tekst(poeng.toLocaleString("en"), VB / 2, VH * .36 + 42, 24, "#fff", "center", 800);
+  tekst("★ +" + st.mynter + " kept", VB / 2, VH * .36 + 72, 12, "#ffc93a", "center", 700);
+  tekst("Spend your stars in the hangar.", VB / 2, VH * .36 + 94, 11, "#bdb6aa", "center", 400);
+  if (nå - skip.dødTid > 1.2) { tekst("TAP TO CONTINUE", VB / 2, VH * .66, 15, "#efe9df", "center", 800); knapp(0, 0, VB, VH, tilMeny); }
+}
+function tegnMeny() {
+  const gr = cx.createLinearGradient(0, 0, 0, VH); gr.addColorStop(0, "rgba(10,10,10,.7)"); gr.addColorStop(.5, "rgba(10,10,10,.45)"); gr.addColorStop(1, "rgba(10,10,10,.8)");
+  cx.fillStyle = gr; cx.fillRect(0, 0, VB, VH);
+  tekst("HIDDEN MOTIVES", 18, 30, 11, "#efe9df", "left", 800);
+  tekst("FLY IT", 18, 60, 34, "#ffa31a", "left", 900);
+  tekst("★ " + data.bank.toLocaleString("en"), VB - 18, 30, 13, "#ffc93a", "right", 800);
+  tekst("🏅 " + totalMedaljer(), VB - 18, 50, 11, "#efe9df", "right", 700);
+  // Vanskelighetsgrad
+  const fw = (VB - 36) / 4;
+  VANSK.forEach((v, i) => {
+    const x = 18 + i * fw, valgt = i === valgtVansk, åpen = vanskÅpen(valgtStage, i);
+    cx.fillStyle = valgt ? v.farge : "rgba(255,255,255,.08)"; rundRekt(x + 2, 88, fw - 4, 26, 6); cx.fill();
+    tekst(åpen ? v.navn : "🔒", x + fw / 2, 101, v.navn.length > 6 ? 8 : 9, valgt ? "#111" : åpen ? "#efe9df" : "#777", "center", 800);
+    knapp(x, 84, fw, 34, () => { if (vanskÅpen(valgtStage, i)) valgtVansk = i; else melding = { t: 2, tekst: "Get all 4 medals on " + VANSK[i - 1].navn + " first" }; });
+  });
+  // Stagene
+  const y0 = 130, h = Math.min(74, (VH - y0 - 110) / SESONGER.length);
+  SESONGER.forEach((S, e) => {
+    const y = y0 + e * h, åpen = stageÅpen(e), valgt = e === valgtStage;
+    cx.fillStyle = valgt ? "rgba(255,163,26,.18)" : "rgba(0,0,0,.35)"; rundRekt(18, y, VB - 36, h - 8, 10); cx.fill();
+    if (valgt) { cx.strokeStyle = "#ffa31a"; cx.lineWidth = 1.5; rundRekt(18, y, VB - 36, h - 8, 10); cx.stroke(); }
+    const img = hentMini(S.bilder[0]), s = h - 20;
+    if (img.complete && img.naturalWidth) { cx.save(); rundRekt(26, y + 6, s, s, 6); cx.clip(); cx.globalAlpha = åpen ? 1 : .3; cx.drawImage(img, 26, y + 6, s, s); cx.restore(); cx.globalAlpha = 1; }
+    tekst("STAGE " + (e + 1), 34 + s, y + 16, 9, åpen ? "#ffa31a" : "#666", "left", 800);
+    tekst(S.navn, 34 + s, y + 32, 11, åpen ? "#efe9df" : "#666", "left", 700);
+    if (åpen) {
+      const m = medaljerFor(e, valgtVansk);
+      m.forEach((ok, i) => { cx.fillStyle = ok ? "#ffc93a" : "rgba(255,255,255,.15)"; cx.beginPath(); cx.arc(40 + s + i * 16, y + h - 22, 5.5, 0, 6.283); cx.fill(); });
+    } else tekst("🔒 " + KRAV[e] + " medals", 34 + s, y + h - 22, 10, "#888", "left", 700);
+    knapp(18, y, VB - 36, h - 8, () => {
+      if (!stageÅpen(e)) { melding = { t: 2, tekst: "Earn " + KRAV[e] + " medals to unlock" }; return; }
+      if (valgtStage === e) { startOppdrag(e, vanskÅpen(e, valgtVansk) ? valgtVansk : 0); return; }
+      valgtStage = e; if (!vanskÅpen(e, valgtVansk)) valgtVansk = 0; nullstillVerden(e); fyllVerden();
+    });
+  });
+  // Bunnen
+  const by = VH - 74;
+  cx.fillStyle = "#ffa31a"; rundRekt(18, by, VB / 2 - 24, 48, 10); cx.fill();
+  tekst("FLY", 18 + (VB / 2 - 24) / 2, by + 24, 18, "#111", "center", 900);
+  knapp(18, by, VB / 2 - 24, 48, () => startOppdrag(valgtStage, vanskÅpen(valgtStage, valgtVansk) ? valgtVansk : 0));
+  cx.fillStyle = "rgba(255,255,255,.1)"; rundRekt(VB / 2 + 6, by, VB / 2 - 24, 48, 10); cx.fill();
+  cx.strokeStyle = "#ffc93a"; cx.lineWidth = 1.5; rundRekt(VB / 2 + 6, by, VB / 2 - 24, 48, 10); cx.stroke();
+  tekst("HANGAR", VB / 2 + 6 + (VB / 2 - 24) / 2, by + 24, 15, "#ffc93a", "center", 900);
+  knapp(VB / 2 + 6, by, VB / 2 - 24, 48, () => { tilstand = "hangar"; hangarFane = 0; });
+  tekst("Tap a stage to select it. Tap it again to fly.", VB / 2, by - 14, 9, "#bdb6aa", "center", 400);
+}
+function tegnHangar() {
+  cx.fillStyle = "rgba(10,10,10,.82)"; cx.fillRect(0, 0, VB, VH);
+  tekst("HANGAR", 18, 32, 24, "#ffc93a", "left", 900);
+  tekst("★ " + data.bank.toLocaleString("en"), VB - 18, 32, 14, "#ffc93a", "right", 800);
+  const faner = ["UPGRADES", "AIRCRAFT", "CARDS"], fw = (VB - 36) / 3;
+  faner.forEach((f, i) => {
+    const x = 18 + i * fw, valgt = i === hangarFane;
+    cx.fillStyle = valgt ? "#ffc93a" : "rgba(255,255,255,.08)"; rundRekt(x + 2, 56, fw - 4, 28, 6); cx.fill();
+    tekst(f, x + fw / 2, 70, 10, valgt ? "#111" : "#efe9df", "center", 800);
+    knapp(x, 52, fw, 36, () => { hangarFane = i; });
+  });
+  const y0 = 100;
+  if (hangarFane === 0) {
+    const h = Math.min(66, (VH - y0 - 80) / OPPG.length);
+    OPPG.forEach((o, i) => {
+      const y = y0 + i * h, n = nivå(o.id), maks = n >= o.maks, låst = o.krever && nivå(o.krever[0]) < o.krever[1], pris = prisFor(o, n), råd = data.bank >= pris;
+      cx.fillStyle = "rgba(255,255,255,.06)"; rundRekt(18, y, VB - 36, h - 6, 8); cx.fill();
+      tekst(o.navn, 28, y + 15, 12, "#efe9df", "left", 800);
+      tekst(låst ? "Needs Main cannon " + o.krever[1] : o.tekst, 28, y + 31, 9, "#9a948a", "left", 400);
+      for (let k = 0; k < o.maks; k++) { cx.fillStyle = k < n ? "#ffc93a" : "rgba(255,255,255,.15)"; cx.fillRect(28 + k * 14, y + h - 18, 10, 5); }
+      const bx = VB - 108, bw = 80;
+      cx.fillStyle = maks ? "rgba(255,255,255,.1)" : låst ? "rgba(255,255,255,.05)" : råd ? "#ffc93a" : "rgba(255,201,58,.2)"; rundRekt(bx, y + 10, bw, h - 26, 8); cx.fill();
+      tekst(maks ? "MAX" : låst ? "🔒" : "★ " + pris, bx + bw / 2, y + 10 + (h - 26) / 2, 11, maks ? "#888" : råd && !låst ? "#111" : "#c9a64a", "center", 800);
+      knapp(bx - 6, y, bw + 12, h - 6, () => {
+        if (maks || låst) return;
+        if (!råd) { melding = { t: 1.6, tekst: "Not enough stars" }; return; }
+        data.bank -= pris; data.oppg[o.id] = n + 1; lagre(); pip(660, 1320, .2, .08, "triangle");
+      });
+    });
+  } else if (hangarFane === 1) {
+    const h = 96;
+    FLY.forEach((f, i) => {
+      const y = y0 + i * h, eid = data.fly.eid.includes(f.id), valgt = data.fly.valgt === f.id, råd = data.bank >= f.pris;
+      cx.fillStyle = valgt ? "rgba(255,163,26,.16)" : "rgba(255,255,255,.06)"; rundRekt(18, y, VB - 36, h - 8, 10); cx.fill();
+      lastSkip(f.id);
+      cx.save(); cx.translate(58, y + h / 2 - 4);
+      if (skipArk[f.id]?.f) tegnSpiller(cx, Math.sin(nå * 1.5 + i) * .25, Math.min(1.1, 76 / (SKIP_B * skipArk[f.id].asp)), f, 0);
+      else { cx.scale(1.6 * f.str, 1.6 * f.str); tegnFlamme(cx); tegnSkip(cx, Math.sin(nå * 1.5 + i) * .25, false, f.vinge); }
+      cx.restore();
+      tekst(f.navn, 100, y + 26, 14, "#efe9df", "left", 800);
+      tekst(f.tekst, 100, y + 46, 9, "#9a948a", "left", 400);
+      const bx = VB - 116, bw = 88;
+      cx.fillStyle = valgt ? "rgba(255,255,255,.1)" : eid ? "#ffa31a" : råd ? "#ffc93a" : "rgba(255,201,58,.2)"; rundRekt(bx, y + 56, bw, 26, 7); cx.fill();
+      tekst(valgt ? "IN USE" : eid ? "SELECT" : "★ " + f.pris, bx + bw / 2, y + 69, 10, valgt ? "#888" : "#111", "center", 800);
+      knapp(18, y, VB - 36, h - 8, () => {
+        if (eid) { data.fly.valgt = f.id; lagre(); return; }
+        if (!råd) { melding = { t: 1.6, tekst: "Not enough stars" }; return; }
+        data.bank -= f.pris; data.fly.eid.push(f.id); data.fly.valgt = f.id; lagre(); pip(660, 1320, .2, .08, "triangle");
+      });
+    });
+  } else {
+    tekst("Cards drop from enemies, one hidden per mission.", VB / 2, y0 + 4, 10, "#bdb6aa", "center", 400);
+    const cw = (VB - 48) / 2, ch = 88;
+    KORT.forEach((k, i) => {
+      const x = 18 + (i % 2) * (cw + 12), y = y0 + 20 + (i >> 1) * (ch + 10), eid = har(k.id);
+      cx.fillStyle = eid ? "rgba(255,201,58,.9)" : "rgba(255,255,255,.07)"; rundRekt(x, y, cw, ch, 10); cx.fill();
+      tekst(eid ? k.navn : "?", x + cw / 2, y + 32, eid ? 12 : 26, eid ? "#2a1800" : "#666", "center", 900);
+      if (eid) tekst(k.tekst, x + cw / 2, y + 58, 9, "#3a2400", "center", 700);
+    });
+  }
+  cx.fillStyle = "rgba(255,255,255,.1)"; rundRekt(18, VH - 64, VB - 36, 44, 10); cx.fill();
+  tekst("BACK", VB / 2, VH - 42, 14, "#efe9df", "center", 900);
+  knapp(18, VH - 64, VB - 36, 44, () => { tilstand = "meny"; });
+}
+function tegn() {
+  knapper = [];
+  tegnVerden();
+  cx.setTransform(DPR * SK, 0, 0, DPR * SK, 0, 0);
+  if (tilstand === "meny") tegnMeny();
+  else if (tilstand === "hangar") tegnHangar();
+  else if (tilstand === "spill") tegnSpillHUD();
+  else if (tilstand === "slutt") tegnSlutt();
+  if (melding) { cx.fillStyle = "rgba(0,0,0,.8)"; rundRekt(30, VH * .5 - 22, VB - 60, 44, 10); cx.fill(); tekst(melding.tekst, VB / 2, VH * .5, 11, "#efe9df", "center", 700); }
+}
+
+// ---------- styring ----------
+const KOMP = 1 / (1 - (WW - VB) / (WW - 28));
+function tilVirtuell(e) { const r = cv.getBoundingClientRect(); return [(e.clientX - r.left) / SK, (e.clientY - r.top) / SK]; }
+cv.addEventListener("pointerdown", e => {
+  e.preventDefault();
+  const [x, y] = tilVirtuell(e);
+  if (e.pointerType !== "mouse") berøring = true;
+  startLyd();
+  if (pause) { pause = false; return; }
+  // Knapper først (siste tegnet ligger øverst).
+  for (let i = knapper.length - 1; i >= 0; i--) { const k = knapper[i]; if (x >= k.x && x <= k.x + k.w && y >= k.y && y <= k.y + k.h) { k.gjør(); return; } }
+  if (tilstand !== "spill" || fase === "klar") return;
+  // En ekstra finger hvor som helst slipper en bombe (AirAttack).
+  if (finger && e.pointerId !== finger.id) { slippBombe(); return; }
+  finger = { id: e.pointerId, x, y }; try { cv.setPointerCapture(e.pointerId); } catch {}
+});
+cv.addEventListener("pointermove", e => {
+  if (!finger || e.pointerId !== finger.id) return;
+  const [x, y] = tilVirtuell(e);
+  if (tilstand === "spill" && skip.død <= 0 && !pause) { skip.x += (x - finger.x) * 1.15 * KOMP; skip.y += (y - finger.y) * 1.15; }
+  finger.x = x; finger.y = y;
+});
+const slippFinger = e => { if (finger && e.pointerId === finger.id) finger = null; };
+cv.addEventListener("pointerup", slippFinger); cv.addEventListener("pointercancel", slippFinger);
+addEventListener("keydown", e => {
+  taster[e.key] = true;
+  if (e.key === " ") { e.preventDefault(); if (tilstand === "spill") slippBombe(); else if (tilstand === "meny") { startLyd(); startOppdrag(valgtStage, valgtVansk); } }
+  if (tilstand === "spill") {
+    if (e.key === "b") megaBombe();
+    if (e.key === "q") brukSkjold();
+    if (e.key === "e") brukLaser();
+    if (e.key === "p") pause = !pause;
+    if (e.key === "Enter" && fase === "klar" && klarT > 1.5) tilMeny();
+  }
+  if (e.key === "Enter" && tilstand === "slutt") tilMeny();
+  if (e.key === "m") settLyd(!lydPå);
+});
+addEventListener("keyup", e => { taster[e.key] = false; });
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) { if (tilstand === "spill") pause = true; if (musikk) musikk.pause(); lagre(); }
+  else if (musikk && lydPå && ac) musikk.play().catch(() => {});
+});
+
+// ---------- størrelse og løkke ----------
+function resize() {
+  const h = document.body.clientHeight || innerHeight, w = Math.min(document.body.clientWidth || innerWidth, Math.round(h * .62));
+  DPR = Math.min(2, devicePixelRatio || 1);
+  SK = w / VB; VH = h / SK;
+  scene.style.width = w + "px"; scene.style.height = h + "px";
+  for (const c of [cv, gcv]) { c.width = Math.round(w * DPR); c.height = Math.round(h * DPR); c.style.width = w + "px"; c.style.height = h + "px"; }
+}
+function svev() {
+  bobX = Math.sin(nå * 1.3) * 3.5 + Math.sin(nå * 2.9) * 1.2;
+  bobY = Math.sin(nå * 2.1) * 3 + Math.cos(nå * 3.7) * 1;
+  bobK = Math.sin(nå * 1.3 + .6) * .2;
+}
+let sistT = performance.now(), ryddKlokke = 0;
+function løkke(t) {
+  const ekte = Math.min(1 / 30, (t - sistT) / 1000); sistT = t;
+  const sakte = berøring && !finger && tilstand === "spill" && !pause && fase !== "klar" && skip.død <= 0;
+  tidsFaktor += ((sakte ? .3 : 1) - tidsFaktor) * Math.min(1, ekte * 8);
+  const dt = ekte * tidsFaktor;
+  nå += dt; svev();
+  if (melding) { melding.t -= ekte; if (melding.t <= 0) melding = null; }
+  if (tilstand === "spill" && !pause) oppdater(dt);
+  else if (tilstand === "slutt") { camY += 20 * ekte; filmKamera(ekte); oppdaterKamera(); oppdaterEffekter(ekte); }
+  else if (tilstand === "meny" || tilstand === "hangar") {
+    // Bakgrunnen i menyen flyr over den valgte stagen med filmkameraet.
+    camY += FART * .7 * ekte; camX = (WW - VB) / 2 + Math.sin(nå * .3) * 60;
+    filmKamera(ekte); oppdaterKamera(); fyllVerden();
+    const [bunn] = synligBakke(); fliser = fliser.filter(f => f.r * STEG + T > bunn - 20);
+  }
+  ryddKlokke += ekte; if (ryddKlokke > 2) { ryddKlokke = 0; rydd(); }
+  tegn();
+  requestAnimationFrame(løkke);
+}
+
+// ---------- start ----------
+addEventListener("resize", resize); resize();
+lagGL();
+if (gl) lagObjGL();
+valgtStage = Math.max(0, SESONGER.findIndex((_, e) => !stageÅpen(e + 1)));
+if (valgtStage < 0) valgtStage = 0;
+nullstillVerden(valgtStage); fyllVerden();
+lastFugler(); if (gl) lastEkte(); lastSkip(data.fly.valgt || "kestrel");
+requestAnimationFrame(løkke);
+</script>
+</body>
+</html>
