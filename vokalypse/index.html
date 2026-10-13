@@ -1,0 +1,297 @@
+<!doctype html>
+<html lang="no">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Vokalypse</title>
+<style>
+  :root {
+    --bg: #0e0f11; --panel: #16181b; --panel2: #1d2024; --line: #2a2e33; --text: #e6e3dc; --dim: #9a9890;
+    --faint: #6b6a65; --accent: #e8b04a; --accent2: #d4703c; --ok: #7fc46a; --warn: #e0805a; --bad: #e05a5a;
+    --o-import: #8fa6ff; --o-freesound: #7fc46a; --o-synth: #c8c8c8; --o-ai: #e05a8a;
+    --radius: 8px; --mono: ui-monospace, "SF Mono", Menlo, monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.45 -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif; }
+  a { color: var(--accent); }
+  button, select, input, textarea { font: inherit; color: var(--text); }
+  header { display: flex; align-items: baseline; gap: 16px; padding: 16px 24px 10px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+  header h1 { margin: 0; font-size: 20px; letter-spacing: 0.32em; font-weight: 700; }
+  header h1 span { color: var(--accent); }
+  header .sub { color: var(--dim); font-size: 13px; }
+  .legend { margin-left: auto; display: flex; gap: 8px; flex-wrap: wrap; font-size: 11px; }
+  .badge { display: inline-block; font: 600 10px/1 var(--mono); letter-spacing: 0.06em; padding: 4px 6px; border-radius: 4px; border: 1px solid currentColor; white-space: nowrap; }
+  .o-import { color: var(--o-import); } .o-freesound { color: var(--o-freesound); } .o-synth { color: var(--o-synth); } .o-ai { color: var(--o-ai); }
+  .o-out { color: var(--accent); }
+  main { display: grid; grid-template-columns: minmax(320px, 400px) 1fr; gap: 0; min-height: calc(100vh - 60px); }
+  @media (max-width: 900px) { main { grid-template-columns: 1fr; } }
+  section.panel { padding: 18px 22px 30px; }
+  section.panel + section.panel { border-left: 1px solid var(--line); }
+  @media (max-width: 900px) { section.panel + section.panel { border-left: 0; border-top: 1px solid var(--line); } }
+  h2 { font-size: 12px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--dim); margin: 0 0 12px; font-weight: 600; }
+  h2 b { color: var(--accent); font-weight: 700; }
+  h3 { font-size: 13px; margin: 18px 0 8px; color: var(--text); font-weight: 600; }
+  .tabs { display: flex; gap: 2px; background: var(--panel); border-radius: var(--radius); padding: 3px; margin-bottom: 12px; }
+  .tabs button { flex: 1; background: none; border: 0; padding: 7px 4px; border-radius: 6px; cursor: pointer; color: var(--dim); font-size: 12.5px; }
+  .tabs button.on { background: var(--panel2); color: var(--text); }
+  .tab { display: none; } .tab.on { display: block; }
+  .box { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px; margin-bottom: 10px; }
+  .note { color: var(--dim); font-size: 12.5px; }
+  .note b { color: var(--text); font-weight: 600; }
+  .warn { color: var(--warn); font-size: 12.5px; }
+  .err { color: var(--bad); font-size: 12.5px; white-space: pre-wrap; }
+  .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin: 6px 0; }
+  .row > label { color: var(--dim); font-size: 12px; min-width: 64px; }
+  .field { display: flex; flex-direction: column; gap: 4px; }
+  .field > span { color: var(--dim); font-size: 11.5px; letter-spacing: 0.04em; }
+  input[type=text], input[type=password], input[type=number], select, textarea {
+    background: var(--panel2); border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; outline: none; min-width: 0;
+  }
+  input:focus, select:focus, textarea:focus { border-color: var(--accent); }
+  textarea { width: 100%; resize: vertical; min-height: 54px; }
+  input[type=range] { accent-color: var(--accent); }
+  .btn { background: var(--panel2); border: 1px solid var(--line); border-radius: 6px; padding: 7px 12px; cursor: pointer; }
+  .btn:hover:not(:disabled) { border-color: var(--dim); }
+  .btn:disabled { opacity: 0.45; cursor: default; }
+  .btn.primary { background: var(--accent); color: #1a1408; border-color: var(--accent); font-weight: 650; }
+  .btn.primary:hover:not(:disabled) { filter: brightness(1.08); }
+  .btn.small { padding: 4px 8px; font-size: 12px; }
+  .btn.ghost { background: none; }
+  .drop { border: 1.5px dashed var(--line); border-radius: var(--radius); padding: 22px 12px; text-align: center; color: var(--dim); cursor: pointer; }
+  .drop.over { border-color: var(--accent); color: var(--text); }
+  #pool { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+  #pool li { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 7px 8px; display: grid; grid-template-columns: auto 1fr auto; gap: 4px 8px; align-items: center; }
+  #pool li.off { opacity: 0.5; }
+  #pool .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }
+  #pool .meta { grid-column: 2 / 4; color: var(--faint); font-size: 11.5px; overflow: hidden; text-overflow: ellipsis; }
+  #pool .acts { display: flex; gap: 4px; }
+  .empty { color: var(--faint); font-size: 12.5px; padding: 8px 0; }
+  .settings { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px 14px; }
+  .settings .wide { grid-column: 1 / -1; }
+  @media (min-width: 1100px) { .settings .wide { grid-column: span 2; } }
+  .seg { display: flex; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+  .seg button { flex: 1; background: none; border: 0; padding: 6px 6px; cursor: pointer; color: var(--dim); font-size: 12.5px; }
+  .seg button.on { background: var(--panel2); color: var(--accent); }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip { border: 1px solid var(--line); background: var(--panel); border-radius: 999px; padding: 4px 10px; cursor: pointer; font-size: 12.5px; color: var(--dim); user-select: none; }
+  .chip.on { color: var(--text); border-color: var(--chip, var(--accent)); box-shadow: inset 0 0 0 1px var(--chip, var(--accent)); }
+  .transport { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin: 16px 0 10px; }
+  .transport .spacer { flex: 1; }
+  #play { min-width: 92px; }
+  .viewwrap { position: relative; background: #0a0b0c; border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
+  #wave { display: block; width: 100%; height: 200px; cursor: pointer; }
+  #busy { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; background: rgba(10,11,12,0.7); color: var(--accent); font: 600 13px var(--mono); letter-spacing: 0.1em; }
+  #busy.on { display: flex; }
+  .infoline { display: flex; gap: 14px; flex-wrap: wrap; color: var(--dim); font: 12px var(--mono); margin: 8px 0 0; }
+  .infoline b { color: var(--text); font-weight: 500; }
+  .typelegend { display: flex; gap: 10px; flex-wrap: wrap; font-size: 11.5px; color: var(--dim); margin-top: 6px; }
+  .typelegend i { display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin-right: 4px; vertical-align: -1px; }
+  #history { display: flex; gap: 6px; flex-wrap: wrap; }
+  #history button { font: 12px var(--mono); }
+  #history button.on { border-color: var(--accent); color: var(--accent); }
+  .export { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .results { list-style: none; padding: 0; margin: 8px 0 0; display: flex; flex-direction: column; gap: 6px; max-height: 340px; overflow: auto; }
+  .results li { background: var(--panel2); border-radius: 6px; padding: 7px 8px; font-size: 12.5px; }
+  .results .t { display: flex; gap: 6px; align-items: center; }
+  .results .t .nm { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .results audio { width: 100%; height: 28px; margin-top: 4px; }
+  details { margin: 8px 0; }
+  summary { cursor: pointer; color: var(--dim); font-size: 12.5px; }
+  table.price { border-collapse: collapse; width: 100%; font-size: 12px; margin: 6px 0; }
+  table.price td { border-top: 1px solid var(--line); padding: 4px 4px; vertical-align: top; }
+  table.price td:last-child { text-align: right; white-space: nowrap; color: var(--text); }
+  .kbd { font: 11px var(--mono); color: var(--faint); }
+  .status { min-height: 18px; font-size: 12.5px; color: var(--dim); margin-top: 6px; }
+  .truth { font-size: 12px; color: var(--dim); border-left: 2px solid var(--accent); padding: 4px 0 4px 10px; margin: 10px 0 0; }
+  footer { color: var(--faint); font-size: 12px; padding: 14px 24px 30px; border-top: 1px solid var(--line); }
+</style>
+</head>
+<body>
+<header>
+  <h1>VOKAL<span>YPSE</span></h1>
+  <div class="sub">vokalmateriale for house, techno og EBM · 16 takter · arbeidsversjon 0.1</div>
+  <div class="legend" title="Hvor lyden kommer fra">
+    <span class="badge o-import" title="Din egen fil">IMPORTERT</span>
+    <span class="badge o-freesound" title="Opptak fra Freesound, CC0/CC BY">FREESOUND</span>
+    <span class="badge o-synth" title="Formantsynth i appen – ikke menneske, ikke AI">SYNTETISK</span>
+    <span class="badge o-ai" title="Ekstern AI-modell – ikke menneskelig opptak">AI-GENERERT</span>
+  </div>
+</header>
+
+<main>
+  <!-- ================= 1. RÅMATERIALE ================= -->
+  <section class="panel" id="panel-src">
+    <h2><b>1</b> · Råmateriale</h2>
+    <div class="tabs" role="tablist">
+      <button class="on" data-tab="t-import">Importer</button>
+      <button data-tab="t-synth">Syntetisk</button>
+      <button data-tab="t-fs">Freesound</button>
+      <button data-tab="t-ai">AI-sang</button>
+    </div>
+
+    <div class="tab on" id="t-import">
+      <div class="drop" id="drop">Slipp lydfiler her, eller <u>klikk for å velge</u><br><span class="note">WAV, AIFF, MP3, M4A, FLAC · inntil 10 min per fil</span></div>
+      <input type="file" id="file" accept="audio/*,.wav,.aif,.aiff,.mp3,.m4a,.flac" multiple hidden>
+      <p class="note">Egne opptak gir best resultat: en tørr stemme som snakker, synger, hvisker eller teller. Filene blir bare i nettleseren din og lastes ikke opp noe sted.</p>
+      <div class="status" id="import-status"></div>
+    </div>
+
+    <div class="tab" id="t-synth">
+      <div class="box">
+        <div class="note"><span class="badge o-synth">SYNTETISK</span> En enkel formant-vokalsynth som er bygget inn i appen. Den lager vokallyder, ikke ekte sang, og er verken AI eller et menneske. Den passer best som kor-flater, rytmiske stavelser og hvisking. Bokstavene tolkes grovt.</div>
+        <div class="row" style="margin-top:10px"><button class="btn" id="synth-pack">Lag startpakke (6 klipp)</button><span class="note">bruker valgt BPM og toneart</span></div>
+      </div>
+      <div class="box">
+        <div class="field"><span>Tekst / stavelser</span>
+          <div class="row" style="margin:0"><input type="text" id="syn-text" value="tell baklengs" style="flex:1"><select id="syn-lang" title="Språk for terning"><option value="no">no</option><option value="en">en</option><option value="de">de</option><option value="syl">stavelser</option></select><button class="btn small" id="syn-dice" title="Tilfeldig fragment">tilfeldig</button></div>
+        </div>
+        <div class="warn" id="syn-cliche"></div>
+        <div class="settings" style="margin-top:8px">
+          <label class="field"><span>Stemme</span><select id="syn-voice"><option value="bass">Bass</option><option value="tenor" selected>Tenor</option><option value="alto">Alt</option><option value="soprano">Sopran</option><option value="mixed">Blandet kor</option></select></label>
+          <label class="field"><span>Antall stemmer</span><input type="number" id="syn-voices" min="1" max="8" value="1"></label>
+          <label class="field"><span>Melodi</span><select id="syn-mel"><option value="mono">Monoton (chant)</option><option value="fall">Fallende</option><option value="rise">Stigende</option><option value="scale" selected>Tilfeldig i skala</option></select></label>
+          <label class="field"><span>Stavelse</span><select id="syn-len"><option value="1">1/16</option><option value="2" selected>1/8</option><option value="4">1/4</option><option value="8">1/2</option></select></label>
+        </div>
+        <div class="row"><label style="min-width:0"><input type="checkbox" id="syn-whisper"> Hvisk (bare støy, ingen tone)</label></div>
+        <div class="row"><button class="btn primary" id="syn-make">Lag klipp</button></div>
+      </div>
+    </div>
+
+    <div class="tab" id="t-fs">
+      <div class="box">
+        <div class="note"><span class="badge o-freesound">FREESOUND</span> Søk i Freesound.org etter opptak som er merket <b>CC0</b> (fri bruk uten krav) eller <b>CC BY</b> (fri bruk, men du må kreditere). Lisensene «NonCommercial» og «Sampling+» blir alltid filtrert bort.</div>
+        <details><summary>Slik får du gratis nøkkel (2 min)</summary>
+          <ol class="note" style="padding-left:18px;margin:6px 0">
+            <li>Lag gratis konto på <a href="https://freesound.org" target="_blank" rel="noopener">freesound.org</a>.</li>
+            <li>Gå til <a href="https://freesound.org/apiv2/apply" target="_blank" rel="noopener">freesound.org/apiv2/apply</a>, og fyll inn navn og beskrivelse (f.eks. «Vokalypse, personlig bruk»).</li>
+            <li>Kopier <b>Client secret/API key</b> og lim den inn her.</li>
+          </ol>
+        </details>
+        <div class="row"><input type="password" id="fs-key" placeholder="Freesound API-nøkkel" style="flex:1" autocomplete="off"><label class="note"><input type="checkbox" id="fs-remember"> husk</label></div>
+        <div class="row"><input type="text" id="fs-q" value="whisper voice" style="flex:1"><button class="btn primary" id="fs-search">Søk</button></div>
+        <div class="row"><label class="note"><input type="radio" name="fs-lic" value="cc0" checked> Bare CC0</label><label class="note"><input type="radio" name="fs-lic" value="by"> CC0 + CC BY</label></div>
+        <div class="chips" id="fs-sugg"></div>
+        <div class="status" id="fs-status"></div>
+        <ul class="results" id="fs-results"></ul>
+        <p class="note">Det som hentes er Freesounds forhåndsvisning (MP3, ca. 128 kbps). Vil du ha full kvalitet, last ned originalfilen fra lydsiden mens du er innlogget, og importer den. Les alltid beskrivelsen. Noen klipp er syntetiske, selv om de fleste er menneskelige opptak.</p>
+      </div>
+      <details><summary>Andre kilder med tydelig lisens (manuell nedlasting)</summary>
+        <ul class="note" style="padding-left:18px">
+          <li><a href="https://freesound.org/search/?f=license:%22Creative+Commons+0%22" target="_blank" rel="noopener">Freesound, filtrert på CC0</a>: last ned og importer.</li>
+          <li><a href="https://ccmixter.org" target="_blank" rel="noopener">ccMixter</a>: a cappella-er. Bruk bare dem som er merket <b>Attribution</b> (CC BY), ikke NonCommercial.</li>
+          <li><a href="https://commons.wikimedia.org/wiki/Category:Audio_files_of_speech" target="_blank" rel="noopener">Wikimedia Commons</a>: talelyd med lisens per fil. Velg <b>Public domain</b>, CC0 eller CC BY.</li>
+        </ul>
+      </details>
+    </div>
+
+    <div class="tab" id="t-ai">
+      <div class="box">
+        <div class="note"><span class="badge o-ai">AI-GENERERT</span> Ekte vokalgenerering via <b>ElevenLabs</b>. Du trenger en egen konto og API-nøkkel. Resultatet er en AI-modell som synger eller snakker, ikke et menneskelig opptak, og det blir merket slik.</div>
+        <details><summary>Pris og oppsett (sjekket 13.10.2026)</summary>
+          <table class="price">
+            <tr><td>Sang (Eleven Music API)</td><td>$0,15 / min</td></tr>
+            <tr><td>Lydteksturer (Sound Effects API)</td><td>$0,12 / min</td></tr>
+            <tr><td>Tale/hvisk (Text to Speech, v2/v3)</td><td>$0,08 / 1000 tegn</td></tr>
+            <tr><td>Starter-abonnement (kommersiell bruk av musikk)</td><td>$6 / mnd</td></tr>
+            <tr><td>Gratisnivå</td><td>ikke kommersiell bruk</td></tr>
+          </table>
+          <p class="note">Ti sekunder sang koster rundt $0,025. Prisene endrer seg, så sjekk <a href="https://elevenlabs.io/pricing/api" target="_blank" rel="noopener">elevenlabs.io/pricing/api</a> før du kjøper.</p>
+          <ol class="note" style="padding-left:18px;margin:6px 0">
+            <li>Lag konto på elevenlabs.io. Velg Starter eller høyere hvis du skal gi ut musikken.</li>
+            <li>Gå til Settings → API Keys, og lag en nøkkel. Gi den gjerne bare tilgang til Music, Sound Effects, Text to Speech og Voices (les), og sett en kredittgrense.</li>
+            <li>Lim nøkkelen inn her. Den sendes bare til api.elevenlabs.io.</li>
+          </ol>
+        </details>
+        <div class="row"><input type="password" id="el-key" placeholder="ElevenLabs API-nøkkel" style="flex:1" autocomplete="off"><label class="note"><input type="checkbox" id="el-remember"> husk</label></div>
+        <div class="seg" id="el-mode" style="margin:8px 0">
+          <button data-v="song" class="on">Sang</button><button data-v="tts">Tale / hvisk</button><button data-v="sfx">Tekstur</button>
+        </div>
+        <div id="el-song">
+          <div class="field"><span>Tekstlinjer (én per linje, maks 30)</span>
+            <textarea id="el-lines">copper in the mouth
+count it backwards</textarea></div>
+          <div class="row"><button class="btn small" id="el-dice">tilfeldige linjer</button></div>
+          <div class="field"><span>Stil (kommaseparert, engelsk fungerer best)</span><input type="text" id="el-styles" value="solo alto, detached, monotone, intimate"></div>
+          <div class="field" style="margin-top:6px"><span>Lengde (sekunder, 3–30)</span><input type="number" id="el-sec" min="3" max="30" value="10"></div>
+        </div>
+        <div id="el-tts" hidden>
+          <div class="row"><button class="btn small" id="el-load-voices">Hent stemmer</button><select id="el-voice" style="flex:1"><option value="">(hent stemmer først)</option></select></div>
+          <div class="field"><span>Tekst</span><textarea id="el-text">[whispers] number seven is silent</textarea></div>
+          <div class="field"><span>Modell</span><select id="el-model"><option value="eleven_multilingual_v2">eleven_multilingual_v2</option><option value="eleven_v3">eleven_v3 (forstår [whispers] o.l.)</option></select></div>
+        </div>
+        <div id="el-sfx" hidden>
+          <div class="field"><span>Beskrivelse (engelsk)</span><textarea id="el-prompt">distant male choir humming one low note in a concrete stairwell, eerie</textarea></div>
+          <div class="settings"><label class="field"><span>Lengde (s, 0,5–30)</span><input type="number" id="el-sfx-sec" min="0.5" max="30" step="0.5" value="6"></label>
+          <label class="field"><span>Tekstpresisjon (0–1)</span><input type="number" id="el-infl" min="0" max="1" step="0.1" value="0.5"></label></div>
+        </div>
+        <div class="warn" id="el-cliche"></div>
+        <div class="row" style="margin-top:8px"><button class="btn primary" id="el-go">Generer</button><span class="note" id="el-cost"></span></div>
+        <div class="status" id="el-status"></div>
+        <p class="note">Status: koblingen følger ElevenLabs' offentlige API-dokumentasjon, men er bare testet mot en simulert tjeneste. Den er ikke prøvd med en ekte konto ennå.</p>
+      </div>
+    </div>
+
+    <h3>Klipp <span class="note" id="pool-count"></span></h3>
+    <ul id="pool"></ul>
+    <div class="empty" id="pool-empty">Ingen klipp ennå. Importer egne filer, eller trykk «Syntetisk» → «Lag startpakke» for å komme i gang med en gang.</div>
+  </section>
+
+  <!-- ================= 2. VARIASJON ================= -->
+  <section class="panel" id="panel-var">
+    <h2><b>2</b> · Variasjon <span class="note" style="text-transform:none;letter-spacing:0">· 16 takter i 4/4</span></h2>
+    <div class="settings">
+      <label class="field"><span>BPM</span><input type="number" id="bpm" min="60" max="200" step="0.5" value="124"></label>
+      <div class="field wide"><span>Toneart</span><div class="row" style="margin:0"><select id="root"></select><select id="scale" style="flex:1"></select></div></div>
+      <div class="field wide"><span>Stil</span><div class="seg" id="style"><button data-v="house" class="on">House</button><button data-v="techno">Techno</button><button data-v="ebm">EBM</button><button data-v="free">Fritt</button></div></div>
+      <label class="field"><span>Tetthet: <b id="dens-l">Luftig</b></span><input type="range" id="density" min="0" max="4" value="1"></label>
+      <label class="field"><span>Swing: <b id="swing-l">0 %</b></span><input type="range" id="swing" min="0" max="30" value="0"></label>
+      <label class="field"><span>Effektmengde: <b id="fx-l">50 %</b></span><input type="range" id="fx" min="0" max="100" value="50"></label>
+      <label class="field"><span>Hale etter takt 16</span><select id="fold"><option value="1">Brett inn (sømløs loop)</option><option value="0">Kutt med fade</option></select></label>
+    </div>
+    <div class="field" style="margin-top:12px"><span>Ingredienser</span><div class="chips" id="ingredients"></div></div>
+
+    <div class="transport">
+      <button class="btn primary" id="gen">Ny variasjon</button>
+      <button class="btn" id="recolor" title="Samme plassering, ny behandling">Ny behandling</button>
+      <button class="btn" id="play">▶ Spill</button>
+      <div class="seg" id="listen" title="Hva du hører"><button data-v="wet" class="on">Behandlet</button><button data-v="dry">Tørr</button></div>
+      <label class="note"><input type="checkbox" id="guide" checked> referansetromme</label>
+      <span class="spacer"></span>
+      <span class="kbd">mellomrom = spill/stopp · N = ny · B = ny behandling</span>
+    </div>
+
+    <div class="viewwrap"><canvas id="wave"></canvas><div id="busy">RENDRER …</div></div>
+    <div class="typelegend" id="typelegend"></div>
+    <div class="infoline" id="info"></div>
+
+    <h3>Historikk</h3>
+    <div id="history"><span class="empty">Variasjonene du lager havner her, så du kan gå tilbake.</span></div>
+
+    <h3>Eksport</h3>
+    <div class="export">
+      <button class="btn primary" id="dl-wet" disabled>Last ned behandlet WAV</button>
+      <button class="btn" id="dl-dry" disabled>Last ned tørr WAV</button>
+      <button class="btn ghost" id="dl-credits" disabled>Lisensliste (.txt)</button>
+    </div>
+    <div class="infoline" id="exportinfo"></div>
+    <p class="truth"><b>Tørr</b> og <b>behandlet</b> har samme lengde og ligger sample-nøyaktig oppå hverandre. Tørr beholder utsnitt, timing, tonehøyde, kor-lag, chops, stutter og reversering. Den har ikke filter, forvrengning, bitcrush, ringmod, hvisk/robot, frysing, romklang eller delay.</p>
+    <p class="truth">Referansetrommen høres bare under avspilling. Den kommer ikke med i WAV-filene.</p>
+    <div class="err" id="err"></div>
+  </section>
+</main>
+
+<footer>
+  Vokalypse kjører helt lokalt i nettleseren. Bare Freesound og ElevenLabs bruker nett, og bare når du selv trykker på dem.
+  Menneskelig stemme finnes bare i det du importerer og i opptak fra Freesound. Alt appen lager selv er syntetisk, og alt ElevenLabs lager er AI-generert.
+</footer>
+
+<script src="js/util.js"></script>
+<script src="js/dsp.js"></script>
+<script src="js/synth.js"></script>
+<script src="js/wav.js"></script>
+<script src="js/providers.js"></script>
+<script src="js/arranger.js"></script>
+<script src="js/render.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
