@@ -4,9 +4,9 @@
   const SPB = MM.theory.STEPS_PER_BAR;
 
   const ROWS = [
-    { id: 'lead', label: 'Melodi', color: '#ffb000', group: 'melody' },
-    { id: 'pluck', label: 'Akkordrytme', color: '#4db6ac', group: 'chords' },
-    { id: 'pad', label: 'Pad', color: '#a68bdc', group: 'chords' },
+    { id: 'lead', label: 'Lead', color: '#ffb000', group: 'melody' },
+    { id: 'pluck', label: 'Korder', color: '#4db6ac', group: 'chords' },
+    { id: 'pad', label: 'Strings', color: '#a68bdc', group: 'chords' },
     { id: 'bass', label: 'Bass', color: '#4fc3f7', group: 'bass' },
     { id: 'drums', label: 'Trommer', color: '#9aa3b8', group: 'drums' },
   ];

@@ -178,4 +178,102 @@ test('MIDI per stemme: trommer på kanal 10 med GM-noter', () => {
   assert.strictEqual(all.tracks.length, 5);
 });
 
+
+/* ---------- stil, lydreferanser og hiphop ---------- */
+function songRef(name, keyRoot, mode, prog, pat, bpm) {
+  // prog: [[rootPc, q, bars]]
+  const k = { root: keyRoot, mode };
+  const chords = []; let t = 0;
+  for (const [r, q, b] of prog) { chords.push({ t, len: b * 16, chord: MM.listen.absChord(k, r, q) }); t += b * 16; }
+  const bars = t / 16;
+  const bass = []; for (let b = 0; b < bars; b++) for (const s of [2, 6, 10, 14]) bass.push({ t: b * 16 + s, d: 2, p: 33 });
+  return Object.assign(P.makeReference({ name, kind: 'song', source: 'audio', key: k, bars, bpm, notes: hook.map((n) => Object.assign({}, n)) }),
+    { chords, bass, hits: { pat, pad: false }, loop: bars });
+}
+const STAB = [1, 0, 0, 1, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0];
+
+test('stil lærer tempo, kordelengde, korderytme og progresjon på tvers av tonearter', () => {
+  const a = songRef('A', 9, 'minor', [[9, 'm', 2], [5, 'M', 2], [0, 'M', 2], [7, 'M', 2]], STAB, 124);
+  const b = songRef('B', 2, 'minor', [[2, 'm', 2], [10, 'M', 2], [5, 'M', 2], [0, 'M', 2]], STAB, 122); // samme forløp i D-moll
+  const style = { id: 's1', name: 'Prog', examples: [a, b].map(MM.styles.exampleFrom) };
+  const L = MM.styles.learn(style);
+  assert.strictEqual(L.chordLen, 32);
+  assert.strictEqual(L.progressions.length, 1, 'samme forløp i to tonearter skal gjenkjennes som ett');
+  assert.strictEqual(L.progressions[0].w, 2);
+  assert.deepStrictEqual(L.hitPats[0].pat, STAB);
+  assert.ok(L.bpm === 122 || L.bpm === 124);
+  const inE = MM.styles.progressionInKey(L.progressions[0], { root: 4, mode: 'minor' }, 8);
+  assert.deepStrictEqual(inE.map((c) => T.chordName({ root: 4, mode: 'minor' }, c.chord)), ['Em', 'C', 'G', 'D']);
+});
+
+test('ny melodi i stilen bruker stilens korder, og arrangementet stilens korderytme', () => {
+  const p = P.newProject();
+  const a = songRef('A', 9, 'minor', [[9, 'm', 2], [5, 'M', 2], [0, 'M', 2], [7, 'M', 2]], STAB, 124);
+  p.style = { id: 's1', name: 'Prog', examples: [MM.styles.exampleFrom(a)] };
+  P.makeVariants(p, 3);
+  for (const v of p.variants) assert.deepStrictEqual(v.chords.map((c) => T.chordName(key, c.chord)), ['Am', 'F', 'C', 'G']);
+  P.chooseVariant(p, 0); P.buildArrangement(p);
+  const pl = p.arrangement.parts.pluck;
+  assert.ok(pl.length > 0);
+  assert.ok(pl.every((n) => STAB[n.t % 16] === 1), 'korder utenfor stilens rytme');
+});
+
+test('behold melodien: forslag fra stilen og låtens egne korder', () => {
+  const p = P.newProject();
+  const own = songRef('Pop', 9, 'minor', [[9, 'm', 1], [7, 'M', 1]], STAB, 100);
+  own.bars = 2;
+  p.references.unshift(own);
+  p.gen.refId = own.id; p.gen.mode = 'keep'; p.gen.bars = 8;
+  const st = songRef('Stil', 9, 'minor', [[5, 'M', 2], [7, 'M', 2], [9, 'm', 4]], STAB, 124);
+  p.style = { id: 's', name: 'S', examples: [MM.styles.exampleFrom(st)] };
+  const vs = P.makeVariants(p, 1);
+  const d = vs.map((v) => v.desc).join(' | ');
+  assert.ok(/fra stilen/.test(d) && /låtens egne korder/.test(d), d);
+  for (const v of vs) assert.strictEqual(JSON.stringify(v.notes.map((n) => n.t)), JSON.stringify(vs[0].notes.map((n) => n.t)));
+});
+
+test('melodi-tempo ×2 gir dobbelt så lange toner', () => {
+  const p = P.newProject();
+  p.gen.mode = 'keep'; p.gen.bars = 4;
+  const v1 = P.makeVariants(p, 1)[0];
+  p.gen.melodyScale = 2;
+  const v2 = P.makeVariants(p, 1)[0];
+  assert.deepStrictEqual(v2.notes.slice(0, 5).map((n) => n.t), v1.notes.slice(0, 5).map((n) => n.t * 2));
+});
+
+test('halvtempo-hiphop: vers/hook, ingen 4-på-gulvet, 808 på kicken', () => {
+  const p = P.newProject();
+  p.settings.style = 'hiphop'; p.settings.bpm = 84; p.settings.lengthMin = 3;
+  P.makeVariants(p, 2); P.chooseVariant(p, 0); P.buildArrangement(p);
+  const a = p.arrangement;
+  assert.ok(a.sections.some((s) => s.label === 'Vers') && a.sections.some((s) => s.label === 'Hook'));
+  const vers = a.sections.find((s) => s.label === 'Vers');
+  const kicksBar = a.parts.drums.filter((n) => n.p === 36 && n.t >= vers.start * 16 && n.t < vers.start * 16 + 16).map((n) => n.t % 16);
+  assert.notDeepStrictEqual(kicksBar, [0, 4, 8, 12]);
+  const kicks = new Set(a.parts.drums.filter((n) => n.p === 36).map((n) => n.t));
+  assert.ok(a.parts.bass.every((n) => kicks.has(n.t)));
+  assert.ok(a.report.messages.every((m) => m.level !== 'warn'), JSON.stringify(a.report.messages));
+});
+
+
+test('låtbit i C-dur inn i A-moll: samme toner og korder (parallelltoneart)', () => {
+  const p = P.newProject();
+  const own = songRef('Pop', 0, 'major', [[5, 'M', 1], [0, 'M', 1], [7, 'M', 1], [9, 'm', 1]], STAB, 100);
+  own.bars = 4;
+  p.references.unshift(own); p.gen.refId = own.id; p.gen.mode = 'keep'; p.gen.bars = 4;
+  const vs = P.makeVariants(p, 1);
+  const ownV = vs.find((v) => /låtens egne/.test(v.desc));
+  assert.ok(ownV, vs.map((v) => v.desc).join(' | '));
+  assert.deepStrictEqual(ownV.chords.map((c) => T.chordName(key, c.chord)), ['F', 'C', 'G', 'Am']);
+  const pcs = (ns) => ns.map((n) => n.p % 12).join(',');
+  assert.strictEqual(pcs(ownV.notes), pcs(own.notes));
+});
+
+test('toneartsbytte A-moll → D-moll flytter melodien en kvart opp/kvint ned', () => {
+  const sh = MM.melody.keyShift({ root: 9, mode: 'minor' }, { root: 2, mode: 'minor' });
+  assert.strictEqual(sh, 5);
+  assert.strictEqual(MM.melody.keyShift({ root: 9, mode: 'minor' }, { root: 0, mode: 'major' }), 0);
+  assert.strictEqual(MM.melody.keyShift({ root: 9, mode: 'minor' }, { root: 9, mode: 'major' }), null);
+});
+
 console.log('\n' + passed + ' tester bestått' + (process.exitCode ? ', noen feilet' : ''));

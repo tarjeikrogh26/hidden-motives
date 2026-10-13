@@ -18,9 +18,9 @@
 
   const MODE_LABELS = {
     keep: 'Behold melodien',
-    inspire: 'Ny melodi fra rytme og kontur',
-    rhythm: 'Behold rytmen, nye toner',
-    chords: 'Nye motiver over akkordene',
+    inspire: 'Ny melodi i samme ånd',
+    rhythm: 'Samme rytme, nye toner',
+    chords: 'Nye melodier over kordene',
   };
 
   /* Rytmeceller (én takt) brukt når ingen rytmereferanse finnes. [start, lengde] i steg. */
@@ -434,8 +434,24 @@
 
   /* ---------- toneart og register ---------- */
 
+  /* Halvtoner å flytte for å komme fra én toneart til en annen uten å endre melodien, eller null når
+     modusene er ulike og ikke paralleller (da må melodien tilpasses trinnvis). */
+  function keyShift(fromKey, toKey) {
+    const minorish = (k) => k.mode !== 'major';
+    const mt = (k) => (k.mode === 'major' ? (k.root + 9) % 12 : k.root);
+    let d;
+    if (fromKey.mode === toKey.mode || (minorish(fromKey) && minorish(toKey))) d = toKey.root - fromKey.root;
+    else if (mt(fromKey) === mt(toKey)) d = 0;
+    else d = null;
+    if (d === null) return null;
+    d = ((d % 12) + 12) % 12;
+    return d > 6 ? d - 12 : d;
+  }
+
   function mapToKey(notes, fromKey, toKey) {
     if (!fromKey || (fromKey.root === toKey.root && fromKey.mode === toKey.mode)) return notes.map((n) => Object.assign({}, n));
+    const sh = keyShift(fromKey, toKey);
+    if (sh !== null) return notes.map((n) => Object.assign({}, n, { p: n.p + sh }));
     // finn transposisjonen som holder melodien nærmest originalt leie
     return notes.map((n) => {
       const { deg, alt } = T.pitchToDeg(fromKey, n.p, 4);
@@ -484,9 +500,13 @@
   function resolveChords(spec, rng) {
     const { key, bars, style } = spec;
     if (spec.chords && spec.chords.length) return { chords: H.fitChordsToBars(spec.chords, spec.chordsBars || bars, bars), from: 'låst' };
-    if (spec.src.chords && spec.src.chords.chords && spec.src.chords.chords.length) {
-      return { chords: H.fitChordsToBars(spec.src.chords.chords, spec.src.chords.bars, bars), from: 'referanse' };
+    const srcCh = spec.src.chords && spec.src.chords.chords && spec.src.chords.chords.length;
+    if (srcCh && spec.mode === 'chords') return { chords: H.fitChordsToBars(spec.src.chords.chords, spec.src.chords.bars, bars), from: 'referanse' };
+    if (spec.learned && MM.styles) {
+      const ch = MM.styles.pickProgression(spec.learned, key, bars, rng.child('stil'));
+      if (ch) return { chords: ch, from: 'stilen' };
     }
+    if (srcCh) return { chords: H.fitChordsToBars(spec.src.chords.chords, spec.src.chords.bars, bars), from: 'referanse' };
     return { chords: H.pickProgression(key, bars, style, rng.child('prog'), spec.slot), from: 'bank' };
   }
 
@@ -497,6 +517,10 @@
     const key = spec.key;
     const rng0 = MM.rng.make(spec.seed, 'melodi');
     const mode = spec.mode || 'inspire';
+    if (spec.melodyScale && spec.melodyScale !== 1) spec.src = scaleSource(spec.src, spec.melodyScale);
+    if (spec.src.chords && spec.src.chords.key && spec.src.chords.chords) {
+      spec.src = Object.assign({}, spec.src, { chords: Object.assign({}, spec.src.chords, { chords: chordsToKey(spec.src.chords.chords, spec.src.chords.key, spec.key), key: spec.key }) });
+    }
     const srcRhythm = rhythmNotesFromSource(spec.src);
     const srcBars = (spec.src.melody && spec.src.melody.bars) || (spec.src.rhythm && spec.src.rhythm.len / SPB) || (spec.src.phrase && spec.src.phrase.bars) || 4;
     let bars = spec.bars || srcBars;
@@ -519,15 +543,31 @@
       } else mel = mel.filter((n) => n.t < bars * SPB);
       mel = placeRegister(mel, center);
       let harms;
-      if (spec.chords && spec.chords.length) harms = [{ chords: H.fitChordsToBars(spec.chords, spec.chordsBars || bars, bars), score: 0 }];
-      else if (spec.src.chords && spec.src.chords.chords) harms = [{ chords: H.fitChordsToBars(spec.src.chords.chords, spec.src.chords.bars, bars), score: 0 }];
-      else harms = H.harmonize(mel, key, bars, { count: spec.count, style: spec.style, slot: spec.slot || (mBars <= 4 ? SPB : 2 * SPB), bassRoots: spec.bassRoots });
+      if (spec.chords && spec.chords.length) harms = [{ chords: H.fitChordsToBars(spec.chords, spec.chordsBars || bars, bars), score: 0, label: 'låste korder' }];
+      else {
+        // forslag: stilens forløp som passer melodien best, låtens egne korder, og harmoniseringer fra banken
+        const cands = [];
+        if (spec.learned && MM.styles) for (const h of MM.styles.rankForMelody(spec.learned, mel, key, bars)) cands.push(Object.assign(h, { label: 'fra stilen' }));
+        if (spec.src.chords && spec.src.chords.chords && spec.src.chords.chords.length) {
+          cands.splice(Math.min(1, cands.length), 0, { chords: H.fitChordsToBars(spec.src.chords.chords, spec.src.chords.bars, bars), score: 0, label: 'låtens egne korder' });
+        }
+        const slot = spec.slot || (spec.learned && spec.learned.chordLen) || (mBars <= 4 ? SPB : 2 * SPB);
+        for (const h of H.harmonize(mel, key, bars, { count: spec.count + 2, style: spec.style, slot, bassRoots: spec.bassRoots })) cands.push(Object.assign(h, { label: 'harmonisert' }));
+        const seen = new Set();
+        harms = [];
+        for (const h of cands) {
+          const sig = h.chords.map((c) => T.chordName(key, c.chord) + c.t).join(' ');
+          if (seen.has(sig)) continue;
+          seen.add(sig); harms.push(h);
+          if (harms.length >= spec.count) break;
+        }
+      }
       for (let i = 0; i < spec.count; i++) {
         const h = harms[i % harms.length];
         variants.push({
           mode, bars, key, notes: mel.map((n) => Object.assign({}, n)), chords: h.chords,
           form: 'original',
-          desc: 'Melodien beholdt. Akkorder: ' + H.progressionLabel(key, h.chords) + (harms.length > 1 ? ' (passform ' + h.score + ')' : ''),
+          desc: 'Melodien beholdt. Korder (' + (h.label || 'harmonisert') + '): ' + H.progressionLabel(key, h.chords) + '.',
         });
       }
       return variants;
@@ -611,11 +651,42 @@
     return variants;
   }
 
+  /* Korder fra en annen toneart: flyttes like mye som melodien (se keyShift), ellers trinnvis. */
+  function chordsToKey(chords, fromKey, toKey) {
+    if (fromKey.root === toKey.root && fromKey.mode === toKey.mode) return chords.map((c) => Object.assign({}, c));
+    const sh = keyShift(fromKey, toKey);
+    return chords.map((c) => {
+      if (sh === null) return Object.assign({}, c, { chord: { deg: c.chord.deg, q: c.chord.iv ? '' : c.chord.q } });
+      const root = T.mod(T.chordRootPc(fromKey, c.chord) + sh, 12);
+      const pcs = T.chordPcs(fromKey, c.chord);
+      const iv = c.chord.iv ? c.chord.iv.slice() : pcs.map((pc) => T.mod(pc - T.chordRootPc(fromKey, c.chord), 12)).sort((a, b) => a - b);
+      const rs = T.mod(root - toKey.root, 12);
+      const sc = T.MODES[toKey.mode].steps;
+      let deg = 0, best = 99;
+      sc.forEach((st, i) => { const d = Math.min(Math.abs(st - rs), 12 - Math.abs(st - rs)); if (d < best || (d === best && st > rs)) { best = d; deg = i; } });
+      const q = c.chord.iv ? c.chord.q : ({ '0,4,7': 'M', '0,3,7': 'm', '0,3,6': 'dim', '0,4,7,10': '7', '0,4,7,11': 'maj7', '0,3,7,10': 'm7', '0,5,7': 'sus4', '0,2,7': 'sus2' }[iv.join(',')] || 'M');
+      return Object.assign({}, c, { chord: { deg, q, rs, iv } });
+    });
+  }
+
+  /* Melodiens tempo inn i målsporet: ×2 gir lange toner (halv fart), ×0.5 dobbel fart. */
+  function scaleSource(src, k) {
+    const out = Object.assign({}, src);
+    const sn = (ns) => ns.map((n) => Object.assign({}, n, { t: n.t * k, d: Math.max(1, n.d * k) }));
+    if (src.melody) out.melody = Object.assign({}, src.melody, { notes: sn(src.melody.notes), bars: Math.max(1, Math.round(src.melody.bars * k)) });
+    if (src.rhythm) out.rhythm = Object.assign({}, src.rhythm, { onsets: src.rhythm.onsets.map((t) => t * k), durs: src.rhythm.durs.map((d) => Math.max(1, d * k)), len: src.rhythm.len * k });
+    if (src.accents) out.accents = Object.assign({}, src.accents, { onsets: src.accents.onsets.map((t) => t * k), len: src.accents.len * k });
+    if (src.rests) out.rests = Object.assign({}, src.rests, { gaps: src.rests.gaps.map((g) => ({ t: g.t * k, d: g.d * k })), len: src.rests.len * k });
+    if (src.phrase) out.phrase = Object.assign({}, src.phrase, { bars: Math.max(1, Math.round(src.phrase.bars * k)) });
+    if (src.chords) out.chords = Object.assign({}, src.chords, { chords: src.chords.chords.map((c) => Object.assign({}, c, { t: c.t * k, len: c.len * k })), bars: Math.max(1, Math.round(src.chords.bars * k)) });
+    return out;
+  }
+
   function tileArr(arr, n) { if (!arr || !arr.length) return null; const out = []; for (let i = 0; i < n; i++) out.push(arr[i % arr.length]); return out; }
 
   MM.melody = {
     DEFAULT_RULES, MODE_LABELS, CELLS, SHAPES,
     leadOct, searchDegs, adaptDegs, transformCell, cadenceCell, chooseTemplate,
-    buildFromUnits, buildFromRhythm, mapToKey, placeRegister, generateVariants,
+    buildFromUnits, buildFromRhythm, mapToKey, placeRegister, generateVariants, scaleSource, keyShift, chordsToKey,
   };
 })(globalThis.MM = globalThis.MM || {});

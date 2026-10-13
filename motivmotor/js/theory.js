@@ -57,18 +57,26 @@
     }
   }
 
+  /* Korder fra lydanalyse kan ligge utenfor skalaen: de bærer da rs (halvtoner over grunntonen) og iv (intervaller). */
+  const QNAME = { M: '', m: 'm', '7': '7', maj7: 'maj7', m7: 'm7', sus4: 'sus4', sus2: 'sus2', dim: 'dim', add9: 'add9', madd9: 'm(add9)', m9: 'm9' };
+
   function chordPcs(key, chord) {
+    if (chord.iv) return chord.iv.map((i) => mod(key.root + chord.rs + i, 12));
     const pcs = chordDegs(chord).map((g) => degPc(key, g));
     if (chord.q === 'M') pcs[1] = mod(degPc(key, chord.deg) + 4, 12); // f.eks. dur-V i moll
     return pcs;
   }
 
-  function chordRootPc(key, chord) { return degPc(key, chord.deg); }
+  function chordRootPc(key, chord) { return chord.iv ? mod(key.root + chord.rs, 12) : degPc(key, chord.deg); }
 
   /* Fargetoner som låter bra holdt over akkorden (9 og 11) uten å være akkordtoner. */
-  function colorPcs(key, chord) { return [degPc(key, chord.deg + 1), degPc(key, chord.deg + 3)]; }
+  function colorPcs(key, chord) {
+    if (chord.iv) { const r = chordRootPc(key, chord); return [mod(r + 2, 12), mod(r + 5, 12)]; }
+    return [degPc(key, chord.deg + 1), degPc(key, chord.deg + 3)];
+  }
 
   function triadQuality(key, chord) {
+    if (chord.iv) { const iv = chord.iv; if (iv.includes(6) && iv.includes(3)) return 'dim'; return iv.includes(4) || !iv.includes(3) ? 'maj' : 'min'; }
     const pcs = chordPcs(key, Object.assign({}, chord, { q: chord.q === 'M' ? 'M' : '' }));
     const third = mod(pcs[1] - pcs[0], 12);
     const fifth = mod(pcs[2] - pcs[0], 12);
@@ -77,6 +85,7 @@
   }
 
   function chordName(key, chord) {
+    if (chord.iv) return NAMES[chordRootPc(key, chord)] + (QNAME[chord.q] !== undefined ? QNAME[chord.q] : chord.q);
     const root = NAMES[chordRootPc(key, chord)];
     if (chord.q === 'sus2' || chord.q === 'sus4') return root + chord.q;
     const tq = triadQuality(key, chord);
@@ -93,6 +102,15 @@
   function roman(key, chord) {
     const tq = triadQuality(key, chord);
     let r = ROMAN[mod(chord.deg, 7)];
+    if (chord.iv) {
+      const diff = chord.rs - MODES[key.mode].steps[mod(chord.deg, 7)];
+      r = (diff < 0 ? 'b' : diff > 0 ? '#' : '') + r;
+      if (tq !== 'maj') r = r.toLowerCase();
+      if (tq === 'dim') r += '°';
+      const suf = { '7': '7', maj7: 'maj7', m7: '7', sus4: 'sus4', sus2: 'sus2', add9: 'add9', madd9: 'add9', m9: '9' }[chord.q];
+      if (suf) r += suf;
+      return r;
+    }
     if (tq !== 'maj') r = r.toLowerCase();
     if (tq === 'dim') r += '°';
     if (chord.q && chord.q !== 'M') r += chord.q === '7' ? '7' : chord.q;
@@ -172,7 +190,7 @@
   }
 
   MM.theory = {
-    STEPS_PER_BAR, NAMES, MODES, ROMAN, mod, clamp,
+    STEPS_PER_BAR, NAMES, MODES, ROMAN, QNAME, mod, clamp,
     noteName, keyName, tonic, degToPitch, pitchToDeg, inScale, degPc,
     chordDegs, chordPcs, chordRootPc, colorPcs, triadQuality, chordName, roman,
     pcProfile, detectKey, detectKeyFromProfile, matchChord,

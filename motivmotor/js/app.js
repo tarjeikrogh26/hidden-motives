@@ -60,14 +60,15 @@
 
   const KEY_OPTS = T.NAMES.map((n, i) => [i, n]);
   const MODE_OPTS = Object.entries(T.MODES).map(([k, m]) => [k, m.name]);
-  const KIND_LABELS = { melody: 'Isolert melodi', chords: 'Akkordloop', mix: 'Utdrag av full miks' };
+  const KIND_LABELS = { melody: 'Isolert melodi', chords: 'Kordeloop', mix: 'Utdrag av full miks' };
+  const KIND_ALL = Object.assign({ song: 'Låtbit (lyd)' }, KIND_LABELS);
   const SOURCE_LABELS = { midi: 'MIDI', audio: 'lyd', drawn: 'tegnet' };
   const STYLE_OPTS = Object.entries(A.STYLES).map(([k, s]) => [k, s.label]);
   const MODE_HELP = {
-    keep: 'Melodien beholdes som den er. Variantene er tre ulike harmoniseringer, og arrangementet bygges rundt melodien.',
-    inspire: 'Et nytt motiv bygges av rytmen og konturen i referansen og utvikles med gjentakelse, svarfrase og oppløsning. Melodien blir ikke bare transponert.',
-    rhythm: 'Rytmen beholdes nøyaktig. Tonene velges på nytt etter harmonireglene og konturen.',
-    chords: 'Akkordforløpet beholdes. Nye motiver skrives over det, med akkordtoner på de tunge slagene.',
+    keep: 'Melodien beholdes som den er. De tre variantene har ulike korder under seg: fra stilen din, fra låta selv, eller harmonisert av appen.',
+    inspire: 'Et nytt motiv bygges av rytmen og formen i melodien du ga, og utvikles med gjentakelse, svar og oppløsning. Den blir ikke bare flyttet til en annen toneart.',
+    rhythm: 'Rytmen i melodien beholdes nøyaktig. Tonene velges på nytt etter kordene.',
+    chords: 'Kordene beholdes. Nye melodier skrives over dem, med kordetoner på de tunge slagene.',
   };
   const RULE_LABELS = {
     chordTone: ['Akkordtoner på tunge slag', 'Høy = tydelig harmonisk, lav = flere spenningstoner'],
@@ -83,7 +84,7 @@
   const app = {
     project: null,
     player: new MM.Player(),
-    ui: { tab: 'ref', refId: null, alts: null, altGroup: null, playing: null, startStep: 0, importTracks: null, exporting: null },
+    ui: { tab: 'mel', refId: null, audio: {}, imp: null, styleId: null, alts: null, altGroup: null, playing: null, startStep: 0, importTracks: null, exporting: null },
     decoded: {},
     saveTimer: null,
   };
@@ -125,6 +126,7 @@
     render(true);
   }
   function stop() {
+    if (app.ui.origSrc) { try { app.ui.origSrc.stop(); } catch (e) { /* ferdig */ } app.ui.origSrc = null; }
     app.player.stop();
     app.ui.playing = null;
     onStep(null);
@@ -158,9 +160,20 @@
   function refArrangement(ref) {
     const pr = app.project;
     const bpm = ref.bpm || pr.settings.bpm;
-    const notes = MM.features.normalizeStart(ref.notes);
+    const notes = ref.kind === 'song' ? ref.notes : MM.features.normalizeStart(ref.notes);
     const parts = { drums: [], bass: [], pad: [], pluck: [], lead: [] };
     if (ref.kind === 'chords') parts.pad = notes; else parts.lead = notes;
+    if (ref.chords && ref.chords.length) {
+      let prev = null;
+      for (const c of ref.chords) {
+        const v = MM.harmony.voice(ref.key, c.chord, prev, 52, 67);
+        prev = v;
+        if (ref.hits && !ref.hits.pad) {
+          for (let t = c.t; t < c.t + c.len; t++) if (ref.hits.pat[t % 16]) for (const p of v) parts.pluck.push({ t, d: 2, p, v: 0.7 });
+        } else for (const p of v) parts.pad.push({ t: c.t, d: c.len, p, v: 0.6 });
+      }
+      for (const n of ref.bass || []) parts.bass.push(n);
+    }
     for (let b = 0; b < ref.bars; b++) for (let q = 0; q < 4; q++) parts.drums.push({ t: b * SPB + q * 4, d: 1, p: q % 2 ? 42 : 36, v: 0.5 });
     return { totalBars: ref.bars, parts, fx: [], automation: null, bpm, key: ref.key, style: pr.settings.style, sections: [] };
   }
@@ -182,7 +195,7 @@
     if (!p) toast('Velkommen! Prøv: Melodi → Lag 3 varianter.', 4000);
   }
 
-  const TABS = [['ref', 'Referanser', '◎'], ['mel', 'Melodi', '♪'], ['arr', 'Arrangement', '▤'], ['snd', 'Lyd', '◉'], ['exp', 'Eksport', '⇪']];
+  const TABS = [['mel', 'Melodier', '♪'], ['sty', 'Stil', '◎'], ['lag', 'Lag', '✦'], ['arr', 'Arrangement', '▤'], ['snd', 'Lyd', '◉'], ['exp', 'Eksport', '⇪']];
 
   function buildShell() {
     const header = h('header', { class: 'top' },
@@ -223,7 +236,7 @@
     const y = window.scrollY;
     panel.innerHTML = '';
     app.arrView = null; app.themeRoll = null;
-    ({ ref: renderRef, mel: renderMelody, arr: renderArrange, snd: renderSound, exp: renderExport })[app.ui.tab](panel);
+    ({ mel: renderRef, sty: renderStyle, lag: renderMelody, arr: renderArrange, snd: renderSound, exp: renderExport })[app.ui.tab](panel);
     window.scrollTo(0, y);
   }
 
@@ -236,26 +249,26 @@
   function renderRef(el) {
     const pr = app.project;
     el.append(
-      h('h2', {}, 'Importer referanse'),
-      h('div', { class: 'row' },
-        btn('Importer MIDI', guard(importMidi), 'primary'),
-        btn('Importer lyd', guard(importAudio)),
-        btn('Tegn ny melodi', () => {
+      h('h2', {}, 'Gi meg en melodi du liker'),
+      h('p', { class: 'lead-in' }, 'Fra hvilken som helst låt, i hvilket som helst tempo og hvilken som helst sjanger. Vokalen regnes som lead-melodien. Trommene bryr appen seg ikke om.'),
+      audioImporter('melodi'),
+      h('div', { class: 'row', style: 'margin-top:10px' },
+        btn('Importer MIDI', guard(importMidi), 'small'),
+        btn('Tegn selv', () => {
           const ref = P.makeReference({ name: 'Tegnet melodi ' + (pr.references.filter((r) => r.source === 'drawn').length + 1), kind: 'melody', source: 'drawn', notes: [], key: Object.assign({}, pr.settings.key), bars: 2 });
           pr.references.unshift(ref); app.ui.refId = ref.id; touch();
-        })),
-      h('p', { class: 'faint' }, 'MIDI er den presise inngangen. Lydanalyse fungerer best på isolerte, enstemmige melodier. Fra full miks gir den bare forslag med usikkerhet, som du retter opp i pianorullen.'));
+        }, 'small')));
 
     if (app.ui.importTracks) el.append(trackChooser());
 
-    el.append(h('h2', {}, 'Referanser'));
-    if (!pr.references.length) el.append(h('div', { class: 'empty' }, 'Ingen referanser ennå.'));
+    el.append(h('h2', {}, 'Melodiene dine'));
+    if (!pr.references.length) el.append(h('div', { class: 'empty' }, 'Ingen melodier ennå.'));
     el.append(h('div', { class: 'list' }, pr.references.map((r) => h('div', {
       class: 'item' + (r.id === app.ui.refId ? ' sel' : ''), onclick: () => { app.ui.refId = r.id; render(); },
     },
     h('div', { class: 'grow' },
       h('div', { class: 'name' }, r.name),
-      h('div', { class: 'faint' }, KIND_LABELS[r.kind] + ' · ' + SOURCE_LABELS[r.source] + ' · ' + T.keyName(r.key) + ' · ' + r.bars + ' takt' + (r.bars > 1 ? 'er' : '') + ' · ' + r.notes.length + ' noter')),
+      h('div', { class: 'faint' }, KIND_ALL[r.kind] + ' · ' + (r.bpm ? Math.round(r.bpm) + ' BPM · ' : '') + SOURCE_LABELS[r.source] + ' · ' + T.keyName(r.key) + ' · ' + r.bars + ' takt' + (r.bars > 1 ? 'er' : '') + ' · ' + r.notes.length + ' noter')),
     r.id === pr.gen.refId ? h('span', { class: 'badge ok' }, 'i bruk') : null))));
 
     const ref = P.refById(pr, app.ui.refId);
@@ -304,33 +317,247 @@
     toast('Importert og kvantisert til 1/16' + (cropped ? ' (de første 16 taktene)' : '') + '. Sjekk type, toneart og fraselengde.', 4200);
   }
 
-  async function importAudio() {
-    const file = await F.pickFile('audio/*,.wav,.mp3,.m4a,.aif,.aiff');
-    if (!file) return;
-    if (!MM.audio) throw new Error('Lydanalyse er ikke tilgjengelig.');
-    const ctx = await app.player.unlock();
-    toast('Analyserer lyd …', 8000);
-    const buf = await ctx.decodeAudioData(await file.arrayBuffer());
-    const kindGuess = 'melody';
-    const res = MM.audio.analyze(buf, { kind: kindGuess, bpm: app.project.settings.bpm });
-    const ref = P.makeReference({ name: file.name.replace(/\.[^.]+$/, ''), source: 'audio', kind: kindGuess, notes: res.notes, bpm: res.bpm, analysis: res.info });
-    app.project.references.unshift(ref);
-    app.ui.refId = ref.id;
-    app.ui.audioBuffers = app.ui.audioBuffers || {};
-    app.ui.audioBuffers[ref.id] = buf;
-    touch();
-    toast(res.info.summary, 5000);
+  /* ---------- lyd inn: låtbit + valgfrie stems fra Logic ---------- */
+  function audioImporter(target) {
+    const imp = app.ui.imp && app.ui.imp.target === target ? app.ui.imp : null;
+    const st = imp || { target, files: {}, start: 0, len: 30, bpm: '' };
+    app.ui.imp = st;
+    const card = h('div', { class: 'card' });
+    const pickRow = (slot, label, help) => {
+      const f = st.files[slot];
+      return h('div', { class: 'item', style: 'cursor:default' },
+        h('div', { class: 'grow' }, h('div', {}, label), h('div', { class: 'faint' }, f ? f.name + ' · ' + Math.round(f.buf.duration) + ' s' : help)),
+        f ? btn('✕', () => { delete st.files[slot]; render(); }, 'small ghost') : null,
+        btn(f ? 'Bytt' : 'Velg fil', guard(async () => {
+          const file = await F.pickFile('audio/*,.wav,.mp3,.m4a,.aif,.aiff');
+          if (!file) return;
+          const ctx = await app.player.unlock();
+          toast('Leser ' + file.name + ' …');
+          const buf = await ctx.decodeAudioData(await file.arrayBuffer());
+          st.files[slot] = { name: file.name, buf };
+          if (!st.name) st.name = file.name.replace(/\.[^.]+$/, '').replace(/[\s_-]*\(?(vocals?|vokal|other|stem|mix)\)?$/i, '');
+          const b = (file.name.match(/(\d{2,3})\s*bpm/i) || [])[1];
+          if (b && !st.bpm) st.bpm = +b;
+          if (st.len > buf.duration) st.len = Math.floor(buf.duration);
+          render();
+        }), 'small' + (slot === 'mix' && !f ? ' primary' : '')));
+    };
+    card.append(
+      pickRow('mix', 'Låta (hele miksen)', 'Brukes til å finne takt og tempo. Velg låta, og skriv inn hvor biten du liker starter.'),
+      pickRow('vocal', target === 'stil' ? 'Vokal-/lead-stem (valgfri)' : 'Vokal-stem (valgfri, anbefalt)', 'Fra Logic Stem Splitter: «Vocals». Gir mye renere melodi.'),
+      pickRow('chords', 'Korde-stem (valgfri, anbefalt)', 'Fra Logic Stem Splitter: «Other». Gir renere korder.'));
+    if (Object.keys(st.files).length) {
+      const num = (label, key, attrs) => h('label', { class: 'f' }, label, h('input', Object.assign({ type: 'number', value: st[key], onchange: (e) => { st[key] = e.target.value === '' ? '' : +e.target.value; } }, attrs)));
+      const status = h('p', { class: 'faint', role: 'status' });
+      const prog = h('div', { class: 'progress', hidden: true }, h('i', {}));
+      card.append(
+        h('div', { class: 'row', style: 'margin-top:10px' },
+          num('Start (sek)', 'start', { min: 0, step: 0.5 }), num('Lengde (sek)', 'len', { min: 8, max: 120 }),
+          num(st.files.mix || st.files.chords ? 'Tempo (tomt = finn selv)' : 'Tempo (må fylles ut)', 'bpm', { min: 50, max: 200, placeholder: 'auto' })),
+        h('label', { class: 'f', style: 'margin-top:8px' }, 'Navn', h('input', { type: 'text', value: st.name || '', onchange: (e) => { st.name = e.target.value; } })),
+        h('div', { class: 'row', style: 'margin-top:10px' },
+          btn('Analyser', guard(async (ev) => {
+            if (!st.files.mix && !st.files.chords && !st.bpm) throw new Error('Med bare vokal må du skrive inn tempoet (det står i Logic).');
+            const button = ev && ev.currentTarget;
+            if (button) button.disabled = true;
+            prog.hidden = false;
+            const bar = prog.querySelector('i');
+            const cache = {};
+            const opts = {
+              mix: st.files.mix && st.files.mix.buf, vocal: st.files.vocal && st.files.vocal.buf, chords: st.files.chords && st.files.chords.buf,
+              start: +st.start || 0, len: +st.len || 30, bpm: +st.bpm || 0, cache,
+              onProgress: (f, msg) => { bar.style.width = Math.round(f * 100) + '%'; status.textContent = (msg || 'Lytter …') + ' ' + Math.round(f * 100) + ' %'; },
+            };
+            let res;
+            try { res = await MM.listen.analyzeSong(opts); } finally { if (button) button.disabled = false; }
+            app.ui.imp = null;
+            const ref = refFromAnalysis(res, st.name || (target === 'melodi' ? 'Låtbit' : 'Eksempel'));
+            app.ui.audio[ref.id] = { files: st.files, start: opts.start, len: opts.len, bpm: opts.bpm, cache, res };
+            if (target === 'melodi') { app.project.references.unshift(ref); app.ui.refId = ref.id; }
+            else addStyleExample(ref);
+            touch();
+            toast('Ferdig. Sjekk resultatet og rett der det trengs.', 3500);
+          }), 'primary'),
+          btn('Tøm', () => { app.ui.imp = null; render(); }, 'ghost')),
+        prog, status,
+        h('p', { class: 'faint' }, 'Stems fra Logic må eksporteres fra samme startpunkt som miksen. 20–40 sekunder holder. Analysen skjer på Macen din, uten nett, og tar gjerne et halvt til ett minutt.'));
+    } else {
+      card.append(h('p', { class: 'faint', style: 'margin-top:8px' }, 'Best resultat: miks + vokal-stem + korde-stem. Bare vokal går også, da må du skrive inn tempoet.'));
+    }
+    return card;
   }
 
-  function reanalyzeAudio(ref, kind) {
-    const buf = app.ui.audioBuffers && app.ui.audioBuffers[ref.id];
-    if (!buf || !MM.audio) return false;
-    const res = MM.audio.analyze(buf, { kind, bpm: ref.bpm || app.project.settings.bpm });
-    ref.notes = res.notes; ref.analysis = res.info; ref.bpm = res.bpm;
-    const kd = T.detectKey(ref.notes);
-    ref.key = kd.key; ref.keyConfidence = kd.confidence; ref.keyCandidates = kd.candidates.map((c) => ({ root: c.root, mode: c.mode }));
-    ref.bars = MM.features.phraseBars(ref.notes);
-    return true;
+  function snapBars(b) { return [16, 8, 4, 2, 1].find((x) => x <= b) || 1; }
+
+  function refFromAnalysis(res, name) {
+    const bars = snapBars(res.bars);
+    const inside = (n) => n.t < bars * SPB;
+    const ref = P.makeReference({ name, kind: 'song', source: 'audio', key: res.key, bars, bpm: res.bpm, notes: res.lead.filter(inside), analysis: res.info });
+    ref.keyConfidence = 0.7;
+    ref.chords = res.chords.filter((c) => c.t < bars * SPB).map((c) => Object.assign({}, c, { len: Math.min(c.len, bars * SPB - c.t) }));
+    ref.bass = res.bass.filter(inside);
+    ref.hits = res.hits; ref.loop = Math.min(res.loop || bars, bars); ref.t0 = res.t0; ref.leadFrom = res.leadFrom;
+    return ref;
+  }
+
+  /* Rett tempo eller taktstart uten å lytte på nytt (tonene er husket). */
+  async function refixAudio(ref, change) {
+    const au = app.ui.audio[ref.id];
+    if (!au) throw new Error('Lydfilene er ikke åpne lenger. Importer låtbiten på nytt for å rette takten.');
+    au.fix = au.fix || {};
+    if (change === 'half') au.fix.half = !au.fix.half;
+    else if (change === 'bar') au.fix.bar = ((au.fix.bar || 0) + 1) % 4;
+    else if (change === 'dbl') au.bpm = Math.min(200, au.res.bpm * 2);
+    else if (change === 'hlf') au.bpm = Math.max(50, au.res.bpm / 2);
+    const res = await MM.listen.analyzeSong({
+      mix: au.files.mix && au.files.mix.buf, vocal: au.files.vocal && au.files.vocal.buf, chords: au.files.chords && au.files.chords.buf,
+      start: au.start, len: au.len, bpm: au.bpm || 0, fix: au.fix, cache: au.cache,
+    });
+    au.res = res;
+    const fresh = refFromAnalysis(res, ref.name);
+    for (const k of ['notes', 'chords', 'bass', 'hits', 'loop', 'bars', 'bpm', 'key', 'analysis', 't0']) ref[k] = fresh[k];
+    touch();
+    toast(Math.round(res.bpm) + ' BPM · ' + T.keyName(res.key));
+  }
+
+  function playOriginal(ref) {
+    const au = app.ui.audio[ref.id];
+    if (!au) return;
+    if (app.ui.playing === 'orig:' + ref.id) { stop(); return; }
+    stop();
+    const buf = (au.files.mix || au.files.vocal || au.files.chords).buf;
+    const ctx = app.player.ctx;
+    const src = ctx.createBufferSource();
+    src.buffer = buf;
+    const g = ctx.createGain(); g.gain.value = 0.8;
+    src.connect(g); g.connect(ctx.destination);
+    const off = au.start + (ref.t0 || 0);
+    src.start(ctx.currentTime + 0.05, Math.max(0, off), Math.min(au.len, ref.bars * 4 * 60 / ref.bpm + 0.5));
+    app.ui.origSrc = src;
+    app.ui.playing = 'orig:' + ref.id;
+    src.onended = () => { if (app.ui.playing === 'orig:' + ref.id) { app.ui.playing = null; render(true); } };
+    render(true);
+  }
+
+  /* Det appen hørte i en låtbit: korder, korderytme, og knapper for å rette takten. */
+  function songPanel(ref) {
+    const box = h('div', { style: 'margin:10px 0' });
+    const prog = (ref.chords || []).map((c) => T.chordName(ref.key, c.chord) + (c.len >= 32 ? ' (' + c.len / 16 + ')' : c.len < 16 ? ' (½)' : '')).join(' – ');
+    box.append(
+      h('p', {}, h('b', {}, Math.round(ref.bpm) + ' BPM · ' + T.keyName(ref.key)), h('span', { class: 'faint' }, ' · melodi fra ' + (ref.leadFrom || 'miksen'))),
+      h('p', { class: 'mono', style: 'font-size:13px' }, 'Korder: ' + (prog || 'fant ingen tydelige')),
+      ref.hits ? h('p', { class: 'mono faint' }, ref.hits.pad ? 'Kordene holdes (strings)' : 'Korderytme: ' + MM.styles.patText(ref.hits.pat)) : null);
+    const au = app.ui.audio[ref.id];
+    if (au) {
+      box.append(h('div', { class: 'row' },
+        playBtn('▶ Originalen', 'orig:' + ref.id, () => playOriginal(ref)),
+        h('span', { class: 'faint' }, 'Takten feil?'),
+        btn('Flytt ½ slag', guard(() => refixAudio(ref, 'half')), 'small'),
+        btn('Taktstart ett slag senere', guard(() => refixAudio(ref, 'bar')), 'small'),
+        btn('Tempo ×2', guard(() => refixAudio(ref, 'dbl')), 'small'),
+        btn('Tempo ÷2', guard(() => refixAudio(ref, 'hlf')), 'small')));
+    } else if (ref.source === 'audio') {
+      box.append(h('p', { class: 'faint' }, 'Lydfilene er ikke åpne i denne økten. Notene og kordene er lagret; rett dem i rullen.'));
+    }
+    return box;
+  }
+
+  /* Melodiens tempo inn i stilen: velg ×½, ×1 eller ×2 slik at farten i sekunder ligger nærmest originalen. */
+  function suggestScale(srcBpm, tgtBpm) {
+    if (!srcBpm || !tgtBpm) return 1;
+    const r = tgtBpm / srcBpm;
+    return [0.5, 1, 2].reduce((b, k) => (Math.abs(Math.log2(r / k)) < Math.abs(Math.log2(r / b)) ? k : b), 1);
+  }
+
+  /* ================= STIL ================= */
+  function currentStyle() {
+    const id = app.ui.styleId || (app.project.style && app.project.style.id);
+    return MM.styles.store.all().find((s) => s.id === id) || null;
+  }
+
+  function addStyleExample(ref) {
+    const style = currentStyle();
+    if (!style) throw new Error('Lag eller velg en stil først.');
+    style.examples.push(MM.styles.exampleFrom(ref));
+    style.modified = Date.now();
+    if (!MM.styles.store.upsert(style)) throw new Error('Lagringsplassen i nettleseren er full.');
+    if (app.project.style && app.project.style.id === style.id) app.project.style = JSON.parse(JSON.stringify(style));
+  }
+
+  function renderStyle(el) {
+    const pr = app.project;
+    const all = MM.styles.store.all();
+    el.append(
+      h('h2', {}, 'Stilen du vil lage'),
+      h('p', { class: 'lead-in' }, 'Gi appen biter av låter i sjangeren du vil lage (for eksempel Adam K & Soha, Deadmau5). Melodien trenger ikke være perfekt. Appen lærer tempoet, rytmen i kordene, hvor lenge kordene varer før de skifter, kordeprogresjonene og bassrytmen.'));
+    const nameIn = h('input', { type: 'text', placeholder: 'For eksempel Melodisk prog house', style: 'flex:1;min-width:0' });
+    el.append(h('div', { class: 'row' }, nameIn, btn('+ Ny stil', guard(() => {
+      const n = nameIn.value.trim();
+      if (!n) throw new Error('Gi stilen et navn.');
+      const st = { id: 's' + MM.rng.newSeed().toString(36), name: n, examples: [], created: Date.now() };
+      MM.styles.store.upsert(st);
+      app.ui.styleId = st.id; render();
+    }), 'primary')));
+    if (!all.length) { el.append(h('div', { class: 'empty' }, 'Ingen stiler ennå. Lag en, og gi den 3–10 eksempler.')); return; }
+    const style = currentStyle() || all[0];
+    app.ui.styleId = style.id;
+    el.append(h('div', { class: 'list', style: 'margin-top:12px' }, all.map((s) => h('div', { class: 'item' + (s.id === style.id ? ' sel' : ''), onclick: () => { app.ui.styleId = s.id; render(); } },
+      h('div', { class: 'grow' }, h('div', { class: 'name' }, s.name), h('div', { class: 'faint' }, s.examples.length + ' eksempler')),
+      pr.style && pr.style.id === s.id ? h('span', { class: 'badge ok' }, 'i bruk') : null))));
+
+    const L = MM.styles.learn(style);
+    const card = h('div', { class: 'card sel' },
+      h('div', { class: 'row spread' }, h('h3', {}, style.name),
+        h('div', { class: 'row' },
+          btn(pr.style && pr.style.id === style.id ? 'I bruk' : 'Bruk i prosjektet', () => {
+            pr.style = JSON.parse(JSON.stringify(style));
+            if (L.bpm && pr.settings.style !== 'hiphop') pr.settings.bpm = L.bpm;
+            const ref = P.refById(pr, pr.gen.refId);
+            if (ref) pr.gen.melodyScale = suggestScale(ref.bpm, pr.settings.bpm);
+            if (pr.arrangement) P.buildArrangement(pr);
+            touch(); toast('«' + style.name + '» brukes nå i Lag og Arrangement.');
+          }, pr.style && pr.style.id === style.id ? '' : 'primary'),
+          pr.style && pr.style.id === style.id ? btn('Slutt å bruke', () => { pr.style = null; if (pr.arrangement) P.buildArrangement(pr); touch(); }, 'small ghost') : null)),
+      h('p', { class: 'mono', style: 'white-space:pre-wrap;font-size:13px' }, MM.styles.describe(L, pr.settings.key)),
+      L.hitPats.length ? h('div', {}, h('div', { class: 'faint' }, 'Korderytmer den har lært (x = anslag, | = slag):'),
+        L.hitPats.slice(0, 4).map((hp) => h('div', { class: 'mono', style: 'font-size:13px' }, MM.styles.patText(hp.pat) + '  ×' + hp.w))) : null);
+    el.append(card);
+
+    el.append(h('h2', {}, 'Legg til eksempel'));
+    el.append(audioImporter('stil'));
+    const midiBtn = btn('Legg til MIDI-fil', guard(async () => {
+      const file = await F.pickFile('.mid,.midi,audio/midi');
+      if (!file) return;
+      const m = MM.midi.parseMidi(await file.arrayBuffer());
+      let notes = [];
+      for (const t of m.tracks) if (!t.isDrum) notes = notes.concat(t.notes);
+      notes = MM.features.normalizeStart(MM.features.quantize(notes, 1)).filter((n) => n.t < 16 * SPB);
+      const ref = P.makeReference({ name: file.name.replace(/\.midi?$/i, ''), notes, bpm: m.bpm, source: 'midi' });
+      ref.kind = 'chords';
+      const ch = MM.features.analyzeChords(notes, ref.key, ref.bars, 16);
+      ref.chords = ch.chords;
+      addStyleExample(ref); touch(); toast('Lagt til');
+    }), 'small');
+    const fromMel = pr.references.length ? select([['', 'Fra en av melodiene dine …']].concat(pr.references.map((r) => [r.id, r.name])), '', guard((v) => {
+      const r = P.refById(pr, v); if (!r) return;
+      addStyleExample(r); touch(); toast('«' + r.name + '» lagt til i stilen');
+    })) : null;
+    el.append(h('div', { class: 'row', style: 'margin-top:10px' }, midiBtn, fromMel));
+
+    el.append(h('h2', {}, 'Eksempler (' + style.examples.length + ')'));
+    el.append(h('div', { class: 'list' }, style.examples.map((x) => h('div', { class: 'item', style: 'cursor:default' },
+      h('div', { class: 'grow' }, h('div', { class: 'name' }, x.name),
+        h('div', { class: 'faint mono' }, (x.bpm ? Math.round(x.bpm) + ' BPM · ' : '') + x.bars + ' takter · ' + (x.hits && !x.hits.pad ? MM.styles.patText(x.hits.pat) : 'holdte korder'))),
+      btn('✕', () => {
+        style.examples = style.examples.filter((y) => y !== x);
+        MM.styles.store.upsert(style);
+        if (pr.style && pr.style.id === style.id) pr.style = JSON.parse(JSON.stringify(style));
+        touch();
+      }, 'small ghost', 'Fjern')))));
+    el.append(h('div', { class: 'row', style: 'margin-top:14px' }, btn('Slett stilen', () => {
+      if (!confirm('Slette stilen «' + style.name + '» og alle eksemplene?')) return;
+      MM.styles.store.remove(style.id); app.ui.styleId = null; render();
+    }, 'ghost danger')));
   }
 
   function refEditor(ref) {
@@ -342,11 +569,8 @@
       h('div', { class: 'row spread' },
         h('input', { type: 'text', value: ref.name, style: 'flex:1;min-width:0', onchange: (e) => { ref.name = e.target.value; touch(); } }),
         playBtn('▶ Spill', 'ref:' + ref.id, () => play(refArrangement(ref), { loop: true, filters: FULL_FILTERS }, 'ref:' + ref.id))),
-      h('div', { style: 'margin:12px 0 6px' }, h('div', { class: 'faint' }, 'Hva slags materiale er dette?'),
-        seg(Object.entries(KIND_LABELS), ref.kind, (k) => {
-          if (ref.source === 'audio' && reanalyzeAudio(ref, k)) toast('Analysert på nytt som ' + KIND_LABELS[k].toLowerCase());
-          ref.kind = k; touch();
-        }, true)));
+      ref.kind === 'song' ? songPanel(ref) : h('div', { style: 'margin:12px 0 6px' }, h('div', { class: 'faint' }, 'Hva slags materiale er dette?'),
+        seg(Object.entries(KIND_LABELS), ref.kind, (k) => { ref.kind = k; touch(); }, true)));
     if (ref.kind === 'mix') card.append(h('div', { class: 'msg warn' }, 'Fra en full miks kan verken noter eller akkorder hentes ut sikkert. Bruk forslagene som skisse og rett opp noter, rytme og akkorder selv.'));
     if (ref.analysis) card.append(h('div', { class: 'msg' + (ref.analysis.confidence < 0.6 ? ' warn' : '') }, ref.analysis.summary));
     const kc = Math.round((ref.keyConfidence || 0) * 100);
@@ -368,7 +592,8 @@
     const rollHost = h('div', { style: 'margin-top:12px' });
     card.append(rollHost);
     let chords;
-    try { chords = ref.kind === 'chords' && ref.notes.length ? MM.features.analyzeChords(ref.notes, ref.key, ref.bars, ref.chordSlot).chords : undefined; } catch (e) { chords = undefined; }
+    if (ref.chords && ref.chords.length) chords = ref.chords;
+    else try { chords = ref.kind === 'chords' && ref.notes.length ? MM.features.analyzeChords(ref.notes, ref.key, ref.bars, ref.chordSlot).chords : undefined; } catch (e) { chords = undefined; }
     // pianorullen bygges etter at kortet er satt inn i DOM
     setTimeout(() => {
       new MM.PianoRoll(rollHost, {
@@ -402,13 +627,15 @@
           touch();
           toast(items.length + ' egenskaper lagret i biblioteket');
         })),
-        btn('Bruk i Melodi →', () => {
+        btn('Bruk i Lag →', () => {
           if (ref.kind === 'chords') { pr.gen.chordRefId = ref.id; if (pr.gen.mode !== 'keep') pr.gen.mode = 'chords'; }
           else pr.gen.refId = ref.id;
           if (pr.gen.bars < ref.bars) pr.gen.bars = Math.min(16, Math.max(4, ref.bars));
           pr.settings.key = Object.assign({}, ref.key);
-          if (ref.bpm && ref.source === 'midi') pr.settings.bpm = Math.round(ref.bpm);
-          app.ui.tab = 'mel'; touch();
+          if (ref.bpm && ref.source === 'midi' && !pr.style) pr.settings.bpm = Math.round(ref.bpm);
+          pr.gen.melodyScale = suggestScale(ref.bpm, pr.settings.bpm);
+          if (ref.kind === 'song' && pr.gen.mode !== 'keep' && pr.gen.mode !== 'inspire') pr.gen.mode = 'keep';
+          app.ui.tab = 'lag'; touch();
         }, 'primary'),
         btn('Slett', () => {
           if (!confirm('Slette «' + ref.name + '»?')) return;
@@ -462,7 +689,47 @@
   function renderMelody(el) {
     const pr = app.project, g = pr.gen, st = pr.settings;
     const melRefs = pr.references.filter((r) => r.kind !== 'chords');
-    const chordRefs = pr.references.filter((r) => r.kind === 'chords' || r.kind === 'mix');
+    const chordRefs = pr.references.filter((r) => r.kind === 'chords' || r.kind === 'mix' || (r.kind === 'song' && r.chords && r.chords.length));
+    const styles = MM.styles.store.all();
+    const src = P.refById(pr, g.refId);
+    const L = P.learned(pr);
+    const top = h('div', { class: 'card' },
+      h('div', { class: 'grid2' },
+        h('label', { class: 'f' }, 'Melodi fra',
+          select([['', '– ingen –']].concat(melRefs.map((r) => [r.id, r.name + (r.bpm ? ' (' + Math.round(r.bpm) + ' BPM)' : '')])), g.refId || '', (v) => {
+            g.refId = v || null;
+            const r = P.refById(pr, v);
+            if (r) { g.melodyScale = suggestScale(r.bpm, st.bpm); if (r.bars > g.bars && r.kind === 'song') g.bars = Math.min(16, r.bars); }
+            touch();
+          })),
+        h('label', { class: 'f' }, 'Stil',
+          select([['', 'Ingen (innebygd ' + A.STYLES[st.style].label.toLowerCase() + ')']].concat(styles.map((x) => [x.id, x.name + ' · ' + x.examples.length + ' eks.'])), pr.style ? pr.style.id : '', (v) => {
+            const x = styles.find((y) => y.id === v);
+            pr.style = x ? JSON.parse(JSON.stringify(x)) : null;
+            const l2 = P.learned(pr);
+            if (l2 && l2.bpm && st.style !== 'hiphop') st.bpm = l2.bpm;
+            if (src) g.melodyScale = suggestScale(src.bpm, st.bpm);
+            if (pr.arrangement) P.buildArrangement(pr);
+            touch();
+          }))),
+      L && L.count ? h('p', { class: 'faint', style: 'white-space:pre-wrap' }, MM.styles.describe(L, st.key)) : null,
+      h('div', { class: 'grid2', style: 'margin-top:8px' },
+        h('label', { class: 'f' }, 'Retning og tempo', h('div', { class: 'row' },
+          select(STYLE_OPTS, st.style, (v) => changeStyle(v)),
+          h('input', { type: 'number', min: 60, max: 160, value: st.bpm, 'aria-label': 'Tempo', onchange: (e) => { st.bpm = T.clamp(+e.target.value || 124, 60, 160); if (src) g.melodyScale = suggestScale(src.bpm, st.bpm); if (pr.arrangement) P.buildArrangement(pr); touch(); } }),
+          h('span', { class: 'faint' }, 'BPM'))),
+        src && src.bpm ? h('label', { class: 'f' }, 'Melodiens fart (låta går i ' + Math.round(src.bpm) + ' BPM)',
+          seg([[0.5, 'Dobbel'], [1, 'Som i takten'], [2, 'Halv']], g.melodyScale || 1, (v) => { g.melodyScale = +v; touch(); }, true)) : h('span', {})),
+      src && src.bpm ? h('p', { class: 'faint' }, 'Melodien føles som ca. ' + Math.round(st.bpm / (g.melodyScale || 1)) + ' BPM i originalens fart (' + Math.round(st.bpm / (g.melodyScale || 1) / src.bpm * 100) + ' %).') : null,
+      h('div', { class: 'row', style: 'margin-top:6px' },
+        st.style !== 'hiphop' ? btn('Halvtempo-hiphop av dette', () => {
+          const target = T.clamp(Math.round(st.bpm / 2 * 1.25), 70, 95);
+          changeStyle('hiphop');
+          st.bpm = target;
+          if (pr.arrangement) P.buildArrangement(pr);
+          touch(); toast('Melodisk hiphop i ' + target + ' BPM. Juster tempoet fritt.');
+        }, 'small', 'Halverer tempoet og løfter det litt, med hiphop-trommer og 808') : null));
+    el.append(h('h2', {}, 'Melodi og stil'), top);
     el.append(
       h('h2', {}, 'Hva skal lages?'),
       seg(Object.entries(MM.melody.MODE_LABELS), g.mode, (m) => { g.mode = m; touch(); }, true),
@@ -470,10 +737,8 @@
 
     const card = h('div', { class: 'card' });
     card.append(h('div', { class: 'grid2' },
-      h('label', { class: 'f' }, 'Referanse (melodi, rytme, kontur)',
-        select([['', '– ingen –']].concat(melRefs.map((r) => [r.id, r.name])), g.refId || '', (v) => { g.refId = v || null; touch(); })),
-      h('label', { class: 'f' }, 'Akkorder fra',
-        select([['', g.mode === 'keep' ? 'Harmoniser melodien' : 'Sjangerbanken (frøstyrt)']].concat(chordRefs.map((r) => [r.id, r.name])), g.chordRefId || '', (v) => { g.chordRefId = v || null; touch(); }))));
+      h('label', { class: 'f' }, 'Korder fra (overstyrer stilen)',
+        select([['', L && L.count ? 'Stilen' : g.mode === 'keep' ? 'Harmoniser melodien' : 'Innebygd bank (frøstyrt)']].concat(chordRefs.map((r) => [r.id, r.name])), g.chordRefId || '', (v) => { g.chordRefId = v || null; touch(); }))));
     // bland enkeltegenskaper
     const det = h('details', {}, h('summary', {}, 'Bland egenskaper fra biblioteket'));
     const types = ['rhythm', 'contour', 'intervals', 'phrase', 'rests', 'accents', 'chords', 'melody'];
@@ -482,7 +747,7 @@
       return h('label', { class: 'f' }, MM.features.FEATURE_TYPES[t],
         select([['', 'Fra referansen over'], ['none', 'Ikke bruk']].concat(items.map((x) => [x.id, x.name])), g.sources[t] || '', (v) => { if (v) g.sources[t] = v; else delete g.sources[t]; touch(true); }));
     })));
-    if (!pr.library.length) det.append(h('p', { class: 'faint' }, 'Biblioteket er tomt. Lagre egenskaper fra en referanse under Referanser.'));
+    if (!pr.library.length) det.append(h('p', { class: 'faint' }, 'Biblioteket er tomt. Lagre egenskaper fra en melodi under Melodier.'));
     if (Object.keys(g.sources).length) det.open = true;
     card.append(det);
     card.append(h('div', { class: 'grid2', style: 'margin-top:6px' },
@@ -490,7 +755,9 @@
         select(KEY_OPTS, st.key.root, (v) => changeKey({ root: +v, mode: st.key.mode })),
         select(MODE_OPTS, st.key.mode, (v) => changeKey({ root: st.key.root, mode: v })))),
       h('label', { class: 'f' }, 'Fraselengde', seg([[2, '2'], [4, '4'], [8, '8'], [16, '16 takter']], g.bars, (v) => { g.bars = +v; touch(); }))));
-    card.append(h('label', { class: 'f', style: 'margin-top:10px' }, 'Retning', seg(STYLE_OPTS, st.style, (v) => changeStyle(v), true)));
+    if (src && src.kind === 'song' && T.keyName(src.key) !== T.keyName(st.key)) {
+      card.append(h('p', { class: 'faint' }, 'Låta er i ' + T.keyName(src.key) + '. ', btn('Bruk ' + T.keyName(src.key), () => changeKey(Object.assign({}, src.key)), 'small ghost')));
+    }
     el.append(card);
 
     const rules = h('details', {}, h('summary', {}, 'Regler for melodi og harmoni'));
@@ -530,7 +797,7 @@
       });
       el.append(grid);
     } else {
-      el.append(h('div', { class: 'empty' }, 'Trykk «Lag 3 varianter» for å komme i gang. Demohooken i A-moll er valgt som referanse.'));
+      el.append(h('div', { class: 'empty' }, 'Trykk «Lag 3 varianter» for å komme i gang. Uten egne melodier brukes demohooken i A-moll.'));
     }
 
     if (pr.theme) {
@@ -635,7 +902,7 @@
   function renderArrange(el) {
     const pr = app.project, st = pr.settings;
     if (!pr.theme) {
-      el.append(h('div', { class: 'empty' }, 'Velg en melodi i Melodi-fanen først.', h('div', { style: 'margin-top:12px' }, btn('Gå til Melodi', () => { app.ui.tab = 'mel'; render(); }, 'primary'))));
+      el.append(h('div', { class: 'empty' }, 'Lag og velg en melodi i Lag-fanen først.', h('div', { style: 'margin-top:12px' }, btn('Gå til Lag', () => { app.ui.tab = 'lag'; render(); }, 'primary'))));
       return;
     }
     const total = A.totalBarsFor(st.lengthMin, st.bpm);
@@ -709,7 +976,7 @@
       el.append(box);
     }
 
-    el.append(h('h2', {}, 'Kontroll'), a.report.messages.map((m) => h('div', { class: 'msg ' + m.level }, m.text)));
+    el.append(h('h2', {}, 'Kontroll'), ...a.report.messages.map((m) => h('div', { class: 'msg ' + m.level }, m.text)));
     const stx = a.report.stats;
     el.append(h('p', { class: 'faint mono' }, Object.entries(stx).map(([k, v]) => A.PART_LABELS[k] + ' ' + T.noteName(v.lo) + '–' + T.noteName(v.hi)).join(' · ')));
     el.append(h('p', { class: 'faint mono' }, 'Frø: trommer ' + MM.rng.seedCode(pr.seeds.drums) + ' · bass ' + MM.rng.seedCode(pr.seeds.bass) + ' · akkorder ' + MM.rng.seedCode(pr.seeds.chords) + ' · melodi ' + MM.rng.seedCode(pr.gen.seed)));
@@ -729,7 +996,7 @@
   function renderSound(el) {
     const pr = app.project;
     el.append(h('p', { class: 'lead-in' }, 'Lydene er bare for avspilling og WAV. Komposisjonen er adskilt: MIDI-eksporten kan spilles med dine egne instrumenter i Ableton.'));
-    const parts = [['lead', 'Hovedmelodi'], ['pluck', 'Akkordrytme'], ['pad', 'Pad'], ['bass', 'Bass']];
+    const parts = [['lead', 'Lead'], ['pluck', 'Korder (spilte)'], ['pad', 'Strings (holdte)'], ['bass', 'Bass']];
     const grid = h('div', { class: 'grid3' });
     for (const [part, label] of parts) {
       const inst = pr.instruments[part];
@@ -825,7 +1092,7 @@
         })),
         btn('Nytt prosjekt', guard(async () => {
           await F.store.put(pr);
-          stop(); app.project = P.newProject(); app.ui.alts = null; app.ui.refId = app.project.gen.refId; app.ui.tab = 'mel';
+          stop(); app.project = P.newProject(); app.ui.alts = null; app.ui.refId = app.project.gen.refId; app.ui.tab = 'lag';
           await F.store.put(app.project); render();
         }))),
       h('h3', { style: 'margin-top:14px' }, 'Mine prosjekter'), list));

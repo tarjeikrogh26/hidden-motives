@@ -10,14 +10,15 @@
     house: { label: 'Progressive house', bpm: 124, swing: 0.1 },
     trance: { label: 'Progressive trance', bpm: 130, swing: 0 },
     driving: { label: 'Drivende melodisk trance', bpm: 138, swing: 0 },
+    hiphop: { label: 'Melodisk hiphop (halvtempo)', bpm: 84, swing: 0.14 },
   };
 
   const DRUM = { kick: 36, clap: 39, snare: 38, hat: 42, open: 46, ride: 51, crash: 49, perc: 70 };
   const PARTS = ['drums', 'bass', 'pad', 'pluck', 'lead'];
-  const PART_LABELS = { drums: 'Trommer', bass: 'Bass', pad: 'Pad', pluck: 'Akkordrytme', lead: 'Hovedmelodi' };
+  const PART_LABELS = { drums: 'Trommer', bass: 'Bass', pad: 'Strings', pluck: 'Korder', lead: 'Lead' };
   /* Låsegrupper: det brukeren låser/regenererer. */
   const GROUPS = { melody: ['lead'], chords: ['pad', 'pluck'], bass: ['bass'], drums: ['drums'] };
-  const GROUP_LABELS = { melody: 'Melodi', chords: 'Akkorder/pad', bass: 'Bass', drums: 'Trommer' };
+  const GROUP_LABELS = { melody: 'Lead', chords: 'Korder og strings', bass: 'Bass', drums: 'Trommer' };
 
   const SECTION_LABELS = {
     intro: 'Intro', build: 'Oppbygging', main1: 'Hovedparti 1', breakdown: 'Breakdown',
@@ -30,7 +31,10 @@
     return Math.max(64, Math.round(lengthMin * bpm / 4 / 8) * 8);
   }
 
+  const HH_LABELS = { intro: 'Intro', main1: 'Vers', main2: 'Hook', breakdown: 'Bro', main3: 'Hook 2', outro: 'Avslutning' };
+
   function planSections(totalBars, style, energy, breakdown) {
+    if (style === 'hiphop') return planHiphop(totalBars, breakdown);
     const bdW = style === 'house' ? 1.5 : style === 'driving' ? 2.4 : 2;
     let defs = [
       { type: 'intro', w: 2, min: 2 },
@@ -64,6 +68,19 @@
       start += s.bars;
       return s;
     });
+  }
+
+  function planHiphop(totalBars, breakdown) {
+    const defs = [{ type: 'intro', w: 1, min: 1 }, { type: 'main1', w: 2, min: 2 }, { type: 'main2', w: 1.5, min: 1 }];
+    if (breakdown) defs.push({ type: 'breakdown', w: 1, min: 1 });
+    defs.push({ type: 'main3', w: 1.5, min: 1 }, { type: 'outro', w: 1, min: 1 });
+    const units = Math.max(defs.reduce((a, d) => a + d.min, 0), Math.round(totalBars / 8));
+    const alloc = defs.map((d) => d.min);
+    let rest = units - alloc.reduce((a, b) => a + b, 0);
+    const order = defs.map((d, i) => i).sort((a, b) => defs[b].w - defs[a].w);
+    for (let k = 0; rest > 0; k++, rest--) alloc[order[k % order.length]]++;
+    let start = 0;
+    return defs.map((d, i) => { const sec = { type: d.type, label: HH_LABELS[d.type], start, bars: alloc[i] * 8 }; start += sec.bars; return sec; });
   }
 
   const ENERGY = { intro: 0.3, build: 0.5, main1: 0.75, breakdown: 0.35, lift: 0.65, main2: 1, main3: 0.95, outro: 0.4 };
@@ -122,7 +139,41 @@
     [[13, 0.6], [14, 0.7], [15, 0.85]],
   ];
 
+  const HH_KICKS = [
+    { name: 'boom bap', k: [[0, 1], [7, 0.75], [10, 0.9]] },
+    { name: 'boom bap 2', k: [[0, 1], [3, 0.6], [10, 0.9], [11, 0.6]] },
+    { name: 'trap', k: [[0, 1], [6, 0.8], [11, 0.85]] },
+    { name: 'rolig', k: [[0, 1], [10, 0.85]] },
+  ];
+
+  function genDrumsHiphop(ctx) {
+    const { sections, energy, rng } = ctx;
+    const notes = [];
+    const add = (t, p, v, d) => notes.push({ t, d: d || 1, p, v: Math.round(T.clamp(v, 0.05, 1) * 100) / 100 });
+    const kp = rng.pick(energy >= 4 ? HH_KICKS : HH_KICKS.filter((x) => x.name !== 'trap'));
+    const trap = kp.name === 'trap';
+    const ghost = rng.chance(0.6);
+    for (const sec of sections) {
+      for (let bar = sec.start; bar < sec.start + sec.bars; bar++) {
+        const b = bar * SPB, local = bar - sec.start, t = sec.type;
+        const main = t.indexOf('main') === 0;
+        const kick = !(t === 'intro' && local < sec.bars / 2) && !(t === 'outro' && local >= sec.bars / 2);
+        const light = t === 'breakdown' || t === 'intro';
+        if (kick) for (const [s, v] of kp.k) if (!light || s === 0) add(b + s, DRUM.kick, v);
+        if (kick && !light) { add(b + 4, DRUM.snare, 0.9); add(b + 12, DRUM.snare, 0.95); add(b + 4, DRUM.clap, 0.5); add(b + 12, DRUM.clap, 0.5); }
+        if (ghost && main) add(b + 15, DRUM.snare, 0.25);
+        const hat16 = trap || (main && energy >= 4);
+        for (let s = 0; s < SPB; s += hat16 ? 1 : 2) add(b + s, DRUM.hat, (s % 4 === 0 ? 0.6 : s % 2 === 0 ? 0.42 : 0.3));
+        if (trap && main && (local + 1) % 4 === 0) for (let s = 12; s < 16; s += 0.5) add(b + s, DRUM.hat, 0.35 + (s - 12) * 0.1, 0.5);
+        if (main && !trap && local % 2 === 1) add(b + 14, DRUM.open, 0.45, 2);
+        if (local === 0 && (t === 'main2' || t === 'main3')) add(b, DRUM.crash, 0.6, 8);
+      }
+    }
+    return notes.sort((a, b) => a.t - b.t || a.p - b.p);
+  }
+
   function genDrums(ctx) {
+    if (ctx.style === 'hiphop') return genDrumsHiphop(ctx);
     const { sections, style, energy, rng } = ctx;
     const notes = [];
     const add = (t, p, v, d) => notes.push({ t, d: d || 1, p, v: Math.round(T.clamp(v, 0.05, 1) * 100) / 100 });
@@ -198,10 +249,34 @@
     ],
   };
 
+  /* Hiphop: 808-bass som følger kicken og holder til neste slag. */
+  function genBassHiphop(ctx) {
+    const { sections, key, theme } = ctx;
+    const kicks = genDrumsHiphop(Object.assign({}, ctx, { rng: MM.rng.make(ctx.drumSeed || 1, 'trommer') })).filter((n) => n.p === DRUM.kick).map((n) => n.t);
+    const notes = [];
+    for (const sec of sections) {
+      if (sec.type === 'intro') continue;
+      const s0 = sec.start * SPB, s1 = (sec.start + sec.bars) * SPB;
+      const ks = kicks.filter((t) => t >= s0 && t < s1);
+      ks.forEach((t, i) => {
+        const nx = i < ks.length - 1 ? ks[i + 1] : s1;
+        const chord = chordAtSong(theme, t).chord;
+        notes.push({ t, d: Math.max(1, Math.min(nx - t, 8) - 0.5), p: bassPitch(key, chord), v: 0.9 });
+      });
+    }
+    return { notes, pattern: '808 på kicken' };
+  }
+
   function genBass(ctx) {
+    if (ctx.style === 'hiphop') return genBassHiphop(ctx);
     const { sections, style, energy, key, theme, rng } = ctx;
     const pats = BASS_PATTERNS[style] || BASS_PATTERNS.trance;
     let pat = rng.pick(energy <= 2 ? pats.slice(0, 2) : pats);
+    const lb = ctx.learned && ctx.learned.bassPats && ctx.learned.bassPats.length ? rng.weighted(ctx.learned.bassPats, ctx.learned.bassPats.map((x) => x.w)) : null;
+    if (lb) {
+      const pos = lb.pat.map((x, i) => (x ? i : -1)).filter((i) => i >= 0);
+      pat = { name: 'stilens bassrytme', bar: pos.map((p, i) => [p, Math.max(1, Math.min(2, (i < pos.length - 1 ? pos[i + 1] : 16) - p))]), oct: [] };
+    }
     const approach = energy >= 3 && rng.chance(0.75);
     const notes = [];
     const add = (t, p, v, d) => notes.push({ t, d, p, v: Math.round(v * 100) / 100 });
@@ -282,7 +357,14 @@
     const colorP = style === 'house' ? 0.7 : 0.3;
     const colors = {};
     for (let d = 0; d < 7; d++) colors[d] = rng.chance(colorP) ? rng.pick(style === 'house' ? ['7', 'add9'] : ['add9', '']) : '';
-    const arp = rng.pick(ARPS[style] || ARPS.trance);
+    let arp = rng.pick(ARPS[style] || ARPS.trance);
+    const L = ctx.learned;
+    if (L && L.hitPats && L.hitPats.length) {
+      const hp = rng.weighted(L.hitPats, L.hitPats.map((x) => x.w)).pat;
+      const pos = hp.map((x, i) => (x ? i : -1)).filter((i) => i >= 0);
+      arp = { name: 'stilens korderytme', hits: pos.map((p, i) => [p, Math.max(1, Math.min(2, (i < pos.length - 1 ? pos[i + 1] : 16) - p))]) };
+    }
+    const stringsHeavy = L && L.count && L.padShare > 0.6;
     let prevPad = null, prevPl = null;
     for (const sec of sections) {
       const s0 = sec.start * SPB, s1 = (sec.start + sec.bars) * SPB;
@@ -290,7 +372,8 @@
       const half = s0 + (sec.bars / 2) * SPB;
       const padOn = t !== 'intro' || energy >= 4;
       const padVel = { intro: 0.4, build: 0.5, main1: 0.6, breakdown: 0.85, lift: 0.7, main2: 0.65, main3: 0.65, outro: 0.5 }[t];
-      const pluckOn = ((t === 'main1' || t === 'main2' || t === 'main3') && energy >= 2) || (t === 'lift' && style !== 'house') || (t === 'build' && energy >= 3) || (t === 'outro');
+      let pluckOn = ((t === 'main1' || t === 'main2' || t === 'main3') && energy >= 2) || (t === 'lift' && style !== 'house' && style !== 'hiphop') || (t === 'build' && energy >= 3) || (t === 'outro');
+      if (stringsHeavy && (t === 'main1' || t === 'build' || t === 'outro')) pluckOn = false;
       forEachChordSpan(theme, s0, s1, (chord, a, b) => {
         if (padOn && !(t === 'intro' && a < half) && !(t === 'outro' && a >= s0 + sec.bars * SPB * 0.5)) {
           const v = H.voice(key, chord, prevPad, reg.padLo, reg.padHi, colors[chord.deg]);
@@ -369,20 +452,30 @@
   };
   const LEAD_KIND_LABELS = { tease: 'antydning', call: 'bare spørsmålet', reduced: 'skjelett', full: 'hel melodi', octave: 'med oktav', harmony: 'med ters-stemme' };
 
+  const LEAD_PLAN_HH = {
+    intro: [{ from: 0, kind: 'tease' }],
+    main1: [{ from: 0, kind: 'full' }],
+    main2: [{ from: 0, kind: 'octave' }],
+    breakdown: [{ from: 0, kind: 'reduced' }],
+    main3: [{ from: 0, kind: 'harmony' }],
+    outro: [{ from: 0, kind: 'call', until: 0.5 }],
+  };
+
   function genLead(ctx) {
     const { sections, theme, key, energy } = ctx;
+    const PLAN = ctx.style === 'hiphop' ? LEAD_PLAN_HH : LEAD_PLAN;
     const P = theme.bars * SPB;
     const notes = [];
     const plan = [];
     for (const sec of sections) {
       const s0 = sec.start * SPB, s1 = (sec.start + sec.bars) * SPB;
-      for (const step of LEAD_PLAN[sec.type] || []) {
+      for (const step of PLAN[sec.type] || []) {
         let kind = step.kind;
         if (kind === 'octave' && energy <= 2) kind = 'full';
         if (sec.type === 'main1' && energy >= 5) kind = 'full';
         const a = s0 + Math.round(step.from * sec.bars / (theme.bars)) * P;
         const b = step.until ? s0 + Math.round(step.until * sec.bars / theme.bars) * P : s1;
-        const nextStart = (LEAD_PLAN[sec.type].find((x) => x.from > step.from) || {}).from;
+        const nextStart = (PLAN[sec.type].find((x) => x.from > step.from) || {}).from;
         const end = nextStart !== undefined ? s0 + Math.round(nextStart * sec.bars / theme.bars) * P : b;
         const ver = leadVersion(theme, kind, key);
         let first = true;
@@ -424,7 +517,7 @@
 
   /* ---------- kontroll: register og kick/bass ---------- */
 
-  function report(parts) {
+  function report(parts, style) {
     const msgs = [];
     const stats = {};
     for (const name of ['bass', 'pad', 'pluck', 'lead']) {
@@ -440,9 +533,9 @@
       else if (overlap > 7) msgs.push({ level: 'info', text: PART_LABELS[a] + ' og ' + PART_LABELS[b].toLowerCase() + ' overlapper litt (' + overlap + ' halvtoner).' });
     }
     const kicks = new Set((parts.drums || []).filter((n) => n.p === DRUM.kick).map((n) => n.t));
-    const clash = (parts.bass || []).filter((n) => kicks.has(n.t) && n.d < 8).length;
+    const clash = style === 'hiphop' ? 0 : (parts.bass || []).filter((n) => kicks.has(n.t) && n.d < 8).length;
     if (clash) msgs.push({ level: 'warn', text: clash + ' basstoner treffer samtidig med kicken.' });
-    if (!msgs.length) msgs.push({ level: 'ok', text: 'Stemmene har egne leier, og bassen spiller mellom kickslagene.' });
+    if (!msgs.length) msgs.push({ level: 'ok', text: style === 'hiphop' ? 'Stemmene har egne leier, og 808-bassen følger kicken.' : 'Stemmene har egne leier, og bassen spiller mellom kickslagene.' });
     return { stats, kickBassClashes: clash, messages: msgs };
   }
 
@@ -459,7 +552,7 @@
     const sig = sectionSig(sections);
     const prev = opts.previous && opts.previous.sig === sig ? opts.previous : null;
     const locked = opts.locked || {};
-    const base = { sections, style: st.style, energy: st.energy, key: st.key, theme, hasLift: sections.some((s) => s.type === 'lift') };
+    const base = { sections, style: st.style, energy: st.energy, key: st.key, theme, hasLift: sections.some((s) => s.type === 'lift'), learned: opts.learned || null, drumSeed: opts.seeds.drums };
     const ctx = (seed, salt) => Object.assign({}, base, { rng: MM.rng.make(seed, salt) });
 
     const parts = {};
@@ -477,7 +570,7 @@
       sig, totalBars, sections, parts, info,
       fx: genFx(sections),
       automation: automation(sections),
-      report: report(parts),
+      report: report(parts, st.style),
       bpm: st.bpm, key: st.key, style: st.style, energy: st.energy,
     };
   }
@@ -507,7 +600,7 @@
     const o = opts || {};
     const bars = Math.max(4, theme.bars);
     const sections = [{ type: o.sectionType || 'main1', label: '', start: 0, bars }];
-    const base = { sections, style: settings.style, energy: Math.min(3, settings.energy), key: settings.key, theme, hasLift: true };
+    const base = { sections, style: settings.style, energy: Math.min(3, settings.energy), key: settings.key, theme, hasLift: true, learned: o.learned || null, drumSeed: seeds.drums };
     const ctx = (seed, salt) => Object.assign({}, base, { rng: MM.rng.make(seed, salt) });
     const drums = genDrums(ctx(seeds.drums, 'trommer')).filter((n) => n.p !== DRUM.crash && n.p !== DRUM.snare);
     const bass = genBass(ctx(seeds.bass, 'bass')).notes;

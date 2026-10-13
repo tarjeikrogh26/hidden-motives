@@ -61,7 +61,8 @@
       version: VERSION, id: uid('p'), name: 'Nytt prosjekt', created: Date.now(), modified: Date.now(),
       settings: { bpm: MM.arrange.STYLES[style].bpm, key: { root: 9, mode: 'minor' }, energy: 3, style, lengthMin: 7, breakdown: true },
       rules: Object.assign({}, MM.melody.DEFAULT_RULES),
-      gen: { mode: 'inspire', refId: 'demo-hook', chordRefId: null, sources: {}, bars: 8, seed: MM.rng.newSeed() },
+      gen: { mode: 'inspire', refId: 'demo-hook', chordRefId: null, sources: {}, bars: 8, seed: MM.rng.newSeed(), melodyScale: 1 },
+      style: null,
       references: demoReferences(),
       library: [],
       variants: [],
@@ -82,15 +83,19 @@
 
   function sourcesFromRef(ref) {
     if (!ref) return {};
+    const own = ref.chords && ref.chords.length ? { chords: { key: ref.key, bars: ref.bars, chords: ref.chords.filter((c) => c.t < ref.bars * SPB) } } : null;
+    if (ref.kind === 'chords' && own) return own;
     if (ref.kind === 'chords') {
       const ch = MM.features.analyzeChords(ref.notes, ref.key, ref.bars, ref.chordSlot);
       return { chords: { key: ref.key, bars: ch.bars, chords: ch.chords } };
     }
     const a = MM.features.analyzeMelody(ref.notes, ref.key, ref.bars);
-    return {
+    const out = {
       melody: { key: ref.key, bars: a.bars, notes: a.notes },
       rhythm: a.rhythm, contour: a.contour, intervals: a.intervals, phrase: a.phrase, rests: a.rests, accents: a.accents,
     };
+    if (own) out.chords = own.chords;
+    return out;
   }
 
   /* Samler kildene: hovedreferanse, eventuell akkordreferanse og enkeltegenskaper fra biblioteket. */
@@ -113,12 +118,14 @@
     return src;
   }
 
+  function learned(project) { return project.style && MM.styles ? MM.styles.learn(project.style) : null; }
+
   function genSpec(project, seed, overrides) {
     const st = project.settings;
     const g = project.gen;
     const spec = {
-      mode: g.mode, key: st.key, bars: g.bars, style: st.style, rules: project.rules,
-      seed: seed >>> 0, src: resolveSources(project), count: 3,
+      mode: g.mode, key: st.key, bars: g.bars, style: st.style === 'hiphop' ? 'house' : st.style, rules: project.rules,
+      seed: seed >>> 0, src: resolveSources(project), count: 3, learned: learned(project), melodyScale: g.melodyScale || 1,
     };
     if (project.locked.chords && project.theme) { spec.chords = project.theme.chords; spec.chordsBars = project.theme.bars; }
     return Object.assign(spec, overrides || {});
@@ -144,7 +151,7 @@
     if (!project.theme) throw new Error('Velg en melodi først.');
     const o = opts || {};
     project.arrangement = MM.arrange.build({
-      settings: project.settings, theme: project.theme, seeds: project.seeds,
+      settings: project.settings, theme: project.theme, seeds: project.seeds, learned: learned(project),
       locked: o.respectLocks === false ? {} : project.locked, previous: project.arrangement,
     });
     project.modified = Date.now();
@@ -185,8 +192,12 @@
         bassRoots = br.roots;
       }
       const cur = theme.chords.map((c) => c.chord.deg + c.chord.q).join(',');
-      harmonies = MM.harmony.harmonize(theme.notes, key, theme.bars, { count: 6, style: project.settings.style, slot, bassRoots })
+      const L = learned(project);
+      const fromStyle = L && !bassRoots ? MM.styles.rankForMelody(L, theme.notes, key, theme.bars) : [];
+      harmonies = fromStyle.concat(MM.harmony.harmonize(theme.notes, key, theme.bars, { count: 6, style: project.settings.style, slot, bassRoots }))
         .filter((h) => h.chords.map((c) => c.chord.deg + c.chord.q).join(',') !== cur);
+      const seenH = new Set();
+      harmonies = harmonies.filter((h) => { const k = h.chords.map((c) => MM.theory.chordName(key, c.chord) + c.t).join(' '); if (seenH.has(k)) return false; seenH.add(k); return true; });
       if (harmonies.length < 3) {
         for (let k = 0; harmonies.length < 3 && k < 12; k++) {
           const ch = MM.harmony.pickProgression(key, theme.bars, project.settings.style, MM.rng.make(MM.rng.newSeed(), 'prog'), slot);
@@ -226,7 +237,7 @@
         if (!project.locked.bass) locked.bass = false;
         if (!project.locked.chords) locked.chords = false;
       }
-      p.arrangement = MM.arrange.build({ settings: project.settings, theme: p.theme, seeds: p.seeds, locked, previous: base });
+      p.arrangement = MM.arrange.build({ settings: project.settings, theme: p.theme, seeds: p.seeds, locked, previous: base, learned: learned(project) });
       if (groups.includes('bass')) descr.push('Bass: ' + p.arrangement.info.bassPattern);
       if (groups.includes('chords')) descr.push('Akkordrytme: ' + p.arrangement.info.arp);
       if (groups.includes('drums')) descr.push('Nye trommemønstre og innfyll');
@@ -303,7 +314,7 @@
 
   MM.project = {
     VERSION, DEMO_HOOK, INSTRUMENT_PRESETS, uid, makeReference, demoReferences, defaultInstruments, newProject,
-    refById, libById, sourcesFromRef, resolveSources, genSpec, makeVariants, chooseVariant, buildArrangement,
+    refById, libById, sourcesFromRef, learned, resolveSources, genSpec, makeVariants, chooseVariant, buildArrangement,
     alternatives, applyAlternative, serialize, deserialize, midiTracks, midiFor, themeMidi,
   };
 })(globalThis.MM = globalThis.MM || {});
