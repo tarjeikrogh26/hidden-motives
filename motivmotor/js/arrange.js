@@ -502,11 +502,27 @@
     return { roots, slot };
   }
 
+  /* Kort sløyfe for forhåndslytting av en melodivariant: tema + akkorder + enkel beat. */
+  function preview(settings, theme, seeds, opts) {
+    const o = opts || {};
+    const bars = Math.max(4, theme.bars);
+    const sections = [{ type: o.sectionType || 'main1', label: '', start: 0, bars }];
+    const base = { sections, style: settings.style, energy: Math.min(3, settings.energy), key: settings.key, theme, hasLift: true };
+    const ctx = (seed, salt) => Object.assign({}, base, { rng: MM.rng.make(seed, salt) });
+    const drums = genDrums(ctx(seeds.drums, 'trommer')).filter((n) => n.p !== DRUM.crash && n.p !== DRUM.snare);
+    const bass = genBass(ctx(seeds.bass, 'bass')).notes;
+    const ch = genChords(ctx(seeds.chords, 'akkorder'));
+    const lead = [];
+    for (let o2 = 0; o2 < bars * SPB; o2 += theme.bars * SPB) for (const n of theme.notes) lead.push(Object.assign({}, n, { t: n.t + o2 }));
+    const parts = { drums, bass, pad: ch.pad, pluck: o.withPluck ? ch.pluck : [], lead };
+    return { sig: 'preview', totalBars: bars, sections, parts, info: {}, fx: [], automation: null, bpm: settings.bpm, key: settings.key, style: settings.style, energy: settings.energy };
+  }
+
   function secondsPerStep(bpm) { return 60 / bpm / 4; }
 
   MM.arrange = {
     STYLES, DRUM, PARTS, PART_LABELS, GROUPS, GROUP_LABELS, SECTION_LABELS, LEAD_KIND_LABELS, ENERGY,
     totalBarsFor, planSections, genDrums, genBass, genChords, genLead, leadVersion, registerPlan,
-    build, report, bassRootsPerSlot, secondsPerStep, chordAtSong,
+    build, preview, report, bassRootsPerSlot, secondsPerStep, chordAtSong,
   };
 })(globalThis.MM = globalThis.MM || {});
