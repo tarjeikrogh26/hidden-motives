@@ -381,7 +381,14 @@
     const r = state.rendered; if (!r) return;
     const v = state.current;
     const data = VK.encodeWav(r[kind].channels, VK.SR, 24);
-    VK.downloadBlob(data, baseName(v) + (kind === 'wet' ? '_behandlet' : '_torr') + '.wav', 'audio/wav');
+    deliver(data, baseName(v) + (kind === 'wet' ? '_behandlet' : '_torr') + '.wav', 'audio/wav');
+  }
+  async function deliver(data, filename, mime) {
+    showErr('');
+    try {
+      const r = await VK.downloadBlob(data, filename, mime);
+      if (r === 'declined') showErr('Nedlastingen ble avbrutt.');
+    } catch (e) { showErr(String(e.message || e)); }
   }
   function exportCredits() {
     const v = state.current; if (!v) return;
@@ -408,7 +415,7 @@
     }
     if (!used.length) lines.push('(ingen klipp brukt)');
     lines.push('', needCredit ? 'Minst én kilde er CC BY. Ta med krediteringen i utgivelsen (f.eks. i beskrivelsen eller på coveret).' : 'Ingen av kildene krever kreditering.');
-    VK.downloadBlob(lines.join('\n'), baseName(v) + '_kilder.txt', 'text/plain;charset=utf-8');
+    deliver(lines.join('\n'), baseName(v) + '_kilder.txt', 'text/plain;charset=utf-8');
   }
 
   // ---------------- Klippliste ----------------
@@ -614,8 +621,18 @@
     } catch (e) { status.textContent = String(e.message || e); }
   }
 
+  // I forhåndsvisningen i Claude blokkeres kontakt med eksterne tjenester. Si det tydelig og slå av knappene.
+  function applyPreviewMode() {
+    if (!VK.inPreview() || document.body.classList.contains('preview')) return;
+    document.body.classList.add('preview');
+    for (const id of ['fs-search', 'el-go', 'el-load-voices']) $(id).disabled = true;
+    for (const id of ['fs-preview-note', 'el-preview-note', 'export-preview-note']) $(id).hidden = false;
+  }
+
   // ---------------- Oppkobling ----------------
   function init() {
+    applyPreviewMode();
+    setTimeout(applyPreviewMode, 1200);
     buildSettings();
     updateExportInfo();
     drawPool();

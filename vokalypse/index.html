@@ -10,6 +10,7 @@
     --faint: #6b6a65; --accent: #e8b04a; --accent2: #d4703c; --ok: #7fc46a; --warn: #e0805a; --bad: #e05a5a;
     --o-import: #8fa6ff; --o-freesound: #7fc46a; --o-synth: #c8c8c8; --o-ai: #e05a8a;
     --radius: 8px; --mono: ui-monospace, "SF Mono", Menlo, monospace;
+    color-scheme: dark;
   }
   * { box-sizing: border-box; }
   html, body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.45 -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif; }
@@ -103,6 +104,7 @@
   .kbd { font: 11px var(--mono); color: var(--faint); }
   .status { min-height: 18px; font-size: 12.5px; color: var(--dim); margin-top: 6px; }
   .truth { font-size: 12px; color: var(--dim); border-left: 2px solid var(--accent); padding: 4px 0 4px 10px; margin: 10px 0 0; }
+  .previewnote { background: var(--panel2); border: 1px solid var(--accent); border-radius: 6px; padding: 8px 10px; font-size: 12.5px; color: var(--text); margin: 0 0 10px; }
   footer { color: var(--faint); font-size: 12px; padding: 14px 24px 30px; border-top: 1px solid var(--line); }
 </style>
 </head>
@@ -158,6 +160,7 @@
     </div>
 
     <div class="tab" id="t-fs">
+      <div class="previewnote" id="fs-preview-note" hidden>Freesound virker ikke i forhåndsvisningen her i Claude, fordi vinduet blokkerer kontakt med andre nettsteder. Åpne den nedlastede versjonen (index.html) på Macen for å søke.</div>
       <div class="box">
         <div class="note"><span class="badge o-freesound">FREESOUND</span> Søk i Freesound.org etter opptak som er merket <b>CC0</b> (fri bruk uten krav) eller <b>CC BY</b> (fri bruk, men du må kreditere). Lisensene «NonCommercial» og «Sampling+» blir alltid filtrert bort.</div>
         <details><summary>Slik får du gratis nøkkel (2 min)</summary>
@@ -185,6 +188,7 @@
     </div>
 
     <div class="tab" id="t-ai">
+      <div class="previewnote" id="el-preview-note" hidden>AI-sang virker ikke i forhåndsvisningen her i Claude, fordi vinduet blokkerer kontakt med andre nettsteder. Åpne den nedlastede versjonen (index.html) på Macen for å bruke ElevenLabs.</div>
       <div class="box">
         <div class="note"><span class="badge o-ai">AI-GENERERT</span> Ekte vokalgenerering via <b>ElevenLabs</b>. Du trenger en egen konto og API-nøkkel. Resultatet er en AI-modell som synger eller snakker, ikke et menneskelig opptak, og det blir merket slik.</div>
         <details><summary>Pris og oppsett (sjekket 13.10.2026)</summary>
@@ -274,6 +278,7 @@ count it backwards</textarea></div>
       <button class="btn ghost" id="dl-credits" disabled>Lisensliste (.txt)</button>
     </div>
     <div class="infoline" id="exportinfo"></div>
+    <div class="previewnote" id="export-preview-note" hidden>I forhåndsvisningen spør Claude før filen lagres, og hver WAV-fil kommer pakket i en zip. Dobbeltklikk zip-filen på Macen, så ligger WAV-filen der.</div>
     <p class="truth"><b>Tørr</b> og <b>behandlet</b> har samme lengde og ligger sample-nøyaktig oppå hverandre. Tørr beholder utsnitt, timing, tonehøyde, kor-lag, chops, stutter og reversering. Den har ikke filter, forvrengning, bitcrush, ringmod, hvisk/robot, frysing, romklang eller delay.</p>
     <p class="truth">Referansetrommen høres bare under avspilling. Den kommer ikke med i WAV-filene.</p>
     <div class="err" id="err"></div>

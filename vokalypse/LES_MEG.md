@@ -12,6 +12,8 @@ Vokalypse lager vokalmateriale til house, techno, EBM og annen elektronisk musik
 
 Du trenger ikke terminal eller server. Alt lyd-arbeid skjer lokalt i nettleseren.
 
+**Forhåndsvisning i Claude:** appen finnes også som et vindu i Claude-appen. Der virker import, syntetisk materiale, avspilling og nedlasting. Claude spør før en fil lagres, og hver WAV kommer pakket i en zip. Freesound og AI-sang virker bare i den nedlastede versjonen, fordi vinduet i Claude blokkerer kontakt med andre nettsteder. Forhåndsvisningen bygges med `node vokalypse/verktoy/bygg-forhandsvisning.js`.
+
 ## Arbeidsflyt
 
 1. **Råmateriale** (til venstre)
