@@ -1,0 +1,29 @@
+#!/bin/bash
+# TRE SPOR – Mac-app. Åpner instrumentet i et eget vindu.
+# Bruker Chrome/Edge/Brave i «app-modus» (eget vindu uten faner og adressefelt) hvis det finnes,
+# ellers Safari. Appen må ligge i trespor-mappen ved siden av index.html.
+HERE="$(cd "$(dirname "$0")" && pwd)"
+if [ -f "$HERE/../Resources/www/index.html" ]; then
+  WWW="$(cd "$HERE/../Resources/www" && pwd)"
+else
+  WWW="$(cd "$HERE/../../.." && pwd)"
+fi
+if [ ! -f "$WWW/index.html" ]; then
+  osascript -e 'display alert "Fant ikke TRE SPOR" message "Legg TRE SPOR.app tilbake i trespor-mappen (ved siden av index.html). Vil du ha den i Dock, dra den dit derfra."' >/dev/null 2>&1
+  exit 1
+fi
+if command -v python3 >/dev/null 2>&1; then
+  URL="file://$(python3 -c 'import sys,urllib.parse;print(urllib.parse.quote(sys.argv[1]))' "$WWW/index.html")"
+else
+  URL="file://$(printf '%s' "$WWW/index.html" | sed 's/ /%20/g')"
+fi
+
+APPDIRS="${TRESPOR_APPDIRS:-/Applications $HOME/Applications}"
+for NAME in "Google Chrome" "Microsoft Edge" "Brave Browser" "Chromium" "Vivaldi"; do
+  for D in $APPDIRS; do
+    if [ -d "$D/$NAME.app" ]; then
+      exec open -na "$D/$NAME.app" --args --app="$URL" --window-size=1440,920 --no-default-browser-check
+    fi
+  done
+done
+exec open -a Safari "$URL"

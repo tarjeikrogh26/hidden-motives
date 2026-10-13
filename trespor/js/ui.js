@@ -7,6 +7,8 @@
   var modFns = [];       // modulasjonsmålere og -markører
   var S = function () { return A.state; };
   U.macroTarget = 'all';
+  U.focus = 'drums';     // sporet tastaturet redigerer
+  U.ctl = {};
 
   /* ---------- DOM-hjelpere ---------- */
   function h(sel, props, kids) {
@@ -45,7 +47,7 @@
     var val = h('span.sl-val');
     var track = h('div.sl-track', { role: 'slider', tabindex: '0', 'aria-label': o.label }, [fill, mark, knob]);
     var el = h('div.sl' + (o.cls ? '.' + o.cls : ''), {}, [
-      h('div.sl-top', {}, [h('span.sl-name', { text: o.label }), o.mod ? h('span.sl-modtag', { text: '∿', title: 'Denne verdien moduleres' }) : null, val]),
+      h('div.sl-top', {}, [h('span.sl-name', { text: o.label }), o.keys ? h('kbd', { text: o.keys }) : null, o.mod ? h('span.sl-modtag', { text: '∿', title: 'Denne verdien moduleres' }) : null, val]),
       track,
       o.hint ? h('div.sl-hint', { text: o.hint }) : null
     ]);
@@ -202,10 +204,11 @@
     var undo = h('button.icon', { type: 'button', title: 'Angre (⌘Z)', 'aria-label': 'Angre', onclick: A.undo }, ['↶']);
     var redo = h('button.icon', { type: 'button', title: 'Gjør om (⇧⌘Z)', 'aria-label': 'Gjør om', onclick: A.redo }, ['↷']);
     var files = h('button.icon.wide', { type: 'button', onclick: openSheet, 'aria-label': 'Fil og eksport' }, [h('span.long', { text: 'Fil og eksport' }), h('span.short', { text: 'Fil' })]);
+    var keysBtn = h('button.icon.kbd-only', { type: 'button', title: 'Tastatursnarveier (H)', onclick: function () { if (TS.keys) TS.keys.toggleHelp(); } }, ['Taster ', h('kbd', { text: 'H' })]);
     var bpm = h('span.bpm');
     var top = h('header.top', {}, [
       h('div.brand', {}, [h('b', { text: 'TRE SPOR' }), bpm]),
-      play, rec, scope, h('div.tgrp', {}, [undo, redo]), files
+      play, rec, scope, h('div.tgrp', {}, [undo, redo]), keysBtn, files
     ]);
     function render() {
       play.classList.toggle('on', A.playing);
@@ -225,9 +228,9 @@
     var ids = U.macroTarget === 'all' ? TS.TRACKS : [U.macroTarget];
     return ids.filter(function (id) { return !locked(id); });
   }
-  function macroSlider(key, label, hint) {
+  function macroSlider(key, label, hint, keys) {
     return slider({
-      label: label, hint: hint, min: 0, max: 1, cls: 'sl-big',
+      label: label, hint: hint, min: 0, max: 1, cls: 'sl-big', keys: keys,
       get: function () {
         var ids = U.macroTarget === 'all' ? TS.TRACKS.filter(function (id) { return !locked(id); }) : [U.macroTarget];
         if (!ids.length) ids = TS.TRACKS;
@@ -244,6 +247,14 @@
       fmt: pct
     });
   }
+  U.nudgeMacro = function (key, d) {
+    var ids = macroTargets();
+    if (!ids.length) return U.toast('Valgt spor er låst.');
+    ids.forEach(function (id) { A.commit(['tracks', id, 'macros', key], Math.round(clamp(S().tracks[id].macros[key] + d, 0, 1) * 100) / 100); });
+    flashTracks(ids);
+    var names = { density: 'Tetthet', movement: 'Bevegelse', intensity: 'Intensitet' };
+    U.toast(names[key] + ' ' + Math.round(S().tracks[ids[0]].macros[key] * 100) + ' % · ' + (U.macroTarget === 'all' ? 'alle spor' : TS.TRACK_NAMES[U.macroTarget]));
+  };
   function flashTracks(ids) {
     ids.forEach(function (id) {
       var c = document.getElementById('track-' + id); if (!c) return;
@@ -259,7 +270,7 @@
       set: function (v) { U.macroTarget = v; U.refresh(); }, cls: 'target'
     });
     var tempo = slider({
-      label: 'Tempo', cls: 'sl-big', min: 60, max: 180, step: 1, fmt: function (v) { return v + ' BPM'; },
+      label: 'Tempo', cls: 'sl-big', keys: '− +', min: 60, max: 180, step: 1, fmt: function (v) { return v + ' BPM'; },
       get: function () { return S().song.bpm; }, set: function (v) { A.commit(['song', 'bpm'], v); },
       hint: 'Grunnpulsen. Alle tre spor følger den.'
     });
@@ -314,9 +325,9 @@
       h('div.keyrow', {}, [root, scale]),
       notes,
       h('div.sl-hint', { text: 'Sequencerne spiller skalatrinn, så alle noter følger med når du bytter toneart.' }),
-      macroSlider('density', 'Tetthet', 'Færre eller flere slag. Lavt: bare grunnslagene. Høyt: ekstra ghost-noter og utfylling.'),
-      macroSlider('movement', 'Bevegelse', 'Hvor mye som flytter seg: modulasjonsdybde, hvor ofte variasjon skjer og hvor raskt musikken utvikler seg.'),
-      macroSlider('intensity', 'Intensitet', 'Energi i lyden: åpnere filter, mer drive, sterkere anslag og aksenter.'),
+      macroSlider('density', 'Tetthet', 'Færre eller flere slag. Lavt: bare grunnslagene. Høyt: ekstra ghost-noter og utfylling.', 'T ⇧T'),
+      macroSlider('movement', 'Bevegelse', 'Hvor mye som flytter seg: modulasjonsdybde, hvor ofte variasjon skjer og hvor raskt musikken utvikler seg.', 'B ⇧B'),
+      macroSlider('intensity', 'Intensitet', 'Energi i lyden: åpnere filter, mer drive, sterkere anslag og aksenter.', 'I ⇧I'),
       h('h3', { text: 'Snapshots' }),
       snapRow
     ]);
@@ -338,11 +349,14 @@
       mutTxt.textContent = 'Utviklingen har gjort ' + n + (n === 1 ? ' endring' : ' endringer') + ' (stiplet).';
       card.classList.toggle('is-locked', S().tracks[id].lock);
       card.classList.toggle('is-muted', S().tracks[id].mute);
+      card.classList.toggle('focus', U.focus === id);
     });
+    var num = String(TS.TRACKS.indexOf(id) + 1);
     var card = h('section.track.t-' + id, { id: 'track-' + id }, [
-      h('div.th', {}, [h('h2', {}, [h('span.tdot'), TS.TRACK_NAMES[id]]), pos, badge, h('div.tbtns', {}, [lock, mute])]),
+      h('div.th', {}, [h('h2', {}, [h('span.tdot'), TS.TRACK_NAMES[id], h('kbd', { text: num, title: 'Velg sporet med tasten ' + num })]), pos, badge, h('div.tbtns', {}, [lock, mute])]),
       mutBar
     ].concat(body));
+    card.addEventListener('pointerdown', function () { if (U.focus !== id) { U.focus = id; U.refresh(); } });
     nowFns.push(function (info) {
       if (!info) { pos.textContent = ''; return; }
       var p = info.ev.pos[id];
@@ -398,7 +412,7 @@
     var cells = [];
     for (var i = 0; i < 16; i++) { var c = h('div.cell', { 'data-i': i }, [h('span.cn'), h('span.cbar')]); cells.push(c); big.appendChild(c); }
     var PROBS = [1, 0.75, 0.5, 0.25];
-    gridPointer(big, {
+    var bigH = {
       locked: isLocked,
       mode: function () { return lane === 'prob' ? 'value' : 'paint'; },
       paintStart: function (i) {
@@ -418,7 +432,8 @@
         if (!D().voices[voice].steps[i].on) setDrum(voice, i, 'on', true);
       },
       drag: function (i, v0, dy) { setDrum(voice, i, 'prob', clamp(Math.round((v0 + dy / 120) * 20) / 20, 0.05, 1)); }
-    });
+    };
+    gridPointer(big, bigH);
 
     function render() {
       var T = D(), dv = TS.seq.effectiveDrums(T), mut = TS.seq.mutatedSet(T, true);
@@ -453,6 +468,16 @@
     }
     upd.push(render);
     A.on('samples', render);
+
+    /* tastatur: samme handlinger som mus og finger */
+    var DLANES = ['on', 'acc', 'prob'];
+    U.ctl.drums = {
+      move: function (d) { sel = (sel + d + 16) % 16; render(); },
+      vert: function (d) { voice = clamp(voice - d, 0, TS.DRUM_VOICES.length - 1); U.refresh(); },
+      enter: function () { if (isLocked()) return U.toast('Sporet er låst – lås opp for å endre.'); lane === 'prob' ? bigH.tap(sel) : bigH.paintStart(sel); },
+      lane: function (d) { lane = DLANES[(DLANES.indexOf(lane) + d + DLANES.length) % DLANES.length]; U.refresh(); },
+      where: function () { return TS.DRUM_VOICES[voice].name + ', steg ' + (sel + 1); }
+    };
 
     nowFns.push(function (info) {
       var p = info ? info.ev.pos.drums : -1;
@@ -545,21 +570,22 @@
         A.commit(['tracks', id, 'mutations'], muts.filter(function (m) { return !(m.type === 'step' && m.i === i && m.field === field); }), { noHistory: true });
     }
     function laneVal(i) { var s = TS.seq.effectiveSteps(T()).steps[i]; return s[lane]; }
-    function bumpVal(i, d) {
-      var v = laneVal(i);
-      if (lane === 'deg') setStep(i, 'deg', clamp(v + d, 0, TS.DEG_MAX));
-      else if (lane === 'oct') setStep(i, 'oct', clamp(v + d, -2, 2));
-      else if (lane === 'gate') setStep(i, 'gate', clamp(Math.round((v + d * 0.05) * 20) / 20, 0.05, 1));
-      else if (lane === 'prob') setStep(i, 'prob', clamp(Math.round((v + d * 0.05) * 20) / 20, 0.05, 1));
+    function bumpVal(i, d, ln) {
+      ln = ln || lane;
+      var v = TS.seq.effectiveSteps(T()).steps[i][ln];
+      if (ln === 'deg') setStep(i, 'deg', clamp(v + d, 0, TS.DEG_MAX));
+      else if (ln === 'oct') setStep(i, 'oct', clamp(v + d, -2, 2));
+      else if (ln === 'gate') setStep(i, 'gate', clamp(Math.round((v + d * 0.05) * 20) / 20, 0.05, 1));
+      else if (ln === 'prob') setStep(i, 'prob', clamp(Math.round((v + d * 0.05) * 20) / 20, 0.05, 1));
       else setStep(i, 'on', d > 0);
-      if (lane !== 'on' && !TS.seq.effectiveSteps(T()).steps[i].on) setStep(i, 'on', true);
+      if (ln !== 'on' && !TS.seq.effectiveSteps(T()).steps[i].on) setStep(i, 'on', true);
     }
 
     var grid = h('div.grid16.big-grid.mel');
     var cells = [];
     for (var i = 0; i < 16; i++) { var c = h('div.cell', { 'data-i': i }, [h('span.cn'), h('span.cbar')]); cells.push(c); grid.appendChild(c); }
     var CYC = { oct: [0, 1, -1], gate: [0.25, 0.5, 0.75, 1], prob: [1, 0.75, 0.5, 0.25] };
-    gridPointer(grid, {
+    var gridH = {
       locked: isLocked,
       mode: function () { return lane === 'on' ? 'paint' : 'value'; },
       paintStart: function (i) { var on = !TS.seq.effectiveSteps(T()).steps[i].on; setStep(i, 'on', on); return on; },
@@ -579,7 +605,8 @@
         else nv = clamp(Math.round((v0 + dy / 110) * 20) / 20, 0.05, 1);
         if (nv !== laneVal(i)) setStep(i, lane, nv);
       }
-    });
+    };
+    gridPointer(grid, gridH);
 
     function noteName(s) {
       var song = S().song;
@@ -610,6 +637,15 @@
       rotInfo.textContent = mut.rot ? ' (utvikling: ' + (mut.rot > 0 ? '+' : '') + mut.rot + ')' : '';
     }
     upd.push(render);
+    U.ctl[id] = {
+      move: function (d) { var len = T().seq.length; sel = ((sel + d) % len + len) % len; U.refresh(); },
+      /* ↑↓ endrer tonen i Slag- og Tone-feltet, ellers verdien i valgt felt */
+      vert: function (d) { if (isLocked()) return U.toast('Sporet er låst – lås opp for å endre.'); bumpVal(sel, d, lane === 'on' ? 'deg' : lane); },
+      enter: function () { if (isLocked()) return U.toast('Sporet er låst – lås opp for å endre.'); gridH.paintStart(sel); },
+      lane: function (d) { var k = LANES.findIndex(function (l) { return l[0] === lane; }); lane = LANES[(k + d + LANES.length) % LANES.length][0]; U.refresh(); },
+      idea: function () { if (isLocked()) return U.toast('Sporet er låst.'); A.newIdea(id); U.toast('Ny grunnidé for ' + TS.TRACK_NAMES[id].toLowerCase() + ' (angre med ⌘Z).'); },
+      where: function () { return 'steg ' + (sel + 1); }
+    };
     nowFns.push(function (info) {
       var p = info ? info.ev.pos[id] : -1;
       if (info && p < 0) return;
@@ -799,6 +835,13 @@
   var sheet;
   function openSheet() { sheet.hidden = false; renderRecs(); renderResult(); }
   function closeSheet() { sheet.hidden = true; }
+  U.openSheet = openSheet; U.closeSheet = closeSheet;
+  U.sheetOpen = function () { return sheet && !sheet.hidden; };
+  U.saveProject = function (withSamples) {
+    var name = 'trespor-' + new Date().toISOString().slice(0, 16).replace(/[:T]/g, '-') + '.json';
+    TS.files.download(JSON.stringify(A.projectObject(withSamples !== false), null, 1), name, 'application/json');
+    U.toast('Prosjektfil lagret: ' + name);
+  };
   var recList, resultBox, progress, busy = false;
   function renderRecs() {
     recList.innerHTML = '';
@@ -866,10 +909,7 @@
         h('h3', { text: 'Prosjekt' }),
         h('p.small', { text: 'Prosjektfila (.json) lagrer noter, synthinnstillinger og modulasjon i hver sin seksjon, sammen med frø, snapshots og opptak, så både musikken og klangutviklingen kan gjenskapes.' }),
         h('div.row', {}, [
-          h('button.primary', { type: 'button', onclick: function () {
-            var name = 'trespor-' + new Date().toISOString().slice(0, 16).replace(/[:T]/g, '-') + '.json';
-            TS.files.download(JSON.stringify(A.projectObject(withSamples.checked), null, 1), name, 'application/json');
-          } }, ['Lagre prosjektfil']),
+          h('button.primary', { type: 'button', onclick: function () { U.saveProject(withSamples.checked); } }, ['Lagre prosjektfil']),
           h('button', { type: 'button', onclick: function () { projIn.click(); } }, ['Åpne prosjektfil …']), projIn,
           h('label.chk', {}, [withSamples, ' Ta med egne samples'])
         ]),
@@ -935,15 +975,6 @@
     U.refresh();
     requestAnimationFrame(frame);
 
-    document.addEventListener('keydown', function (e) {
-      var tag = (e.target.tagName || '').toLowerCase();
-      if (tag === 'input' || tag === 'select' || tag === 'textarea') return;
-      var mod = e.metaKey || e.ctrlKey;
-      if (mod && e.key.toLowerCase() === 'z') { e.preventDefault(); e.shiftKey ? A.redo() : A.undo(); }
-      else if (mod && e.key.toLowerCase() === 'y') { e.preventDefault(); A.redo(); }
-      else if (e.code === 'Space' && !mod) { e.preventDefault(); A.togglePlay(); }
-      else if (e.key.toLowerCase() === 'r' && !mod) A.toggleRec();
-      else if (e.key.toLowerCase() === 's' && !mod) { A.saveSnapshot(); U.toast('Snapshot lagret.'); }
-    });
+    if (TS.keys) TS.keys.init();
   };
 })(typeof window !== 'undefined' ? window : globalThis);

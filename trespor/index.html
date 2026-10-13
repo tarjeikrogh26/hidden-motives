@@ -12,7 +12,6 @@
 <title>TRE SPOR</title>
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
-<link rel="manifest" href="manifest.webmanifest">
 <link rel="stylesheet" href="css/app.css">
 </head>
 <body>
@@ -26,11 +25,13 @@
 <script src="js/render.js"></script>
 <script src="js/app.js"></script>
 <script src="js/ui.js"></script>
+<script src="js/keys.js"></script>
 <script>
   (function () {
     var A = TS.app;
     A.load().then(function () { TS.ui.refresh(); });
     TS.ui.init();
+    if (location.protocol !== 'file:') { var m = document.createElement('link'); m.rel = 'manifest'; m.href = 'manifest.webmanifest'; document.head.appendChild(m); }
     if (location.protocol === 'https:' && 'serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(function () {});
   })();
 </script>

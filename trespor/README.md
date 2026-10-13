@@ -6,24 +6,61 @@ Alt kjører i nettleseren (Web Audio). Ingen installasjon, ingen konto, ingen be
 
 ---
 
-## Start på Mac
+## Mac (hovedversjonen)
 
-**Enklest:** dobbeltklikk `start-mac.command` i mappen `trespor`.
+**Dobbeltklikk `TRE SPOR.app`** i mappen `trespor`.
 
-- Instrumentet åpnes i nettleseren på `http://localhost:8765`.
-- Terminalvinduet viser også adressen du åpner på iPhone, for eksempel `http://192.168.1.23:8765`.
-- Stopp ved å lukke terminalvinduet.
+- Har du Chrome, Edge eller Brave, åpnes instrumentet i et eget vindu uten faner og adressefelt, som et vanlig program. Ellers åpnes det i Safari.
+- Vil du ha det i Dock: dra `TRE SPOR.app` til Dock. La selve appen ligge i `trespor`-mappen, for den henter filene derfra.
+- Trykk **H** for oversikten over tastene.
 
-Første gang kan macOS si at fila er fra en «ukjent utvikler». Høyreklikk da på `start-mac.command`, velg **Åpne** og bekreft. Hvis den ikke er kjørbar etter nedlasting som zip: `chmod +x start-mac.command` i Terminal.
+**Første gang** kan macOS stoppe appen fordi den ikke er signert av en kjent utvikler.
+- På macOS 15 (Sequoia) og nyere: prøv å åpne den én gang. Gå så til **Systeminnstillinger → Personvern og sikkerhet**, bla ned og trykk **Åpne likevel**.
+- På eldre macOS: høyreklikk på appen, velg **Åpne**, og bekreft.
 
-**Uten server:** dobbeltklikk `index.html`. Det virker i Safari og Chrome på Mac. Serveren trengs bare for å åpne appen fra iPhone.
+Hentet du repoet som zip, og appen ikke starter i det hele tatt, kjør dette én gang i Terminal fra `trespor`-mappen:
 
-Anbefalt nettleser: Safari eller Chrome. Trykk mellomrom for å spille.
+```
+xattr -dr com.apple.quarantine "TRE SPOR.app" start-mac.command
+chmod +x "TRE SPOR.app/Contents/MacOS/trespor" start-mac.command
+```
 
-## Test på iPhone
+**Alternativ:** dobbeltklikk `index.html`. Det virker i Safari og Chrome.
+
+### Spill med tastaturet
+
+Alt kan gjøres uten mus. Tastene ligger direkte på et norsk tastatur, uten Alt-kombinasjoner.
+
+| Tast | Gjør |
+|---|---|
+| **Mellomrom** | spill / stopp |
+| **1  2  3** | velg trommer / bass / synth. Hovedkontrollene styrer da bare det sporet |
+| **0** | hovedkontrollene styrer alle spor |
+| **← →** | flytt stegmarkøren (⇧ = fire steg) |
+| **↑ ↓** | tone opp / ned. I andre felt endres verdien. På trommer velges lyd |
+| **Enter** | slag av / på |
+| **,  .** | forrige / neste felt: Slag, Tone, Oktav, Lengde, Sjanse |
+| **−  +** | tempo |
+| **T / ⇧T** | tetthet opp / ned |
+| **B / ⇧B** | bevegelse opp / ned |
+| **I / ⇧I** | intensitet opp / ned |
+| **L  M** | lås / demp valgt spor |
+| **N** | ny idé for bass eller synth |
+| **U  F** | utvikling av/på, frys tilfeldighet |
+| **R** | opptak (starter på neste takt) |
+| **S** | lagre snapshot. **⇧1–⇧9** henter snapshot 1–9 |
+| **⌘Z / ⇧⌘Z** | angre / gjør om |
+| **⌘S** | lagre prosjektfil. **⌘E** åpner fil og eksport |
+| **H** eller **?** | vis tasteoversikten. **Esc** lukker den |
+
+Valgt spor har hvit ramme, og stegmarkøren er den hvite ruta. Tastehintene vises ved kontrollene på Mac og skjules på telefon.
+
+## iPhone
+
+Samme instrument, med store ruter for fingre i stedet for tastehint.
 
 **A. Fra Macen (samme Wi-Fi)**
-1. Start `start-mac.command` på Macen.
+1. Dobbeltklikk `start-mac.command` på Macen. Den starter en liten server og viser adressen for iPhone.
 2. Åpne adressen fra terminalvinduet (`http://<mac-ip>:8765`) i Safari på iPhone.
 3. Trykk ▶. Hører du ingenting: sjekk lydløs-bryteren på siden av telefonen, og skru opp volumet.
 4. Valgfritt: Del-knappen → **Legg til på Hjem-skjerm**. Da åpnes appen i fullskjerm.
@@ -31,6 +68,8 @@ Anbefalt nettleser: Safari eller Chrome. Trykk mellomrom for å spille.
 **B. Via GitHub Pages**
 Repoet ser ut til å være publisert med GitHub Pages fra `main`. Når denne grenen er flettet inn, skal instrumentet på
 `https://tarjeikrogh26.github.io/hidden-motives/trespor/` ligge der. Over https fungerer det også uten nett etter første besøk.
+
+**iPad** fungerer på samme måte i Safari. Har iPaden tastatur, virker tastene også der.
 
 Eksport på iPhone: knappene laster ned filene (Safari spør først). **Del / Lagre i Filer** sender WAV- og MIDI-filene rett til Filer, AirDrop eller en annen app.
 
@@ -42,7 +81,7 @@ Prosjektet lagres automatisk i nettleseren. Egne samples lagres også lokalt, sl
 
 | Du vil … | Gjør dette |
 |---|---|
-| Starte og stoppe | ▶ (eller mellomrom på Mac) |
+| Starte og stoppe | ▶ (Mellomrom på Mac) |
 | Endre tempo, toneart og energi | **Hovedkontroller** øverst |
 | Endre bare bass eller bare synth | Velg **Bass** eller **Synth** under «Kontrollene styrer» |
 | Låse et spor helt | **Lås** på sporet |
@@ -152,8 +191,9 @@ Fordi synth og modulasjon ligger i hver sin seksjon, kan klangutviklingen gjensk
 
 ```
 trespor/
+  TRE SPOR.app          Mac-appen (dobbeltklikk)
   index.html            appen
-  start-mac.command     start på Mac (server + adresse for iPhone)
+  start-mac.command     server for iPhone (viser adressen)
   css/app.css           utseende
   js/core.js            tilstand, skalaer, frøstyrt tilfeldighet
   js/sequencer.js       sequencer, variasjon, modulasjonskilder, utvikling
@@ -163,6 +203,7 @@ trespor/
   js/files.js           WAV, MIDI, ZIP, prosjektfil, lagring
   js/app.js             angre, snapshots, opptak, samples, eksport
   js/ui.js              grensesnitt
+  js/keys.js            tastaturstyring
   tests/                tester
 ```
 
@@ -171,5 +212,7 @@ trespor/
 ```
 node tests/unit.test.js        # sequencer, utvikling, grenser, frø, filformater
 node tests/browser.test.js     # i ekte nettleser (krever Playwright):
-                               # spiller, tar opp, rendrer miks/stems/MIDI, loop, angre, prosjektfil, mobilvisning
+                               # spiller, tar opp, rendrer miks/stems/MIDI, loop, angre, prosjektfil,
+                               # tastaturstyring og mobilvisning
+BROWSER=webkit node tests/browser.test.js   # samme test i WebKit, motoren i Safari på Mac og iPhone
 ```

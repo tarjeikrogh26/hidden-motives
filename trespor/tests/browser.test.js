@@ -2,8 +2,11 @@
    laster appen, spiller, tar opp en fremføring med kontrollendringer, rendrer og sjekker lyd, stems og MIDI.
    Kjør: node tests/browser.test.js   (krever playwright) */
 const path = require('path');
-let chromium;
-try { ({ chromium } = require('playwright')); } catch (e) { ({ chromium } = require('/opt/node22/lib/node_modules/playwright')); }
+let pw;
+try { pw = require('playwright'); } catch (e) { pw = require('/opt/node22/lib/node_modules/playwright'); }
+/* BROWSER=webkit tester med samme motor som Safari på Mac og iPhone */
+const engineName = process.env.BROWSER || 'chromium';
+const chromium = pw[engineName];
 
 const url = process.env.URL || ('file://' + path.resolve(__dirname, '..', 'index.html'));
 const shots = process.env.SHOTS || '';
@@ -12,7 +15,8 @@ function ok(cond, msg) { console.log((cond ? 'ok   ' : 'FEIL ') + msg); if (!con
 
 (async () => {
   const exe = process.env.CHROMIUM || undefined;
-  const browser = await chromium.launch({ executablePath: exe, args: ['--autoplay-policy=no-user-gesture-required'] });
+  const browser = await chromium.launch(engineName === 'chromium' ? { executablePath: exe, args: ['--autoplay-policy=no-user-gesture-required'] } : {});
+  console.log('nettlesermotor: ' + engineName + ' ' + browser.version());
   const page = await browser.newPage({ viewport: { width: 1400, height: 950 } });
   const errors = [];
   page.on('pageerror', e => errors.push(String(e)));
@@ -142,8 +146,71 @@ function ok(cond, msg) { console.log((cond ? 'ok   ' : 'FEIL ') + msg); if (!con
   });
   ok(pj.ok1 && pj.res && pj.loop, 'prosjektfil lagres og åpnes med synth, modulasjon og samples ' + JSON.stringify(pj));
 
+  /* tastatur (Mac) */
+  await page.evaluate(() => { TS.app.stop(); TS.app.newProject(); });
+  await page.mouse.click(5, 900);
+  const k = async (key) => { await page.keyboard.press(key); await page.waitForTimeout(30); };
+  const get = () => page.evaluate(() => ({
+    focus: TS.ui.focus, target: TS.ui.macroTarget, bpm: TS.app.state.song.bpm,
+    s2: TS.app.state.tracks.bass.seq.steps[2], s4: TS.app.state.tracks.bass.seq.steps[4],
+    dens: TS.TRACKS.map(id => TS.app.state.tracks[id].macros.density), lock: TS.app.state.tracks.bass.lock,
+    snaps: TS.app.snapshots.length, playing: TS.app.playing, kick1: TS.app.state.tracks.drums.voices[0].steps[1].on,
+    help: !document.querySelector('.keyhelp') ? false : !document.querySelector('.keyhelp').hidden,
+    focusCls: document.getElementById('track-bass').classList.contains('focus')
+  }));
+  const k0 = await get();
+  await k('2');
+  let ks = await get();
+  ok(ks.focus === 'bass' && ks.target === 'bass' && ks.focusCls, 'tast 2 velger bass og retter hovedkontrollene mot bass');
+  await k('ArrowRight'); await k('ArrowRight'); await k('Enter');
+  ks = await get();
+  ok(ks.s2.on !== k0.s2.on, 'piltaster + Enter slår et basssteg av/på');
+  await k('ArrowRight'); await k('ArrowRight'); await k('ArrowUp'); await k('ArrowUp');
+  ks = await get();
+  ok(ks.s4.on && ks.s4.deg === k0.s4.deg + 2, '↑ to ganger hever tonen to skalatrinn (' + k0.s4.deg + ' → ' + ks.s4.deg + ')');
+  await k('.'); await k('.'); await k('ArrowUp');
+  ks = await get();
+  ok(ks.s4.oct === k0.s4.oct + 1, 'punktum bytter felt til Oktav, ↑ øker oktaven');
+  await k('t'); await k('t');
+  ks = await get();
+  ok(Math.abs(ks.dens[1] - k0.dens[1] - 0.1) < 1e-6 && ks.dens[0] === k0.dens[0] && ks.dens[2] === k0.dens[2], 'T øker tetthet bare på bass ' + JSON.stringify(ks.dens));
+  await k('Shift+T');
+  ks = await get();
+  ok(Math.abs(ks.dens[1] - k0.dens[1] - 0.05) < 1e-6, '⇧T senker tettheten');
+  await k('+'); await k('+'); await k('-');
+  ks = await get();
+  ok(ks.bpm === k0.bpm + 1, '+ og − endrer tempo');
+  await k('l');
+  ks = await get();
+  ok(ks.lock === true, 'L låser valgt spor');
+  await k('l');
+  await k('s');
+  ks = await get();
+  ok(ks.snaps === k0.snaps + 1, 'S lagrer snapshot');
+  await k('1'); await k('ArrowRight'); await k('Enter');
+  ks = await get();
+  ok(ks.focus === 'drums' && ks.kick1 !== k0.kick1, 'tast 1 + Enter redigerer trommene');
+  await page.click('#track-bass .tog.lock'); await page.click('#track-bass .tog.lock');
+  const lockBefore = (await get()).lock;
+  await k('Space');
+  ks = await get();
+  ok(ks.playing && ks.lock === lockBefore, 'mellomrom spiller selv rett etter et klikk på en knapp');
+  await k('Space');
+  await k('Control+z');
+  ks = await get();
+  ok(ks.snaps >= 1, 'angre med ⌘/Ctrl+Z gir ingen feil');
+  await k('h');
+  ks = await get();
+  ok(ks.help, 'H viser tastaturoversikten');
+  if (shots) await page.screenshot({ path: shots + '/taster.png' });
+  await k('Escape');
+  ks = await get();
+  ok(!ks.help, 'Esc lukker oversikten');
+  await k('2');
+  if (shots) { await page.evaluate(() => window.scrollTo(0, 0)); await page.screenshot({ path: shots + '/mac-fokus.png' }); }
+
   /* mobil */
-  const mob = await browser.newPage({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
+  const mob = await browser.newPage(Object.assign({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, hasTouch: true }, engineName === 'chromium' ? { isMobile: true } : {}));
   mob.on('pageerror', e => errors.push(String(e)));
   await mob.goto(url);
   await mob.waitForSelector('.top');
