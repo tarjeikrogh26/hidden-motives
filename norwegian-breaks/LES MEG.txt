@@ -1,0 +1,37 @@
+NORWEGIAN BREAKS – trommeapp for iPhone og Mac (i nettleseren)
+
+FLYT
+1 Loop       Last inn en trommeloop (WAV, AIFF, MP3, M4A). Sjekk tempo og antall takter.
+2 Rhythm     Rytmen hentes ut: hvert slag ligger der det faktisk treffer (swing, push,
+             ghost notes bevares). Trykk på et slag for å rette det, trykk i et tomt felt
+             for å legge til. Lagre rytmen. Kan eksporteres som MIDI.
+3 Sounds     Lydene hentes ut: forslag til kutt rundt hvert slag. Lytt, dra kuttene,
+             merk "Keep" og lagre i et trommesett. Appen sier fra når to trommer
+             overlapper, når forrige slag ringer under, eller når halen er kuttet.
+4 Combine    Rytme fra én loop + lyder fra en annen (eller egne enkeltlyder via "+ File").
+             Layer kick: egen hard kick under valgte kickslag, med nivå, timing og lengde.
+5 Long beat  Velg stil (boom bap / trap), tempo, lengde i minutter og variasjon.
+             Lås kick, snare, hats eller other. "Keep this one" + "Make another" gir
+             versjoner ved siden av hverandre. Eksport: WAV (24-bit) + MIDI, og separate
+             spor (kick, snare, hats, other, layer kick).
+Library      Rytmer, trommesett og prosjekter lagres hver for seg på enheten.
+             "Save file" lager en prosjektfil med lydene inni, for backup og flytting
+             mellom Mac og iPhone. Åpne den med "Open a Norwegian Breaks file".
+
+START PÅ MAC
+  Dobbeltklikk "Start Norwegian Breaks.command". Nettleseren åpner appen.
+  Første gang: høyreklikk fila og velg Åpne (macOS spør fordi den er lastet ned).
+  Hvis den ikke vil starte: åpne Terminal, skriv  sh  og et mellomrom, dra fila inn, trykk Enter.
+  Du kan også dobbeltklikke "Norwegian Breaks.html" direkte, men da kan nettleseren
+  nekte å lagre biblioteket mellom øktene. Bruk start-fila for vanlig arbeid.
+
+TEST PÅ IPHONE (to måter)
+  A) Åpne artifact-lenken i Claude-appen eller på claude.ai i Safari. Trykk "Choose a loop"
+     for å hente fra Filer. Lyd spilles også med lydløs-bryteren på.
+  B) Start appen på Macen (over). Vinduet viser en adresse som http://192.168.x.x:8765/...
+     Skriv den inn i Safari på iPhonen (samme Wi-Fi). Del > Legg til på Hjem-skjerm gir et ikon.
+     Merk: Biblioteket ligger lagret per nettleser og adresse. Flytt arbeid med prosjektfiler.
+
+ÆRLIG OM KUTT
+  Et kutt er en bit av hele loopen. Slår kick og hi-hat samtidig, får du begge i lyden.
+  Appen prøver ikke å skille dem fra hverandre (ingen kildeseparasjon i denne versjonen).
