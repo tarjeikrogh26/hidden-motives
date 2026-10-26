@@ -1,4 +1,4 @@
-# DROPFATHER — by Tarjei Krogh · v0.1
+# DROPFATHER — by Tarjei Krogh · v0.2
 
 Build-up, pre-drop og drop for en hvilken som helst låt. Lokal nettleserapp, ingen server, ingen konto.
 Åpne `Dropfather.html` i Chrome, Edge eller Safari og dra inn en WAV/AIFF/MP3.
@@ -37,9 +37,11 @@ Kilder: [Point Blank – drops that hit harder](https://www.pointblankmusicschoo
    - **Insert**: en ny build-up settes inn før droppet, og låten blir lengre. Godt for gamle låter som aldri hadde et drop.
 4. **Velg stil**: House lift · Festival · Techno tunnel · Take-off · EBM motor · Randomize. Juster så maskinene:
    - BUILD-UP: high-pass sweep, noise riser, pitch riser, roll (snare/clap/kick), stutter, reverb wash, volume swell
-   - PRE-DROP: pausen (ingen / 1 slag / 2 slag / 1 takt), echo throw i DELAYSY-stil (ping-pong), reverse suck
-   - DROP: kick, basspattern (offbeat, rolling 16ths, gallop, oktav-motor, sub hold, monoton 1/4), basslyd (sub/saw/reese/acid),
-     pump, impact, air, låtnivå, «erstatt låtens egen bass»
+   - PRE-DROP: pausen (ingen / 1 slag / 2 slag / 1 takt), **DELAYSY** echo throw (alle 777 fabrikkpresets, kast av
+     siste 1/2 slag til siste takt), reverse suck
+   - DROP: kick, **Bass Invaders**-lyd (alle 2000 fabrikklyder, inkludert de innspilte bassene), basspattern
+     (offbeat, rolling 16ths, gallop, oktav-motor, sub hold, monoton 1/4 eller **Bass Invaders riff**: lydens egen
+     fabrikk-basslinje), oktav, pump, impact, air, låtnivå, «erstatt låtens egen bass»
 5. **Lytt**: «Play drop» (build-up + drop), «Whole song» og «A/B original». Klikk i det hvite/røde vinduet for å lytte derfra.
 6. **Eksport**: WAV (hele låten, bare build+drop, eller bare lagene) i 24-bit, MIDI (bass, kick, roll) og planen som JSON.
 
@@ -51,10 +53,17 @@ nye området, så en hardt mastret låt ikke klipper. Statuslinjen viser hvor my
 - **Analyse**: fra AVANTGARDIAN ARP v0.18 (`src/vendor/`). Chordino/NNLS-Chroma er **GPL-2.0-or-later**
   (lisenser og kildekode i `src/vendor/chordino-license/`). Selges Dropfather med denne motoren, må hele appen
   distribueres under GPL med kildekode tilgjengelig. Samme gjelder ARP i dag.
-- **Bass, trommer, risere, impact**: syntetisert i `src/dsp.js`. Ingen samples. Trommene fra Bass Invaders er
-  bevisst *ikke* brukt, fordi lisensen deres er uavklart (se Bass Invaders `SOURCE-NOTES`).
-- **Echo throw**: en ny, enkel ping-pong i DELAYSY-ånd, ikke DELAYSY-koden. **Bass**: ny kompakt monosynth i
-  Bass Invaders-ånd, ikke Bass Invaders-motoren. Begge kan byttes ut med de ekte motorene i neste versjon.
+- **Bass**: den ekte Bass Invaders v0.10.8-motoren (`src/vendor/bass-invaders/`). Filene er kopiert uendret.
+  Lydverts-delen av `app.js` (`loadPreset`, `applySound`, `makeGraph` og startverdiene) er hentet ordrett ut med
+  `tools/extract-bass-host.py`. Hver lyd får derfor nøyaktig samme patch, graf (filter 2, dark echo, 3D space,
+  kompressor) og nivåkalibrering (`bass-balance.js`) som i appen. Riff-mønsteret bruker Bass Invaders' egen
+  frasegenerator med lydens fabrikk-seed. De innspilte bassene er CC0 (lisenser i `bass-assets/licenses/`) og er
+  innebygd slik `Bass-Invaders.html` gjør det.
+- **Echo throw**: den ekte DELAYSY v0.6.3-motoren med alle 777 presets (`src/vendor/delaysy-engine.js`), hentet ordrett
+  ut av HTML-filen med `tools/extract-delaysy.py`. Bare en liten vertsdel er ny. Den kobler motoren til én
+  AudioContext/OfflineAudioContext i stedet for siden. Nivået følger DELAYSYs egen auto-level-regel (weighted energy).
+- **Trommer, risere, impact**: syntetisert i `src/dsp.js`. Ingen samples. Trommene fra Bass Invaders er bevisst
+  *ikke* brukt, fordi lisensen deres er uavklart (se Bass Invaders `SOURCE-NOTES`).
 - Logo: Tarjei Krogh.
 
 ## Utvikling
@@ -62,12 +71,15 @@ nye området, så en hardt mastret låt ikke klipper. Statuslinjen viser hvor my
 ```
 node build.mjs            # bygger Dropfather.html fra src/
 node test-analysis.cjs    # tempo, takt 1 og drop-punkt på syntetiske låter
+# hente motorene på nytt fra nye versjoner av appene:
+python3 tools/extract-delaysy.py DELAYSY-vX.html src/vendor/delaysy-engine.js
+python3 tools/extract-bass-host.py Bass-Invaders/source/dist/app.js src/vendor/bass-invaders/bass-host.js
 ```
 
 `src/analysis.js` (tempo/takt/energikart/forslag), `src/dsp.js` (all lyd, offline rendering, WAV/MIDI),
-`src/app.js` (UI), `src/vendor/` (ARP-analysen).
+`src/app.js` (UI), `src/vendor/` (ARP-analysen, Bass Invaders, DELAYSY).
 
-## Kjente grenser i v0.1
+## Kjente grenser i v0.2
 
 - Takt 1 er en kvalifisert gjetning (seksjoner skifter på 1-ern). Sjekk den med «−1 beat / +1 beat».
 - Taktartsforutsetning 4/4. Tempo må være stabilt (ingen live-tempo-drift).

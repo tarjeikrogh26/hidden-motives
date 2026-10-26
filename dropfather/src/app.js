@@ -46,14 +46,16 @@ const lookupBass=t=>S.harmony?A.bassAt(S.harmony,t):null;
 
 /* ---------- Plan and controls ---------- */
 const BUILD=[['hp','High-pass sweep'],['riser','Noise riser'],['pitch','Pitch riser'],['roll','Roll',X.ROLLS],['rollAmt','Roll level'],['stutter','Stutter'],['verb','Reverb wash'],['swell','Volume swell']];
-const PRE=[['throw','Echo throw'],['throwDiv','Echo rhythm',{0.5:'1/8',0.75:'Dotted 1/8',1:'1/4',1.5:'Dotted 1/4'}],['reverse','Reverse suck']];
-const DROP=[['kick','Kick'],['bassPattern','Bass pattern',Object.fromEntries(Object.entries(X.PATTERNS).map(([k,v])=>[k,v.name]))],['bassSound','Bass sound',X.SOUNDS],['bass','Bass level'],['follow','Bass follows the song’s bass map',true],['pump','Pump'],['impact','Impact'],['lift','Air'],['song','Song level'],['replaceBass','Replace the song’s own bass',true]];
+const DELAYSY=Object.fromEntries((window.Delaysy?.presets||[]).map((v,i)=>[i,`${i+1}. ${v.name} · ${v.cat}`])),BASSES=Object.fromEntries(X.bassCatalog().map((v,i)=>[v.id,`${i+1}. ${v.name}`]));
+const PRE=[['throw','Echo throw'],['delaysy','DELAYSY preset',DELAYSY],['throwLen','Throw',{0.5:'Last 1/2 beat',1:'Last beat',2:'Last 2 beats',4:'Last bar'}],['reverse','Reverse suck']];
+const DROP=[['kick','Kick'],['bassPattern','Bass pattern',Object.fromEntries(Object.entries(X.PATTERNS).map(([k,v])=>[k,v.name]))],['bassPreset','Bass Invaders sound',BASSES],['bassOct','Bass octave',{low:'Low · E1–D♯2',mid:'Mid · one octave up'}],['bass','Bass level'],['follow','Bass follows the song’s bass map',true],['pump','Pump'],['impact','Impact'],['lift','Air'],['song','Song level'],['replaceBass','Replace the song’s own bass',true]];
 function controls(box,group,defs){
  const el=$(box);el.replaceChildren();
  for(const [key,label,opt] of defs){
   const id=group+'-'+key,row=document.createElement('div');
   if(opt===true){row.className='check';row.innerHTML=`<input type="checkbox" id="${id}"><label for="${id}"></label>`;row.querySelector('label').textContent=label;row.querySelector('input').onchange=e=>{S.plan[group][key]=e.target.checked;changed();};}
-  else if(opt){row.className='pick';row.innerHTML=`<label for="${id}"></label><select id="${id}"></select>`;row.querySelector('label').textContent=label;const sel=row.querySelector('select');for(const [v,n] of Object.entries(opt))sel.add(new Option(n,v));sel.onchange=e=>{const v=e.target.value;S.plan[group][key]=isNaN(+v)?v:+v;changed();};}
+  else if(opt){const long=Object.keys(opt).length>20;row.className='pick'+(long?' browse':'');row.innerHTML=`<label for="${id}"></label><div class="nav">${long?'<button type="button" aria-label="Back 10">«</button><button type="button" aria-label="Previous">‹</button>':''}<select id="${id}"></select>${long?'<button type="button" aria-label="Next">›</button><button type="button" aria-label="Forward 10">»</button>':''}</div>`;row.querySelector('label').textContent=label;const sel=row.querySelector('select');for(const [v,n] of Object.entries(opt))sel.add(new Option(n,v));const set=v=>{S.plan[group][key]=isNaN(+v)?v:+v;changed();};sel.onchange=e=>set(e.target.value);
+   if(long)row.querySelectorAll('.nav button').forEach((b,i)=>b.onclick=()=>{const n=sel.options.length,step=[-10,-1,1,10][i];sel.selectedIndex=((sel.selectedIndex+step)%n+n)%n;set(sel.value);});}
   else{row.className='knob';row.innerHTML=`<label for="${id}"></label><input type="range" id="${id}" min="0" max="1" step="0.01"><output></output>`;row.querySelector('label').textContent=label;const r=row.querySelector('input');r.oninput=()=>{S.plan[group][key]=+r.value;row.querySelector('output').textContent=Math.round(r.value*100)+'%';changed(true);};r.onchange=()=>changed();}
   el.append(row);
  }
@@ -74,7 +76,7 @@ function planText(tl){
  if(b.hp>0)parts.push(`high-pass up to ${Math.round(20*2**(b.hp*6.6))} Hz`);if(b.roll!=='off'&&b.rollAmt>0)parts.push(X.ROLLS[b.roll].toLowerCase());if(b.riser>0)parts.push('noise riser');if(b.pitch>0)parts.push(`pitch riser in ${NOTE[p.root]}`);if(b.stutter>0)parts.push('stutter');
  const gap=p.gapBeats?`${p.gapBeats===4?'one bar':p.gapBeats+' beat'+(p.gapBeats>1?'s':'')} of air`:'no gap';
  const head=p.mode==='replace'?`Bars ${first}–${p.dropBar} become a ${p.buildBars}-bar build-up`:`A new ${p.buildBars}-bar build-up is inserted before bar ${p.dropBar+1} (song +${fmt(tl.shift)})`;
- $('planText').textContent=`${head} (${parts.join(', ')||'plain'}). Pre-drop: ${gap}${p.pre.throw>0?' with echo throw':''}${p.pre.reverse>0?', reverse suck':''}. Drop at bar ${p.dropBar+1}: ${d.kick>0?'kick + ':''}${d.bass>0?X.PATTERNS[d.bassPattern].name.toLowerCase()+' '+X.SOUNDS[d.bassSound].toLowerCase()+(d.follow&&S.harmony?' following the song’s bass':' on '+NOTE[p.root]):'no extra bass'}, pump ${Math.round(d.pump*100)}%, ${p.dropBars} bars.`;
+ $('planText').textContent=`${head} (${parts.join(', ')||'plain'}). Pre-drop: ${gap}${p.pre.throw>0?` with DELAYSY echo throw (${(DELAYSY[p.pre.delaysy]||'').replace(/^\d+\. /,'')})`:''}${p.pre.reverse>0?', reverse suck':''}. Drop at bar ${p.dropBar+1}: ${d.kick>0?'kick + ':''}${d.bass>0?X.PATTERNS[d.bassPattern].name.toLowerCase()+' on '+(BASSES[d.bassPreset]||d.bassPreset).replace(/^\d+\. /,'')+(d.follow&&S.harmony?' following the song’s bass':' on '+NOTE[p.root]):'no extra bass'}, pump ${Math.round(d.pump*100)}%, ${p.dropBars} bars.`;
 }
 function renderCandidates(){
  const box=$('candidates');box.replaceChildren();if(!S.an)return;
@@ -152,7 +154,7 @@ async function exportSong(){const r=await fullRender();download(X.wav(r.buffer),
 async function exportSection(){const r=await fullRender(),tl=r.tl;download(X.wav(r.buffer,Math.max(0,tl.buildOut-tl.bar),Math.min(r.buffer.duration,tl.dropEndOut+tl.bar)),fileBase()+' (section).wav','audio/wav');status('Exported build-up + drop (one bar of song on each side).');}
 async function exportLayers(){status('Rendering layers …');const r=await X.renderSong(S.buffer,S.plan,{lookupBass,original:false});download(X.wav(r.buffer),fileBase()+' (layers).wav','audio/wav');status('Exported only the Dropfather layers. Line it up with the start of the exported song.');}
 async function exportMidi(){const r=await fullRender();download(X.midi(r.events,S.plan.bpm),fileBase()+'.mid','audio/midi');status('Exported MIDI: bass, kick and roll, from the start of the rendered song.');}
-function exportPlan(){download(new TextEncoder().encode(JSON.stringify({app:'Dropfather 0.1',track:S.name,plan:S.plan},null,1)),fileBase()+'.json','application/json');}
+function exportPlan(){download(new TextEncoder().encode(JSON.stringify({app:'Dropfather 0.2',track:S.name,plan:S.plan},null,1)),fileBase()+'.json','application/json');}
 
 /* ---------- Wiring ---------- */
 function init(){

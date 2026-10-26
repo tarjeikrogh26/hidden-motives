@@ -48,6 +48,8 @@ canvas{display:block;width:100%;border-radius:8px;background:#050505;border:1px 
 .knob{display:grid;grid-template-columns:110px minmax(0,1fr) 42px;gap:8px;align-items:center;margin:7px 0}
 .knob label{font-size:12px}.knob output{font-size:11px;color:var(--muted);text-align:right}
 .pick{display:grid;grid-template-columns:110px minmax(0,1fr);gap:8px;align-items:center;margin:7px 0}.pick label{font-size:12px}.pick select{width:100%}
+.pick .nav{display:flex;gap:4px;min-width:0}.pick .nav select{flex:1;min-width:0}.pick .nav button{min-width:30px;padding:4px;flex:0 0 auto}
+.pick.browse{grid-template-columns:1fr}
 .check{display:flex;gap:8px;align-items:center;margin:9px 0;font-size:12px}
 input[type=range]{width:100%;accent-color:var(--red);min-height:26px}
 .dock{position:fixed;left:50%;bottom:8px;transform:translateX(-50%);width:calc(100% - 24px);max-width:1220px;background:#0e0e0e;border:2px solid var(--white);border-radius:12px;padding:10px 12px;box-shadow:0 -10px 30px #000c;z-index:20}
