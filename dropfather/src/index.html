@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>DROPFATHER by Krogh</title>
+<meta name="description" content="Dropfather: build-up, pre-drop and drop machine for any song. Local browser app by Tarjei Krogh.">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Bowlby+One&family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+<style>/*INLINE:style.css*/</style>
+</head><body>
+<div id="app">
+<header class="hero"><img id="logo" src="/*INLINE-IMG:../assets/dropfather-logo.webp*/" alt="DROPFATHER"><p class="tagline">Build-up · Pre-drop · Drop — by Tarjei Krogh · v0.1</p></header>
+
+<section class="panel" id="loadPanel">
+ <label class="dropzone" id="dropzone"><input id="file" type="file" accept="audio/*,.wav,.aif,.aiff,.mp3,.m4a,.flac"><b>Drop a song here</b><span>or click to load WAV · AIFF · MP3. Everything stays on this computer.</span></label>
+</section>
+
+<section class="panel hidden" id="trackPanel">
+ <div class="trackbar">
+  <div class="trackname"><b id="trackName">—</b><small id="trackMeta"></small></div>
+  <div class="ctl"><span>BPM</span><button id="bpmDown" aria-label="BPM down">‹</button><input id="bpm" type="number" step="0.01" min="60" max="200" value="120"><button id="bpmUp" aria-label="BPM up">›</button><button id="bpmHalf">÷2</button><button id="bpmDouble">×2</button><button id="tap">Tap</button></div>
+  <div class="ctl"><span>Bar 1</span><button id="gridBeatBack" title="Move bar 1 one beat earlier">−1 beat</button><button id="gridBeatFwd" title="Move bar 1 one beat later">+1 beat</button><button id="gridBack" title="Nudge grid 10 ms earlier">‹10ms</button><button id="gridFwd" title="Nudge grid 10 ms later">10ms›</button></div>
+  <div class="ctl"><span>Root</span><select id="root"></select><small id="harmonyStatus" class="muted">AVANTGARDIAN analysis …</small></div>
+ </div>
+ <canvas id="overview" height="150" aria-label="Song map. Click to place the drop."></canvas>
+ <div class="legend"><i class="lg full"></i>low end (kick + bass) <i class="lg break"></i>breakdown <i class="lg build"></i>build-up <i class="lg gap"></i>pre-drop <i class="lg drop"></i>drop · click the map to place the drop on a bar</div>
+ <div class="cands"><span>Drop suggestions</span><div id="candidates"></div></div>
+</section>
+
+<section class="panel hidden" id="planPanel">
+ <div class="planrow">
+  <div class="seg" role="group" aria-label="Mode"><button data-mode="replace" title="The bars before the drop become the build-up. Same song length.">Replace</button><button data-mode="insert" title="Adds new build-up bars before the drop. The song gets longer.">Insert</button></div>
+  <div class="ctl"><span>Drop at bar</span><button id="barDown">‹</button><output id="dropBar">—</output><button id="barUp">›</button><small id="dropTime" class="muted"></small></div>
+  <div class="ctl"><span>Build</span><select id="buildBars"><option>4</option><option selected>8</option><option>16</option><option>32</option></select><span>bars</span></div>
+  <div class="ctl"><span>Pre-drop gap</span><select id="gapBeats"><option value="0">None</option><option value="1">1 beat</option><option value="2">2 beats</option><option value="4">1 bar</option></select></div>
+  <div class="ctl"><span>Drop</span><select id="dropBars"><option>8</option><option selected>16</option><option>32</option></select><span>bars</span></div>
+ </div>
+ <div class="styles" id="styles"></div>
+ <p id="planText" class="plantext"></p>
+ <canvas id="zoom" height="130" aria-label="Rendered build-up and drop. Click to listen from there."></canvas>
+</section>
+
+<div class="machines hidden" id="machines">
+ <section class="panel machine"><h2>BUILD-UP</h2><p class="hint">Takes the bass away, lifts the tension.</p><div id="buildCtl"></div></section>
+ <section class="panel machine"><h2>PRE-DROP</h2><p class="hint">The breath before the hit. The echo throw comes from DELAYSY.</p><div id="preCtl"></div></section>
+ <section class="panel machine red"><h2>DROP</h2><p class="hint">Kick and bass come back. Bass follows the ARP bass map.</p><div id="dropCtl"></div></section>
+</div>
+
+<footer class="dock hidden" id="dock">
+ <div class="transport"><button id="playDrop" class="primary">▶ Play drop</button><button id="playSong">▶ Whole song</button><button id="playOrig">A/B original</button><button id="stop">■ Stop</button><label class="vol">Vol <input id="volume" type="range" min="0" max="1" step="0.01" value="0.8"></label></div>
+ <div class="exports"><button id="exSong">WAV · whole song</button><button id="exSection">WAV · build + drop</button><button id="exLayers">WAV · layers only</button><button id="exMidi">MIDI</button><button id="exPlan">Save plan</button></div>
+ <div id="status" role="status" aria-live="polite">Load a song to start.</div>
+</footer>
+</div>
+<script id="chordino-lib">/*INLINE:vendor/chordino-runtime.js*/
+/*INLINE:vendor/harmony-engine.js*/</script>
+<script>window.DROPFATHER_WASM_B64="/*INLINE-B64:vendor/chordino.wasm*/";</script>
+<script>/*INLINE:analysis.js*/</script>
+<script>/*INLINE:dsp.js*/</script>
+<script>/*INLINE:app.js*/</script>
+</body></html>
