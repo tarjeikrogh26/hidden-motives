@@ -2,7 +2,7 @@
    machines, sounds (Bass Invaders bass, AVANTGARDIAN ARP lead), play and export. */
 (()=>{'use strict';
 const $=id=>document.getElementById(id),G=DropGrid,X=DropDSP,NOTE=G.NOTE;
-const M={project:null,section:'drop',player:null,src:null,full:null,raf:0,restart:0,replay:0,cells:null,ui:{arp:0}};
+const M={view:'drop',sel:0,project:null,section:'drop',player:null,src:null,full:null,raf:0,restart:0,replay:0,cells:null,ui:{arp:0}};
 const status=(text,bad)=>{$('mStatus').textContent=text;$('mStatus').style.color=bad?'#ff6a5e':'';};
 const ctx=()=>window.Dropfather.audio(),out=()=>window.Dropfather.S.gain;
 const seed=()=>(Math.random()*2**31)|0;
@@ -51,9 +51,10 @@ function renderSecbar(){
  const el=$('secbar'),p=M.project,sec=M.section;el.replaceChildren();
  const add=html=>{const d=document.createElement('div');d.className='ctl';d.innerHTML=html;el.append(d);return d;};
  if(sec==='pre'){add('<span>The pre-drop has no grid. Set it in the PRE-DROP machine below.</span>');return;}
- const s=p[sec],bars=add('<span>Length</span><select aria-label="Section length"></select><span>bars</span>').querySelector('select');for(const n of sec==='build'?[2,4,8,16,32]:sec==='drop'?[8,16,32]:[4,8,16,32])bars.add(new Option(n,n));bars.value=s.bars;bars.onchange=()=>{s.bars=+bars.value;changed();renderStrip();};
+ if(!G.timeline(p).parts.some(x=>x.name===sec)){const d=add('<span></span><button type="button">← Back to the song</button>');d.querySelector('span').textContent=`Editing ${G.labelOf(p,sec)}, a part of the song`;d.querySelector('button').onclick=()=>setView('song');}
+ const s=p[sec],bars=add('<span>Length</span><select aria-label="Section length"></select><span>bars</span>').querySelector('select');for(const n of G.typeOf(p,sec)==='build'?[2,4,8,16,32]:G.typeOf(p,sec)==='drop'?[8,16,32]:[4,8,16,32])bars.add(new Option(n,n));bars.value=s.bars;bars.onchange=()=>{s.bars=+bars.value;changed();renderStrip();};
  const pat=add('<span>Pattern</span><select aria-label="Pattern length"></select>').querySelector('select');for(const n of [1,2,4])pat.add(new Option(n+(n>1?' bars':' bar'),n));pat.value=s.patternBars;pat.onchange=()=>{G.resize(s,+pat.value);M.full=null;renderGrid();changed();};
- const other=sec==='drop'?'build':'drop',copy=add(`<button type="button">Copy the ${G.NAMES[other].toLowerCase()} pattern here</button>`).querySelector('button');copy.onclick=()=>{s.grid=JSON.parse(JSON.stringify(p[other].grid));s.patternBars=p[other].patternBars;M.full=null;renderAll();changed();};
+ const other=G.typeOf(p,sec)==='drop'?'build':'drop',copy=add(`<button type="button">Copy the ${G.NAMES[other].toLowerCase()} pattern here</button>`).querySelector('button');copy.onclick=()=>{s.grid=JSON.parse(JSON.stringify(p[other].grid));s.patternBars=p[other].patternBars;M.full=null;renderAll();changed();};
  const clr=add('<button type="button">Clear this grid</button>').querySelector('button');clr.onclick=()=>{s.grid=G.blank(G.steps(s));M.full=null;paint();changed();};
  if(s.fx&&'filterFrom' in s.fx){const box=document.createElement('div');box.className='secfx';el.append(box);const f=()=>s.fx;knob(box,f,'filterFrom','Filter at start',changed);knob(box,f,'filterTo','Filter at end',changed);knob(box,f,'verb','Reverb',changed);knob(box,f,'pump','Pump',changed);}
 }
@@ -72,10 +73,10 @@ function renderGrid(){
 }
 function paint(){if(!M.cells)return;const g=M.project[M.section].grid;for(const col of M.cells)for(const c of col){const l=c.dataset.l,i=+c.dataset.i;if(c.dataset.d!=null){c.classList.toggle('on',g[l][i]===+c.dataset.d);}else{c.classList.toggle('on',g[l][i]===1);c.classList.toggle('acc',g[l][i]===2);}}}
 function renderAll(){
- const p=M.project;if(M.section!=='pre'&&!G.enabled(p,M.section))M.section='drop';
+ const p=M.project;if(M.section!=='pre'&&!p[M.section]?.grid)M.section='drop';
  $('mBpm').value=p.bpm;$('mKey').value=p.key;$('mScale').value=p.scale;$('mDesc').textContent=p.desc||'';
  document.querySelectorAll('#mStyles button[data-style]').forEach(b=>b.classList.toggle('on',b.dataset.style===p.style));
- renderStrip();renderSecbar();renderGrid();for(const r of rows)r.sync();syncMixer();
+ renderStrip();renderSecbar();renderGrid();for(const r of rows)r.sync();syncMixer();if(M.view==='song')renderSong();
  const another=$('mAnother');if(another)another.textContent=`🎲 Another ${G.STYLES[p.style]?.name||'random'} drop`;
 }
 // Grid edits are heard at once while looping (the scheduler reads the grid). Other changes rebuild the loop;
@@ -104,8 +105,9 @@ function progress(f,label){const el=$('mProgress');if(f==null){el.classList.add(
 /* ---------- Play ---------- */
 function player(){if(!M.player)M.player=G.createPlayer(ctx(),mixer());return M.player;}
 async function loop(){
+ if(M.view==='song'){const k=G.songOrder(M.project)[M.sel];if(k)M.section=k;}
  if(M.section==='pre')M.section='drop';stopBuffer();M.paused=null;playLabel();window.Dropfather.stop();ctx();
- status('Preparing the voices …');await player().play(M.project,M.section);renderStrip();status(`Looping the ${G.NAMES[M.section].toLowerCase()} · edit the grid while it plays`);tick();
+ status('Preparing the voices …');await player().play(M.project,M.section);renderStrip();status(`Looping the ${G.labelOf(M.project,M.section).toLowerCase()} · edit the grid while it plays`);tick();
 }
 function stopBuffer(){if(M.src){try{M.src.stop();}catch(e){}M.src=null;}}
 function playLabel(){const b=$('mPlayAll');if(b)b.textContent=M.src?'❚❚ Pause':M.paused!=null?'▶ Resume':'▶ Play all';}
@@ -113,27 +115,103 @@ function playLabel(){const b=$('mPlayAll');if(b)b.textContent=M.src?'❚❚ Paus
 function playFrom(sec){const tl=G.timeline(M.project),part=tl.parts.find(x=>x.name===(sec==='pre'?'build':sec));if(!part)return;M.paused=sec==='pre'?Math.max(0,tl.gapOut-tl.bar):part.start;M.player?.stop();playAll(false).then(()=>status(`Playing from the ${sec==='pre'?'pre-drop':G.NAMES[sec].toLowerCase()}`));}
 function pause(){if(!M.src)return;M.paused=ctx().currentTime-M.srcStart;stopBuffer();cancelAnimationFrame(M.raf);markNow(-1);playLabel();status('Paused · press Resume to play on from here');}
 function stop(){M.paused=null;M.player?.stop();stopBuffer();playLabel();clearTimeout(M.replay);cancelAnimationFrame(M.raf);markNow(-1);setStripHead(null);}
-async function renderAllParts(){if(M.full)return M.full;const p=M.project;status('Rendering '+G.timeline(p).parts.map(x=>G.NAMES[x.name].toLowerCase()).join(' → ')+' …');const t=performance.now(),r=await G.render(p,{sr:ctx().sampleRate,progress:f=>progress(f,'Rendering')});progress(null);if(M.project!==p)return renderAllParts();M.full=r;const gr=20*Math.log10(r.reduction||1);status(`Rendered in ${((performance.now()-t)/1000).toFixed(1)} s${gr<-.1?` · limiter ${gr.toFixed(1)} dB`:''}`);return r;}
+async function renderAllParts(){const song=M.view==='song';if(M.full&&M.full.song===song)return M.full;const p=M.project;status('Rendering '+G.timeline(p,song).parts.map(x=>G.labelOf(p,x.name).toLowerCase()).join(' → ')+' …');const t=performance.now(),r=await G.render(p,{sr:ctx().sampleRate,song,progress:f=>progress(f,'Rendering')});progress(null);if(M.project!==p||(M.view==='song')!==song)return renderAllParts();M.full=r;const gr=20*Math.log10(r.reduction||1);status(`Rendered in ${((performance.now()-t)/1000).toFixed(1)} s${gr<-.1?` · limiter ${gr.toFixed(1)} dB`:''}`);return r;}
 async function playAll(resume){
  const at=resume&&M.src?ctx().currentTime-M.srcStart:M.paused??0;const back=M.paused!=null;M.paused=null;M.player?.stop();window.Dropfather.stop();
  const r=await renderAllParts();stopBuffer();const c=ctx(),s=c.createBufferSource(),split=c.createChannelSplitter(8),mx=mixer();s.buffer=r.stems;s.connect(split);
  G.STEMS.forEach((k,i)=>{const m=c.createChannelMerger(2);split.connect(m,2*i,0);split.connect(m,2*i+1,1);m.connect(mx[k]);});const from=Math.min(at,r.buffer.duration-.1),t0=c.currentTime+.05;s.start(t0,from);M.src=s;M.srcStart=t0-from;
- s.onended=()=>{if(M.src===s){M.src=null;setStripHead(null);markNow(-1);playLabel();}};playLabel();status(resume?'Updated · playing on from the same spot':back?'Playing on from where you paused':'Playing '+r.parts.map(x=>G.NAMES[x.name].toLowerCase()).join(' → '));tick();
+ s.onended=()=>{if(M.src===s){M.src=null;setStripHead(null);markNow(-1);playLabel();}};playLabel();status(resume?'Updated · playing on from the same spot':back?'Playing on from where you paused':'Playing '+r.parts.map(x=>G.labelOf(M.project,x.name).toLowerCase()).join(' → '));tick();
 }
 function markNow(step){if(!M.cells)return;if(M.now!=null&&M.cells[M.now])for(const c of M.cells[M.now])c.classList.remove('now');M.now=step>=0&&M.cells.length?step%M.cells.length:null;if(M.now!=null)for(const c of M.cells[M.now])c.classList.add('now');}
 function setStripHead(t){for(const b of $('strip').querySelectorAll('button')){const i=b.querySelector('i'),a=+b.dataset.a,e=+b.dataset.e;const on=t!=null&&t>=a&&t<e;i.style.display=on?'block':'none';if(on)i.style.left=((t-a)/Math.max(1e-6,e-a)*100)+'%';}}
 function tick(){
- cancelAnimationFrame(M.raf);const tl=G.timeline(M.project);
+ cancelAnimationFrame(M.raf);
+ if(M.view==='song'){if(!M.src&&!M.player?.playing()){songHead(null);return;}if(M.src)songHead(ctx().currentTime-M.srcStart+(M.full?.t0||0));M.raf=requestAnimationFrame(tick);return;}
+ const tl=G.timeline(M.project);
  if(M.player?.playing()){const pos=M.player.position(),part=tl.parts.find(x=>x.name===pos?.section);if(pos&&pos.section===M.section)markNow(pos.step);if(part)setStripHead(part.start+pos.step*tl.step%(part.end-part.start));}
  else if(M.src){const t=ctx().currentTime-M.srcStart+(M.full?.t0||0);setStripHead(t);const part=tl.parts.find(x=>x.name===M.section);markNow(part&&t>=part.start&&t<part.end?Math.floor((t-part.start)/tl.step):-1);}
  else return;
  M.raf=requestAnimationFrame(tick);
 }
 
+/* ---------- Song view: the whole arrangement ---------- */
+const PART_TYPES=[['intro','+ Intro'],['build','+ Build-up'],['drop','+ Drop'],['breakdown','+ Breakdown'],['outro','+ Outro']];
+const fmtTime=t=>`${Math.floor(t/60)}:${String(Math.round(t%60)).padStart(2,'0')}`;
+function makeSongNow(){G.makeSong(M.project,seed());M.sel=0;songChanged();const p=M.project;status(`New song around your drop: ${G.songOrder(p).map(k=>G.labelOf(p,k).toLowerCase()).join(' → ')} · the melody is in the breakdowns (${G.leadName(p.breakdown.sounds.lead)})`);}
+function setView(v){
+ if(v==='song')G.ensureSongParts(M.project);
+ stop();M.view=v;document.body.dataset.view=v;M.full=null;
+ document.querySelectorAll('#mView button').forEach(b=>b.classList.toggle('on',b.dataset.view===v));
+ $('mExAll').textContent=v==='song'?'WAV · whole song':G.SKETCH.some(k=>M.project.song?.[k])?'WAV · whole song sketch':'WAV · build-up + drop';
+ renderAll();status(v==='song'?'Song view · click a part to play from it, drag to move it, double-click or ✎ to edit its grid.':'Drop view · build-up, pre-drop and drop.');
+}
+function songChanged(){M.full=null;renderSong();changed();}
+function moveTo(from,to){const a=M.project.arrangement;if(from===to||from<0||to<0||to>=a.length)return;const [k]=a.splice(from,1);a.splice(to,0,k);M.sel=to;songChanged();}
+function insertPart(key){const a=M.project.arrangement,at=Math.min(a.length,(M.sel??a.length-1)+1);a.splice(at,0,key);M.sel=at;songChanged();}
+function editPart(i){const k=G.songOrder(M.project)[i];if(!k)return;M.section=k;setView('drop');$('makerPanel').scrollIntoView({behavior:'smooth'});}
+function playFromTime(t){M.paused=t;M.player?.stop();return playAll(false);}
+function songHead(t){const h=$('songHead');if(!h)return;if(t==null){h.style.display='none';return;}const tl=G.timeline(M.project,true);h.style.display='block';h.style.left=Math.min(100,t/tl.total*100)+'%';}
+// One part's four lanes as a picture: drum hits, bass and lead notes by pitch, and the fx (riser, pre-drop, impact).
+function drawPart(cv,p,x,tl){
+ const g=cv.getContext('2d'),W=cv.width,H=cv.height,lane=H/4,sec=p[x.name],n=G.steps(sec),N=sec.bars*16,w=W/N;
+ g.clearRect(0,0,W,H);g.fillStyle='rgba(255,255,255,.05)';for(let l=1;l<4;l+=2)g.fillRect(0,l*lane,W,lane);
+ for(let b=1;b<sec.bars;b++){g.fillStyle=b%4?'rgba(255,255,255,.05)':'rgba(255,255,255,.14)';g.fillRect(b*16*w,0,1,H);}
+ const gapFrom=x.pre?(x.gapOut-x.start)/tl.step:N;
+ for(let k=0;k<Math.min(N,gapFrom);k++){const i=k%n,G2=sec.grid;
+  if(G2.kick[i]){g.fillStyle='#f3efe4';g.fillRect(k*w,lane*.25,Math.max(1,w*.8),lane*.6);}
+  if(G2.clap[i]||G2.snare[i]){g.fillStyle='#ff4a3d';g.fillRect(k*w,lane*.55,Math.max(1,w*.8),lane*.35);}
+  if(G2.hat[i]||G2.open[i]){g.fillStyle='#a49f94';g.fillRect(k*w,lane*.1,Math.max(1,w*.6),lane*.15);}
+  for(const [li,ln,rows,col] of [[1,'bass',G.ROWS.bass,'#e3201b'],[2,'lead',G.ROWS.lead,'#f3efe4']]){const d=G2[ln][i];if(d==null)continue;let len=1;while(len<16&&k+len<N&&G2[ln][(i+len)%n]==null)len++;g.fillStyle=col;g.fillRect(k*w,li*lane+lane-4-(d/rows)*(lane-8),Math.max(2,len*w*(p.gate?.[ln]??.6)),3);}
+ }
+ g.fillStyle='rgba(255,74,61,.7)';
+ if(x.type==='build'){g.beginPath();g.moveTo(0,H);g.lineTo(Math.min(W,gapFrom*w),3*lane+3);g.lineTo(Math.min(W,gapFrom*w),H);g.fill();}
+ if(x.type==='drop'){g.fillRect(0,3*lane+2,Math.max(4,w*6),lane-4);}
+ if(x.pre){g.fillStyle='#000';g.fillRect(gapFrom*w,0,W-gapFrom*w,H);g.fillStyle='#ff4a3d';g.font=`${Math.round(lane*.6)}px sans-serif`;g.fillText('pre',gapFrom*w+2,lane*.8);}
+}
+function renderSong(){
+ const p=M.project,el=$('song');if(!el)return;G.ensureSongParts(p);const tl=G.timeline(p,true),order=G.songOrder(p);el.replaceChildren();
+ if(M.sel==null||M.sel>=order.length)M.sel=order.length?Math.max(0,order.length-1):null;
+ const lanes=document.createElement('div');lanes.className='lanes';lanes.innerHTML='<span></span>'+G.STEMS.map(k=>`<span>${STEM_NAMES[k]}</span>`).join('');el.append(lanes);
+ const track=document.createElement('div');track.className='blocks';track.style.minWidth=Math.round(tl.total/tl.bar*9)+'px';el.append(track);
+ tl.parts.forEach((x,i)=>{
+  const b=document.createElement('div'),sec=p[x.name];b.className='blk '+x.type+(i===M.sel?' on':'');b.style.flex=`${x.end-x.start} 1 0`;b.draggable=true;b.tabIndex=0;b.setAttribute('role','button');
+  b.innerHTML=`<div class="bh"><b></b><small></small></div><canvas width="${sec.bars*32}" height="96"></canvas>`;
+  b.querySelector('b').textContent=G.labelOf(p,x.name)+(order.indexOf(x.name)!==i?' ↻':'');b.querySelector('small').textContent=`bar ${Math.round(x.start/tl.bar)+1} · ${sec.bars} bars`;
+  b.title='Click: play from here · double-click: edit the grid · drag: move';drawPart(b.querySelector('canvas'),p,x,tl);
+  b.onclick=()=>{M.sel=i;renderSong();playFromTime(x.start).then(()=>status(`Playing from ${G.labelOf(p,x.name).toLowerCase()} (bar ${Math.round(x.start/tl.bar)+1})`));};
+  b.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();b.onclick();}if(e.key==='ArrowLeft'&&e.altKey)moveTo(i,i-1);if(e.key==='ArrowRight'&&e.altKey)moveTo(i,i+1);};
+  b.ondblclick=()=>editPart(i);
+  b.ondragstart=e=>{e.dataTransfer.setData('text/plain',String(i));e.dataTransfer.effectAllowed='move';b.classList.add('drag');};b.ondragend=()=>b.classList.remove('drag');
+  b.ondragover=e=>{e.preventDefault();b.classList.add('over');};b.ondragleave=()=>b.classList.remove('over');
+  b.ondrop=e=>{e.preventDefault();b.classList.remove('over');moveTo(+e.dataTransfer.getData('text/plain'),i);};
+  track.append(b);
+ });
+ const head=document.createElement('i');head.className='songhead';head.id='songHead';track.append(head);
+ $('songInfo').textContent=`${tl.parts.length} parts · ${Math.round(tl.total/tl.bar)} bars · ${fmtTime(tl.total)} at ${p.bpm} BPM`;
+ // The selected part.
+ const sel=$('sSel');sel.replaceChildren();const x=tl.parts[M.sel];if(!x)return;const key=x.name,a=p.arrangement;
+ const info=document.createElement('span');info.className='selinfo';info.textContent=`${G.labelOf(p,key)} · bar ${Math.round(x.start/tl.bar)+1}`;sel.append(info);
+ button(sel,'▶ Play from here',()=>playFromTime(x.start));
+ button(sel,'✎ Edit grid',()=>editPart(M.sel)).title='Open this part in the drop view';
+ button(sel,'◀ Move',()=>moveTo(M.sel,M.sel-1));button(sel,'Move ▶',()=>moveTo(M.sel,M.sel+1));
+ button(sel,'⧉ Repeat',()=>insertPart(key)).title='The same part again right after (edits change both)';
+ button(sel,'✦ Variation',()=>{const id=G.variation(p,key,seed());a[M.sel]=id;songChanged();status(`${G.labelOf(p,id)}: its own copy${['drop','build'].includes(x.type)?' with a new lead riff':''}. Edit it without touching the others.`);}).title='Make this one its own copy (drops and build-ups get a new lead riff)';
+ if(['breakdown','drop','build'].includes(x.type)||p[key].grid.lead.some(v=>v!=null))button(sel,'🎲 New melody',()=>{const name=G.newPartMelody(p,key,seed());songChanged();status(`New melody in ${name.toLowerCase()}${a.filter(k=>k===key).length>1?' (and its repeats)':''}`);}).title='A new lead line for this part, on the same chords';
+ const snd=document.createElement('label');snd.className='sellen';snd.innerHTML='<span>Lead</span><select aria-label="Lead sound of this part"></select>';const ss=snd.querySelector('select');ss.add(new Option('Same as the drop',''));for(const q of (window.DropLead?.list()||[]))ss.add(new Option('Dropfather · '+q.n,'dl:'+q.id));ss.value=p[key].sounds?.lead||'';ss.onchange=()=>{if(ss.value)p[key].sounds={...(p[key].sounds||{}),lead:ss.value};else delete p[key].sounds;songChanged();};sel.append(snd);
+ const len=document.createElement('label');len.className='sellen';len.innerHTML='<span>Length</span><select aria-label="Part length"></select>';const ls=len.querySelector('select');for(const n of x.type==='build'?[2,4,8,16,32]:x.type==='drop'?[8,16,32]:[4,8,16,32])ls.add(new Option(n+' bars',n));ls.value=p[key].bars;ls.onchange=()=>{p[key].bars=+ls.value;songChanged();};sel.append(len);
+ button(sel,'✕ Remove',()=>{if(a.length<2)return;a.splice(M.sel,1);M.sel=Math.min(M.sel,a.length-1);songChanged();}).classList.add('danger');
+}
+function initSong(){
+ const pal=$('sPalette'),make=button(pal,'🎲 Make a song from the drop',()=>makeSongNow());make.className='primary';make.title='Writes intro, groove, a breakdown with the song melody, a second build-up and drop, and an outro around your drop. Your drop and build-up stay as they are. Click again for another version.';
+ for(const [type,label] of PART_TYPES)button(pal,label,()=>insertPart(G.partOfType(M.project,type))).title='Add after the selected part';
+ document.querySelectorAll('#mView button').forEach(b=>b.onclick=()=>setView(b.dataset.view));
+ $('mFurther').onclick=()=>{setView('song');window.scrollTo({top:$('songPanel').offsetTop-10,behavior:'smooth'});};
+}
+
 /* ---------- Export ---------- */
 const name=()=>`Dropfather ${G.STYLES[M.project.style]?.name||'drop'} ${NOTE[M.project.key]} ${M.project.bpm}bpm`;
 const save=(bytes,file,type)=>DropFiles.download(bytes,file,type,status);
-async function exportAll(){const r=await renderAllParts(),whole=r.parts.length>2;if(await save(X.wav(G.mix(r,M.project).buffer,0,r.parts[r.parts.length-1].end-r.t0+1.5),name()+(whole?' (song sketch)':'')+'.wav','audio/wav'))status(`Exported ${r.parts.map(x=>G.NAMES[x.name].toLowerCase()).join(' → ')} as 24-bit WAV.`);}
+async function exportAll(){const r=await renderAllParts(),whole=r.parts.length>2;if(await save(X.wav(G.mix(r,M.project).buffer,0,r.parts[r.parts.length-1].end-r.t0+1.5),name()+(M.view==='song'?' (song)':whole?' (song sketch)':'')+'.wav','audio/wav'))status(`Exported ${r.parts.map(x=>G.labelOf(M.project,x.name).toLowerCase()).join(' → ')} as 24-bit WAV.`);}
 async function exportDrop(){const r=await renderAllParts();if(await save(X.wav(G.mix(r,M.project).buffer,r.tl.dropOut-r.t0,r.tl.dropEndOut-r.t0),name()+' (drop).wav','audio/wav'))status('Exported the drop alone, bar-exact, as 24-bit WAV.');}
 async function exportMidi(){const r=await renderAllParts(),by=l=>r.events.filter(e=>l.includes(e[0])).map(e=>e.slice(1));if(await save(X.midiTracks([{name:'Bass',channel:0,notes:by(['bass'])},{name:'Lead',channel:1,notes:by(['lead'])},{name:'Drums',channel:9,notes:by(['kick','clap','snare','hat','open','roll'])}],M.project.bpm),name()+'.mid','audio/midi'))status('Exported MIDI: bass, lead and drums (GM drum notes), from the start of the arrangement.');}
 // Stems: drums, bass, lead and fx as 24-bit WAVs from the start of the arrangement, at their faders, in one zip.
@@ -143,13 +221,13 @@ async function exportStems(){
  if(await save(DropFiles.zipFiles(files),name()+' (stems).zip','application/zip'))status('Exported 4 stems (drums, bass, lead, fx) as 24-bit WAVs in one zip. Drop them in at bar 1 and they line up.');
 }
 function saveProject(){return save(new TextEncoder().encode(JSON.stringify({app:'Dropfather drop maker',version:2,project:M.project},null,1)),name()+'.json','application/json');}
-async function loadProject(file){try{const j=JSON.parse(await file.text()),p=j.project||j;if(!p.build?.grid||!p.drop?.grid)throw Error('not a Dropfather drop maker project');p.song=p.song||{intro:false,breakdown:false,outro:false};p.sounds.drums=window.DropKits?.has(p.sounds.drums)?p.sounds.drums:'synth';M.project=p;M.full=null;stop();buildControls();renderAll();status('Loaded '+file.name);}catch(e){status('Could not load: '+e.message,true);}}
+async function loadProject(file){try{const j=JSON.parse(await file.text()),p=j.project||j;if(!p.build?.grid||!p.drop?.grid)throw Error('not a Dropfather drop maker project');p.song=p.song||{intro:false,breakdown:false,outro:false};p.sounds.drums=window.DropKits?.has(p.sounds.drums)?p.sounds.drums:'synth';if(M.view==='song')G.ensureSongParts(p);M.project=p;M.full=null;stop();buildControls();renderAll();status('Loaded '+file.name);}catch(e){status('Could not load: '+e.message,true);}}
 
 /* ---------- Wiring ---------- */
-function setProject(p,note){M.project=p;M.full=null;buildControls();renderAll();changed();status(note||p.desc);}
+function setProject(p,note){if(M.view==='song')G.ensureSongParts(p);M.project=p;M.full=null;buildControls();renderAll();changed();status(note||p.desc);}
 // Before anything is chosen, the whole engine lies under the start screen in black and white. Make a drop
 // brings it to life in red.
-function show(){for(const id of ['makerPanel','makerMachines','makerSounds','makerDock'])$(id).classList.remove('hidden');}
+function show(){for(const id of ['makerPanel','songPanel','makerMachines','makerSounds','makerDock'])$(id).classList.remove('hidden');}
 function preview(){M.project=G.generate('house',seed());buildControls();renderAll();show();}
 function open(){
  const first=!document.body.dataset.mode;document.body.dataset.mode='maker';window.Dropfather.stop();show();if(!M.project)setProject(G.generate('house',seed()));else renderAll();
@@ -157,7 +235,7 @@ function open(){
  status('Engine on · loop a section to hear it while you edit the grid, or play it all.');
 }
 function init(){
- buildMixer();
+ buildMixer();initSong();
  NOTE.forEach((n,i)=>$('mKey').add(new Option(n,i)));for(const [k,[n]] of Object.entries(G.SCALES))$('mScale').add(new Option(n,k));
  const st=$('mStyles'),keep=()=>({key:M.project.key,scale:M.project.scale});{const l=document.createElement('span');l.className='stylelabel';l.textContent='Pick a style: every click writes a new drop in it. 🎲 Randomize (in the bar at the bottom) picks the style for you too.';st.append(l);}
  for(const [k,v] of Object.entries(G.STYLES)){const b=document.createElement('button');b.textContent=v.name;b.dataset.style=k;b.title='Write a new '+v.name+' drop (different every time)';b.onclick=()=>setProject(G.generate(k,seed(),keep()));st.append(b);}

@@ -23,6 +23,10 @@ const bassBase=key=>28+((key-4+12)%12);// E1..D#2, as in song mode
 const leadBase=key=>57+((key-9+12)%12);// A3..G#4
 function midiFor(project,lane,d){return (lane==='bass'?bassBase(project.key):leadBase(project.key))+degree(project,d);}
 function rowLabel(project,lane,d){const m=midiFor(project,lane,d);return NOTE[m%12]+(Math.floor(m/12)-1);}
+// Sections are keyed: the drop view's intro … outro, plus song parts made in the song view ('drop2' …), which carry
+// their type and label. typeOf decides how a section sounds (build-ups open up, drops hit, the rest are filtered).
+const typeOf=(p,key)=>p?.[key]?.type||key;
+const labelOf=(p,key)=>p?.[key]?.label||NAMES[typeOf(p,key)]||String(key).toUpperCase();
 const enabled=(p,name)=>(name==='build'||name==='drop')?true:!!(p.song&&p.song[name]&&p[name]);
 
 /* ---------- Sound sources ---------- */
@@ -118,11 +122,13 @@ const RIFFS={
  techno:[[0,3,6,10,13],[2,6,10,14],[0,6,12],[3,6,11,14]],
  ebm:[[0,2,4,6,8,10,12,14],[0,3,4,7,8,10,12,14],[0,2,3,6,8,10,11,14]],
  progressive:[[0,2,3,5,6,8,10,11,13,14],[0,2,4,6,8,10,12,14],[0,3,6,8,11,14],[0,1,3,4,6,8,9,11,12,14]],
- ambient:[[0,6,10],[0,8],[2,8,14],[0,4,8,12],[0,10]]};
+ ambient:[[0,6,10],[0,8],[2,8,14],[0,4,8,12],[0,10]],
+ // The song's melody (breakdowns): fewer, longer notes that sing over the chords.
+ melody:[[0,6,8,12],[0,4,10,12],[0,3,6,8,12],[0,8,12],[0,6,10],[0,3,8,10,14]]};
 function riff(p,rng,kind,n){
  const pick=a=>a[Math.floor(rng()*a.length)],A=pick(RIFFS[kind]||RIFFS.festival);
  const B=rng()<.4?A:[...A.filter(s=>s<10),...pick([[10,12,14],[11,14],[12,13,14],[10,14,15],[12,14]])];
- const contour=kind==='takeoff'||kind==='progressive'?'arp':kind==='ambient'?pick(['arch','wave','down']):kind==='techno'||kind==='ebm'?pick(['hold','hold','wave']):pick(['up','down','arch','hold','wave']);
+ const contour=kind==='takeoff'||kind==='progressive'?'arp':kind==='ambient'||kind==='melody'?pick(['arch','wave','down','up']):kind==='techno'||kind==='ebm'?pick(['hold','hold','wave']):pick(['up','down','arch','hold','wave']);
  const out=Array(n).fill(null),lo=2,hi=10;let prev=7;
  for(let bar=0;bar*16<n;bar++){
   const T=chordTones(chordOf(p,bar*16)),tones=[];for(let x=lo;x<=hi;x++)if(T.includes(pc7(x)))tones.push(x);
@@ -225,12 +231,60 @@ function sketch(p){
 }
 
 /* ---------- Timeline ---------- */
-function timeline(p){
+function timeline(p,song=false){
  const beat=60/p.bpm,bar=beat*4,parts=[];let t=0;
- for(const name of ORDER){if(!enabled(p,name))continue;const len=p[name].bars*bar;parts.push({name,start:t,end:t+len});t+=len;}
- const b=parts.find(x=>x.name==='build'),d=parts.find(x=>x.name==='drop'),gap=Math.min(p.pre.gapBeats*beat,(b.end-b.start)-beat);
- return {beat,bar,step:beat/4,parts,gap,buildOut:b.start,gapOut:b.end-gap,dropOut:d.start,dropEndOut:d.end,total:t};
+ for(const name of song?songOrder(p):ORDER.filter(n=>enabled(p,n))){const len=p[name].bars*bar;parts.push({name,type:typeOf(p,name),index:parts.length,start:t,end:t+len});t+=len;}
+ // A build-up straight before a drop ends in the pre-drop: its last beats are the silence.
+ parts.forEach((x,i)=>{if(x.type==='build'&&parts[i+1]?.type==='drop'){x.pre=true;x.gapOut=x.end-Math.min(p.pre.gapBeats*beat,(x.end-x.start)-beat);}});
+ const b=parts.find(x=>x.pre)||parts.find(x=>x.type==='build'),d=parts.find(x=>x.type==='drop');
+ return {beat,bar,step:beat/4,parts,song,gap:b?.pre?b.end-b.gapOut:0,buildOut:b?.start??0,gapOut:b?(b.gapOut??b.end):0,dropOut:d?.start??0,dropEndOut:d?.end??0,total:t};
 }
+/* ---------- Song: the whole arrangement, parts in any order, repeated or varied ---------- */
+const SONG_DEFAULT=['intro','build','drop','breakdown','build','drop','outro'];
+const songOrder=p=>(p.arrangement||[]).filter(k=>p[k]?.grid);
+// Make sure intro, breakdown and outro exist (from the drop, as Suggest does) without turning them on in the drop view.
+function ensureSongParts(p){if(!songOrder(p).length)return makeSong(p,(p.seed||1)+101);if(SKETCH.some(k=>!p[k])){const flags={...(p.song||{})};sketch(p);p.song={intro:!!flags.intro,breakdown:!!flags.breakdown,outro:!!flags.outro};}return p;}
+// A new part of the song with its own grid: a copy of an existing part. A drop or build-up variation gets a new lead riff.
+function variation(p,key,seed){
+ const type=typeOf(p,key),count=Object.keys(p).filter(k=>p[k]?.grid&&typeOf(p,k)===type).length+1;let id=type+count;while(p[id])id+='b';
+ p[id]={...JSON.parse(JSON.stringify(p[key])),type,label:NAMES[type]+' '+count};
+ if((type==='drop'||type==='build')&&seed!=null){const sec=p[id],st=STYLES[p.style]||STYLES.festival;if(sec.patternBars<4)resize(sec,4);sec.grid.lead=riff(p,P.rng(seed),st.riffs||'festival',steps(sec));}
+ return id;
+}
+// Make a whole track around the drop: intro, a groove, a breakdown where the song's melody lives (chords and a
+// singing line, no kick), the build-up and drop, a second breakdown, a second drop (sometimes a variation) and an
+// outro. The drop and the build-up themselves are kept as they are.
+const FORMS={
+ club:[['intro',16],['groove',16],['breakdown',16],['build',8],['drop',16],['breakdown2',8],['build',8],['drop2',16],['outro',16]],
+ festival:[['intro',8],['breakdown',16],['build',16],['drop',16],['breakdown2',16],['build',16],['drop2',16],['outro',8]],
+ chill:[['intro',8],['breakdown',16],['groove',16],['build',8],['drop',16],['breakdown2',16],['outro',16]]};
+const FORM_OF={house:'club',techno:'club',ebm:'club',progressive:'club',festival:'festival',takeoff:'festival',ambient:'chill'};
+const MELODY_SOUNDS=['dl:pad','dl:future','dl:glass'];
+function makeSong(p,seed){
+ const rng=P.rng(seed>>>0),pick=a=>a[Math.floor(rng()*a.length)],st=STYLES[p.style]||STYLES.festival,form=FORMS[FORM_OF[p.style]]||FORMS[pick(Object.keys(FORMS))];
+ const flags={...(p.song||{})};sketch(p);p.song={intro:!!flags.intro,breakdown:!!flags.breakdown,outro:!!flags.outro};
+ const d=p.drop,copy=g=>JSON.parse(JSON.stringify(g)),bars=k=>form.find(x=>x[0]===k)?.[1];
+ // The melody: a 4-bar phrase on the drop's chords, played as chords by a pad, a future-bass chord or a glass pluck.
+ const mel=blank(64);mel.lead=riff(p,rng,'melody',64);for(let i=0;i<64;i+=16)mel.bass[i]=chordRoot(p,i);
+ if(rng()<.5)for(let i=8;i<64;i+=16)mel.hat[i]=1;
+ const sound=pick(MELODY_SOUNDS);
+ p.breakdown={type:'breakdown',label:'BREAKDOWN',bars:bars('breakdown')||16,patternBars:4,grid:mel,sounds:{lead:sound},gate:{lead:.95,bass:.98},fx:{filterFrom:.5,filterTo:.92,verb:.45,pump:0}};
+ const mel2=copy(mel);if(rng()<.5)for(let i=0;i<64;i+=4)mel2.kick[i]=i%16===0?1:0;
+ p.breakdown2={type:'breakdown',label:'BREAKDOWN 2',bars:bars('breakdown2')||8,patternBars:4,grid:mel2,sounds:{lead:sound},gate:{lead:.95,bass:.98},fx:{filterFrom:.4,filterTo:.85,verb:.55,pump:0}};
+ // The groove: the drop's drums and bass, open, no lead: the DJ-friendly part.
+ const groove=copy(d.grid);groove.lead.fill(null);if(rng()<.5)groove.open.fill(0);
+ p.groove={type:'outro',label:'GROOVE',bars:bars('groove')||16,patternBars:d.patternBars,grid:groove,fx:{filterFrom:.95,filterTo:1,verb:.12,pump:d.fx.pump}};
+ if(bars('intro'))p.intro.bars=bars('intro');if(bars('outro'))p.outro.bars=bars('outro');
+ // Drop 2: the same drop, or its own copy with a new lead riff.
+ delete p.drop2;let drop2='drop';if(form.some(x=>x[0]==='drop2')&&rng()<.5){drop2=variation(p,'drop',seed+11);}
+ p.arrangement=form.map(([k])=>k==='drop2'?drop2:k);
+ return p;
+}
+const chordRoot=(p,k)=>{let v=chordOf(p,k);while(v>ROWS.bass-1)v-=7;return v;};
+// A new lead line for one part: the song melody in breakdowns, the style's riff elsewhere.
+function newPartMelody(p,key,seed){const sec=p[key],type=typeOf(p,key),st=STYLES[p.style]||STYLES.festival;if(sec.patternBars<4)resize(sec,4);sec.grid.lead=riff(p,P.rng(seed>>>0),type==='breakdown'?'melody':st.riffs||'festival',steps(sec));if(key==='drop')leadToBuild(p);return labelOf(p,key);}
+// A new part of a type: the existing pattern of that type if there is one, else a copy derived from the drop.
+function partOfType(p,type){if(p[type]?.grid)return type;if(SKETCH.includes(type)){ensureSongParts(p);return type;}return 'drop';}
 
 /* ---------- Graph and scheduler (shared by live play and offline render) ---------- */
 // AVANTGARDIAN ARP's own chain for one factory sound: mono VoiceOutput → SoundMatch trim → StudioFX with the sound's FX.
@@ -263,7 +317,8 @@ const LEAD_LEVEL=1.6;
 const STEMS=['drums','bass','lead','fx'];
 // dest: one node for everything, or {drums,bass,lead,fx} with a node per stem.
 async function makeGraph(ctx,dest,project,section){
- const g={ctx,section,events:[],lane:{},shots:{},grp:{},noise:P.noiseBuffer(ctx,4,11)},fx=project[section].fx,isBuild=section==='build',isDrop=section==='drop',plain=!isBuild&&!isDrop,ir=P.impulse(ctx,2.6,2.6,5,1);
+ const leadId=project[section].sounds?.lead||project.sounds.lead;
+ const g={ctx,section,type:typeOf(project,section),events:[],lane:{},shots:{},grp:{},noise:P.noiseBuffer(ctx,4,11)},fx=project[section].fx,type=typeOf(project,section),isBuild=type==='build',isDrop=type==='drop',plain=!isBuild&&!isDrop,ir=P.impulse(ctx,2.6,2.6,5,1);
  // Build: everything through one high-pass that opens. Drop: everything but kick and clap pumps.
  // Intro, breakdown, outro: one low-pass that moves over the section, plus reverb and optional pump.
  for(const stem of STEMS){
@@ -280,15 +335,15 @@ async function makeGraph(ctx,dest,project,section){
  for(const [k] of DRUMS){const n=ctx.createGain();n.gain.value=project.mix[k];g.lane[k]=n;g.shots[k]=await drumShot(ctx,project,k);}
  for(const [k] of DRUMS)if(k!=='kick')g.lane[k].connect(pumped(k)?D.pump:D.body);
  g.kickShaper=P.shaper(ctx,.25);g.lane.kick.connect(g.kickShaper).connect(D.body);
- for(const k of ['bass','lead']){const n=ctx.createGain();n.gain.value=project.mix[k]*(k==='bass'?3:project.sounds.lead?.startsWith('dl:')?LEAD_LEVEL:2.2);g.lane[k]=n;}
+ for(const k of ['bass','lead']){const n=ctx.createGain();n.gain.value=project.mix[k]*(k==='bass'?3:leadId?.startsWith('dl:')?LEAD_LEVEL:2.2);g.lane[k]=n;}
  g.lane.bass.connect(pumped('bass')?B.pump:B.body);
  // The lead bus: its own drive, delay and reverb, and a tone filter the section moves. In the build-up it skips the
  // high-pass (the lead is what opens up there) and goes straight to the swell.
- if(root.DropLead){g.leadBus=root.DropLead.bus(ctx,isBuild?L.swell:pumped('lead')?L.pump:L.body,project.sounds.lead?.startsWith('dl:')?project.sounds.lead.slice(3):null,project.bpm);g.lane.lead.connect(g.leadBus.input);}
+ if(root.DropLead){g.leadBus=root.DropLead.bus(ctx,isBuild?L.swell:pumped('lead')?L.pump:L.body,leadId?.startsWith('dl:')?leadId.slice(3):null,project.bpm);g.lane.lead.connect(g.leadBus.input);}
  else{g.lane.lead.connect(pumped('lead')?L.pump:L.body);const ls=ctx.createGain();ls.gain.value=.25;g.lane.lead.connect(ls).connect(L.verb);}
  // ARP and Bass Invaders share one ladder worklet per context: prepare ARP's first, then both voices.
- if(project.sounds.lead?.startsWith('arp:')&&root.NBVoice)await root.NBVoice.prepare(ctx);
- const [bass,lead]=await Promise.all([voice(ctx,g.lane.bass,project.sounds.bass,project,bassBase(project.key)),voice(ctx,g.lane.lead,project.sounds.lead,project,leadBase(project.key))]);
+ if(leadId?.startsWith('arp:')&&root.NBVoice)await root.NBVoice.prepare(ctx);
+ const [bass,lead]=await Promise.all([voice(ctx,g.lane.bass,project.sounds.bass,project,bassBase(project.key)),voice(ctx,g.lane.lead,leadId,project,leadBase(project.key))]);
  g.bass=bass;g.lead=lead;
  // Dropfather leads render each distinct chord of the section once, before it plays.
  if(lead?.prepare){const sec=project[section],list=[],seen=new Set();let prev=null;
@@ -304,11 +359,11 @@ function sectionStart(g,project,t){
  const ctx=g.ctx,tl=timeline(project),sec=project[g.section],fx=sec.fx,len=sec.bars*tl.bar;
  // Lead tone: closed and narrow before the drop, opening through the build-up, wide open in the drop.
  if(g.leadBus){const L=g.leadBus,f=L.tone.frequency,at=(x,v)=>{x.cancelScheduledValues(t);x.setValueAtTime(v,t);};
-  if(g.section==='build'){at(f,280);f.exponentialRampToValueAtTime(9000,t+len);at(L.verb.gain,L.base.verb*1.8);at(L.delay.gain,L.base.delay*1.3);}
-  else if(g.section==='drop'){at(f,20000);at(L.verb.gain,L.base.verb);at(L.delay.gain,L.base.delay);}
-  else{at(f,{intro:1400,breakdown:2600,outro:2400}[g.section]||2400);at(L.verb.gain,L.base.verb*(g.section==='breakdown'?2.2:1.4));at(L.delay.gain,L.base.delay*1.2);}}
+  if(g.type==='build'){at(f,280);f.exponentialRampToValueAtTime(9000,t+len);at(L.verb.gain,L.base.verb*1.8);at(L.delay.gain,L.base.delay*1.3);}
+  else if(g.type==='drop'){at(f,20000);at(L.verb.gain,L.base.verb);at(L.delay.gain,L.base.delay);}
+  else{at(f,{intro:1400,breakdown:5200,outro:2400}[g.type]||2400);at(L.verb.gain,Math.min(.9,L.base.verb*(g.type==='breakdown'?1.5:1.4)));at(L.delay.gain,L.base.delay*1.2);}}
  for(const G of Object.values(g.grp))if(G.lp){G.lp.frequency.cancelScheduledValues(t);G.lp.frequency.setValueAtTime(lpHz(fx.filterFrom),t);G.lp.frequency.exponentialRampToValueAtTime(lpHz(fx.filterTo),t+len);}
- if(g.section==='build'){
+ if(g.type==='build'){
   const hpEnd=20*2**(fx.hp*6.6);
   for(const G of Object.values(g.grp)){G.hp.frequency.cancelScheduledValues(t);G.hp.frequency.setValueAtTime(20,t);G.hp.frequency.exponentialRampToValueAtTime(Math.max(21,hpEnd),t+len);G.hp.Q.setValueAtTime(.7,t);G.hp.Q.linearRampToValueAtTime(.7+fx.hp*2.5,t+len);
    G.swell.gain.cancelScheduledValues(t);G.swell.gain.setValueAtTime(1,t);G.swell.gain.linearRampToValueAtTime((1+fx.swell*.3)/(1+fx.verb*.9),t+len);G.wash.gain.cancelScheduledValues(t);G.wash.gain.setValueAtTime(0,t);G.wash.gain.linearRampToValueAtTime(fx.verb*.9,t+len);}
@@ -317,14 +372,14 @@ function sectionStart(g,project,t){
    for(const [type,det,mul,lv] of [['sawtooth',-11,1,.5],['sawtooth',11,1,.5],['square',0,2,.25]]){const o=ctx.createOscillator(),og=ctx.createGain();o.type=type;o.detune.value=det;og.gain.value=lv;o.frequency.setValueAtTime(f0*mul,t);o.frequency.exponentialRampToValueAtTime(f0*mul*2**(st/12),t+len);o.connect(og).connect(lp);o.start(t);o.stop(t+len+.05);}}
   if(g.rollShot&&fx.rollAmt>0){const kick=fx.roll==='kick';g.rollBus.gain.value=fx.rollAmt*(kick?.5:.45);g.rollHP.frequency.setValueAtTime(kick?30:250,t);g.rollHP.frequency.exponentialRampToValueAtTime(kick?400:1600,t+len);
    for(let u=0;u<len-1e-4;){const p=u/len,div=p<.5?1:p<.75?2:p<.875?4:8,vel=.25+.75*p**1.4;hit(g,g.rollShot,g.rollBus,t+u,vel,kick?1:2**(p*7/12));g.events.push(['roll',t+u,tl.beat/div*.5,kick?36:38,vel]);u+=tl.beat/div;}}
- }else if(g.section==='drop'&&fx.impact>0){const o=ctx.createOscillator(),v=ctx.createGain();o.frequency.setValueAtTime(82,t);o.frequency.exponentialRampToValueAtTime(36,t+1.2);v.gain.setValueAtTime(0,t);v.gain.linearRampToValueAtTime(fx.impact*.7,t+.004);v.gain.setTargetAtTime(0,t+.02,.45);o.connect(v).connect(g.out);o.start(t);o.stop(t+3);
+ }else if(g.type==='drop'&&fx.impact>0){const o=ctx.createOscillator(),v=ctx.createGain();o.frequency.setValueAtTime(82,t);o.frequency.exponentialRampToValueAtTime(36,t+1.2);v.gain.setValueAtTime(0,t);v.gain.linearRampToValueAtTime(fx.impact*.7,t+.004);v.gain.setTargetAtTime(0,t+.02,.45);o.connect(v).connect(g.out);o.start(t);o.stop(t+3);
   const n=ctx.createBufferSource(),h=ctx.createBiquadFilter(),nv=ctx.createGain();n.buffer=g.noise;h.type='highpass';h.frequency.value=4200;nv.gain.setValueAtTime(fx.impact*.25,t);nv.gain.setTargetAtTime(0,t+.01,.8);n.connect(h).connect(nv).connect(g.out);nv.connect(g.verb);n.start(t,0,3.9);}
 }
 // The note a lane plays at step k of a section: pitch, length up to the next note (times the gate), velocity by
 // position, and for chord leads the chord under it.
 function noteAt(project,sec,lane,k,eng){
  const n=steps(sec),i=k%n,grid=sec.grid,d=grid[lane][i];if(d==null)return null;let gap=1;while(gap<Math.min(n,16)&&grid[lane][(i+gap)%n]==null)gap++;
- const midi=midiFor(project,lane,d),dur=Math.max(.04,gap*timeline(project).step*project.gate[lane]),vel=i%16===0?112:i%4===0?104:92;
+ const midi=midiFor(project,lane,d),dur=Math.max(.04,gap*timeline(project).step*(sec.gate?.[lane]??project.gate[lane])),vel=i%16===0?112:i%4===0?104:92;
  const kind=lane==='lead'&&eng?.patch&&root.DropLead?root.DropLead.VOICING[eng.patch]:null;
  return {midi,dur,vel,chord:kind?voiceChord(project,d,k,kind).map(x=>midiFor(project,'lead',x)):null};
 }
@@ -332,8 +387,8 @@ function noteAt(project,sec,lane,k,eng){
 function scheduleStep(g,project,k,t){
  const sec=project[g.section],n=steps(sec),i=k%n,grid=sec.grid,tl=timeline(project),progress=k/(sec.bars*16);
  if(k===0)sectionStart(g,project,t);
- for(const [lane] of DRUMS){const v=grid[lane][i];if(!v)continue;if(g.section==='build'&&lane==='kick'&&progress>=sec.fx.kickOut)continue;hit(g,g.shots[lane],g.lane[lane],t,v===2?1:.72);g.events.push([lane,t,tl.step*.9,{kick:36,clap:39,snare:38,hat:42,open:46}[lane],v===2?1:.72]);}
- if(g.section!=='build'&&i%4===0&&(sec.fx.pump||0)>0)for(const G of Object.values(g.grp)){G.pump.gain.setTargetAtTime(1-sec.fx.pump*.85,t,.003);G.pump.gain.setTargetAtTime(1,t+.03,tl.beat*.17);}
+ for(const [lane] of DRUMS){const v=grid[lane][i];if(!v)continue;if(g.type==='build'&&lane==='kick'&&progress>=sec.fx.kickOut)continue;hit(g,g.shots[lane],g.lane[lane],t,v===2?1:.72);g.events.push([lane,t,tl.step*.9,{kick:36,clap:39,snare:38,hat:42,open:46}[lane],v===2?1:.72]);}
+ if(g.type!=='build'&&i%4===0&&(sec.fx.pump||0)>0)for(const G of Object.values(g.grp)){G.pump.gain.setTargetAtTime(1-sec.fx.pump*.85,t,.003);G.pump.gain.setTargetAtTime(1,t+.03,tl.beat*.17);}
  for(const lane of ['bass','lead']){const x=noteAt(project,sec,lane,k,g[lane]);if(!x)continue;const eng=g[lane];
   if(eng)eng.play({midi:x.midi,time:t,duration:x.dur,velocity:x.vel,accent:i%4===2&&lane==='bass',chord:x.chord});for(const m of x.chord||[x.midi])g.events.push([lane,t,x.dur,m,x.vel/127]);}
 }
@@ -382,26 +437,30 @@ function mixdown(stems,gains=[1,1,1,1]){
 // The finished stereo mix at the project's fader settings, limited.
 function mix(result,project){const bus=busOf(project),buf=mixdown(result.stems,STEMS.map(k=>faderGain(bus[k]))),lim=P.limit(buf,0,buf.duration);return {buffer:buf,peak:lim.peak,reduction:lim.reduction};}
 // opts.progress(0..1) is called as the bars render.
-async function render(project,{sr=44100,only=null,progress=()=>{}}={}){
- const tl=timeline(project),parts=tl.parts.filter(x=>!only||only.includes(x.name)),pre=project.pre,beat=tl.beat,fade=.006;
- const total=parts.reduce((a,x)=>a+project[x.name].bars,0)+4;let done=0;const tick=()=>{done++;progress(Math.min(.99,done/total));};progress(0);
- const rendered=await Promise.all(parts.map(x=>renderSection(project,x.name,sr,tick))),by=Object.fromEntries(parts.map((x,i)=>[x.name,rendered[i]]));
+// opts.song: the song view's arrangement instead of the drop view. opts.progress(0..1) is called as bars render.
+async function render(project,{sr=44100,only=null,song=false,progress=()=>{}}={}){
+ const tl=timeline(project,song),parts=tl.parts.filter(x=>!only||only.includes(x.name)||only.includes(x.type)),pre=project.pre,beat=tl.beat,fade=.006;
+ const keys=[...new Set(parts.map(x=>x.name))],pairs=parts.filter((x,i)=>x.pre&&parts[i+1]===tl.parts[x.index+1]);
+ const total=keys.reduce((a,k)=>a+project[k].bars,0)+2*pairs.length+2;let done=0;const tick=()=>{done++;progress(Math.min(.99,done/total));};progress(0);
+ const rendered=await Promise.all(keys.map(k=>renderSection(project,k,sr,tick))),by=Object.fromEntries(keys.map((k,i)=>[k,rendered[i]]));
  const t0=parts[0].start,length=parts[parts.length-1].end-t0+3,ctx=new OfflineAudioContext(8,Math.round(length*sr),sr),fxStem=stemRouter(ctx,ctx.destination).fx;
  const place=(buf,at,offset=0,dur=buf.duration-offset)=>{const s=ctx.createBufferSource(),v=ctx.createGain();s.buffer=buf;v.gain.setValueAtTime(1,Math.max(0,at+dur-fade));v.gain.linearRampToValueAtTime(0,at+dur);s.connect(v).connect(ctx.destination);s.start(Math.max(0,at),offset+Math.max(0,-at),dur);};
- // Sections ring into the next one, except the build-up: it stops dead at the pre-drop.
- for(const x of parts){const R=by[x.name],at=x.start-t0;if(x.name==='build')place(R.buffer,at,0,tl.gapOut-x.start+fade);else place(R.buffer,at);}
- const B=by.build,D=by.drop;
- // The throw and the reverse suck are made from the mixed build-up and drop, and land on the fx stem.
- if(B&&D&&pre.throw>0&&root.Delaysy){const len=Math.min(pre.throwLen*beat,tl.gapOut-tl.buildOut),W=await P.delaysyThrow(mixdown(B.buffer),tl.gapOut-tl.buildOut-len,len,pre.delaysy,project.bpm),v=ctx.createGain(),s=ctx.createBufferSource(),at=tl.gapOut-len-W.lead-t0;s.buffer=W.buffer;v.gain.setValueAtTime(pre.throw*W.gain,0);v.gain.setValueAtTime(pre.throw*W.gain,tl.dropOut-t0);v.gain.setTargetAtTime(pre.throw*W.gain*.3,tl.dropOut-t0,beat*.5);s.connect(v).connect(fxStem);s.start(Math.max(0,at),Math.max(0,-at));}
- tick();
- if(B&&D&&pre.reverse>0){const R=await P.reverseSwell(mixdown(D.buffer),0,beat,2.4),len=clamp(Math.max(tl.gap,2*beat),.2,R.duration-.05),a=tl.dropOut-len-t0,s=ctx.createBufferSource(),v=ctx.createGain();s.buffer=R;v.gain.setValueAtTime(0,a);v.gain.linearRampToValueAtTime(pre.reverse*.9,tl.dropOut-t0-.01);v.gain.linearRampToValueAtTime(0,tl.dropOut-t0+.004);s.connect(v).connect(fxStem);s.start(a,R.duration-len);s.stop(tl.dropOut-t0+.02);}
- tick();
+ // Parts ring into the next one, except a build-up before a drop: it stops dead at the pre-drop.
+ for(const x of parts){const R=by[x.name],at=x.start-t0;if(x.pre)place(R.buffer,at,0,x.gapOut-x.start+fade);else place(R.buffer,at);}
+ // Every pre-drop: the build-up's last beat thrown into DELAYSY, and the drop's first beat reversed into it. Both on the fx stem.
+ const throws={},swells={};
+ for(const x of pairs){const D=tl.parts[x.index+1],gapOut=x.gapOut-t0,dropOut=D.start-t0;
+  if(pre.throw>0&&root.Delaysy){const len=Math.min(pre.throwLen*beat,x.gapOut-x.start),W=throws[x.name]||(throws[x.name]=await P.delaysyThrow(mixdown(by[x.name].buffer),x.gapOut-x.start-len,len,pre.delaysy,project.bpm)),v=ctx.createGain(),s=ctx.createBufferSource(),at=gapOut-len-W.lead;s.buffer=W.buffer;v.gain.setValueAtTime(pre.throw*W.gain,Math.max(0,at));v.gain.setValueAtTime(pre.throw*W.gain,dropOut);v.gain.setTargetAtTime(pre.throw*W.gain*.3,dropOut,beat*.5);v.gain.setTargetAtTime(0,D.end-t0-beat,beat);s.connect(v).connect(fxStem);s.start(Math.max(0,at),Math.max(0,-at));}
+  tick();
+  if(pre.reverse>0&&by[D.name]){const R=swells[D.name]||(swells[D.name]=await P.reverseSwell(mixdown(by[D.name].buffer),0,beat,2.4)),len=clamp(Math.max(D.start-x.gapOut,2*beat),.2,R.duration-.05),a=dropOut-len,s=ctx.createBufferSource(),v=ctx.createGain();s.buffer=R;v.gain.setValueAtTime(0,a);v.gain.linearRampToValueAtTime(pre.reverse*.9,dropOut-.01);v.gain.linearRampToValueAtTime(0,dropOut+.004);s.connect(v).connect(fxStem);s.start(a,R.duration-len);s.stop(dropOut+.02);}
+  tick();
+ }
  const stems=await ctx.startRendering(),m=mix({stems},project);tick();
- const events=parts.flatMap(x=>by[x.name].events.filter(e=>x.name!=='build'||e[1]<tl.gapOut-x.start).map(e=>[e[0],e[1]+x.start-t0,...e.slice(2)]));
+ const events=parts.flatMap(x=>by[x.name].events.filter(e=>!x.pre||e[1]<x.gapOut-x.start).map(e=>[e[0],e[1]+x.start-t0,...e.slice(2)]));
  progress(1);
- return {stems,buffer:m.buffer,tl,t0,parts,events,peak:m.peak,reduction:m.reduction};
+ return {stems,buffer:m.buffer,tl,t0,parts,events,peak:m.peak,reduction:m.reduction,song};
 }
 
-const api={STEMS,faderGain,busOf,mixdown,mix,PROGS,progName,chordName,newMelody,newChords,SCALES,DRUMS,ROWS,NOTE,ORDER,NAMES,SKETCH,STYLES,steps,blank,resize,degree,midiFor,rowLabel,enabled,arpSounds,arpPatterns,leadName,arpLane,newArpLead,generate,randomize,sketch,timeline,createPlayer,render};
+const api={makeSong,newPartMelody,typeOf,labelOf,SONG_DEFAULT,songOrder,ensureSongParts,variation,partOfType,STEMS,faderGain,busOf,mixdown,mix,PROGS,progName,chordName,newMelody,newChords,SCALES,DRUMS,ROWS,NOTE,ORDER,NAMES,SKETCH,STYLES,steps,blank,resize,degree,midiFor,rowLabel,enabled,arpSounds,arpPatterns,leadName,arpLane,newArpLead,generate,randomize,sketch,timeline,createPlayer,render};
 if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.DropGrid=api;
 })(typeof globalThis!=='undefined'?globalThis:this);

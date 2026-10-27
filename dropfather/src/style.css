@@ -141,3 +141,30 @@ body:not([data-mode]) .dock.maker-only{position:static;margin-top:14px}
 .mixer input[type=range]{writing-mode:vertical-lr;direction:rtl;width:30px;height:118px;min-height:0;margin:0}
 #app{padding-bottom:280px}
 @media(max-width:600px){#app{padding-bottom:300px}.dock.maker-only{grid-template-columns:1fr;gap:8px;padding:10px}.mixer{border-left:0;padding-left:0;border-top:1px solid var(--line);padding-top:6px;justify-content:space-around}.mixer input[type=range]{height:70px}.progress{flex:0 0 150px}}
+
+/* Song view: the arrangement as blocks over four lanes (drums, bass, lead, fx). */
+body:not([data-view="song"]) #songPanel,body[data-view="song"] #makerPanel,body[data-view="song"] #makerMachines{display:none!important}
+.viewseg{display:flex;border:2px solid var(--white);border-radius:8px;overflow:hidden}
+.viewseg button{border:0;border-radius:0;min-height:40px;padding:0 14px;font-family:'Bowlby One','Arial Black',Impact,sans-serif;font-weight:400;letter-spacing:.03em}
+.viewseg button.on{background:var(--white);color:#000}
+.songtop{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap}.songtop h2{margin:0;color:var(--red2)}
+.palette{margin:10px 0}
+.songwrap{overflow-x:auto;border:1px solid var(--line);border-radius:8px;background:#0b0b0b}
+.song{display:grid;grid-template-columns:62px minmax(0,1fr);min-width:0}
+.song .lanes{display:grid;grid-template-rows:42px repeat(4,24px);border-right:1px solid var(--line);position:sticky;left:0;background:#0b0b0b;z-index:2}
+.song .lanes span{font-size:11px;font-weight:700;color:var(--muted);padding:0 8px;display:flex;align-items:center}
+.blocks{position:relative;display:flex;gap:2px;padding:0 2px}
+.blk{display:flex;flex-direction:column;min-width:0;border-radius:6px;border:2px solid transparent;cursor:pointer;overflow:hidden;background:#1d1d1d}
+.blk .bh{height:38px;padding:3px 7px;display:flex;flex-direction:column;justify-content:center;overflow:hidden;white-space:nowrap}
+.blk .bh b{font-family:'Bowlby One','Arial Black',Impact,sans-serif;font-weight:400;font-size:13px;letter-spacing:.03em;overflow:hidden;text-overflow:ellipsis}
+.blk .bh small{font-size:10px;color:var(--muted)}
+.blk canvas{display:block;width:100%;height:96px}
+.blk.intro,.blk.outro{background:#1f1f1f}.blk.breakdown{background:#17222f}.blk.build{background:#26241f}.blk.drop{background:#2a0f0d}.blk.drop .bh b{color:var(--red2)}
+.blk.on{border-color:var(--white)}.blk.over{border-color:var(--red2);border-style:dashed}.blk.drag{opacity:.4}
+.blk:focus-visible{outline:2px solid var(--red2);outline-offset:1px}
+.songhead{position:absolute;top:0;bottom:0;width:2px;background:#fff;box-shadow:0 0 8px #fff;display:none;pointer-events:none;z-index:3}
+.songsel{margin-top:10px;align-items:center}
+.songsel .selinfo{font-family:'Bowlby One','Arial Black',Impact,sans-serif;font-size:14px;color:var(--white);margin-right:6px}
+.songsel .sellen{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted)}
+.songsel button.danger{border-color:#7a1d18;color:#ff8a80}
+@media(max-width:600px){.viewseg button{padding:0 10px;min-height:38px}}

@@ -6,7 +6,7 @@
 <style>/*INLINE:style.css*/</style>
 </head><body>
 <div id="app">
-<header class="hero"><img id="logo" src="/*INLINE-IMG:../assets/dropfather-logo.webp*/" alt="DROPFATHER"><p class="tagline">Build-up · Pre-drop · Drop — by Tarjei Krogh · v0.8</p></header>
+<header class="hero"><img id="logo" src="/*INLINE-IMG:../assets/dropfather-logo.webp*/" alt="DROPFATHER"><p class="tagline">Build-up · Pre-drop · Drop — by Tarjei Krogh · v0.9</p></header>
 
 <section class="panel" id="startPanel">
  <div class="choices">
@@ -56,7 +56,7 @@
  <div class="planrow">
   <div class="ctl"><span>BPM</span><button id="mBpmDown" aria-label="BPM down">‹</button><input id="mBpm" type="number" min="60" max="200" step="1" value="124"><button id="mBpmUp" aria-label="BPM up">›</button></div>
   <div class="ctl"><span>Key</span><select id="mKey" aria-label="Key"></select><select id="mScale" aria-label="Scale"></select></div>
-  <div class="ctl"><button id="mClear">Clear all</button><button id="mSketch">+ Suggest the rest of the song</button></div>
+  <div class="ctl"><button id="mClear">Clear all</button><button id="mSketch">+ Suggest the rest of the song</button><button id="mFurther" class="primary" title="Open the song view: a whole track built around this drop">Take it further → make a song</button></div>
  </div>
  <div class="styles" id="mStyles"></div>
  <p class="plantext" id="mDesc"></p>
@@ -64,6 +64,13 @@
  <div class="secbar" id="secbar"></div>
  <div class="gridwrap"><div id="grid" class="grid"></div></div>
  <p class="hint" id="mHint"></p>
+</section>
+<section class="panel hidden maker-only" id="songPanel">
+ <div class="songtop"><h2>SONG</h2><span id="songInfo" class="hint"></span></div>
+ <p class="hint">The whole track, part by part. Click a part to play from it, drag it to move it, double-click (or ✎) to edit its grid in the drop view. ↻ marks a repeat of an earlier part; ✦ Variation gives a part its own copy. A build-up right before a drop gets the pre-drop.</p>
+ <div class="palette rowbtns" id="sPalette"></div>
+ <div class="songwrap"><div id="song" class="song" aria-label="Arrangement"></div></div>
+ <div class="songsel rowbtns" id="sSel"></div>
 </section>
 <div class="machines hidden maker-only" id="makerMachines">
  <section class="panel machine"><h2>BUILD-UP</h2><p class="hint">The whole build goes through a high-pass that opens up, with riser and roll on top.</p><div id="mBuildCtl"></div></section>
@@ -73,7 +80,7 @@
 <section class="panel hidden maker-only" id="makerSounds"><h2>SOUNDS &amp; MIX</h2><p class="hint">Bass: Bass Invaders (2000 factory sounds). Lead: AVANTGARDIAN ARP (777 sounds through its own voice, level match and FX) or Bass Invaders. The lead line can come straight from ARP's pattern library or a fresh ARP blend.</p><div id="mSoundCtl" class="soundgrid"></div></section>
 <footer class="dock hidden maker-only" id="makerDock">
  <div class="dockmain">
-  <div class="transport"><button id="mRandom" title="Randomize everything: style, key, scale, chords, sounds and DELAYSY preset">🎲 Randomize all</button><button id="mPlayAll" class="primary">▶ Play all</button><button id="mLoop">▶ Loop section</button><button id="mStop">■ Stop</button><div class="progress hidden" id="mProgress" role="progressbar" aria-label="Render progress"><i></i><span></span></div><label class="vol">Vol <input id="mVolume" type="range" min="0" max="1" step="0.01" value="0.8"></label></div>
+  <div class="transport"><div class="seg viewseg" id="mView" role="group" aria-label="View"><button type="button" data-view="drop" class="on">Drop</button><button type="button" data-view="song">Song</button></div><button id="mRandom" title="Randomize everything: style, key, scale, chords, sounds and DELAYSY preset">🎲 Randomize all</button><button id="mPlayAll" class="primary">▶ Play all</button><button id="mLoop">▶ Loop section</button><button id="mStop">■ Stop</button><div class="progress hidden" id="mProgress" role="progressbar" aria-label="Render progress"><i></i><span></span></div><label class="vol">Vol <input id="mVolume" type="range" min="0" max="1" step="0.01" value="0.8"></label></div>
   <div id="mStatus" role="status" aria-live="polite">Press Make a drop to start the engine.</div>
   <div class="exports"><button id="mExAll">WAV · build-up + drop</button><button id="mExDrop">WAV · drop only</button><button id="mExStems">WAV stems · 4 tracks</button><button id="mExMidi">MIDI</button><button id="mSave">Save project</button><label class="filebtn">Load project<input id="mLoad" type="file" accept=".json,application/json"></label></div>
  </div>

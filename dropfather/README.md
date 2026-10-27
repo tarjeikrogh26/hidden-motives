@@ -1,4 +1,4 @@
-# DROPFATHER — by Tarjei Krogh · v0.8
+# DROPFATHER — by Tarjei Krogh · v0.9
 
 To veier inn fra startskjermen:
 
@@ -129,6 +129,32 @@ grunntone, ikke bassnoten) eller kick i målingen. Det må høres, ikke bare må
 
 Build-upen går gjennom ett high-pass som åpner seg, med riser, roll og romklang. «Kick plays until» bestemmer når kicken
 forsvinner. I droppet pumper alt unntatt kick og clap, og det kommer et impact på 1-eren.
+
+## Song (v0.9)
+
+Bryteren **Drop | Song** nederst bytter mellom droppet og hele låta. **Take it further → make a song** i
+drop-vinduet gjør det samme.
+
+- **🎲 Make a song from the drop** skriver en hel låt rundt droppet. Droppet og build-upen beholdes som de er.
+  - Formen følger stilen: club (intro, groove, breakdown, build-up, drop, breakdown 2, build-up, drop 2, outro),
+    festival eller chill.
+  - **Melodien bor i breakdownene**, ikke i droppet. De har en syngende linje på droppets akkorder, spilt som
+    akkorder med pad, future bass-akkord eller glass-pluck, med holdte bassnoter og uten kick. Droppet er
+    utløsningen etterpå.
+  - **Groove** er droppets trommer og bass uten lead, den DJ-vennlige delen.
+  - **Drop 2** er enten det samme droppet eller en egen kopi med nytt lead-riff.
+  - Trykk igjen for en ny versjon.
+- **Tidslinjen** viser hver del over fire spor (Drums, Bass, Lead, FX), med taktnummer.
+  - Klikk en del for å spille fra den. Dra delene for å flytte dem. Dobbeltklikk eller ✎ åpner delens grid i
+    drop-vinduet, og «← Back to the song» fører tilbake.
+  - ↻ betyr en gjentakelse av en tidligere del.
+- **Valgt del:**
+  - ◀ og ▶ flytter delen. ⧉ Repeat legger inn samme del igjen. ✕ fjerner den.
+  - ✦ Variation gir delen sin egen kopi, og drop og build-up får da et nytt lead-riff.
+  - 🎲 New melody lager en ny lead-linje. **Lead** velger egen lyd for delen. **Length** setter antall takter.
+- Hver build-up rett før et drop får pre-drop (pause, DELAYSY-kast, reverse suck).
+- Hver del rendres én gang, også når den gjentas.
+- Eksport: hele låta som WAV, stems (4 spor fra takt 1) eller MIDI.
 
 ## Opphav og rettigheter (viktig før salg)
 
