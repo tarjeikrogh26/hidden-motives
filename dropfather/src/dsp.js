@@ -1,54 +1,59 @@
-/* Dropfather DSP: build-up, pre-drop and drop rendered offline around the original song.
+/* Dropfather DSP: a new part (build-up, pre-drop, drop) made from the song's own audio and inserted into it.
+   The drop bass plays only AVANTGARDIAN ARP's root notes for the very bars the drop is made of.
    All times are in seconds. "src" is the original song, "out" is the rendered result. */
 (function(root){'use strict';
 const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
 const mtof=m=>440*2**((m-69)/12);
 
+// Every style follows ARP's roots; styles only change rhythm, sound and how hard the build pushes.
 const STYLES={
  house:{name:'House lift',buildBars:8,gapBeats:1,dropBars:16,
   build:{hp:.45,riser:.35,pitch:0,roll:'clap',rollAmt:.45,stutter:0,verb:.35,swell:.2},
   pre:{throw:.5,delaysy:8,throwLen:1,reverse:.4},
-  drop:{kick:.75,bassPattern:'offbeat',bassPreset:'pal:house:5:1',bassOct:'low',bass:.6,follow:true,pump:.35,impact:.35,replaceBass:false,lift:.3,song:.9}},
+  drop:{kick:.75,bassPattern:'offbeat',bassPreset:'pal:house:5:1',bassOct:'low',bass:.6,pump:.35,impact:.35,cutBass:true,lift:.3,song:.9}},
  festival:{name:'Festival',buildBars:16,gapBeats:4,dropBars:16,
-  build:{hp:.85,riser:.8,pitch:.8,roll:'snare',rollAmt:.85,stutter:.75,verb:.6,swell:.5},
+  build:{hp:.85,riser:.8,pitch:.5,roll:'snare',rollAmt:.85,stutter:.75,verb:.6,swell:.5},
   pre:{throw:.6,delaysy:61,throwLen:2,reverse:.8},
-  drop:{kick:.9,bassPattern:'roll16',bassPreset:'pal:edm:1:1',bassOct:'low',bass:.65,follow:true,pump:.7,impact:.9,replaceBass:true,lift:.6,song:.8}},
+  drop:{kick:.9,bassPattern:'roll16',bassPreset:'pal:edm:1:1',bassOct:'low',bass:.65,pump:.7,impact:.9,cutBass:true,lift:.6,song:.85}},
  techno:{name:'Techno tunnel',buildBars:8,gapBeats:2,dropBars:16,
   build:{hp:.7,riser:.6,pitch:0,roll:'kick',rollAmt:.7,stutter:0,verb:.5,swell:.3},
   pre:{throw:.7,delaysy:98,throwLen:1,reverse:.3},
-  drop:{kick:.95,bassPattern:'gallop',bassPreset:'pal:motor:3:1',bassOct:'low',bass:.7,follow:false,pump:.55,impact:.6,replaceBass:true,lift:.2,song:.85}},
+  drop:{kick:.95,bassPattern:'gallop',bassPreset:'pal:motor:3:1',bassOct:'low',bass:.7,pump:.55,impact:.6,cutBass:true,lift:.2,song:.85}},
  takeoff:{name:'Take-off',buildBars:8,gapBeats:1,dropBars:16,
-  build:{hp:.65,riser:.55,pitch:.6,roll:'snare',rollAmt:.6,stutter:.5,verb:.45,swell:.35},
+  build:{hp:.65,riser:.55,pitch:0,roll:'snare',rollAmt:.6,stutter:.5,verb:.45,swell:.35},
   pre:{throw:.45,delaysy:30,throwLen:1,reverse:.6},
-  drop:{kick:.85,bassPattern:'roll16',bassPreset:'pal:edm:0:1',bassOct:'low',bass:.6,follow:false,pump:.5,impact:.7,replaceBass:true,lift:.4,song:.85}},
+  drop:{kick:.85,bassPattern:'roll16',bassPreset:'pal:edm:0:1',bassOct:'low',bass:.6,pump:.5,impact:.7,cutBass:true,lift:.4,song:.85}},
  ebm:{name:'EBM motor',buildBars:4,gapBeats:2,dropBars:16,
-  build:{hp:.55,riser:.3,pitch:.3,roll:'snare',rollAmt:.7,stutter:.25,verb:.25,swell:.2},
+  build:{hp:.55,riser:.3,pitch:0,roll:'snare',rollAmt:.7,stutter:.25,verb:.25,swell:.2},
   pre:{throw:.35,delaysy:179,throwLen:.5,reverse:.2},
-  drop:{kick:.9,bassPattern:'invaders',bassPreset:'pal:ebm:3:1',bassOct:'low',bass:.7,follow:true,pump:.3,impact:.5,replaceBass:true,lift:.3,song:.85}}
+  drop:{kick:.9,bassPattern:'eighths',bassPreset:'pal:ebm:3:1',bassOct:'low',bass:.7,pump:.3,impact:.5,cutBass:true,lift:.3,song:.85}}
 };
 
-// 16 steps per bar. Each entry: [step, length in steps, interval in semitones].
+// Rhythm only: every note's pitch is ARP's root at that moment of the drop material. [step of 16, length in steps].
 const PATTERNS={
- offbeat:{name:'Offbeat (house)',steps:[[2,1.6,0],[6,1.6,0],[10,1.6,0],[14,1.6,0]]},
- roll16:{name:'Rolling 16ths',steps:[1,2,3,5,6,7,9,10,11,13,14,15].map(s=>[s,.75,0])},
- gallop:{name:'Gallop (techno)',steps:[[2,.8,0],[3,.8,0],[6,.8,0],[7,.8,0],[10,.8,0],[11,.8,0],[14,.8,0],[15,.8,0]]},
- octave8:{name:'Octave motor',steps:[0,2,4,6,8,10,12,14].map((s,i)=>[s,1.5,i%2?12:0])},
- sub:{name:'Sub hold',steps:[[0,15.6,0]]},
- mono4:{name:'Monotone 1/4',steps:[[0,3.2,0],[4,3.2,0],[8,3.2,0],[12,3.2,0]]},
- invaders:{name:'Bass Invaders riff',steps:null}
+ offbeat:{name:'Offbeat (house)',steps:[[2,1.6],[6,1.6],[10,1.6],[14,1.6]]},
+ eighths:{name:'Eighths',steps:[0,2,4,6,8,10,12,14].map(s=>[s,1.5])},
+ roll16:{name:'Rolling 16ths',steps:[1,2,3,5,6,7,9,10,11,13,14,15].map(s=>[s,.75])},
+ gallop:{name:'Gallop (techno)',steps:[[2,.8],[3,.8],[6,.8],[7,.8],[10,.8],[11,.8],[14,.8],[15,.8]]},
+ mono4:{name:'Quarters',steps:[[0,3.2],[4,3.2],[8,3.2],[12,3.2]]},
+ roots:{name:'ARP roots, held',steps:null}
 };
 const ROLLS={snare:'Snare roll',clap:'Clap roll',kick:'Kick roll',off:'Off'};
 
-function defaultPlan(){return {bpm:120,offset:0,dropBar:16,mode:'replace',root:9,seed:1,...JSON.parse(JSON.stringify(STYLES.takeoff)),style:'takeoff'};}
+function defaultPlan(){return {bpm:120,offset:0,insertBar:16,srcBar:16,srcBars:8,seed:1,...JSON.parse(JSON.stringify(STYLES.house)),style:'house'};}
 
+// The song plays to the insert point I, then the new part: build-up (the bars before I replayed and filtered),
+// pre-drop gap, and the drop (srcBars of the song from srcBar, looped). Then the song carries on from I.
 function timeline(plan,duration){
- const beat=60/plan.bpm,bar=beat*4,D=plan.offset+plan.dropBar*bar,buildLen=plan.buildBars*bar;
- const gap=Math.min(plan.gapBeats*beat,Math.max(0,buildLen-beat)),buildSrc=D-buildLen,shift=plan.mode==='insert'?buildLen:0;
- const buildOut=plan.mode==='insert'?D:buildSrc,dropOut=D+shift,dropEndSrc=Math.min(duration,D+plan.dropBars*bar);
- return {beat,bar,D,buildSrc,buildOut,gap,gapOut:dropOut-gap,dropOut,dropEndSrc,dropEndOut:dropEndSrc+shift,shift,outDuration:duration+shift};
+ const beat=60/plan.bpm,bar=beat*4,I=plan.offset+plan.insertBar*bar,buildLen=plan.buildBars*bar,dropLen=plan.dropBars*bar;
+ const gap=Math.min(plan.gapBeats*beat,Math.max(0,buildLen-beat)),srcStart=plan.offset+plan.srcBar*bar,srcLen=Math.max(bar,Math.min(plan.srcBars*bar,duration-srcStart));
+ const dropOut=I+buildLen,shift=buildLen+dropLen;
+ return {beat,bar,D:I,buildSrc:I-buildLen,buildOut:I,gap,gapOut:dropOut-gap,dropOut,dropEndOut:dropOut+dropLen,srcStart,srcLen,srcEnd:srcStart+srcLen,shift,outDuration:duration+shift};
 }
-// Map an output time back to the song (for bass lookup and A/B).
-function outToSrc(tl,t){if(tl.shift&&t>=tl.buildOut&&t<tl.dropOut)return tl.buildSrc+(t-tl.buildOut);return t>=tl.dropOut?t-tl.shift:t;}
+// Map an output time back to the song (for root lookup and A/B).
+function outToSrc(tl,t){if(t<tl.buildOut)return t;if(t<tl.dropOut)return tl.buildSrc+(t-tl.buildOut);if(t<tl.dropEndOut)return tl.srcStart+(t-tl.dropOut)%tl.srcLen;return t-tl.shift;}
+// ARP's root notes (non-silent chord sections, seconds): the root sounding at time t, or null.
+function rootAt(roots,t){if(!roots||!roots.length)return null;let lo=0,hi=roots.length-1;while(lo<hi){const m=(lo+hi+1)>>1;if(roots[m].start<=t)lo=m;else hi=m-1;}const s=roots[lo];return s.start<=t&&t<s.end?s.root:null;}
 
 function rng(seed){let s=(seed>>>0)||1;return()=>{s^=s<<13;s^=s>>>17;s^=s<<5;return(s>>>0)/4294967296;};}
 function noiseBuffer(ctx,seconds=4,seed=7){const r=rng(seed),b=ctx.createBuffer(2,Math.round(ctx.sampleRate*seconds),ctx.sampleRate);for(let c=0;c<2;c++){const d=b.getChannelData(c);for(let i=0;i<d.length;i++)d[i]=r()*2-1;}return b;}
@@ -100,12 +105,6 @@ function hitTrack(ctx,from,to,hits,sample){
 }
 // Bass Invaders' 2000 factory sounds, in the same order as the app's browser.
 function bassCatalog(){const K=root.KroghBass;return K?K.catalog().filter(p=>p.id.startsWith('pal:')||p.id.startsWith('pal2:')||p.id.startsWith('sample:')):[];}
-// The bass riff of a factory sound: the sound's own seed and genre through Bass Invaders' phrase generator. Returns [beat, length, interval, velocity, accent, slideIn, slideOut] over 8 bars.
-function invadersRiff(id,bpm){
- const list=bassCatalog(),entry=list.find(p=>p.id===id),genre=entry?.genre||'house',seed=root.BassFactory?.entries(list).find(e=>e.sound===id)?.seed??810001,knobs=root.BassInvadersHost.phraseKnobs();
- const notes=root.BassPatterns.generate({...knobs,genre,riffMode:'auto',seed,bars:8,phraseBars:4});
- return root.BassPatterns.events(notes,{bpm,rootMidi:60,gate:knobs.gate,swing:knobs.swing,rootMap:[0,0],phraseBars:4}).map(e=>[e.time*bpm/60,e.duration*bpm/60,e.pitch-60,e.velocity/127,e.accent,e.slideIn,e.slideOut]);
-}
 // One Bass Invaders voice through the app's own graph (filter 2, dark echo, 3D space, compressor) and level calibration.
 async function invadersBass(ctx,dest,id,settings,notes){
  const H=root.BassInvadersHost,graph=H.makeGraph(ctx,dest,settings),engine=root.KroghBass.create(ctx,graph.input,{preset:id});
@@ -141,18 +140,18 @@ async function delaysyThrow(buffer,start,len,index,bpm){
  return {buffer:out,lead,gain:Ew>1e-12&&Ec>1e-12?clamp(Math.sqrt(Ec/Ew)*.5,.12,16):1,preset:preset.name};
 }
 
-/* Render the plan. opts: {from,to,original:true,layers:true,lookupBass}. Returns {buffer,tl,events,peak,reduction,from,to}. */
+/* Render the plan. opts: {from,to,original:true,layers:true,roots}; roots = ARP root notes [{start,end,root}] in seconds. Returns {buffer,tl,events,peak,reduction,from,to}. */
 async function render(buffer,plan,opts={}){
  const duration=buffer.duration,tl=timeline(plan,duration),sr=buffer.sampleRate,from=Math.max(0,opts.from??0),to=Math.min(tl.outDuration,opts.to??tl.outDuration);
  const withOriginal=opts.original!==false,withLayers=opts.layers!==false,B=plan.build,P=plan.pre,Dp=plan.drop,beat=tl.beat,bar=tl.bar;
- const swell=withOriginal&&P.reverse>0&&withLayers?await reverseSwell(buffer,tl.D,Math.min(beat,duration-tl.D),2.4):null;
+ const swell=withOriginal&&P.reverse>0&&withLayers?await reverseSwell(buffer,tl.srcStart,Math.min(beat,tl.srcLen),2.4):null;
  const ctx=new OfflineAudioContext(2,Math.max(1,Math.round((to-from)*sr)),sr),T=t=>Math.max(0,t-from),noise=noiseBuffer(ctx),events={bass:[],kick:[],roll:[]};
  const r=rng(plan.seed||1);
 
  // Buses.
  const master=ctx.createGain();master.connect(ctx.destination);
  const verb=ctx.createConvolver();verb.normalize=true;verb.buffer=impulse(ctx,2.8,2.6,5,1);const verbOut=ctx.createGain();verbOut.gain.value=.45;verb.connect(verbOut).connect(master);
- const level=songLevel(buffer,tl.D,Math.min(duration,tl.D+4*bar)),scale=clamp(level/.35,.25,1.2),layerGain=ctx.createGain();layerGain.connect(master);
+ const level=songLevel(buffer,tl.srcStart,tl.srcEnd),scale=clamp(level/.35,.25,1.2),layerGain=ctx.createGain();layerGain.connect(master);
  const pump=ctx.createGain();pump.connect(master);
  const fade=.006,BASS_TRIM=3,THROW_TRIM=1;
 
@@ -166,7 +165,8 @@ async function render(buffer,plan,opts={}){
  buildVerb.gain.setValueAtTime(0,T(bStart));buildVerb.gain.linearRampToValueAtTime(B.verb*.9,T(bEnd));
 
  const dropIn=ctx.createGain(),lift=ctx.createBiquadFilter();dropIn.gain.value=Dp.song;lift.type='highshelf';lift.frequency.value=5500;lift.gain.value=Dp.lift*4;
- let dropHead=dropIn;if(Dp.replaceBass){for(let i=0;i<2;i++){const f=ctx.createBiquadFilter();f.type='highpass';f.frequency.value=115;f.Q.value=.6;dropHead.connect(f);dropHead=f;}}
+ // The song's own bass is cut from the drop material, so only ARP's roots carry the low end.
+ let dropHead=dropIn;if(Dp.cutBass){for(let i=0;i<2;i++){const f=ctx.createBiquadFilter();f.type='highpass';f.frequency.value=130;f.Q.value=.6;dropHead.connect(f);dropHead=f;}}
  dropHead.connect(lift).connect(pump);
 
  // preroll: feed the filters silently first, so a high-pass does not overshoot when it starts on heavy sub bass.
@@ -177,22 +177,23 @@ async function render(buffer,plan,opts={}){
   if(pre>0)g.gain.setValueAtTime(0,T(start));g.gain.setValueAtTime(fadeIn?0:gain,T(a));if(fadeIn)g.gain.linearRampToValueAtTime(gain,T(out0+fade));if(fadeOut){g.gain.setValueAtTime(gain,T(out1-fade));g.gain.linearRampToValueAtTime(0,T(b));}
  };
  const stutterBeats=Math.round(B.stutter*4),stutterLen=Math.min(stutterBeats*beat,(bEnd-bStart)*.5),stutterOut=bEnd-stutterLen;
- if(plan.mode==='insert')play(0,tl.D,0,master,false,true);else play(0,tl.buildSrc,0,master,false,true);
+ play(0,tl.D,0,master,false,true);
  play(tl.buildSrc,tl.buildSrc+(stutterOut-bStart),bStart,buildIn,true,true,1,.25);
  if(stutterLen>0){
   // Each beat repeats the first slice faster: 1/4, 1/8, 1/16, 1/32 (the last beats of the build).
   const divs=[1,2,4,8].slice(-Math.round(stutterLen/beat)),slice0=tl.buildSrc+(stutterOut-bStart);let t=stutterOut;
   for(const d of divs){const len=beat/d;for(let k=0;k<d;k++){play(slice0,slice0+len-.003,t,buildIn,true,true,.85+.15*(k/d));t+=len;}}
  }
- play(tl.D,tl.dropEndSrc,tl.dropOut,dropIn,true,true,1,plan.mode==='insert'?0:.25);
- if(tl.dropEndSrc<duration)play(tl.dropEndSrc,duration,tl.dropEndOut,master,true,false);
+ // The drop: the chosen bars of the song, looped for the drop's length.
+ for(let o=tl.dropOut,k=0;o<tl.dropEndOut-1e-6;o+=tl.srcLen,k++)play(tl.srcStart,tl.srcStart+Math.min(tl.srcLen,tl.dropEndOut-o),o,dropIn,true,true,1,k?0:.25);
+ play(tl.D,duration,tl.dropEndOut,master,true,false);
 
  // Pump (sidechain feel) on the drop segment and the bass.
  pump.gain.setValueAtTime(1,0);
  if(Dp.pump>0){for(let t=tl.dropOut;t<tl.dropEndOut-1e-6;t+=beat){if(t<from-beat||t>to)continue;pump.gain.setTargetAtTime(1-Dp.pump*.85,T(t),.003);pump.gain.setTargetAtTime(1,T(t+.03),beat*.17);}pump.gain.setTargetAtTime(1,T(tl.dropEndOut),.02);}
 
  if(withLayers){
-  const rootAt=t=>{const pc=Dp.follow&&opts.lookupBass?opts.lookupBass(t):null;return pc==null?plan.root:pc;};
+  const roots=opts.roots||null,arp=t=>rootAt(roots,t);
   const toBass=pc=>28+((pc-4+12)%12); // E1..D#2 for the drop; Bass Invaders voices carry the harmonics that small speakers need.
 
   // Roll: accelerating hits through a rising high-pass, pitched up to +7 semitones.
@@ -210,8 +211,8 @@ async function render(buffer,plan,opts={}){
    s.connect(bp).connect(h).connect(g).connect(layerGain);g.connect(send).connect(verb);send.gain.value=.4;s.start(T(bStart));s.stop(T(bEnd+.06)+.01);
   }
   // Pitch riser in the song's key.
-  if(B.pitch>0){
-   const pc=rootAt(Math.max(0,tl.D)),f0=mtof(48+pc),st=B.pitch>.6?24:12,lp=ctx.createBiquadFilter(),g=ctx.createGain();lp.type='lowpass';
+  if(B.pitch>0&&arp(tl.srcStart+.05)!=null){
+   const pc=arp(tl.srcStart+.05),f0=mtof(48+(pc??0)),st=B.pitch>.6?24:12,lp=ctx.createBiquadFilter(),g=ctx.createGain();lp.type='lowpass';
    lp.frequency.setValueAtTime(500,T(bStart));lp.frequency.exponentialRampToValueAtTime(7000,T(bEnd));g.gain.setValueAtTime(.0001,T(bStart));g.gain.exponentialRampToValueAtTime(B.pitch*.38*scale,T(bEnd));g.gain.linearRampToValueAtTime(0,T(bEnd+.02));
    lp.connect(g).connect(layerGain);g.connect(verb);
    for(const [type,det,mul,lv] of [['sawtooth',-11,1,.5],['sawtooth',11,1,.5],['square',0,2,.25]]){const o=ctx.createOscillator(),og=ctx.createGain();o.type=type;o.detune.value=det;og.gain.value=lv;o.frequency.setValueAtTime(f0*mul,T(bStart));o.frequency.exponentialRampToValueAtTime(f0*mul*2**(st/12),T(bEnd));o.connect(og).connect(lp);o.start(T(bStart));o.stop(T(bEnd+.05)+.01);}
@@ -237,14 +238,19 @@ async function render(buffer,plan,opts={}){
    for(let t=tl.dropOut;t<tl.dropEndOut-1e-6;t+=beat){events.kick.push([t,beat*.25,36,Dp.kick]);hits.push([t,1,1]);}
    src.buffer=hitTrack(ctx,from,to,hits,await oneShot(sr,'kick'));src.connect(sh).connect(g).connect(layerGain);src.start(0);
   }
-  if(Dp.bass>0){
-   const bus=ctx.createGain(),notes=[],step=beat/4,lift=Dp.bassOct==='mid'?12:0,base=toBass(rootAt(tl.D))+lift;
+  // Bass: only ARP's roots, at the same moment of the material the drop is playing. No root, no note.
+  if(Dp.bass>0&&roots){
+   const bus=ctx.createGain(),notes=[],step=beat/4,lift=Dp.bassOct==='mid'?12:0;
    // The bass sits behind the pump, scaled to the song like the other layers.
    bus.gain.value=Dp.bass*BASS_TRIM*scale;bus.connect(pump);
-   const add=(t,dur,interval,vel,accent,slideIn=false,slideOut=false)=>{if(t>=tl.dropEndOut-1e-6)return;const midi=toBass(rootAt(outToSrc(tl,t)+.02))+lift+interval;dur=Math.min(dur,tl.dropEndOut-t);events.bass.push([t,dur,midi,vel]);if(t>=from&&t<=to)notes.push({midi,time:t-from,duration:dur,velocity:Math.round(clamp(vel,.05,1)*127),accent,slideIn,slideOut});};
-   if(Dp.bassPattern==='invaders'&&root.BassPatterns){const riff=invadersRiff(Dp.bassPreset,plan.bpm);for(let loop=0;loop*8<plan.dropBars;loop++)for(const [b0,len,iv,vel,acc,si,so] of riff)add(tl.dropOut+(loop*32+b0)*beat,len*beat,iv,vel,acc,si,so);}
-   else{const pat=PATTERNS[Dp.bassPattern]||PATTERNS.offbeat;for(let b=0;b<plan.dropBars;b++)for(const [s,len,iv] of pat.steps){let interval=iv;if(Dp.bassPattern==='octave8'&&b%8===7&&s===14)interval=7;add(tl.dropOut+(b*16+s)*step,len*step,interval,.72+.16*(s%4===2?1:0)+.04*(r()-.5),s%4===2);}}
-   if(root.KroghBass&&root.BassInvadersHost&&notes.length){const pc=rootAt(tl.D);await invadersBass(ctx,bus,Dp.bassPreset,root.BassInvadersHost.settingsFor(Dp.bassPreset,{bpm:plan.bpm,root:pc,octave:base-pc}),notes);}
+   const add=(t,dur,pc,vel,accent)=>{if(pc==null||t>=tl.dropEndOut-1e-6)return;const midi=toBass(pc)+lift;dur=Math.min(dur,tl.dropEndOut-t);events.bass.push([t,dur,midi,vel]);if(t>=from&&t<=to)notes.push({midi,time:t-from,duration:dur,velocity:Math.round(clamp(vel,.05,1)*127),accent});};
+   if(Dp.bassPattern==='roots'){
+    // Exactly ARP's "listen to roots only": one held note per root section, joined when the root repeats.
+    for(let o=tl.dropOut;o<tl.dropEndOut-1e-6;o+=tl.srcLen){const end=Math.min(tl.srcEnd,tl.srcStart+tl.dropEndOut-o),held=[];
+     for(const n of roots){const a=Math.max(n.start,tl.srcStart),b=Math.min(n.end,end);if(b<=a)continue;const last=held[held.length-1];if(last&&last.root===n.root&&Math.abs(last.b-a)<.015)last.b=b;else held.push({a,b,root:n.root});}
+     for(const h of held)add(o+h.a-tl.srcStart,Math.max(.03,h.b-h.a-.025),h.root,.8,false);}
+   }else{const pat=PATTERNS[Dp.bassPattern]||PATTERNS.offbeat;for(let b=0;b<plan.dropBars;b++)for(const [s,len] of pat.steps){const t=tl.dropOut+(b*16+s)*step;add(t,len*step,arp(outToSrc(tl,t)+.02),.72+.16*(s%4===2?1:0)+.04*(r()-.5),s%4===2);}}
+   if(root.KroghBass&&root.BassInvadersHost&&notes.length){const pc=arp(tl.srcStart+.05)??notes[0].midi%12,base=toBass(pc)+lift;await invadersBass(ctx,bus,Dp.bassPreset,root.BassInvadersHost.settingsFor(Dp.bassPreset,{bpm:plan.bpm,root:pc,octave:base-pc}),notes);}
   }
  }
  const out=await ctx.startRendering(),lim=opts.limit===false?{peak:1,reduction:1}:limit(out,T(bStart-fade),T(tl.dropEndOut+1.5));
@@ -268,7 +274,7 @@ function randomize(plan,seed){
  for(const k of ['hp','riser','pitch','rollAmt','verb','swell'])p.build[k]=j(p.build[k]);p.build.stutter=pick([0,0,.25,.5,.75,1]);p.build.roll=pick(['snare','snare','clap','kick']);
  p.pre.throw=j(p.pre.throw);p.pre.reverse=j(p.pre.reverse);p.pre.throwLen=pick([.5,1,1,2]);p.gapBeats=pick([0,1,1,2,4]);
  if(root.Delaysy)p.pre.delaysy=Math.floor(r()*root.Delaysy.presets.length);
- p.drop.bassPattern=pick(Object.keys(PATTERNS));const sounds=bassCatalog();if(sounds.length)p.drop.bassPreset=pick(sounds).id;for(const k of ['pump','impact','lift'])p.drop[k]=j(p.drop[k]);
+ p.drop.bassPattern=pick(Object.keys(PATTERNS));p.srcBars=pick([4,8,8,16]);const sounds=bassCatalog();if(sounds.length)p.drop.bassPreset=pick(sounds).id;for(const k of ['pump','impact','lift'])p.drop[k]=j(p.drop[k]);
  return p;
 }
 
@@ -289,6 +295,6 @@ function wav(buffer,t0=0,t1=buffer.duration){
  return new Uint8Array(out.buffer);
 }
 
-const api={STYLES,PATTERNS,ROLLS,bassCatalog,defaultPlan,timeline,outToSrc,render,renderSong,randomize,midi,wav};
+const api={STYLES,PATTERNS,ROLLS,bassCatalog,defaultPlan,timeline,outToSrc,rootAt,render,renderSong,randomize,midi,wav};
 if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.DropDSP=api;
 })(typeof globalThis!=='undefined'?globalThis:this);

@@ -32,7 +32,7 @@ canvas{display:block;width:100%;border-radius:8px;background:#050505;border:1px 
 #zoom{height:130px;margin-top:12px}
 .legend{font-size:11px;color:var(--muted);margin-top:6px;display:flex;flex-wrap:wrap;gap:4px 10px;align-items:center}
 .lg{display:inline-block;width:12px;height:10px;border-radius:2px;margin-right:-6px}
-.lg.full{background:#8a1a16}.lg.break{background:#2f4a6d}.lg.build{background:#f3efe4}.lg.gap{background:#000;border:1px solid #888}.lg.drop{background:var(--red)}
+.lg.full{background:#8a1a16}.lg.ins{background:#f3efe4;width:3px}.lg.break{background:#2f4a6d}.lg.build{background:#f3efe4}.lg.gap{background:#000;border:1px solid #888}.lg.drop{background:var(--red)}
 .cands{display:flex;gap:10px;align-items:center;margin-top:10px;flex-wrap:wrap}.cands>span{color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.05em}
 #candidates{display:flex;gap:6px;flex-wrap:wrap}
 #candidates button{font-size:12px;min-height:32px}
@@ -60,3 +60,6 @@ input[type=range]{width:100%;accent-color:var(--red);min-height:26px}
 #status{font-size:12px;color:#ffb3ad;margin-top:6px;min-height:18px}
 @media(max-width:900px){.machines{grid-template-columns:1fr}}
 @media(max-width:600px){#app{padding:10px 12px 170px}.transport,.exports{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}.transport button,.exports button{flex:0 0 auto}.dock{padding:8px}.dock .vol{display:none}.dropzone.loaded span{display:none}.knob{grid-template-columns:92px minmax(0,1fr) 38px}.pick{grid-template-columns:92px minmax(0,1fr)}.seg button{min-width:80px}.dropzone b{font-size:22px}.vol{margin-left:0}.trackbar{gap:8px}.styles button{font-size:13px;padding:7px 10px}}
+
+.arp b{font-size:13px;color:#ffb3ad;font-weight:600}
+.cands .seg button{min-width:0;font-size:12px;min-height:32px}
