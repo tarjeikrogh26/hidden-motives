@@ -1,10 +1,11 @@
-# DROPFATHER — by Tarjei Krogh · v0.4
+# DROPFATHER — by Tarjei Krogh · v0.5
 
 To veier inn fra startskjermen:
 
 - **Drop a song here**: lager et **nytt parti** (build-up, pre-drop og drop) av låtens egen lyd og setter det inn i
   låta. Bassen i droppet spiller bare AVANTGARDIAN ARP-ens grunntoner.
-- **Make a drop**: bygg build-up, pre-drop og drop fra bunnen av på en grid. Ingen låt trengs.
+- **Make a drop**: bygg build-up, pre-drop og drop fra bunnen av på en grid, og eventuelt resten av låta rundt
+  (intro, breakdown, outro). Ingen låt trengs.
 
 Lokal nettleserapp, ingen server, ingen konto. Åpne `Dropfather.html` i Chrome, Edge eller Safari.
 
@@ -68,28 +69,40 @@ Målt på *Television Is Blue*: den faste noten traff sterkeste tone i originale
 ARP-grunntonene treffer **69–74 %** (*The Light*: 77–84 %). Resten kan være omvendinger (ARP gir akkordens
 grunntone, ikke bassnoten) eller kick i målingen. Det må høres, ikke bare måles.
 
-## Make a drop (drop maker, v0.4)
+## Make a drop (drop maker, v0.5)
 
 1. Velg **Make a drop** på startskjermen.
-2. **BPM, toneart og skala** (moll, frygisk, dorisk, harmonisk moll, dur). Stilknappene skriver et helt nytt forslag
-   (build-up + drop). **Randomize** blander stil, toneart og lyder.
-3. **Stripen** `BUILD-UP │ PRE │ DROP` er arrangementet. Klikk en del for å redigere den.
-   - **Build-up** og **drop** har hver sin grid:
-     - Fem trommelinjer: kick, clap, snare, hat og open hat. Ett klikk gir på, to gir aksent.
-     - To notelinjer, bass og lead, med én note per steg i valgt skala.
-     - Mønsteret er 1, 2 eller 4 takter og loopes over delens lengde.
-   - **Pre-drop** har ingen grid. Den er pausen, DELAYSY-kastet av build-upens siste slag og reverse suck.
-4. **Lyder**:
-   - **Bass og lead** er Bass Invaders-stemmer: alle 2000 fabrikklyder, og lead i tillegg Mini Lead, Saw Lead og
-     Square Lead.
-   - **Basslinjene** i House, Festival og Techno skrives av Bass Invaders' egen riff-generator, tilpasset skalaen.
-   - **Trommer, roll og risere** er Dropfathers egne (syntetiserte).
-5. **Loop section** spiller delen du redigerer, og endringer i griden høres med en gang. **Play all** rendrer
-   build-up → pre-drop → drop med alle effekter.
-6. **Eksport**:
-   - WAV i 24-bit: build-up + drop, eller bare droppet.
-   - MIDI med bass, lead og trommer (GM-noter).
-   - Prosjektet som JSON. Det kan lastes inn igjen.
+2. **BPM, toneart og skala** (moll, frygisk, dorisk, harmonisk moll, dur).
+3. **Stilknappene** (House lift, Festival, Techno tunnel, Take-off, EBM motor) skriver et **nytt drop hver gang**:
+   - Hver stil har sin egen meny av varianter, og hvert trykk trekker en ny kombinasjon: hats, clap/snare, open hats,
+     fills, basspattern (Bass Invaders-riff, offbeat, synkopert, rullende 16-deler, gallop, oktav), lead og tempo
+     innenfor stilen.
+   - Linjen under knappene sier hva som ble valgt.
+   - **🎲 New drop** gir et nytt drop i samme stil, toneart og skala. **Randomize** trekker stil, toneart, skala,
+     basslyd og DELAYSY-preset.
+4. **Stripen** er arrangementet. Klikk en del for å redigere den.
+   - **Grid:** build-up, drop (og intro, breakdown og outro) har hver sin grid, med fem trommelinjer og bass og lead
+     i valgt skala. Mønsteret er 1, 2 eller 4 takter.
+   - **Pre-drop** er pausen, DELAYSY-kastet og reverse suck.
+5. **+ Suggest the rest of the song** lager tre deler av droppet:
+   - **Intro**, 16 takter: droppets groove uten clap og lead, med lowpass som åpner seg.
+   - **Breakdown**, 8 takter: ingen trommer, leaden og holdte bassnoter under romklang.
+   - **Outro**, 16 takter: trommer og bass, med lowpass som lukker seg.
+
+   Hver del har egen grid og egne filterknapper. Rekkefølgen blir intro → breakdown → build-up → pre-drop → drop → outro.
+6. **Lyder**:
+   - **Bass:** Bass Invaders (2000 fabrikklyder). Basslinjene kommer fra Bass Invaders' egen riff-generator.
+   - **Lead:** AVANTGARDIAN ARP med alle 777 lyder gjennom ARP-ens egen kjede (Norwegian Beats v46-stemme, mono
+     VoiceOutput, SoundMatch-nivå og lydens StudioFX). Bass Invaders-lydene kan også brukes som lead.
+   - **Leadlinjen** kan hentes fra **ARP-ens mønsterbibliotek**: velg et av 2281 mønstre, trykk **🎲 Random ARP
+     pattern**, eller **🎲 ARP blend (Make arp)**, som er ARP-ens egen `NoteEngine.hybrid` og blander fire mønstre til
+     en ny frase. Tonene legges på nærmeste trinn i skalaen.
+7. **Loop section** spiller delen du redigerer, og endringer i griden høres med en gang. **Play all** rendrer hele
+   arrangementet. Endrer du noe mens det spiller (stil, lyd, grid), rendres det på nytt og fortsetter fra samme sted.
+8. **Eksport**:
+   - WAV i 24-bit: hele arrangementet, eller bare droppet.
+   - MIDI med bass, lead og trommer.
+   - Prosjektet som JSON.
 
 Build-upen går gjennom ett high-pass som åpner seg, med riser, roll og romklang. «Kick plays until» bestemmer når kicken
 forsvinner. I droppet pumper alt unntatt kick og clap, og det kommer et impact på 1-eren.
@@ -108,6 +121,11 @@ forsvinner. I droppet pumper alt unntatt kick og clap, og det kommer et impact p
 - **Echo throw**: den ekte DELAYSY v0.6.3-motoren med alle 777 presets (`src/vendor/delaysy-engine.js`), hentet ordrett
   ut av HTML-filen med `tools/extract-delaysy.py`. Bare en liten vertsdel er ny. Den kobler motoren til én
   AudioContext/OfflineAudioContext i stedet for siden. Nivået følger DELAYSYs egen auto-level-regel (weighted energy).
+- **Lead i drop maker**: AVANTGARDIAN ARP v0.18 (`src/vendor/arp/`). Filene er kopiert uendret: `nb-voice.js`,
+  `nb-ladder.js`, `nb46-presets.js`, `nb46-bank.js`, `voice-output.js`, `sound-match.js`, `studio-fx.js`,
+  `performance.js` og `engine.js`. Byggesteget endrer bare stien til ladder-workleten, så den kan ligge inne i
+  HTML-filen. Mønsterbiblioteket er de første 4 taktene av ARP-ens `patterns.json`
+  (`tools/extract-arp-patterns.py`), med notene uendret.
 - **Trommer, risere, impact**: syntetisert i `src/dsp.js`. Ingen samples. Trommene fra Bass Invaders er bevisst
   *ikke* brukt, fordi lisensen deres er uavklart (se Bass Invaders `SOURCE-NOTES`).
 - Logo: Tarjei Krogh.
@@ -120,17 +138,19 @@ node test-analysis.cjs    # tempo, takt 1 og drop-punkt på syntetiske låter (s
 # hente motorene på nytt fra nye versjoner av appene:
 python3 tools/extract-delaysy.py DELAYSY-vX.html src/vendor/delaysy-engine.js
 python3 tools/extract-bass-host.py Bass-Invaders/source/dist/app.js src/vendor/bass-invaders/bass-host.js
+python3 tools/extract-arp-patterns.py ARP/dist/assets/patterns.json src/vendor/arp/patterns-4bars.json
 ```
 
 `src/analysis.js` (tempo/takt/energikart/forslag), `src/dsp.js` (all lyd, offline rendering, WAV/MIDI),
 `src/app.js` (sangmodus-UI), `src/grid.js` + `src/maker.js` (drop maker: motor og UI), `src/decode.js` (formater),
 `src/files.js` (lagring), `src/vendor/` (ARP-analysen, Bass Invaders, DELAYSY).
 
-## Kjente grenser i v0.4
+## Kjente grenser i v0.5
 
 - Takt 1 er en kvalifisert gjetning (seksjoner skifter på 1-ern). Sjekk den med «−1 beat / +1 beat».
 - Taktartsforutsetning 4/4. Tempo må være stabilt (ingen live-tempo-drift).
 - Bassen er aldri bedre enn ARP-analysen. I takter der ARP tar feil, tar bassen feil.
 - Ikke lyttetestet av meg (Claude kan ikke høre). Tallene er målt (nivå, tonehøyde, tidsplassering), smaken er ikke.
 - Drop maker: leadens hook-generator er Dropfathers egen (enkel). Bass og lead er monofone, én note per steg.
-- Drop maker: en full render tar noen sekunder (Bass Invaders kalibrerer nivået på hver lyd først).
+- Drop maker: en full render tar tid, fordi ARP bygger en full stemme per note. Det rendres takt for takt, og i
+  testmiljøet tok hele låta (137 s lyd) 31 s. På en vanlig maskin går det raskere.

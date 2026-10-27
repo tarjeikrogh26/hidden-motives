@@ -103,3 +103,12 @@ body[data-mode="maker"] .song-only,body[data-mode="song"] .maker-only{display:no
 .soundgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px 24px}
 @media(max-width:900px){.soundgrid{grid-template-columns:1fr}}
 @media(max-width:600px){.choices{grid-template-columns:1fr}.grid .row>label{flex-basis:44px;font-size:10px}.strip button{font-size:12px;padding:6px}}
+
+.strip .plain{background:#17202a}
+.strip .plain.on,.strip .build.on,.strip .drop.on,.strip .pre.on{border-color:var(--white)}
+#mSketch.on{background:#222;border-color:var(--white)}
+.rowbtns{display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 10px;grid-column:1/-1}
+.rowbtns button{font-size:12px;min-height:34px}
+.secfx{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 20px;width:100%}
+@media(max-width:700px){.secfx{grid-template-columns:1fr}}
+#mDesc{margin:8px 0 0}

@@ -154,7 +154,7 @@ async function exportSong(){const r=await fullRender();if(await download(X.wav(r
 async function exportSection(){const r=await fullRender(),tl=r.tl;if(await download(X.wav(r.buffer,tl.buildOut,tl.dropEndOut),fileBase()+' (new part).wav','audio/wav'))status('Exported the new part alone: build-up, pre-drop and drop, bar-exact.');}
 async function exportLayers(){status('Rendering layers …');if(!S.arpDone){status('Still waiting for the ARP analysis.');return;}const r=await X.renderSong(S.buffer,S.plan,{roots:S.roots,original:false});if(await download(X.wav(r.buffer),fileBase()+' (layers).wav','audio/wav'))status('Exported only the Dropfather layers. Line it up with the start of the exported song.');}
 async function exportMidi(){const r=await fullRender();if(await download(X.midi(r.events,S.plan.bpm),fileBase()+'.mid','audio/midi'))status('Exported MIDI: bass, kick and roll, from the start of the rendered song.');}
-function exportPlan(){return download(new TextEncoder().encode(JSON.stringify({app:'Dropfather 0.4',track:S.name,plan:S.plan},null,1)),fileBase()+'.json','application/json');}
+function exportPlan(){return download(new TextEncoder().encode(JSON.stringify({app:'Dropfather 0.5',track:S.name,plan:S.plan},null,1)),fileBase()+'.json','application/json');}
 
 /* ---------- Wiring ---------- */
 function init(){
