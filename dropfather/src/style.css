@@ -223,3 +223,13 @@ body[data-mode="maker"] .choice.songmode{border-color:var(--white);background:#2
 .songgo{font-family:'Bowlby One','Arial Black',Impact,sans-serif;font-weight:400;letter-spacing:.04em;font-size:16px;background:#0c1724;border:2px solid #5aa9ff;color:#8fc4ff;padding:6px 16px}
 .prtitle{font-family:'Bowlby One','Arial Black',Impact,sans-serif;font-weight:400;color:var(--red2);margin-right:6px}
 @media(max-width:800px){.choices{grid-template-columns:1fr!important}}
+
+/* Automation lane and undo. */
+.autorow{position:relative;height:78px;border-top:1px solid var(--line);background:#100d14;cursor:crosshair;touch-action:none}
+.autorow svg{position:absolute;left:0;top:0;width:100%;height:70px;overflow:visible}
+.autorow polyline{fill:none;stroke:#6b5a80;stroke-width:1.5}.autorow polyline.on{stroke:#d38cff;stroke-width:2}
+.autorow .apt{position:absolute;width:10px;height:10px;margin:-5px 0 0 -5px;border-radius:50%;background:#d38cff;border:2px solid #fff;cursor:grab}
+.autorow .autoname{position:absolute;right:8px;bottom:4px;font-size:10px;color:#a78bbf;pointer-events:none}
+.song .lanes .au{display:flex;flex-direction:column;align-items:stretch;gap:3px;padding:4px 6px;border-top:1px solid var(--line);background:#100d14}
+.song .lanes .au span{padding:0;font-size:10px;color:#a78bbf}.song .lanes .au select{font-size:10px;min-height:22px;padding:0 2px}.song .lanes .au button{min-height:18px;font-size:10px;padding:0 4px}
+.undobtns{display:inline-flex;gap:4px}.undobtns button{min-width:40px;padding:0 6px!important}.undobtns button:disabled{opacity:.35}

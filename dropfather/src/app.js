@@ -29,22 +29,26 @@ async function load(file){
  }catch(e){console.error(e);status('Could not read '+file.name+': '+e.message,true);}
 }
 
-// AVANTGARDIAN ARP's Chordino engine, off the UI thread when the browser allows it.
+// AVANTGARDIAN ARP's Chordino engine, off the UI thread when the browser allows it. mono: 22050 Hz samples.
+// Resolves with the harmony (segments in seconds: root, quality, label, silent).
+function arpHarmony(mono,onProgress=()=>{}){
+ return new Promise((resolve,reject)=>{
+  const lib=$('chordino-lib').textContent,b64=window.DROPFATHER_WASM_B64,bytes=Uint8Array.from(atob(b64),c=>c.charCodeAt(0)),samples=mono.slice(),duration=mono.length/A.SR;
+  async function mainThread(){try{const raw=await Chordino.analyse(mono,22050,onProgress,Uint8Array.from(atob(b64),c=>c.charCodeAt(0)).buffer);resolve(HarmonyEngine.finish(raw,{bpm:60,offset:0,duration}));}catch(e){reject(e);}}
+  try{
+   const code=lib+`\nonmessage=async e=>{try{const raw=await Chordino.analyse(e.data.samples,22050,p=>postMessage({progress:p}),e.data.wasm);postMessage({result:HarmonyEngine.finish(raw,{bpm:60,offset:0,duration:e.data.duration})});}catch(err){postMessage({error:err.message});}};`;
+   const url=URL.createObjectURL(new Blob([code],{type:'text/javascript'})),w=new Worker(url);
+   w.onmessage=e=>{if(e.data.progress!=null)onProgress(e.data.progress);if(e.data.error){w.terminate();reject(Error(e.data.error));}if(e.data.result){w.terminate();URL.revokeObjectURL(url);resolve(e.data.result);}};
+   w.onerror=e=>{e.preventDefault();w.terminate();mainThread();};
+   w.postMessage({samples,duration,wasm:bytes.buffer},[samples.buffer,bytes.buffer]);
+  }catch(e){mainThread();}
+ });
+}
 function harmony(){
- const lib=$('chordino-lib').textContent,b64=window.DROPFATHER_WASM_B64,bytes=Uint8Array.from(atob(b64),c=>c.charCodeAt(0)),samples=S.mono.slice(),duration=S.mono.length/A.SR,name=S.name;
- $('harmonyStatus').textContent='analysing …';
+ const name=S.name;$('harmonyStatus').textContent='analysing …';
  // ARP's own root notes: the chord sections' roots, silent sections left out (as its "listen to roots only").
- const done=h=>{if(name!==S.name)return;S.harmony=h;S.roots=h.segments.filter(s=>!s.silent&&s.end>s.start).map(s=>({start:s.start,end:s.end,root:s.root}));S.arpDone=true;$('harmonyStatus').textContent='ready';syncUI();drawOverview();invalidate();};
- const fail=m=>{if(name!==S.name)return;S.arpDone=true;S.roots=null;$('harmonyStatus').textContent='failed: no bass ('+m+')';syncUI();invalidate();};
- const onProgress=p=>{$('harmonyStatus').textContent=`analysing … ${Math.round(p*100)} %`;};
- try{
-  const code=lib+`\nonmessage=async e=>{try{const raw=await Chordino.analyse(e.data.samples,22050,p=>postMessage({progress:p}),e.data.wasm);postMessage({result:HarmonyEngine.finish(raw,{bpm:60,offset:0,duration:e.data.duration})});}catch(err){postMessage({error:err.message});}};`;
-  const url=URL.createObjectURL(new Blob([code],{type:'text/javascript'})),w=new Worker(url);
-  w.onmessage=e=>{if(e.data.progress!=null)onProgress(e.data.progress);if(e.data.error){fail(e.data.error);w.terminate();}if(e.data.result){done(e.data.result);w.terminate();URL.revokeObjectURL(url);}};
-  w.onerror=e=>{e.preventDefault();w.terminate();mainThread();};
-  w.postMessage({samples,duration,wasm:bytes.buffer},[samples.buffer,bytes.buffer]);
- }catch(e){mainThread();}
- async function mainThread(){try{const raw=await Chordino.analyse(S.mono,22050,onProgress,Uint8Array.from(atob(b64),c=>c.charCodeAt(0)).buffer);done(HarmonyEngine.finish(raw,{bpm:60,offset:0,duration}));}catch(e){fail(e.message);}}
+ arpHarmony(S.mono,p=>{$('harmonyStatus').textContent=`analysing … ${Math.round(p*100)} %`;}).then(h=>{if(name!==S.name)return;S.harmony=h;S.roots=h.segments.filter(s=>!s.silent&&s.end>s.start).map(s=>({start:s.start,end:s.end,root:s.root}));S.arpDone=true;$('harmonyStatus').textContent='ready';syncUI();drawOverview();invalidate();},
+  e=>{if(name!==S.name)return;S.arpDone=true;S.roots=null;$('harmonyStatus').textContent='failed: no bass ('+e.message+')';syncUI();invalidate();});
 }
 
 /* ---------- Plan and controls ---------- */
@@ -185,7 +189,7 @@ function init(){
  document.addEventListener('keydown',e=>{if(e.code==='Space'&&S.buffer&&document.body.dataset.mode==='song'&&!/INPUT|SELECT|TEXTAREA|BUTTON/.test(e.target.tagName)){e.preventDefault();S.play?stop():playDrop(0);}});
  window.addEventListener('resize',()=>{drawOverview();drawZoom();});
  syncUI();
- window.Dropfather={S,load,audio,stop};
+ window.Dropfather={arpHarmony,S,load,audio,stop};
 }
 init();
 })();

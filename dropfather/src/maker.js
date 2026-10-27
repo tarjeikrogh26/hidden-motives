@@ -2,7 +2,7 @@
    machines, sounds (Bass Invaders bass, AVANTGARDIAN ARP lead), play and export. */
 (()=>{'use strict';
 const $=id=>document.getElementById(id),G=DropGrid,X=DropDSP,NOTE=G.NOTE;
-const M={view:'drop',sel:0,clip:null,zoom:1,follow:true,samples:{},project:null,section:'drop',player:null,src:null,full:null,raf:0,restart:0,replay:0,cells:null,ui:{arp:0}};
+const M={autoTarget:'lead.filter',view:'drop',sel:0,clip:null,zoom:1,follow:true,samples:{},project:null,section:'drop',player:null,src:null,full:null,raf:0,restart:0,replay:0,cells:null,ui:{arp:0}};
 const status=(text,bad)=>{$('mStatus').textContent=text;$('mStatus').style.color=bad?'#ff6a5e':'';};
 const ctx=()=>window.Dropfather.audio(),out=()=>window.Dropfather.S.gain;
 const seed=()=>(Math.random()*2**31)|0;
@@ -87,7 +87,7 @@ function gridOp(kind,amount=0){
  if(kind==='pitch'){items.forEach(x=>{if(x.d!=null)clear(x);});items.forEach(x=>{if(x.d!=null)put(x,x.i,x.d+amount);});q.r=q.r.map(v=>v-amount);}
  if(kind==='dup'){const w=q.i[1]-q.i[0]+1;items.forEach(x=>put(x,x.i+w,x.d));q.i=q.i.map(v=>Math.min(n-1,v+w));}
  if(kind==='delete'){items.forEach(clear);}
- M.full=null;paint();paintSel();if(M.src){clearTimeout(M.replay);M.replay=setTimeout(()=>playAll(true),700);}
+ M.full=null;paint();paintSel();remember();if(M.src){clearTimeout(M.replay);M.replay=setTimeout(()=>playAll(true),700);}
  status(items.length?`${items.length} note${items.length>1?'s':''} ${{move:'moved',pitch:'transposed',dup:'duplicated',delete:'cleared'}[kind]}`:'Nothing selected on those cells');
 }
 function gridKeys(e){
@@ -106,7 +106,7 @@ function renderAll(){
 }
 // Grid edits are heard at once while looping (the scheduler reads the grid). Other changes rebuild the loop;
 // while Play all runs, any change re-renders the whole thing and carries on from the same spot.
-function changed(){M.full=null;if(M.player?.playing()){clearTimeout(M.restart);M.restart=setTimeout(loop,250);}if(M.src){clearTimeout(M.replay);M.replay=setTimeout(()=>playAll(true),450);}}
+function changed(){remember();M.full=null;if(M.player?.playing()){clearTimeout(M.restart);M.restart=setTimeout(loop,250);}if(M.src){clearTimeout(M.replay);M.replay=setTimeout(()=>playAll(true),450);}}
 
 /* ---------- Mixer: four stems (drums, bass, lead, fx) into a master limiter ---------- */
 const STEM_NAMES={drums:'Drums',bass:'Bass',lead:'Lead',fx:'FX',audio:'Audio'};
@@ -151,9 +151,10 @@ async function renderAllParts(){const song=M.view==='song';if(M.full&&M.full.son
 async function playAll(resume){
  const at=resume&&M.src?ctx().currentTime-M.srcStart:M.paused??0;const back=M.paused!=null;M.paused=null;M.player?.stop();window.Dropfather.stop();
  const r=await renderAllParts();stopBuffer();const c=ctx(),s=c.createBufferSource(),split=c.createChannelSplitter(G.STEMS.length*2),mx=mixer();s.buffer=r.stems;s.connect(split);
- G.STEMS.forEach((k,i)=>{const m=c.createChannelMerger(2);split.connect(m,2*i,0);split.connect(m,2*i+1,1);m.connect(mx[k]);});const from=Math.min(at,r.buffer.duration-.1),t0=c.currentTime+.05;if(from<r.stems.duration)s.start(t0,from);M.src=s;M.srcStart=t0-from;
+ const from=Math.min(at,r.buffer.duration-.1),t0=c.currentTime+.05,auto=r.song?{bar:r.tl.bar,from:from+r.t0,t0}:null;
+ G.STEMS.forEach((k,i)=>{const m=c.createChannelMerger(2);split.connect(m,2*i,0);split.connect(m,2*i+1,1);m.connect(G.autoChain(c,mx[k],M.project,k,auto));});const audioIn=G.autoChain(c,mx.audio,M.project,'audio',auto);if(from<r.stems.duration)s.start(t0,from);M.src=s;M.srcStart=t0-from;
  // Audio tracks: one source each, through its own gain (mute, solo, volume) into the mixer's audio channel.
- const tg=G.trackGains(M.project);M.trackNodes=(r.audio||[]).map((b,i)=>{const n=c.createGain();n.gain.value=tg[i]??1;n.connect(mx.audio);if(from<b.duration){const a=c.createBufferSource();a.buffer=b;a.connect(n);a.start(t0,from);M.extra.push(a);}return n;});
+ const tg=G.trackGains(M.project);M.trackNodes=(r.audio||[]).map((b,i)=>{const n=c.createGain();n.gain.value=tg[i]??1;n.connect(audioIn);if(from<b.duration){const a=c.createBufferSource();a.buffer=b;a.connect(n);a.start(t0,from);M.extra.push(a);}return n;});
  s.onended=()=>{if(M.src===s){M.src=null;setStripHead(null);markNow(-1);playLabel();}};playLabel();status(resume?'Updated · playing on from the same spot':back?'Playing on from where you paused':'Playing '+r.parts.map(x=>G.labelOf(M.project,x.name).toLowerCase()).join(' → '));tick();
 }
 function markNow(step){if(!M.cells)return;if(M.now!=null&&M.cells[M.now])for(const c of M.cells[M.now])c.classList.remove('now');M.now=step>=0&&M.cells.length?step%M.cells.length:null;if(M.now!=null)for(const c of M.cells[M.now])c.classList.add('now');}
@@ -184,7 +185,7 @@ function setView(v){
 function songChanged(){M.full=null;renderSong();changed();}
 // Audio clips or tracks changed: only the audio tracks render again (fast); playback carries on from the same spot.
 async function clipChanged(){
- renderSong();const r=M.full;if(!r||!r.song)return;const job=M.audioJob=(M.audioJob||0)+1;
+ renderSong();remember();const r=M.full;if(!r||!r.song)return;const job=M.audioJob=(M.audioJob||0)+1;
  const audio=await G.renderAudio(M.project,Object.fromEntries(Object.entries(M.samples).map(([k,v])=>[k,v.buffer])),ctx().sampleRate,r.t0);
  if(job!==M.audioJob||M.full!==r)return;r.audio=audio;if(M.src)playAll(true);
 }
@@ -256,13 +257,14 @@ function renderSong(){
  const tl=G.timeline(p,true),order=G.songOrder(p),span=songSpan(p,tl),spanBars=span/tl.bar,pct=t=>(t/span*100)+'%';el.replaceChildren();
  if(M.sel!=null&&M.sel>=order.length)M.sel=order.length-1;
  const lanes=document.createElement('div');lanes.className='lanes';
- lanes.innerHTML='<span class="rl">bar</span><span class="pl"></span>'+G.STEMS.slice(0,4).map(k=>`<span>${STEM_NAMES[k]}</span>`).join('')+'<span class="sp"></span>'+p.audio.tracks.map(t=>`<span class="al"></span>`).join('')+'<span class="al add">+ Audio</span>';
+ lanes.innerHTML='<span class="rl">bar</span><span class="pl"></span>'+G.STEMS.slice(0,4).map(k=>`<span>${STEM_NAMES[k]}</span>`).join('')+'<span class="sp"></span>'+p.audio.tracks.map(t=>`<span class="al"></span>`).join('')+'<span class="au"></span><span class="al add">+ Audio</span>';
+ lanes.style.gridTemplateRows=`22px 41px repeat(4,24px) 1px ${p.audio.tracks.length?`repeat(${p.audio.tracks.length},45px)`:''} 79px 45px`;
  lanes.querySelectorAll('.al:not(.add)').forEach((s2,i)=>{const t=p.audio.tracks[i];s2.innerHTML='<i class="sw" title="Track colour (click to change)"></i><em title="Double-click to rename"></em><button type="button" class="m" title="Mute">M</button><button type="button" class="s" title="Solo">S</button>';
   s2.querySelector('em').textContent=t.name;s2.querySelector('.sw').style.background=trackColor(i);s2.querySelector('.m').classList.toggle('on',!!t.mute);s2.querySelector('.s').classList.toggle('on',!!t.solo);
   s2.querySelector('.m').onclick=()=>{t.mute=!t.mute;renderSong();applyMix();};s2.querySelector('.s').onclick=()=>{t.solo=!t.solo;renderSong();applyMix();};
   s2.querySelector('.sw').onclick=()=>{const cur=TRACK_COLORS.indexOf(trackColor(i));t.color=TRACK_COLORS[(cur+1)%TRACK_COLORS.length];renderSong();};
   s2.querySelector('em').ondblclick=()=>{const n=prompt('Track name',t.name);if(n){t.name=n.slice(0,24);renderSong();}};});
- el.append(lanes);
+ autoLabel(lanes.querySelector('.au'));el.append(lanes);
  const col=document.createElement('div');col.className='tlcol';col.style.width=Math.round(spanBars*PX_PER_BAR*M.zoom)+'px';el.append(col);
  const ruler=document.createElement('div');ruler.className='ruler';ruler.title='Click to play (or start) from here';const every=M.zoom<.75?8:4;
  for(let b=0;b<spanBars;b+=every){const m=document.createElement('span');m.style.left=pct(b*tl.bar);m.textContent=b+1;ruler.append(m);}
@@ -282,6 +284,7 @@ function renderSong(){
   row.append(b);
  });
  p.audio.tracks.forEach((t,ti)=>{const r=document.createElement('div');r.className='arow';r.dataset.track=ti;for(const c of p.audio.clips.filter(c=>c.track===ti))r.append(clipEl(c,tl,span));col.append(r);});
+ col.append(autoRow(tl,span));
  const add=document.createElement('div');add.className='arow add';add.dataset.track=p.audio.tracks.length;add.textContent='Drop audio files here or anywhere on the timeline: WAV, AIFF, MP3, M4A, FLAC … They land on the bar you drop them on and follow the tempo.';col.append(add);
  const head=document.createElement('i');head.className='songhead';head.id='songHead';col.append(head);
  if(M.paused!=null&&!M.src)songHead(M.paused);
@@ -298,6 +301,7 @@ function renderSongSel(tl){
  button(sel,'◀ Move',()=>moveTo(M.sel,M.sel-1));button(sel,'Move ▶',()=>moveTo(M.sel,M.sel+1));
  button(sel,'⧉ Repeat',()=>insertPart(key)).title='The same part again right after (edits change both)';
  button(sel,'␣ Insert space',()=>{const id=G.insertSpace(p,M.sel,p[key].bars);M.sel=M.sel+1;songChanged();status(`Inserted ${p[id].bars} empty bars after ${G.labelOf(p,key).toLowerCase()}: room for a new part or audio. Audio after it moved along.`);}).title='Push everything after this part along by its length and leave the room empty (Ableton: Insert Time)';
+ button(sel,'↗ Open up',()=>autoGesture(x,1)).title='Automation on the lane below: the filter (or volume) rises over this part';button(sel,'↘ Close down',()=>autoGesture(x,-1)).title='Automation: falls over this part';
  button(sel,'✦ Variation',()=>{const id=G.variation(p,key,seed());a[M.sel]=id;songChanged();status(`${G.labelOf(p,id)}: its own copy${['drop','build'].includes(x.type)?' with a new lead riff':''}. Edit it without touching the others.`);}).title='Make this one its own copy (drops and build-ups get a new lead riff)';
  if(['breakdown','drop','build'].includes(x.type)||p[key].grid.lead.some(v=>v!=null))button(sel,'🎲 New melody',()=>{const name=G.newPartMelody(p,key,seed());songChanged();status(`New melody in ${name.toLowerCase()}${a.filter(k=>k===key).length>1?' (and its repeats)':''}`);}).title='A new lead line for this part, on the same chords';
  const snd=document.createElement('label');snd.className='sellen';snd.innerHTML='<span>Lead</span><select aria-label="Lead sound of this part"></select>';const ss=snd.querySelector('select');ss.add(new Option('Same as the drop',''));for(const q of (window.DropLead?.list()||[]))ss.add(new Option('Dropfather · '+q.n,'dl:'+q.id));ss.value=p[key].sounds?.lead||'';ss.onchange=()=>{if(ss.value)p[key].sounds={...(p[key].sounds||{}),lead:ss.value};else delete p[key].sounds;songChanged();};sel.append(snd);
@@ -372,6 +376,65 @@ function prKey(e){
  return false;
 }
 function prPlayhead(t){const el=$('prPlay');if(!el)return;const tl=G.timeline(M.project,true),part=tl.parts.find(x=>t>=x.start&&t<x.end);if(!part||part.name!==M.prKey){el.style.display='none';return;}const n=G.steps(M.project[M.prKey]);el.style.display='block';el.style.left=(((t-part.start)/tl.step)%n)*PR_STEP+'px';}
+/* ---------- Automation lane: one target at a time (volume or filter of a mixer channel) ----------
+   Click to add a point (it follows the pointer while you hold), drag points, double-click one to delete it.
+   Points snap to beats; hold Alt for free placement. */
+const AUTO_TARGETS=()=>G.MIXER.flatMap(k=>Object.entries(G.AUTO_KINDS).map(([kind,n])=>[k+'.'+kind,`${STEM_NAMES[k]} · ${n}`]));
+function autoPoints(){const p=M.project;p.auto=p.auto||{};return p.auto[M.autoTarget]||(p.auto[M.autoTarget]=[]);}
+function autoChanged(msg){M.autoDirty=true;renderSong();remember();if(M.src)playAll(true);if(msg)status(msg);}
+function autoLabel(box){
+ box.innerHTML='<span>Automation</span><select aria-label="Automation target"></select><button type="button" title="Clear this lane">Clear</button>';
+ const sel=box.querySelector('select'),p=M.project;for(const [k,n] of AUTO_TARGETS())sel.add(new Option((p.auto?.[k]?.length?'● ':'')+n,k));sel.value=M.autoTarget;
+ sel.onchange=()=>{M.autoTarget=sel.value;renderSong();};box.querySelector('button').onclick=()=>{if(p.auto)delete p.auto[M.autoTarget];autoChanged('Lane cleared');};
+}
+function autoRow(tl,span){
+ const row=document.createElement('div');row.className='autorow';const spanBars=span/tl.bar,pts=(M.project.auto?.[M.autoTarget]||[]),H=70,kind=M.autoTarget.split('.')[1];
+ const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');svg.setAttribute('viewBox',`0 0 ${spanBars} 1`);svg.setAttribute('preserveAspectRatio','none');
+ const line=document.createElementNS(svg.namespaceURI,'polyline'),xy=pts.length?[[0,pts[0][1]],...pts,[spanBars,pts[pts.length-1][1]]]:[[0,1],[spanBars,1]];
+ line.setAttribute('points',xy.map(([b,v])=>`${b},${1-v}`).join(' '));line.setAttribute('vector-effect','non-scaling-stroke');line.setAttribute('class',pts.length?'on':'');svg.append(line);row.append(svg);
+ const lab=document.createElement('span');lab.className='autoname';lab.textContent=AUTO_TARGETS().find(t=>t[0]===M.autoTarget)[1]+(pts.length?'':' · click to draw');row.append(lab);
+ pts.forEach((pt,i)=>{const d=document.createElement('i');d.className='apt';d.style.left=(pt[0]/spanBars*100)+'%';d.style.top=((1-pt[1])*H)+'px';d.title=`bar ${+(pt[0]+1).toFixed(2)} · ${kind==='filter'?Math.round(20*2**(pt[1]*10))+' Hz':Math.round(pt[1]*100)+'%'}`;d.dataset.i=i;row.append(d);});
+ const at=(e,free)=>{const r=row.getBoundingClientRect(),b=(e.clientX-r.left)/r.width*spanBars,v=Math.max(0,Math.min(1,1-(e.clientY-r.top)/H));return [Math.max(0,free?+b.toFixed(3):Math.round(b*4)/4),+v.toFixed(3)];};
+ row.onpointerdown=e=>{
+  if(e.button)return;e.preventDefault();const list=autoPoints();let pt=e.target.classList.contains('apt')?list[+e.target.dataset.i]:null;
+  if(!pt){pt=at(e,e.altKey);list.push(pt);list.sort((a,b)=>a[0]-b[0]);}
+  row.setPointerCapture(e.pointerId);const el=()=>row.querySelectorAll('.apt')[list.indexOf(pt)];
+  if(!e.target.classList.contains('apt'))renderSong();
+  const target=M.autoTarget;
+  const move=ev=>{const [b,v]=at(ev,ev.altKey);pt[0]=b;pt[1]=v;list.sort((x,y)=>x[0]-y[0]);const r2=document.querySelector('.autorow');if(r2){const d=r2.querySelectorAll('.apt')[list.indexOf(pt)];if(d){d.style.left=(b/spanBars*100)+'%';d.style.top=((1-v)*H)+'px';}}};
+  const up=()=>{document.removeEventListener('pointermove',move);document.removeEventListener('pointerup',up);M.autoTarget=target;const l=autoPoints();for(let i=l.length-1;i>0;i--)if(Math.abs(l[i][0]-l[i-1][0])<1e-6)l.splice(i-1,1);autoChanged();};
+  document.addEventListener('pointermove',move);document.addEventListener('pointerup',up);
+ };
+ row.ondblclick=e=>{if(!e.target.classList.contains('apt'))return;autoPoints().splice(+e.target.dataset.i,1);autoChanged('Point deleted');};
+ return row;
+}
+// Ready-made moves for the selected part on the current lane: a sweep or swell in, or out.
+function autoGesture(x,dir){
+ const tl=G.timeline(M.project,true),a=x.start/tl.bar,b=x.end/tl.bar,kind=M.autoTarget.split('.')[1],low=kind==='filter'?.35:0,list=autoPoints().filter(([t])=>t<a||t>b);
+ list.push(...(dir>0?[[a,low],[b,1]]:[[a,1],[b,low]]));list.sort((p,q)=>p[0]-q[0]);M.project.auto[M.autoTarget]=list;
+ autoChanged(`${AUTO_TARGETS().find(t=>t[0]===M.autoTarget)[1]}: ${dir>0?'opens up':'closes down'} over ${G.labelOf(M.project,x.name).toLowerCase()}`);
+}
+
+/* ---------- Undo / redo: snapshots of the project after each change (Ctrl/Cmd+Z, Shift+Ctrl/Cmd+Z) ---------- */
+function remember(){clearTimeout(M.remT);M.remT=setTimeout(()=>{const j=JSON.stringify(M.project);M.hist=M.hist||[];if(M.hist[M.hpos]===j)return;M.hist=M.hist.slice(0,(M.hpos??-1)+1);M.hist.push(j);if(M.hist.length>60)M.hist.shift();M.hpos=M.hist.length-1;undoLabels();},250);}
+function undoLabels(){$('mUndo').disabled=!(M.hpos>0);$('mRedo').disabled=!(M.hist&&M.hpos<M.hist.length-1);}
+function travel(step){
+ clearTimeout(M.remT);const i=(M.hpos??0)+step;if(!M.hist||i<0||i>=M.hist.length)return;M.hpos=i;M.project=JSON.parse(M.hist[i]);M.full=null;stop();buildControls();renderAll();undoLabels();status(step<0?'Undone':'Redone');
+}
+
+// A dropped song's chords (ARP), for drops put into it: the four bars before the insertion point.
+function songChords(bar){
+ const p=M.project,tl=G.timeline(p,true);for(const c of p.audio?.clips||[]){const h=M.harmony?.[c.sample];if(!h||c.warp!=='off')continue;
+  const from=Math.max(0,bar-4);if(from<c.start||from>=c.start+c.len)continue;const barSec=tl.bar,at=b=>(c.offset||0)+((from+b)-c.start+(c.phase||0))*barSec;
+  return G.chordsFromHarmony(p,h.segments,at,barSec,4);}
+ return null;
+}
+async function listenForChords(buffer,id){
+ const SR=22050,c=new OfflineAudioContext(1,Math.ceil(buffer.duration*SR),SR),s=c.createBufferSource();s.buffer=buffer;s.connect(c.destination);s.start();
+ const mono=(await c.startRendering()).getChannelData(0);M.harmony=M.harmony||{};
+ try{M.harmony[id]=await window.Dropfather.arpHarmony(mono,p=>{if(!M.src)status(`AVANTGARDIAN ARP is listening for the chords … ${Math.round(p*100)} %`);});status('ARP has the chords: a drop inserted now follows the song’s harmony.');}
+ catch(e){status('ARP could not read the chords ('+e.message+'); drops use their own progression.',true);}
+}
 function renderClipSel(c,tl,sel){
  const p=M.project,info=document.createElement('span');info.className='selinfo';info.textContent=`${c.name} · bar ${+(c.start+1).toFixed(2)}`;sel.append(info);
  const upd=()=>{clipChanged();};
@@ -430,11 +493,12 @@ async function openSong(file){
   M.view='song';document.body.dataset.view='song';document.querySelectorAll('#mView button').forEach(b=>b.classList.toggle('on',b.dataset.view==='song'));M.sel=null;M.clip=null;M.paused=null;
   setProject(p,`${file.name}: ${bpm} BPM, ${G.NOTE[k.key]} ${k.scale}. Click the ruler where the drop should go, then ⤵ Insert a drop here. The drop is written in the song's key and tempo.`);
   $('mExAll').textContent='WAV · whole song';window.scrollTo({top:$('songPanel').offsetTop-10,behavior:'smooth'});
+  listenForChords(buffer,id);
  }catch(e){progress(null);status(`${file.name}: ${e.message}`,true);}
 }
 function initSong(){
  const pal=$('sPalette'),make=button(pal,'🎲 Make a song from the drop',()=>makeSongNow());make.className='primary';make.title='Writes intro, groove, a breakdown with the song melody, a second build-up and drop, and an outro around your drop. Your drop and build-up stay as they are. Click again for another version.';
- const ins=button(pal,'⤵ Insert a drop here',()=>{const p=M.project,tl=G.timeline(p,true),bar=Math.round((M.paused??0)/tl.bar);const r=G.insertDropAt(p,bar);M.sel=G.songOrder(p).indexOf('build',0);M.clip=null;songChanged();status(`Build-up + drop inserted at bar ${r.bar+1} (${r.bars} bars). The song after it moved along.`);});ins.className='primary';ins.title='Click the ruler at a bar first. Puts the build-up and drop there; the song after it is split and moved along';
+ const ins=button(pal,'⤵ Insert a drop here',()=>{const p=M.project,tl=G.timeline(p,true),bar=Math.round((M.paused??0)/tl.bar);const ch=songChords(bar);let prog='';if(ch)prog=G.setChords(p,ch,seed());const r=G.insertDropAt(p,bar);M.sel=G.songOrder(p).indexOf('build',0);M.clip=null;songChanged();status(`Build-up + drop inserted at bar ${r.bar+1} (${r.bars} bars)${prog?`, on the song’s chords: ${prog}`:''}. The song after it moved along.`);});ins.className='primary';ins.title='Click the ruler at a bar first. Puts the build-up and drop there; the song after it is split and moved along';
  for(const [type,label] of PART_TYPES)button(pal,label,()=>insertPart(G.partOfType(M.project,type))).title='Add after the selected part';
  const zoom=document.createElement('span');zoom.className='zoom';pal.append(zoom);
  button(zoom,'−',()=>{M.zoom=Math.max(.4,M.zoom/1.5);renderSong();}).title='Zoom out';button(zoom,'+',()=>{M.zoom=Math.min(5,M.zoom*1.5);renderSong();}).title='Zoom in';
@@ -456,18 +520,18 @@ function initSong(){
 const name=()=>`Dropfather ${G.STYLES[M.project.style]?.name||'drop'} ${NOTE[M.project.key]} ${M.project.bpm}bpm`;
 const save=(bytes,file,type)=>DropFiles.download(bytes,file,type,status);
 const endOf=r=>Math.max(r.parts[r.parts.length-1].end,r.song?G.clipEnd(M.project)*r.tl.bar:0)-r.t0+1.5;
-async function exportAll(){const r=await renderAllParts(),whole=r.parts.length>2;if(await save(X.wav(G.mix(r,M.project).buffer,0,endOf(r)),name()+(M.view==='song'?' (song)':whole?' (song sketch)':'')+'.wav','audio/wav'))status(`Exported ${r.parts.map(x=>G.labelOf(M.project,x.name).toLowerCase()).join(' → ')} as 24-bit WAV.`);}
-async function exportDrop(){const r=await renderAllParts();if(await save(X.wav(G.mix(r,M.project).buffer,r.tl.dropOut-r.t0,r.tl.dropEndOut-r.t0),name()+' (drop).wav','audio/wav'))status('Exported the drop alone, bar-exact, as 24-bit WAV.');}
+async function exportAll(){const r=await renderAllParts(),whole=r.parts.length>2;if(await save(X.wav((await G.mix(r,M.project)).buffer,0,endOf(r)),name()+(M.view==='song'?' (song)':whole?' (song sketch)':'')+'.wav','audio/wav'))status(`Exported ${r.parts.map(x=>G.labelOf(M.project,x.name).toLowerCase()).join(' → ')} as 24-bit WAV.`);}
+async function exportDrop(){const r=await renderAllParts();if(await save(X.wav((await G.mix(r,M.project)).buffer,r.tl.dropOut-r.t0,r.tl.dropEndOut-r.t0),name()+' (drop).wav','audio/wav'))status('Exported the drop alone, bar-exact, as 24-bit WAV.');}
 async function exportMidi(){const r=await renderAllParts(),by=l=>r.events.filter(e=>l.includes(e[0])).map(e=>e.slice(1));if(await save(X.midiTracks([{name:'Bass',channel:0,notes:by(['bass'])},{name:'Lead',channel:1,notes:by(['lead'])},{name:'Drums',channel:9,notes:by(['kick','clap','snare','hat','open','roll'])}],M.project.bpm),name()+'.mid','audio/midi'))status('Exported MIDI: bass, lead and drums (GM drum notes), from the start of the arrangement.');}
 // Stems: drums, bass, lead, fx and audio as 24-bit WAVs from the start of the arrangement, at their faders.
-function stemFiles(r){
- const end=endOf(r),g=G.busGains(M.project),tg=G.trackGains(M.project),files=[],n=Math.round(end*r.stems.sampleRate),buf=()=>new AudioBuffer({numberOfChannels:2,length:n,sampleRate:r.stems.sampleRate});
- G.STEMS.forEach((k,i)=>{const b=buf();for(let c=0;c<2;c++){const d=b.getChannelData(c),src=r.stems.getChannelData(2*i+c);for(let j=0;j<Math.min(n,src.length);j++)d[j]=src[j]*g[k];}files.push({name:`${i+1} ${STEM_NAMES[k]}.wav`,bytes:X.wav(b,0,end)});});
- (r.audio||[]).forEach((a,i)=>{const b=buf(),gn=g.audio*(tg[i]??1);for(let c=0;c<2;c++){const d=b.getChannelData(c),src=a.getChannelData(Math.min(c,a.numberOfChannels-1));for(let j=0;j<Math.min(n,src.length);j++)d[j]=src[j]*gn;}files.push({name:`${G.STEMS.length+i+1} ${M.project.audio.tracks[i].name}.wav`,bytes:X.wav(b,0,end)});});
+async function stemFiles(r){
+ const end=endOf(r),files=[];status('Writing stems …');
+ for(const [i,k] of G.STEMS.entries())files.push({name:`${i+1} ${STEM_NAMES[k]}.wav`,bytes:X.wav(await G.mixOffline(r,M.project,k),0,end)});
+ for(const [i] of (r.audio||[]).entries())files.push({name:`${G.STEMS.length+i+1} ${M.project.audio.tracks[i].name}.wav`,bytes:X.wav(await G.mixOffline(r,M.project,'track:'+i),0,end)});
  return files;
 }
 async function exportStems(){
- const r=await renderAllParts(),files=stemFiles(r);
+ const r=await renderAllParts(),files=await stemFiles(r);
  if(await save(DropFiles.zipFiles(files),name()+' (stems).zip','application/zip'))status(`Exported ${files.length} stems (${files.map(f=>f.name.replace(/^\d+ |\.wav$/g,'')).join(', ')}) as 24-bit WAVs in one zip. Drop them in at bar 1 and they line up.`);
 }
 // Save: the project as JSON; with audio clips it is collected into a zip with the samples (Ableton: Collect All and Save).
@@ -492,12 +556,12 @@ async function exportAbleton(){
  const r=await renderAllParts(),p=M.project,by=l=>r.events.filter(e=>l.includes(e[0])).map(e=>e.slice(1)),dir=name()+'/';
  const midi=X.midiTracks([{name:'Bass',channel:0,notes:by(['bass'])},{name:'Lead',channel:1,notes:by(['lead'])},{name:'Drums',channel:9,notes:by(['kick','clap','snare','hat','open','roll'])}],p.bpm);
  const how=`Dropfather → Ableton Live\n\n1. Set Live's tempo to ${p.bpm} BPM.\n2. Select all the WAV files in "Audio" and drag them into the Arrangement View at bar 1.1.\n   Hold Cmd (Mac) / Ctrl (Windows) while dropping to put each on its own track.\n   Warp is not needed: they are already at ${p.bpm} BPM. Turn Warp off on the clips.\n3. Drag "MIDI/${name()}.mid" to bar 1.1 as well: Live makes one MIDI track per part (Bass, Lead, Drums),\n   so you can play them with your own instruments.\n4. Key: ${NOTE[p.key]} ${G.SCALES[p.scale][0].toLowerCase()} · chords: ${G.progName(p)}.\n\nThe project file (project.dropfather.json) opens again in Dropfather.\n`;
- const files=[...stemFiles(r).map(f=>({name:dir+'Audio/'+f.name,bytes:f.bytes})),{name:dir+'MIDI/'+name()+'.mid',bytes:midi},{name:dir+'project.dropfather.json',bytes:projectJson()},{name:dir+'HOW TO OPEN IN ABLETON.txt',bytes:new TextEncoder().encode(how)}];
+ const files=[...(await stemFiles(r)).map(f=>({name:dir+'Audio/'+f.name,bytes:f.bytes})),{name:dir+'MIDI/'+name()+'.mid',bytes:midi},{name:dir+'project.dropfather.json',bytes:projectJson()},{name:dir+'HOW TO OPEN IN ABLETON.txt',bytes:new TextEncoder().encode(how)}];
  if(await save(DropFiles.zipFiles(files),name()+' (Ableton).zip','application/zip'))status(`Ableton pack: ${files.length-3} stems, MIDI (bass, lead, drums), the project and a how-to. Unzip, set Live to ${p.bpm} BPM and drag it in at bar 1.`);
 }
 
 /* ---------- Wiring ---------- */
-function setProject(p,note){if(M.view==='song')G.ensureSongParts(p);M.project=p;M.full=null;buildControls();renderAll();changed();status(note||p.desc);}
+function setProject(p,note){M.hist=[];M.hpos=-1;if(M.view==='song')G.ensureSongParts(p);M.project=p;M.full=null;buildControls();renderAll();changed();status(note||p.desc);}
 // Before anything is chosen, the whole engine lies under the start screen in black and white. Make a drop
 // brings it to life in red.
 function show(){for(const id of ['makerPanel','songPanel','makerMachines','makerSounds','makerDock'])$(id).classList.remove('hidden');}
@@ -525,13 +589,14 @@ function init(){
  for(const [label,fn,title] of [['◀',()=>gridOp('move',-1),'Move left (←, Shift: a beat)'],['▶',()=>gridOp('move',1),'Move right (→)'],['▲',()=>gridOp('pitch',1),'Up a scale step (↑, Shift: an octave)'],['▼',()=>gridOp('pitch',-1),'Down a scale step (↓)'],['⧉',()=>gridOp('dup'),'Duplicate to the right (Ctrl/Cmd+D)'],['✕',()=>gridOp('delete'),'Clear (Delete)'],['Done',clearSel,'Let go of the selection (Esc)']])button($('gselbar'),label,fn).title=title;
  $('grid').onclick=e=>{if(M.skipClick){M.skipClick=false;return;}const c=e.target.closest('.c');if(!c)return;if(M.gsel){clearSel();}const ln=M.project[M.section].len?.[c.dataset.l];if(ln)ln[+c.dataset.i]=null;const g=M.project[M.section].grid,l=c.dataset.l,i=+c.dataset.i;if(c.dataset.d!=null){const d=+c.dataset.d;g[l][i]=g[l][i]===d?null:d;}else g[l][i]=(g[l][i]+1)%3;M.full=null;paint();if(M.src){clearTimeout(M.replay);M.replay=setTimeout(()=>playAll(true),700);}};
  $('makeDrop').onclick=open;
- $('mPlayAll').onclick=()=>M.src?pause():playAll(false);$('mRandom').onclick=()=>setProject(G.randomize(M.project,seed()));$('mLoop').onclick=loop;$('mStop').onclick=stop;
+ $('mPlayAll').onclick=()=>M.src?pause():playAll(false);$('mRandom').onclick=()=>setProject(G.randomize(M.project,seed()));$('mLoop').onclick=loop;$('mStop').onclick=stop;$('mUndo').onclick=()=>travel(-1);$('mRedo').onclick=()=>travel(1);
  const now=()=>M.src?ctx().currentTime-M.srcStart+(M.full?.t0||0):(M.paused??0),barLen=()=>G.timeline(M.project,M.view==='song').bar;
  $('mHome').onclick=()=>seek(0);$('mBack').onclick=()=>seek(Math.round(now()/barLen()-4)*barLen());$('mFwd').onclick=()=>seek(Math.round(now()/barLen()+4)*barLen());$('mVolume').oninput=e=>{const g=out();if(g)g.gain.value=+e.target.value;};
  $('mExStems').onclick=exportStems;$('mExAbleton').onclick=exportAbleton;$('mExAll').onclick=exportAll;$('mExDrop').onclick=exportDrop;$('mExMidi').onclick=exportMidi;$('mSave').onclick=saveProject;$('mLoad').onchange=e=>e.target.files[0]&&loadProject(e.target.files[0]);
  document.addEventListener('pointerdown',e=>{if(!e.target.closest?.('#proll'))M.prFocus=false;});
  document.addEventListener('keydown',e=>{
   if(document.body.dataset.mode!=='maker'||/INPUT|SELECT|TEXTAREA/.test(e.target.tagName))return;
+  if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='z'){e.preventDefault();travel(e.shiftKey?1:-1);return;}
   if(M.view==='song'){
    if(document.activeElement?.closest?.('#proll')&&prKey(e))return;
    const c=M.project.audio?.clips.find(x=>x.id===M.clip),mod=e.ctrlKey||e.metaKey;

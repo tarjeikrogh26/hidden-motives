@@ -1,4 +1,4 @@
-# DROPFATHER — by Tarjei Krogh · v0.11
+# DROPFATHER — by Tarjei Krogh · v0.12
 
 To veier inn fra startskjermen:
 
@@ -155,6 +155,20 @@ drop-vinduet gjør det samme.
 - Hver build-up rett før et drop får pre-drop (pause, DELAYSY-kast, reverse suck).
 - Hver del rendres én gang, også når den gjentas.
 - Eksport: hele låta som WAV, stems (fra takt 1) eller MIDI.
+
+### Automasjon, angre og låtas akkorder (v0.12)
+
+- **Automasjon:** en egen rad under lydsporene. Velg kanal og type (volum eller filter for Drums, Bass, Lead, FX
+  eller Audio) i menyen til venstre.
+  - Klikk for å legge til et punkt, og hold for å dra det. Dobbeltklikk sletter. Punktene festes til slag, og
+    Alt gir fri plassering.
+  - ● i menyen viser hvilke spor som har automasjon.
+  - For valgt del gir **↗ Open up** og **↘ Close down** ferdige sveip over hele delen.
+  - Automasjonen høres i avspillingen og er med i alle eksporter (miks, stems, Ableton-pakke).
+- **Angre og gjør om:** ↶ og ↷ i bunnlinjen, eller Ctrl/Cmd+Z og Shift+Ctrl/Cmd+Z. Opptil 60 steg.
+- **Droppet følger låtas akkorder:** når du slipper inn en låt, lytter AVANTGARDIAN ARP etter akkordene i
+  bakgrunnen (ca. 15 s for en låt på 5 min). **⤵ Insert a drop here** tar akkordene fra de fire taktene før
+  innsettingspunktet og skriver bass og lead i droppet på dem.
 
 ### Tre veier inn (v0.11)
 

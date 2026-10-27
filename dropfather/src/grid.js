@@ -468,10 +468,48 @@ function mixdown(stems,gains=[1,1,1,1],extra=[]){
  for(const x of extra)if(x.gain)add(x.buffer.getChannelData(0),x.buffer.getChannelData(x.buffer.numberOfChannels>1?1:0),x.gain,x.buffer.length);
  return out;
 }
-// The finished stereo mix at the project's mixer settings (faders, mute, solo, audio tracks), limited.
-function mix(result,project){
- const g=busGains(project),tg=trackGains(project),buf=mixdown(result.stems,STEMS.map(k=>g[k]),(result.audio||[]).map((b,i)=>({buffer:b,gain:g.audio*(tg[i]??1)}))),lim=P.limit(buf,0,buf.duration);
- return {buffer:buf,peak:lim.peak,reduction:lim.reduction};
+/* ---------- Automation (song view): per mixer channel, volume and a low-pass filter, drawn as points ----------
+   p.auto['lead.vol'] = [[bar, value], …], value 0..1 (volume: 1 = as mixed; filter: 1 = open, 0 = 20 Hz). */
+const AUTO_KINDS={vol:'volume',filter:'filter'};
+const autoHz=v=>20*2**(clamp(v,0,1)*10);
+function autoValue(points,bar){if(!points?.length)return null;if(bar<=points[0][0])return points[0][1];for(let i=1;i<points.length;i++){const [b0,v0]=points[i-1],[b1,v1]=points[i];if(bar<=b1)return b1===b0?v1:v0+(v1-v0)*(bar-b0)/(b1-b0);}return points[points.length-1][1];}
+// Points onto an AudioParam. opt: bar (s), from (song time at t0), t0 (context time).
+function scheduleAuto(param,points,opt,map,exp){
+ param.cancelScheduledValues(0);param.setValueAtTime(map(autoValue(points,opt.from/opt.bar)),opt.t0);
+ for(const [b,v] of points){const t=opt.t0+b*opt.bar-opt.from;if(t<=opt.t0)continue;const y=map(v);exp?param.exponentialRampToValueAtTime(Math.max(1e-4,y),t):param.linearRampToValueAtTime(y,t);}
+}
+// The automation chain of one channel: volume → low-pass → dest. Returns its input.
+function autoChain(ctx,dest,p,k,opt){
+ const g=ctx.createGain(),f=ctx.createBiquadFilter(),A=opt?p.auto||{}:{};f.type='lowpass';f.Q.value=.7;f.frequency.value=20480;g.connect(f).connect(dest);
+ if(A[k+'.vol']?.length)scheduleAuto(g.gain,A[k+'.vol'],opt,v=>v*v,false);if(A[k+'.filter']?.length)scheduleAuto(f.frequency,A[k+'.filter'],opt,autoHz,true);
+ return g;
+}
+// Offline mix of a render: every stem and audio track through its gain and automation. only: one stem key or
+// 'track:i' (for stem export: fader and automation, but not mute or solo).
+async function mixOffline(result,project,only=null){
+ const sr=result.stems.sampleRate,len=Math.max(result.stems.length,...(result.audio||[]).map(b=>b.length)),ctx=new OfflineAudioContext(2,len,sr),opt=result.song?{bar:timeline(project,true).bar,from:result.t0||0,t0:0}:null;
+ const bus=busOf(project),g=only?Object.fromEntries(MIXER.map(k=>[k,faderGain(bus[k])])):busGains(project),tg=only?(project.audio?.tracks||[]).map(t=>t.gain??1):trackGains(project);
+ const src=ctx.createBufferSource(),split=ctx.createChannelSplitter(CH);src.buffer=result.stems;src.connect(split);
+ STEMS.forEach((k,i)=>{if(only&&only!==k)return;const m=ctx.createChannelMerger(2),gn=ctx.createGain();gn.gain.value=g[k];split.connect(m,2*i,0);split.connect(m,2*i+1,1);m.connect(autoChain(ctx,gn,project,k,opt));gn.connect(ctx.destination);});
+ const ag=ctx.createGain();ag.gain.value=g.audio;ag.connect(ctx.destination);const aIn=autoChain(ctx,ag,project,'audio',opt);
+ (result.audio||[]).forEach((b,i)=>{if(only&&only!=='track:'+i)return;const s=ctx.createBufferSource(),t=ctx.createGain();s.buffer=b;t.gain.value=tg[i]??1;s.connect(t).connect(aIn);s.start();});
+ src.start();return ctx.startRendering();
+}
+// The finished stereo mix at the project's mixer settings (faders, mute, solo, audio tracks, automation), limited.
+async function mix(result,project){const buf=await mixOffline(result,project),lim=P.limit(buf,0,buf.duration);return {buffer:buf,peak:lim.peak,reduction:lim.reduction};}
+// Chords from a song's ARP analysis: the strongest root of each bar, as degrees of the project's scale.
+// segments in seconds; at(b) gives the song second where bar b of the window starts.
+function chordsFromHarmony(p,segments,at,barSec,n=4){
+ const sc=SCALES[p.scale][1],out=[];
+ for(let b=0;b<n;b++){const a=at(b),e=a+barSec,w=Array(12).fill(0);for(const s of segments){if(s.silent)continue;const o=Math.min(e,s.end)-Math.max(a,s.start);if(o>0)w[s.root]+=o;}
+  const m=Math.max(...w);if(m<=0){out.push(out[out.length-1]??0);continue;}const rel=(w.indexOf(m)-p.key+12)%12;let best=0,dist=99;sc.forEach((v,i)=>{const d=Math.min(Math.abs(v-rel),12-Math.abs(v-rel));if(d<dist){dist=d;best=i;}});out.push(best);}
+ return out;
+}
+// Put the drop (and the build-up's lead) on a given progression: bass riff and lead written again on it.
+function setChords(project,chords,seed){
+ project.chords=chords.slice();const st=STYLES[project.style]||STYLES.festival,rng=P.rng(seed>>>0);if(project.drop.patternBars<4)resize(project.drop,4);
+ const n=steps(project.drop),v=project.v||{bassline:'offbeat'};project.drop.grid.bass=onChords(bassline(v.bassline,project,st,rng,seed,n),project);newMelody(project,seed+1);
+ return progName(project);
 }
 // Audio tracks (song view), one stereo buffer each from the song's start: clips warped to the song tempo, from
 // their phase (where in the clip it starts, after a trim or split), looped or cut to their length, with fades.
@@ -507,12 +545,12 @@ async function render(project,{sr=44100,only=null,song=false,samples={},progress
   if(pre.reverse>0&&by[D.name]){const R=swells[D.name]||(swells[D.name]=await P.reverseSwell(mixdown(by[D.name].buffer),0,beat,2.4)),len=clamp(Math.max(D.start-x.gapOut,2*beat),.2,R.duration-.05),a=dropOut-len,s=ctx.createBufferSource(),v=ctx.createGain();s.buffer=R;v.gain.setValueAtTime(0,a);v.gain.linearRampToValueAtTime(pre.reverse*.9,dropOut-.01);v.gain.linearRampToValueAtTime(0,dropOut+.004);s.connect(v).connect(fxStem);s.start(a,R.duration-len);s.stop(dropOut+.02);}
   tick();
  }
- const stems=await ctx.startRendering(),audio=song?await renderAudio(project,samples,sr,t0):[],m=mix({stems,audio},project);tick();
+ const stems=await ctx.startRendering(),audio=song?await renderAudio(project,samples,sr,t0):[],m=await mix({stems,audio,song,t0},project);tick();
  const events=parts.flatMap(x=>by[x.name].events.filter(e=>!x.pre||e[1]<x.gapOut-x.start).map(e=>[e[0],e[1]+x.start-t0,...e.slice(2)]));
  progress(1);
  return {stems,audio,buffer:m.buffer,tl,t0,parts,events,peak:m.peak,reduction:m.reduction,song};
 }
 
-const api={insertDropAt,MIXER,busGains,trackGains,renderAudio,insertSpace,clipEnd,makeSong,newPartMelody,typeOf,labelOf,SONG_DEFAULT,songOrder,ensureSongParts,variation,partOfType,STEMS,faderGain,busOf,mixdown,mix,PROGS,progName,chordName,newMelody,newChords,SCALES,DRUMS,ROWS,NOTE,ORDER,NAMES,SKETCH,STYLES,steps,blank,resize,degree,midiFor,rowLabel,enabled,arpSounds,arpPatterns,leadName,arpLane,newArpLead,generate,randomize,sketch,timeline,createPlayer,render};
+const api={AUTO_KINDS,autoValue,autoChain,mixOffline,chordsFromHarmony,setChords,insertDropAt,MIXER,busGains,trackGains,renderAudio,insertSpace,clipEnd,makeSong,newPartMelody,typeOf,labelOf,SONG_DEFAULT,songOrder,ensureSongParts,variation,partOfType,STEMS,faderGain,busOf,mixdown,mix,PROGS,progName,chordName,newMelody,newChords,SCALES,DRUMS,ROWS,NOTE,ORDER,NAMES,SKETCH,STYLES,steps,blank,resize,degree,midiFor,rowLabel,enabled,arpSounds,arpPatterns,leadName,arpLane,newArpLead,generate,randomize,sketch,timeline,createPlayer,render};
 if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.DropGrid=api;
 })(typeof globalThis!=='undefined'?globalThis:this);
