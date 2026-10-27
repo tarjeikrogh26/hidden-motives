@@ -33,7 +33,7 @@
 body { background: var(--cream); color: var(--ink); font-family: var(--body); font-size: 14px; line-height: 1.45;
   background-image: radial-gradient(60% 40% at 8% 0%, rgba(58,163,170,.18), transparent 70%), radial-gradient(50% 40% at 95% 10%, rgba(228,134,171,.20), transparent 70%), radial-gradient(70% 50% at 50% 100%, rgba(236,208,143,.25), transparent 70%);
   background-attachment: fixed; }
-.wrap { max-width: 1180px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 18px 170px; display: flex; flex-direction: column; gap: 22px; }
+.wrap { max-width: 1180px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 18px calc(var(--dock-h, 260px) + 22px); display: flex; flex-direction: column; gap: 22px; }
 h1, h2, h3 { margin: 0; font-weight: 500; text-wrap: balance; }
 .eyebrow { font-family: var(--mono); font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
 button, select, input { font: inherit; color: inherit; }
@@ -145,19 +145,34 @@ details.room .eyebrow { color: #9fc3c4; }
 .osc:nth-child(even) .head h3 { color: var(--gold-hi) !important; }
 .osc.off { opacity: .5; }
 
-/* Fixed bottom bar */
-.dock { position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; background: rgba(255,250,246,.94); border-top: 1px solid var(--gold-hi); backdrop-filter: blur(10px);
+/* Fixed bottom bar, laid out like STAB LAB: two banks, the transport, the drums, twelve chord pads */
+.dock { position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; background: rgba(255,250,246,.95); border-top: 1px solid var(--gold-hi); backdrop-filter: blur(10px);
   padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-top: 10px; padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px)); }
-.dock-in { max-width: 1180px; margin: 0 auto; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
-.play { width: 54px; height: 54px; border-radius: 50%; border: none; background: radial-gradient(circle at 35% 30%, #f6b9d0, var(--rose) 55%, var(--rose-deep)); color: #fff; display: grid; place-items: center; flex: none; box-shadow: 0 4px 14px -4px rgba(201,97,139,.6); }
-.play svg { width: 20px; height: 20px; fill: currentColor; }
-.bank { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1 1 220px; }
-.bank select { font-family: var(--display); font-style: italic; font-size: 21px; font-weight: 600; background: transparent; border: none; border-bottom: 1px solid var(--line); border-radius: 0; padding: 2px 0; }
-.dock .small { display: flex; flex-direction: column; gap: 2px; }
-.dock input[type=number], .dock input[type=text] { background: var(--pearl); border: 1px solid var(--line); border-radius: 6px; padding: 7px 8px; width: 74px; font-family: var(--mono); }
+.dock-in { max-width: 1180px; margin: 0 auto; display: flex; flex-direction: column; gap: 9px; }
+.banks { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 18px; }
+.bankrow { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.bankrow > label { font-family: var(--mono); font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--teal); }
+.bankrow + .bankrow > label { color: var(--rose-deep); }
+.nav { display: flex; gap: 5px; align-items: stretch; min-width: 0; }
+.nav button { flex: none; min-width: 34px; padding: 6px 8px; background: var(--pearl); border: 1px solid var(--line); border-radius: 6px; font-size: 16px; line-height: 1; }
+.nav button:hover { border-color: var(--gold); }
+.nav select { flex: 1 1 auto; min-width: 0; font-family: var(--display); font-style: italic; font-weight: 600; font-size: 17px; padding: 5px 8px; }
+.nav .dice { color: var(--gold); font-size: 19px; }
+.transport, .drumrow { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: end; }
+.field { display: flex; flex-direction: column; gap: 2px; font-family: var(--mono); font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+.field select, .field input { font-family: var(--body); letter-spacing: 0; text-transform: none; font-size: 14px; color: var(--ink); }
+.dock input[type=number], .dock input[type=text] { background: var(--pearl); border: 1px solid var(--line); border-radius: 6px; padding: 7px 8px; width: 70px; font-family: var(--mono); }
 .dock input[type=text] { width: 130px; font-family: var(--body); }
-.status { font-size: 12px; color: var(--muted); flex-basis: 100%; }
+.play { width: 48px; height: 48px; border-radius: 50%; border: none; background: radial-gradient(circle at 35% 30%, #f6b9d0, var(--rose) 55%, var(--rose-deep)); color: #fff; display: grid; place-items: center; flex: none; box-shadow: 0 4px 14px -4px rgba(201,97,139,.6); }
+.play svg { width: 18px; height: 18px; fill: currentColor; }
+.drumrow .btn[aria-pressed=true] { background: var(--gold-hi); border-color: var(--gold); }
 .dock .lvl { width: 120px; }
+.status { font-size: 12px; color: var(--muted); align-self: center; min-width: 0; }
+.pads { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 6px; }
+.pad { padding: 8px 0; border-radius: 6px; border: 1px solid var(--line); background: var(--pearl); font-family: var(--display); font-style: italic; font-weight: 600; font-size: 16px; touch-action: none; user-select: none; color: var(--ink); }
+.pad.out { background: transparent; color: var(--muted); }
+.more-btn { display: none; }
+.pad.down { background: var(--rose); color: #fff; border-color: var(--rose-deep); }
 
 @media (max-width: 980px) {
   .now { grid-template-columns: 1fr; }
@@ -165,11 +180,15 @@ details.room .eyebrow { color: #9fc3c4; }
   .colours { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .oscs { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .slots { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .banks { grid-template-columns: 1fr; }
 }
 @media (max-width: 560px) {
   .macros, .colours, .oscs { grid-template-columns: 1fr; }
   .card h2 { font-size: 27px; }
-  .dock .hide-s { display: none; }
+  .dock .hide-s, .pads { display: none; }
+  .more-btn { display: inline-block; margin-left: auto; }
+  .dock:not(.open) .more-s { display: none; }
+  .nav button[data-d="-10"], .nav button[data-d="10"] { display: none; }
   .banner { aspect-ratio: 2 / 1; }
 }
 @media (prefers-reduced-motion: reduce) { .sub-meter i b { transition: none; } }
@@ -203,22 +222,19 @@ details.room .eyebrow { color: #9fc3c4; }
   <section class="lineup" aria-label="Chord line">
     <div class="bar">
       <div>
-        <div class="eyebrow">Plays when you press play · chords change on bar one</div>
+        <div class="eyebrow">Plays with ▶ · chords change on bar one · choose lines in the bar below</div>
         <h2>Chord line</h2>
       </div>
       <div class="row">
-        <div class="ctl"><label for="lineProg">Progression</label><select id="lineProg"></select></div>
-        <div class="ctl"><label for="lineKey">Key</label><select id="lineKey"></select></div>
-        <div class="ctl"><label for="lineBars">Bars per chord</label><select id="lineBars"><option value="1">1</option><option value="2" selected>2</option><option value="4">4</option></select></div>
-        <div class="ctl"><label for="lineAs">Play as</label><select id="lineAs"><option value="2">Two notes</option><option value="3" selected>Three notes</option></select></div>
-        <div class="ctl" style="flex:1 1 140px"><label for="lineSurprise">Surprise <output id="lineSurpriseOut">25%</output></label><input type="range" id="lineSurprise" min="0" max="1" step="0.01" value="0.25" class="rose"></div>
-        <button class="btn" id="lineNew" type="button">New line</button>
+        <div class="ctl" style="flex:1 1 160px"><label for="lineSurprise">Surprise <output id="lineSurpriseOut">25%</output></label><input type="range" id="lineSurprise" min="0" max="1" step="0.01" value="0.25" class="rose"></div>
+        <button class="btn" id="lineNew" type="button">Write a new line</button>
       </div>
     </div>
     <div class="slots" id="slots"></div>
     <div class="slot-edit" id="slotEdit" hidden>
       <div class="ctl"><label for="editRoot">Root</label><select id="editRoot"></select></div>
       <div class="ctl"><label for="editQ">Chord</label><select id="editQ"></select></div>
+      <div class="ctl"><label for="editBars">Bars</label><select id="editBars"><option>1</option><option>2</option><option>4</option><option>8</option></select></div>
       <button class="btn" id="editDone" type="button">Done</button>
     </div>
   </section>
@@ -234,30 +250,45 @@ details.room .eyebrow { color: #9fc3c4; }
   </details>
 </div>
 
-<div class="dock">
+<div class="dock" id="dock">
   <div class="dock-in">
-    <button class="play" id="play" type="button" aria-label="Play the chord line"><svg viewBox="0 0 20 20" id="playIcon"><path d="M5 3l12 7-12 7z"/></svg></button>
-    <div class="bank">
-      <span class="eyebrow">Sound</span>
-      <select id="preset" aria-label="Sound"></select>
+    <div class="banks">
+      <div class="bankrow"><label for="soundSel">Sound · <span id="soundCount">111</span></label>
+        <div class="nav"><button type="button" data-bank="sound" data-d="-10" aria-label="Back 10 sounds">«</button><button type="button" data-bank="sound" data-d="-1" aria-label="Previous sound">‹</button><select id="soundSel" aria-label="Sound"></select><button type="button" data-bank="sound" data-d="1" aria-label="Next sound">›</button><button type="button" data-bank="sound" data-d="10" aria-label="Forward 10 sounds">»</button><button type="button" class="dice" id="soundDice" title="Randomize sound" aria-label="Randomize sound">⚄</button></div></div>
+      <div class="bankrow"><label for="lineSel">Chord line · <span id="lineCount">111</span></label>
+        <div class="nav"><button type="button" data-bank="line" data-d="-10" aria-label="Back 10 chord lines">«</button><button type="button" data-bank="line" data-d="-1" aria-label="Previous chord line">‹</button><select id="lineSel" aria-label="Chord line"></select><button type="button" data-bank="line" data-d="1" aria-label="Next chord line">›</button><button type="button" data-bank="line" data-d="10" aria-label="Forward 10 chord lines">»</button><button type="button" class="dice" id="lineDice" title="Random chord line" aria-label="Random chord line">⚄</button></div></div>
     </div>
-    <button class="btn" id="prev" type="button" aria-label="Previous sound">‹</button>
-    <button class="btn" id="next" type="button" aria-label="Next sound">›</button>
-    <button class="btn" id="dice" type="button">Randomize</button>
-    <div class="small hide-s"><span class="eyebrow">Name</span><input type="text" id="saveName" value="My sound" aria-label="Name for saving"></div>
-    <button class="btn" id="save" type="button">Save</button>
-    <div class="small"><span class="eyebrow">Tempo</span><input type="number" id="tempo" min="40" max="200" value="84" aria-label="Tempo"></div>
-    <div class="small hide-s"><span class="eyebrow">Level</span><input type="range" id="level" class="lvl" min="-24" max="6" step="0.5" value="0" aria-label="Level"></div>
-    <div class="status" id="status">Paused. Press ▶ to hear the chord line, or play the keyboard.</div>
+    <div class="transport">
+      <button class="play" id="play" type="button" aria-label="Play the chord line"><svg viewBox="0 0 20 20" id="playIcon"><path d="M5 3l12 7-12 7z"/></svg></button>
+      <label class="field">BPM<input type="number" id="tempo" min="40" max="200" value="84"></label>
+      <label class="field">Key<select id="lineKey"></select></label>
+      <label class="field more-s">Notes<select id="lineAs"><option value="2">2</option><option value="3" selected>3</option></select></label>
+      <label class="field more-s">Register<select id="lineReg"><option value="-12">Low</option><option value="0" selected>Mid</option><option value="12">High</option></select></label>
+      <label class="field more-s">Bars<select id="lineBars"><option value="1">1</option><option value="2" selected>2</option><option value="4">4</option></select></label>
+      <label class="field hide-s">Name<input type="text" id="saveName" value="My sound"></label>
+      <button class="btn more-s" id="save" type="button">Save sound</button>
+      <button class="btn more-btn" id="dockMore" type="button" aria-expanded="false">More</button>
+      <label class="field hide-s">Level<input type="range" id="level" class="lvl" min="-24" max="6" step="0.5" value="0"></label>
+    </div>
+    <div class="drumrow more-s">
+      <button class="btn" id="drumOn" type="button" aria-pressed="false">Drums off</button>
+      <label class="field">Groove<select id="drumSel"></select></label>
+      <label class="field hide-s">Drum level<input type="range" id="drumLevel" class="lvl" min="0" max="1" step="0.01" value="0.5"></label>
+      <button class="btn" id="matchBpm" type="button">Match BPM</button>
+      <span class="status" id="status">Paused. Press ▶ to hear the chord line, hold a chord pad, or play the keyboard.</span>
+    </div>
+    <div class="pads" id="pads" role="group" aria-label="Chord pads: hold one to play its chord"></div>
   </div>
 </div>
 
 <script type="text/plain" id="workletSrc">
+const rng32 = seed => () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let x = Math.imul(seed ^ seed >>> 15, 1 | seed); x = x + Math.imul(x ^ x >>> 7, 61 | x) ^ x; return ((x ^ x >>> 14) >>> 0) / 4294967296; };
 class DriftSonata extends AudioWorkletProcessor {
   constructor(options) {
     super();
     this.ready = false; this.queue = []; this.playing = false; this.ppq = 0; this.bpm = 84; this.slot = -1; this.sounding = []; this.tick = 0;
-    this.line = []; this.barsPer = 2;
+    this.line = []; this.drums = { on: false, pattern: [[], [], []], level: .5, slow: false }; this.hits = [];
+    this.makeDrums();
     this.port.onmessage = e => this.ready ? this.msg(e.data) : this.queue.push(e.data);
     const stub = { fd_close: () => 0, fd_seek: () => 0, fd_write: () => 0 };
     WebAssembly.instantiate(options.processorOptions.wasm, { wasi_snapshot_preview1: stub }).then(({ instance }) => {
@@ -266,6 +297,22 @@ class DriftSonata extends AudioWorkletProcessor {
       this.ready = true; for (const m of this.queue) this.msg(m); this.queue = [];
       this.port.postMessage({ t: 'ready' });
     });
+  }
+  // The drum sounds from STAB LAB: a pitched-down sine kick, a noise snare with body, a ticking hat.
+  makeDrums() {
+    const sr = sampleRate, make = (type, slow) => {
+      const duration = type === 'kick' ? .46 : type === 'snare' ? .21 : .07, a = new Float32Array(Math.ceil(sr * duration)), R = rng32(1451 + type.length + (slow ? 7 : 0));
+      let phase = 0, previous = 0, lp = 0;
+      for (let i = 0; i < a.length; i++) {
+        const t = i / sr, noise = R() * 2 - 1; let v = 0;
+        if (type === 'kick') { phase += 2 * Math.PI * ((slow ? 45 : 51) + 110 * Math.exp(-t * 35)) / sr; v = Math.sin(phase) * Math.exp(-t / (slow ? .12 : .085)) * .8 + noise * Math.exp(-t * 450) * .06; }
+        else if (type === 'snare') { lp += .17 * (noise - lp); v = ((noise - lp) * .55 + Math.sin(t * 2 * Math.PI * 185) * Math.exp(-t * 55) * .35) * Math.exp(-t * 22); }
+        else { v = (noise - previous) * Math.exp(-t / .011) * .23; previous = noise; }
+        a[i] = v * Math.min(1, i / 20, (a.length - i) / 45);
+      }
+      return a;
+    };
+    this.buf = { kick: make('kick', false), kickSlow: make('kick', true), snare: make('snare'), hat: make('hat') };
   }
   msg(m) {
     const x = this.x;
@@ -278,10 +325,11 @@ class DriftSonata extends AudioWorkletProcessor {
         for (const z of m.zones) { const ptr = x.ds_bank_add(z.fam, z.root, z.sr, z.data.length); new Float32Array(x.memory.buffer, ptr, z.data.length).set(z.data); }
         x.ds_bank_commit(); break;
       }
-      case 'line': this.line = m.line; this.barsPer = m.barsPer; if (this.playing) this.slot = -2; break;
+      case 'line': this.line = m.line; if (this.playing) this.slot = -2; break;
+      case 'drums': this.drums = m.drums; break;
       case 'bpm': this.bpm = m.bpm; break;
       case 'play': this.playing = true; this.ppq = 0; this.slot = -1; break;
-      case 'stop': this.playing = false; this.release(); this.slot = -1; this.port.postMessage({ t: 'slot', s: -1 }); break;
+      case 'stop': this.playing = false; this.release(); this.slot = -1; this.hits = []; this.port.postMessage({ t: 'slot', s: -1 }); break;
     }
   }
   release() { for (const n of this.sounding) this.x.ds_note_off(n); this.sounding = []; }
@@ -291,18 +339,39 @@ class DriftSonata extends AudioWorkletProcessor {
     const x = this.x, step = n * this.bpm / 60 / sampleRate;
     if (this.playing && this.line.length) {
       // The chord for the end of this block: a change lands just before the bar line, so the sub on bar one hears it.
-      const slotQ = 4 * this.barsPer, total = slotQ * this.line.length;
-      const s = Math.floor(((this.ppq + step) % total) / slotQ);
+      const total = this.line.reduce((a, c) => a + c.bars, 0) * 4;
+      let pos = (this.ppq + step) % total, s = 0;
+      while (s < this.line.length - 1 && pos >= this.line[s].bars * 4) { pos -= this.line[s].bars * 4; s++; }
       if (s !== this.slot) {
         this.release(); this.slot = s;
-        for (const note of this.line[s]) { x.ds_note_on(note, .8); this.sounding.push(note); }
+        for (const note of this.line[s].notes) { x.ds_note_on(note, .8); this.sounding.push(note); }
         this.port.postMessage({ t: 'slot', s });
+      }
+    }
+    if (this.playing && this.drums.on) {
+      // Every sixteenth that falls inside this block, placed on its own sample
+      const p = this.drums.pattern;
+      for (let k = Math.ceil(this.ppq / .25 - 1e-9); k * .25 < this.ppq + step; k++) {
+        const off = Math.min(n - 1, Math.max(0, Math.round((k * .25 - this.ppq) / step * n))), s16 = ((k % 16) + 16) % 16, acc = s16 % 4 === 0 ? 1 : .72;
+        if (p[0].includes(s16)) this.hits.push({ b: this.drums.slow ? this.buf.kickSlow : this.buf.kick, pos: -off, g: acc });
+        if (p[1].includes(s16)) this.hits.push({ b: this.buf.snare, pos: -off, g: acc });
+        if (p[2].includes(s16)) this.hits.push({ b: this.buf.hat, pos: -off, g: .6 + .4 * acc });
       }
     }
     x.ds_transport(this.playing ? 1 : 0, this.ppq, this.bpm, 4, 4);
     x.ds_process(n);
     L.set(new Float32Array(x.memory.buffer, x.ds_left(), n));
     if (R !== L) R.set(new Float32Array(x.memory.buffer, x.ds_right(), n));
+    if (this.hits.length) {
+      const lv = this.drums.level * 1.2;
+      for (const h of this.hits) {
+        const a = h.b;
+        for (let i = 0; i < n; i++) { const j = h.pos + i; if (j >= 0 && j < a.length) { const v = a[j] * h.g * lv; L[i] += v; if (R !== L) R[i] += v; } }
+        h.pos += n;
+      }
+      this.hits = this.hits.filter(h => h.pos < h.b.length);
+      for (let i = 0; i < n; i++) { L[i] = Math.max(-.99, Math.min(.99, L[i])); if (R !== L) R[i] = Math.max(-.99, Math.min(.99, R[i])); }
+    }
     if (this.playing) this.ppq += step;
     if (++this.tick % 6 === 0) {
       const c = x.ds_disp_count(), notes = [];
@@ -350,6 +419,7 @@ async function startAudio() {
     values.forEach((v, i) => node.port.postMessage({ t: 'p', i, v }));
     node.port.postMessage({ t: 'bpm', bpm: tempo() });
     sendLine();
+    sendDrums();
     loadSamples();
     if (ctx.state !== 'running') await ctx.resume();
   })().catch(e => { starting = null; setStatus('The sound engine could not start in this browser: ' + e.message); throw e; });
@@ -453,6 +523,7 @@ function fmt(p, v) {
 }
 function setValue(id, v, from) {
   const i = idx[id]; values[i] = v; send(i);
+  if (!loadingSound && id !== 'level' && typeof markSoundDirty === 'function') markSoundDirty();
   if (controls[id]) controls[id].forEach(f => f !== from && f(v));
 }
 function onCtl(id, f) { (controls[id] = controls[id] || []).push(f); }
@@ -554,37 +625,64 @@ $('level').addEventListener('input', () => { setValue('level', +$('level').value
 onCtl('level', v => { $('level').value = v; $('level').style.setProperty('--pct', ((v + 24) / 30 * 100) + '%'); });
 $('level').style.setProperty('--pct', '80%');
 
-/* ---------- Sounds: factory and saved ---------- */
+/* ---------- Sound bank: 111 numbered sounds, variations of the factory sounds (as in STAB LAB) ---------- */
 const DEFAULTS = P.map(p => p.def);
+const rng32 = seed => () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let x = Math.imul(seed ^ seed >>> 15, 1 | seed); x = x + Math.imul(x ^ x >>> 7, 61 | x) ^ x; return ((x ^ x >>> 14) >>> 0) / 4294967296; };
+const esc = t => String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
 function presetValuesOf(pr) { const v = DEFAULTS.slice(); for (const k in pr.set) if (k in idx) v[idx[k]] = pr.set[k]; return v; }
-function applyValues(v) { v.forEach((x, i) => setValue(P[i].id, x)); }
+let loadingSound = false;
+function applyValues(v) { loadingSound = true; v.forEach((x, i) => setValue(P[i].id, x)); loadingSound = false; }
+const SOUND_WORDS = ['', 'Pearl', 'Gilded', 'Low tide', 'Night choir', 'Glass hall', 'Sour milk', 'Moonwax'];
+const soundBank = Array.from({ length: 111 }, (_, i) => {
+  const base = DATA.presets[i % DATA.presets.length], v = Math.floor(i / DATA.presets.length);
+  return { name: base.name + (v ? ' · ' + SOUND_WORDS[v % SOUND_WORDS.length] : ''), base, v, seed: 171 + i * 77 };
+});
+// A variation nudges the base sound a little, then leans the way its word says.
+function soundValues(s) {
+  const vals = presetValuesOf(s.base);
+  if (!s.v) return vals;
+  const R = rng32(s.seed), get = id => vals[idx[id]];
+  const set = (id, x) => { const p = P[idx[id]]; vals[idx[id]] = Math.min(p.max, Math.max(p.min, x)); };
+  for (const [id, amt] of [['drift', .15], ['tension', .12], ['cutoff', .08], ['space', .12], ['subdrop', .12], ['tape', .12], ['air', .1], ['motion', .2], ['chaos', .2], ['shimmer', .15]]) set(id, get(id) + (R() * 2 - 1) * amt);
+  switch (s.v % 8) {
+    case 1: set('choir', get('choir') + .25); set('cutoff', get('cutoff') + .05); break;                          // Pearl
+    case 2: set('color', 0); set('ensemble', 1); set('shimmer', get('shimmer') + .2); break;                      // Gilded
+    case 3: set('subdrop', get('subdrop') + .25); set('cutoff', get('cutoff') - .08); set('o6oct', -1); break;    // Low tide
+    case 4: set('vox', get('vox') + .35); set('vowel', R() * .4); break;                                          // Night choir
+    case 5: set('space', get('space') + .25); set('o5wave', 2); set('o6wave', 3); break;                          // Glass hall
+    case 6: set('drift', get('drift') + .3); set('life', .8); set('tape', get('tape') + .2); break;               // Sour milk
+    case 7: set('cello', get('cello') + .3); set('color', 1); set('attack', Math.max(get('attack'), 1.6)); break; // Moonwax
+  }
+  return vals;
+}
 function userSounds() { return store.get('ds-sounds', []); }
-function fillPresets(selectName) {
-  const sel = $('preset'); sel.innerHTML = '';
-  const groups = {};
-  DATA.presets.forEach((pr, k) => { (groups[pr.group] = groups[pr.group] || []).push(`<option value="f${k}">${pr.name}</option>`); });
+let soundChoice = String(store.get('ds-sound', '0')), soundDirty = false;
+function soundName(v) { return v[0] === 'u' ? (userSounds()[+v.slice(1)] || {}).name || 'My sound' : soundBank[+v].name; }
+function fillSounds() {
   const mine = userSounds();
-  sel.innerHTML = Object.entries(groups).map(([g, o]) => `<optgroup label="${g}">${o.join('')}</optgroup>`).join('') +
-    (mine.length ? `<optgroup label="Yours">${mine.map((s, k) => `<option value="u${k}">${s.name.replace(/</g, '&lt;')}</option>`).join('')}</optgroup>` : '');
-  if (selectName) { const o = [...sel.options].find(o => o.textContent === selectName); if (o) sel.value = o.value; }
+  $('soundSel').innerHTML = (soundDirty ? `<option value="x">— ${esc(soundName(soundChoice))} · changed, unsaved</option>` : '') +
+    soundBank.map((s, i) => `<option value="${i}">${String(i + 1).padStart(3, '0')} / ${esc(s.name)}</option>`).join('') +
+    (mine.length ? `<optgroup label="Yours">${mine.map((s, k) => `<option value="u${k}">${esc(s.name)}</option>`).join('')}</optgroup>` : '');
+  $('soundSel').value = soundDirty ? 'x' : soundChoice;
 }
-function loadSelected() {
-  const v = $('preset').value;
-  if (v[0] === 'f') applyValues(presetValuesOf(DATA.presets[+v.slice(1)]));
-  else { const s = userSounds()[+v.slice(1)]; if (s) applyValues(P.map((p, i) => p.id in s.values ? s.values[p.id] : DEFAULTS[i])); }
+function loadSound(v) {
+  v = String(v);
+  if (v === 'x') return;
+  if (v[0] === 'u') { const s = userSounds()[+v.slice(1)]; if (!s) return; applyValues(P.map((p, i) => p.id in s.values ? s.values[p.id] : DEFAULTS[i])); }
+  else applyValues(soundValues(soundBank[+v] || soundBank[0]));
+  soundChoice = v; soundDirty = false; fillSounds(); store.set('ds-sound', v);
 }
-$('preset').addEventListener('change', loadSelected);
-function step(d) { const s = $('preset'); s.selectedIndex = (s.selectedIndex + d + s.options.length) % s.options.length; loadSelected(); }
-$('prev').addEventListener('click', () => step(-1));
-$('next').addEventListener('click', () => step(1));
+function markSoundDirty() { if (!soundDirty) { soundDirty = true; fillSounds(); } }
+$('soundSel').addEventListener('change', () => loadSound($('soundSel').value));
 $('save').addEventListener('click', () => {
   const name = ($('saveName').value || 'My sound').trim(), mine = userSounds().filter(s => s.name !== name);
   const vals = {}; P.forEach((p, i) => vals[p.id] = values[i]);
-  mine.push({ name, values: vals }); store.set('ds-sounds', mine); fillPresets(name);
+  mine.push({ name, values: vals }); store.set('ds-sounds', mine);
+  soundChoice = 'u' + (mine.length - 1); soundDirty = false; fillSounds(); store.set('ds-sound', soundChoice);
   setStatus(`Saved “${name}” in this browser.`);
 });
 // Randomize inside ranges that always sound like something
-$('dice').addEventListener('click', () => {
+$('soundDice').addEventListener('click', () => {
   const r = (a, b) => a + Math.random() * (b - a), pick = a => a[Math.floor(Math.random() * a.length)];
   const set = { drift: r(.15, .85), tension: r(.3, .85), subdrop: r(.2, .8), space: r(.3, .9), choir: r(0, .6), cello: r(0, .5), vox: r(0, .5), vowel: r(0, 1),
     cutoff: r(.42, .75), tape: r(0, .6), air: r(0, .4), color: pick([0, 0, 1, 1, 2, 3, 4]), ensemble: r(.4, 1), motion: r(.3, .8), shimmer: r(.1, .7), delay: r(0, .35),
@@ -594,93 +692,193 @@ $('dice').addEventListener('click', () => {
   for (const k in set) setValue(k, set[k]);
   setStatus('Randomized. Save it if you like it.');
 });
+// « ‹ › » step through a bank by one or ten
+document.querySelectorAll('[data-bank]').forEach(b => b.addEventListener('click', () => {
+  const sel = b.dataset.bank === 'sound' ? $('soundSel') : $('lineSel'), opts = [...sel.options].filter(o => o.value !== 'x');
+  let i = opts.findIndex(o => o.value === sel.value);
+  if (i < 0) i = opts.findIndex(o => o.value === (b.dataset.bank === 'sound' ? soundChoice : String(lineChoice)));
+  i = ((Math.max(0, i) + +b.dataset.d) % opts.length + opts.length) % opts.length;
+  sel.value = opts[i].value; sel.dispatchEvent(new Event('change'));
+}));
 
-/* ---------- Chord line ---------- */
+/* ---------- Chord lines: 111 numbered lines in the chosen key ---------- */
 const QUAL = { '': [0, 4, 7], 'm': [0, 3, 7], '5': [0, 7], 'sus2': [0, 2, 7], 'sus4': [0, 5, 7], 'dim': [0, 3, 6], 'aug': [0, 4, 8], '7': [0, 4, 7, 10], 'maj7': [0, 4, 7, 11], 'm7': [0, 3, 7, 10] };
 const QNAME = { '': 'Major', 'm': 'Minor', '5': 'Fifth', 'sus2': 'Sus2', 'sus4': 'Sus4', 'dim': 'Diminished', 'aug': 'Augmented', '7': 'Seven', 'maj7': 'Major seven', 'm7': 'Minor seven' };
-// Progressions as [semitones over the key's tonic, chord]
-const PROGS = {
-  'Night drive': [[0, 'm'], [8, ''], [3, ''], [10, ''], [5, 'm'], [0, 'm'], [8, ''], [7, '']],
-  'Lament': [[0, 'm'], [5, 'm'], [8, ''], [7, ''], [0, 'm'], [10, ''], [8, ''], [7, 'sus4']],
-  'Cathedral': [[0, 'm'], [3, ''], [10, ''], [5, 'm'], [8, ''], [3, ''], [5, 'm'], [7, '']],
-  'Halo': [[8, ''], [3, ''], [10, ''], [0, 'm'], [8, ''], [3, ''], [10, ''], [10, 'sus4']],
-  'Witch': [[0, 'm'], [1, ''], [0, 'm'], [10, ''], [0, 'm'], [1, ''], [8, ''], [7, '']],
-  'Drone': [[0, 'm'], [0, 'm'], [8, ''], [8, ''], [0, 'm'], [0, 'm'], [5, 'm'], [7, 'sus4']],
-};
-let line = store.get('ds-line', null) || PROGS['Night drive'].map(([s, q]) => ({ root: (9 + s) % 12, q }));
+// [semitones over the key's tonic (a minor key), chord]
+const LINE_BASES = [
+  ['Night drive', [[0, 'm'], [8, ''], [3, ''], [10, ''], [5, 'm'], [0, 'm'], [8, ''], [7, '']]],
+  ['Lament', [[0, 'm'], [5, 'm'], [8, ''], [7, ''], [0, 'm'], [10, ''], [8, ''], [7, 'sus4']]],
+  ['Cathedral', [[0, 'm'], [3, ''], [10, ''], [5, 'm'], [8, ''], [3, ''], [5, 'm'], [7, '']]],
+  ['Halo', [[8, ''], [3, ''], [10, ''], [0, 'm'], [8, ''], [3, ''], [10, ''], [10, 'sus4']]],
+  ['Witch', [[0, 'm'], [1, ''], [0, 'm'], [10, ''], [0, 'm'], [1, ''], [8, ''], [7, '']]],
+  ['Drone', [[0, 'm'], [0, 'm'], [8, ''], [8, ''], [0, 'm'], [0, 'm'], [5, 'm'], [7, 'sus4']]],
+  ['Nordic light', [[0, 'm'], [10, ''], [8, ''], [10, ''], [0, 'm'], [10, ''], [8, ''], [7, 'sus4']]],
+  ['Clockwork march', [[0, 'm'], [5, 'm'], [7, ''], [0, 'm'], [8, ''], [5, 'm'], [7, 'sus4'], [7, '']]],
+  ['Radio silence', [[0, 'm'], [0, 'm'], [8, ''], [8, ''], [3, ''], [3, ''], [10, ''], [10, '']]],
+  ['Low orbit', [[8, ''], [10, ''], [0, 'm'], [0, 'm'], [8, ''], [10, ''], [3, ''], [7, '']]],
+  ['Sad robot', [[0, 'm'], [7, 'm'], [8, ''], [3, ''], [5, 'm'], [0, 'm'], [5, 'm'], [7, '']]],
+  ['Last tram', [[0, 'm'], [3, ''], [10, ''], [5, 'm'], [0, 'm'], [3, ''], [1, ''], [0, 'm']]],
+];
+const LINE_WORDS = ['', 'Slow tide', 'Late bloom', 'Halo turn', 'Dark choir', 'Long breath', 'Surprise', 'Gold leaf', 'Cold room', 'Half time'];
+const ODD = [[1, ''], [5, ''], [2, ''], [9, 'm'], [0, ''], [6, ''], [4, ''], [10, 'sus4']];
+const lineBank = Array.from({ length: 111 }, (_, i) => {
+  const base = LINE_BASES[i % LINE_BASES.length], v = Math.floor(i / LINE_BASES.length);
+  return { name: base[0] + (v ? ' · ' + LINE_WORDS[v] : ''), base, v, seed: 933 + i * 197 };
+});
+// A variation changes how long the chords last, or swaps a few for darker, brighter or stranger ones.
+// u = length in units of the Bars setting.
+function lineFrom(l, key) {
+  const R = rng32(l.seed); let c = l.base[1].map(([s, q]) => ({ s, q, u: 1 }));
+  switch (l.v) {
+    case 1: c.forEach(x => x.u = 2); break;
+    case 2: c.forEach((x, k) => x.u = k % 2 ? 1 : 2); break;
+    case 3: c[6] = { s: 7, q: 'sus4', u: 1 }; c[7] = { s: 7, q: '', u: 1 }; break;
+    case 4: c.forEach(x => { if (x.q === '' && x.s !== 7 && R() < .5) x.q = 'm'; }); break;
+    case 5: c[0].u = 4; break;
+    case 6: for (let k = 0; k < 2; k++) { const pos = 1 + Math.floor(R() * 6), o = ODD[Math.floor(R() * ODD.length)]; c[pos] = { s: o[0], q: o[1], u: 1 }; } break;
+    case 7: c.forEach(x => { x.q = x.q === 'm' ? 'm7' : x.q === '' ? (x.s === 7 ? '7' : 'maj7') : x.q; }); break;
+    case 8: c.forEach(x => { if (x.s !== 0) x.q = R() < .5 ? 'sus2' : '5'; }); break;
+    case 9: c = c.filter((_, k) => k % 2 === 0).map(x => ({ ...x, u: 2 })); break;
+  }
+  return c.map(x => ({ root: (key + x.s + 120) % 12, q: x.q, u: x.u }));
+}
+const savedLine = store.get('ds-line2', null);
+let lineChoice = savedLine ? savedLine.choice : 0, lineDirty = savedLine ? !!savedLine.dirty : false, lineKey = savedLine ? savedLine.key : 9;
+let line = savedLine && savedLine.line ? savedLine.line : lineFrom(lineBank[0], lineKey);
 let editing = -1, playing = false, lastNotes = null;
-$('lineProg').innerHTML = '<option value="">Your own</option>' + Object.keys(PROGS).map(k => `<option>${k}</option>`).join('');
-$('lineProg').value = store.get('ds-line', null) ? '' : 'Night drive';
-$('lineKey').innerHTML = NAMES.map((n, k) => `<option value="${k}">${n} minor</option>`).join(''); $('lineKey').value = '9';
+$('lineKey').innerHTML = NAMES.map((n, k) => `<option value="${k}">${n} minor</option>`).join(''); $('lineKey').value = String(lineKey);
 $('editRoot').innerHTML = NAMES.map((n, k) => `<option value="${k}">${n}</option>`).join('');
 $('editQ').innerHTML = Object.entries(QNAME).map(([k, v]) => `<option value="${k}">${v}</option>`).join('');
-
-// Each chord as two or three notes around A3, moving as little as possible from the one before.
-function voiceLine() {
-  const asN = +$('lineAs').value, out = []; let prev = null;
-  for (const c of line) {
-    let pcs = QUAL[c.q].map(i => (c.root + i) % 12);
-    if (asN === 2) pcs = c.q === '5' || c.q.startsWith('sus') ? [pcs[0], pcs[pcs.length - 1]] : [pcs[0], pcs[1]];
-    else pcs = pcs.slice(0, 3);
-    let best = null, bestCost = 1e9;
-    for (let base = 50; base <= 62; base++) {
-      if (!pcs.includes(base % 12)) continue;
-      const notes = [base];
-      for (let k = 1; k < 12 && notes.length < pcs.length; k++) if (pcs.includes((base + k) % 12) && !notes.some(n => n % 12 === (base + k) % 12)) notes.push(base + k);
-      if (notes.length < pcs.length) continue;
-      const cost = prev ? notes.reduce((a, n, j) => a + Math.abs(n - (prev[j] ?? prev[prev.length - 1])), 0) : Math.abs(notes[0] - 57);
-      if (cost < bestCost) { bestCost = cost; best = notes; }
-    }
-    out.push(best); prev = best;
-  }
-  return out;
+function fillLines() {
+  $('lineSel').innerHTML = (lineDirty ? `<option value="x">— Your own line · unsaved</option>` : '') +
+    lineBank.map((l, i) => `<option value="${i}">${String(i + 1).padStart(3, '0')} / ${esc(l.name)}</option>`).join('');
+  $('lineSel').value = lineDirty ? 'x' : String(lineChoice);
 }
+function pickLine(i) { lineChoice = +i; lineDirty = false; line = lineFrom(lineBank[lineChoice], lineKey); editing = -1; $('slotEdit').hidden = true; fillLines(); lineChanged(); }
+$('lineSel').addEventListener('change', () => { if ($('lineSel').value !== 'x') pickLine($('lineSel').value); });
+$('lineDice').addEventListener('click', () => pickLine(Math.floor(Math.random() * lineBank.length)));
+const unitBars = () => +$('lineBars').value;
+const slotBars = c => Math.max(1, Math.round(c.u * unitBars()));
+
+// A chord as two or three notes in the chosen register, moving as little as possible from the one before.
+function voiceChord(c, prev) {
+  const reg = +$('lineReg').value, asN = +$('lineAs').value;
+  let pcs = QUAL[c.q].map(i => (c.root + i) % 12);
+  if (asN === 2) pcs = c.q === '5' || c.q.startsWith('sus') ? [pcs[0], pcs[pcs.length - 1]] : [pcs[0], pcs[1]];
+  else pcs = pcs.slice(0, 3);
+  let best = null, bestCost = 1e9;
+  for (let base = 50 + reg; base <= 62 + reg; base++) {
+    if (!pcs.includes(base % 12)) continue;
+    const notes = [base];
+    for (let k = 1; k < 12 && notes.length < pcs.length; k++) if (pcs.includes((base + k) % 12) && !notes.some(n => n % 12 === (base + k) % 12)) notes.push(base + k);
+    if (notes.length < pcs.length) continue;
+    const cost = prev ? notes.reduce((a, n, j) => a + Math.abs(n - (prev[j] ?? prev[prev.length - 1])), 0) : Math.abs(notes[0] - 57 - reg);
+    if (cost < bestCost) { bestCost = cost; best = notes; }
+  }
+  return best;
+}
+function voiceLine() { const out = []; let prev = null; for (const c of line) { prev = voiceChord(c, prev); out.push(prev); } return out; }
 function lineLabel(c) { return NAMES[c.root] + ({ '': '', 'm': 'm', '5': '5', 'sus2': 'sus2', 'sus4': 'sus4', 'dim': 'dim', 'aug': 'aug', '7': '7', 'maj7': 'maj7', 'm7': 'm7' })[c.q]; }
 function drawSlots() {
-  $('slots').innerHTML = line.map((c, k) => `<button type="button" class="slot${k === editing ? ' editing' : ''}" data-k="${k}"><span class="n">${String(k + 1).padStart(2, '0')} · ${+$('lineBars').value} bar${+$('lineBars').value > 1 ? 's' : ''}</span><span class="c">${lineLabel(c)}</span></button>`).join('');
+  $('slots').innerHTML = line.map((c, k) => { const b = slotBars(c); return `<button type="button" class="slot${k === editing ? ' editing' : ''}" data-k="${k}"><span class="n">${String(k + 1).padStart(2, '0')} · ${b} bar${b > 1 ? 's' : ''}</span><span class="c">${lineLabel(c)}</span></button>`; }).join('');
   $('slots').querySelectorAll('.slot').forEach(b => b.addEventListener('click', () => {
-    editing = +b.dataset.k; $('editRoot').value = line[editing].root; $('editQ').value = line[editing].q; $('slotEdit').hidden = false; drawSlots();
+    editing = +b.dataset.k; const c = line[editing];
+    $('editRoot').value = c.root; $('editQ').value = c.q; $('editBars').value = String(slotBars(c)); $('slotEdit').hidden = false; drawSlots();
   }));
   markSlot(currentSlot);
 }
 let currentSlot = -1;
-function markSlot(s) { currentSlot = s; $('slots').querySelectorAll('.slot').forEach((b, k) => b.classList.toggle('playing', k === s)); lineHeld = new Set(s >= 0 && lastNotes ? lastNotes[s] : []); }
-function sendLine() { lastNotes = voiceLine(); if (node) node.port.postMessage({ t: 'line', line: lastNotes, barsPer: +$('lineBars').value }); store.set('ds-line', line); }
-function lineChanged() { drawSlots(); sendLine(); }
-function setProg(name) {
-  if (!PROGS[name]) return;
-  const key = +$('lineKey').value; line = PROGS[name].map(([s, q]) => ({ root: (key + s) % 12, q })); lineChanged();
+function markSlot(s) { currentSlot = s; $('slots').querySelectorAll('.slot').forEach((b, k) => b.classList.toggle('playing', k === s)); lineHeld = new Set(s >= 0 && lastNotes && lastNotes[s] ? lastNotes[s] : []); }
+function sendLine() {
+  lastNotes = voiceLine();
+  if (node) node.port.postMessage({ t: 'line', line: lastNotes.map((notes, k) => ({ notes, bars: slotBars(line[k]) })) });
+  store.set('ds-line2', { choice: lineChoice, dirty: lineDirty, key: lineKey, line });
 }
-$('lineProg').addEventListener('change', () => setProg($('lineProg').value));
-$('lineKey').addEventListener('change', () => { if ($('lineProg').value) setProg($('lineProg').value); else { lineChanged(); } });
-$('lineBars').addEventListener('change', lineChanged);
-$('lineAs').addEventListener('change', lineChanged);
-const editApply = () => { if (editing < 0) return; line[editing] = { root: +$('editRoot').value, q: $('editQ').value }; $('lineProg').value = ''; lineChanged(); };
-$('editRoot').addEventListener('change', editApply);
-$('editQ').addEventListener('change', editApply);
+function lineChanged() { drawSlots(); sendLine(); drawPads(); }
+function ownLine() { if (!lineDirty) { lineDirty = true; fillLines(); } }
+$('lineKey').addEventListener('change', () => {
+  const k = +$('lineKey').value, d = k - lineKey; lineKey = k;
+  if (lineDirty) line = line.map(c => ({ ...c, root: (c.root + d + 120) % 12 })); else line = lineFrom(lineBank[lineChoice], lineKey);
+  lineChanged();
+});
+for (const id of ['lineBars', 'lineAs', 'lineReg']) $(id).addEventListener('change', lineChanged);
+const editApply = () => {
+  if (editing < 0) return;
+  line[editing] = { root: +$('editRoot').value, q: $('editQ').value, u: +$('editBars').value / unitBars() };
+  ownLine(); lineChanged();
+};
+for (const id of ['editRoot', 'editQ', 'editBars']) $(id).addEventListener('change', editApply);
 $('editDone').addEventListener('click', () => { editing = -1; $('slotEdit').hidden = true; drawSlots(); });
 $('lineSurprise').addEventListener('input', () => { const v = +$('lineSurprise').value; $('lineSurpriseOut').textContent = Math.round(v * 100) + '%'; $('lineSurprise').style.setProperty('--pct', v * 100 + '%'); });
 $('lineSurprise').style.setProperty('--pct', '25%');
-// A new line in the key: mostly the chords of the minor key, now and then one borrowed from somewhere darker or brighter.
+// A new line in the key: mostly the chords of the minor key, now and then one borrowed from somewhere darker or brighter,
+// and now and then a chord that stays longer. Changes always land on a bar.
 $('lineNew').addEventListener('click', () => {
-  const key = +$('lineKey').value, surprise = +$('lineSurprise').value;
+  const surprise = +$('lineSurprise').value;
   const home = [[0, 'm'], [3, ''], [5, 'm'], [7, 'm'], [8, ''], [10, ''], [7, '']], weights = [3, 2, 2, 1, 3, 2, 1];
-  const odd = [[1, ''], [5, ''], [2, ''], [9, 'm'], [0, ''], [6, ''], [4, ''], [10, 'sus4']];
   const pickW = () => { let t = Math.random() * weights.reduce((a, b) => a + b); for (let k = 0; k < home.length; k++) { t -= weights[k]; if (t <= 0) return home[k]; } return home[0]; };
   const out = [[0, 'm']];
   while (out.length < 8) {
-    let c = Math.random() < surprise * .6 ? odd[Math.floor(Math.random() * odd.length)] : pickW();
+    let c = Math.random() < surprise * .6 ? ODD[Math.floor(Math.random() * ODD.length)] : pickW();
     if (out.length === 7) c = Math.random() < .6 ? [7, ''] : [10, ''];
     if (c[0] === out[out.length - 1][0] && c[1] === out[out.length - 1][1]) continue;
     out.push(c);
   }
-  line = out.map(([s, q]) => ({ root: (key + s) % 12, q })); $('lineProg').value = ''; lineChanged();
-  setStatus('A new chord line. Edit a chord by clicking it.');
+  line = out.map(([s, q]) => ({ root: (lineKey + s) % 12, q, u: Math.random() < surprise * .35 ? 2 : 1 }));
+  ownLine(); lineChanged();
+  setStatus('A new chord line. Click a chord to change it.');
 });
+
+/* ---------- Chord pads: twelve roots, each with the chord the key gives it ---------- */
+const PAD_Q = { 0: 'm', 1: '', 2: 'sus2', 3: '', 4: '', 5: 'm', 6: '', 7: '', 8: '', 9: 'm', 10: '', 11: 'dim' }, IN_KEY = [0, 2, 3, 5, 7, 8, 10];
+function drawPads() {
+  $('pads').innerHTML = Array.from({ length: 12 }, (_, pc) => {
+    const d = (pc - lineKey + 12) % 12, c = { root: pc, q: PAD_Q[d] };
+    return `<button type="button" class="pad${IN_KEY.includes(d) ? '' : ' out'}" data-pc="${pc}">${lineLabel(c)}</button>`;
+  }).join('');
+}
+{
+  const downs = new Map();
+  $('pads').addEventListener('pointerdown', e => {
+    const b = e.target.closest('.pad'); if (!b) return;
+    e.preventDefault(); b.setPointerCapture(e.pointerId);
+    const pc = +b.dataset.pc, notes = voiceChord({ root: pc, q: PAD_Q[(pc - lineKey + 12) % 12] }, null);
+    downs.set(e.pointerId, { b, notes }); b.classList.add('down'); notes.forEach(n => noteOn(n));
+  });
+  const up = e => { const d = downs.get(e.pointerId); if (!d) return; d.b.classList.remove('down'); d.notes.forEach(n => noteOff(n)); downs.delete(e.pointerId); };
+  $('pads').addEventListener('pointerup', up); $('pads').addEventListener('pointercancel', up);
+}
+
+/* ---------- Drums: STAB LAB's grooves, to hear the strings against a beat ---------- */
+const DRUMS = [
+  ['Floating dust', 68, 'Chill / Ambient', [[0, 10], [8], [2, 6, 10, 14]]], ['Slow neon', 76, 'Chill / Ambient', [[0, 7, 12], [8], [2, 6, 10, 14]]], ['Weightless', 84, 'Chill / Ambient', [[0, 11], [8], [0, 4, 8, 12]]],
+  ['Late air', 88, 'Chill / Ambient', [[0, 6, 14], [8], [2, 6, 10, 13, 14]]], ['Tape steps', 72, 'Chill / Ambient', [[0, 10], [7, 15], [2, 4, 6, 10, 12, 14]]], ['Breathing room', 90, 'Chill / Ambient', [[0, 6, 11], [8], [1, 5, 9, 13]]],
+  ['Sour Bristol', 78, 'Trip-hop / Darkwave', [[0, 7, 10], [8], [0, 2, 4, 6, 8, 10, 12, 14]]], ['Velvet smoke', 72, 'Trip-hop / Darkwave', [[0, 3, 10], [8], [0, 4, 6, 8, 12, 14]]], ['Cold wave', 112, 'Trip-hop / Darkwave', [[0, 8], [4, 12], [2, 6, 10, 14, 15]]], ['Witch steps', 70, 'Trip-hop / Darkwave', [[0, 11], [8], [0, 3, 6, 8, 11, 14]]],
+  ['Pocket 808', 82, 'Rap', [[0, 6, 11], [4, 12], [0, 2, 4, 6, 8, 10, 12, 14]]], ['Concrete swing', 86, 'Rap', [[0, 7, 10], [4, 12], [0, 2, 4, 6, 8, 10, 12, 14, 15]]], ['Dust break', 90, 'Rap', [[0, 3, 10], [4, 12], [0, 2, 5, 6, 8, 10, 13, 14]]],
+  ['Night train', 94, 'Rap', [[0, 6, 9, 14], [4, 12], [0, 2, 4, 6, 8, 10, 12, 14]]], ['Loose hands', 98, 'Rap', [[0, 7, 10, 15], [4, 12], [0, 2, 3, 6, 8, 10, 11, 14]]],
+  ['Broken house', 106, 'House / Broken', [[0, 6, 8, 14], [4, 12], [2, 6, 10, 14]]], ['Disco pocket', 110, 'House / Broken', [[0, 4, 8, 12], [4, 12], [2, 6, 10, 14]]], ['Warehouse', 116, 'House / Broken', [[0, 4, 8, 12], [4, 12], [0, 2, 4, 6, 8, 10, 12, 14]]],
+  ['Deep steps', 120, 'House / Broken', [[0, 4, 8, 12], [4, 12], [2, 6, 10, 14]]], ['Rubber floor', 122, 'House / Broken', [[0, 4, 8, 12], [4, 12], [1, 2, 5, 6, 9, 10, 13, 14]]], ['Neon engine', 128, 'House / Broken', [[0, 4, 8, 12], [4, 12], [2, 6, 10, 14, 15]]],
+].map(([name, bpm, group, pattern], i) => ({ name, bpm, group, pattern, i }));
+const drumPrefs = store.get('ds-drums', { on: false, i: 6, level: .5 });
+$('drumSel').innerHTML = [...new Set(DRUMS.map(d => d.group))].map(g => `<optgroup label="${g}">${DRUMS.filter(d => d.group === g).map(d => `<option value="${d.i}">${d.name} · ${d.bpm} BPM</option>`).join('')}</optgroup>`).join('');
+$('drumSel').value = String(drumPrefs.i); $('drumLevel').value = drumPrefs.level;
+$('drumLevel').style.setProperty('--pct', drumPrefs.level * 100 + '%');
+function sendDrums() {
+  const d = DRUMS[+$('drumSel').value], on = $('drumOn').getAttribute('aria-pressed') === 'true', level = +$('drumLevel').value;
+  $('drumLevel').style.setProperty('--pct', level * 100 + '%');
+  store.set('ds-drums', { on, i: d.i, level });
+  if (node) node.port.postMessage({ t: 'drums', drums: { on, pattern: d.pattern, level, slow: d.bpm < 92 } });
+}
+function setDrumsOn(on) { $('drumOn').setAttribute('aria-pressed', on); $('drumOn').textContent = on ? 'Drums on' : 'Drums off'; sendDrums(); }
+$('drumOn').addEventListener('click', () => setDrumsOn($('drumOn').getAttribute('aria-pressed') !== 'true'));
+$('drumSel').addEventListener('change', sendDrums);
+$('drumLevel').addEventListener('input', sendDrums);
+$('matchBpm').addEventListener('click', () => { $('tempo').value = DRUMS[+$('drumSel').value].bpm; $('tempo').dispatchEvent(new Event('change')); });
 
 /* ---------- Transport ---------- */
 const tempo = () => Math.max(40, Math.min(200, +$('tempo').value || 84));
-$('tempo').addEventListener('change', () => { $('tempo').value = tempo(); if (node) node.port.postMessage({ t: 'bpm', bpm: tempo() }); });
+$('tempo').addEventListener('change', () => { $('tempo').value = tempo(); store.set('ds-tempo', tempo()); if (node) node.port.postMessage({ t: 'bpm', bpm: tempo() }); });
+$('tempo').value = store.get('ds-tempo', 84);
 function setStatus(t) { $('status').textContent = t; }
 $('play').addEventListener('click', async () => {
   await startAudio();
@@ -691,6 +889,9 @@ $('play').addEventListener('click', async () => {
   setStatus(playing ? 'Playing the chord line. Chords change on bar one, where the Sub-Drop lands.' : 'Stopped.');
 });
 document.addEventListener('keydown', e => { if (e.code === 'Space' && !/INPUT|SELECT|TEXTAREA|BUTTON/.test(e.target.tagName)) { e.preventDefault(); $('play').click(); } });
+// Keep the page clear of the bar at the bottom, whatever its height
+$('dockMore').addEventListener('click', () => { const open = $('dock').classList.toggle('open'); $('dockMore').setAttribute('aria-expanded', open); $('dockMore').textContent = open ? 'Less' : 'More'; });
+new ResizeObserver(() => document.documentElement.style.setProperty('--dock-h', $('dock').offsetHeight + 'px')).observe($('dock'));
 
 /* ---------- Keyboard, computer keys and MIDI ---------- */
 const LOW = 36, HIGH = 84, keyEls = {};
@@ -743,6 +944,7 @@ if (navigator.requestMIDIAccess) {
   }).catch(() => {});
 }
 
-fillPresets(); drawSlots(); lastNotes = voiceLine();
-onCtl('level', () => {});
+fillLines(); drawSlots(); drawPads(); lastNotes = voiceLine();
+if (soundChoice !== '0') loadSound(soundChoice); else fillSounds();
+setDrumsOn(!!drumPrefs.on);
 </script>

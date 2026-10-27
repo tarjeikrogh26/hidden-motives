@@ -116,7 +116,7 @@ static void tuningCheck(float drift) {
 
 int main(int argc, char** argv) {
     if (argc < 2) { std::printf("render <out.wav> [preset|all] [sample folder] [bars per chord]\n"); return 1; }
-    const std::string out = argv[1], which = argc > 2 ? argv[2] : "Sonata";
+    const std::string out = argv[1], which = argc > 2 ? argv[2] : presets()[0].name;
     auto bank = argc > 3 ? loadSampleFolder(argv[3]) : std::make_shared<SampleBank>();
     const int bars = argc > 4 ? std::atoi(argv[4]) : 2;
     // Extra arguments id=value change single parameters, e.g. space=0 drift=1
