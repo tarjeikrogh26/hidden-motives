@@ -45,7 +45,7 @@ function renderStrip(){
  const p=M.project,tl=G.timeline(p),el=$('strip');el.replaceChildren();
  const blocks=[];for(const x of tl.parts){if(x.name==='build'){blocks.push(['build',x.start,tl.gapOut,`${p.build.bars} bars`]);blocks.push(['pre',tl.gapOut,tl.dropOut,p.pre.gapBeats?`${p.pre.gapBeats===4?'1 bar':p.pre.gapBeats+' beat'+(p.pre.gapBeats>1?'s':'')}`:'none']);}else blocks.push([x.name,x.start,x.end,`${p[x.name].bars} bars`]);}
  for(const [sec,a,e,info] of blocks){const b=document.createElement('button');b.className=sec+(['intro','breakdown','outro'].includes(sec)?' plain':'')+(M.section===sec?' on':'');b.dataset.sec=sec;b.dataset.a=a;b.dataset.e=e;b.style.flex=sec==='pre'?'0 0 auto':`${(e-a)/tl.total} 1 0`;b.innerHTML='<span></span><small></small><i></i>';b.querySelector('span').textContent=sec==='pre'?'PRE':G.NAMES[sec];b.querySelector('small').textContent=info;b.title=`Play from the ${sec==='pre'?'pre-drop':G.NAMES[sec].toLowerCase()} (and edit it)`;b.onclick=()=>{M.section=sec;renderAll();if(M.player?.playing()&&sec!=='pre')loop();else playFrom(sec);};el.append(b);}
- const has=G.SKETCH.some(k=>p.song?.[k]),t=$('mSketch');t.textContent=has?'− Remove intro, breakdown, outro':'+ Suggest the rest of the song';t.classList.toggle('on',has);$('mExAll').textContent=has?'WAV · whole song sketch':'WAV · build-up + drop';
+ const has=G.SKETCH.some(k=>p.song?.[k]),t=$('mSketch');t.textContent=has?'− Remove intro, breakdown, outro':'+ Suggest the rest of the song';t.classList.toggle('on',has);$('mExAll').textContent=M.view==='song'?'WAV · whole song':has?'WAV · whole song sketch':'WAV · build-up + drop';
 }
 function renderSecbar(){
  const el=$('secbar'),p=M.project,sec=M.section;el.replaceChildren();
