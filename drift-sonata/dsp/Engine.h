@@ -7,18 +7,49 @@
 #include "Bits.h"
 #include "Harmony.h"
 #include "Params.h"
+#include "Space3D.h"
+#include "Vocoder.h"
 
 namespace ds {
 
-// Sampled single notes (choir, cello) the granular layers read from.
+// Sampled single notes (choir, cello, strings, brass) the granular layers read from.
 struct Zone { std::vector<float> data; float sr = 48000; float root = 60; int family = 0; };
-enum Family { kChoir = 0, kCello = 1, kFamilies = 2 };
+// Texture is not played per note: one bed of recorded atmosphere, moved to the chord's root.
+enum Family { kChoir = 0, kCello = 1, kStrings = 2, kBrass = 3, kTexture = 4, kFamilies = 5 };
+
+// Wavetables made from the recordings: 2048-sample cycles, several frames to glide through, and for each frame a
+// copy per octave with only the harmonics that fit under half the sample rate (so high notes never alias).
+enum Table { kTableCello = 0, kTableChoir, kTableStrings, kTableBrass, kTableChimera, kTables };
+struct Wavetable {
+    static constexpr int N = 2048, kLevels = 11;
+    int frames = 0;
+    std::vector<float> raw, mip;
+    void build() {
+        if (frames <= 0 || (int)raw.size() < frames * N) { frames = 0; return; }
+        mip.assign((size_t)kLevels * frames * N, 0.f);
+        std::vector<float> re(N), im(N), r2(N), i2(N);
+        for (int f = 0; f < frames; f++) {
+            for (int i = 0; i < N; i++) { re[i] = raw[(size_t)f * N + i]; im[i] = 0; }
+            fft(re.data(), im.data(), N, false);
+            for (int L = 0; L < kLevels; L++) {
+                const int limit = std::max(1, (N / 2) >> L);
+                for (int k = 0; k < N; k++) { const int h = k <= N / 2 ? k : N - k; const bool keep = h >= 1 && h <= limit && h < N / 2; r2[k] = keep ? re[k] : 0; i2[k] = keep ? im[k] : 0; }
+                fft(r2.data(), i2.data(), N, true);
+                float* dst = &mip[((size_t)L * frames + f) * N];
+                for (int i = 0; i < N; i++) dst[i] = r2[i] / N;
+            }
+        }
+    }
+    const float* frame(int level, int f) const { return &mip[((size_t)level * frames + f) * N]; }
+};
 
 struct SampleBank {
     std::vector<Zone> zones;
-    float lo[kFamilies] = {200, 200}, hi[kFamilies] = {-200, -200};
+    Wavetable tables[kTables];
+    float lo[kFamilies] = {200, 200, 200, 200, 200}, hi[kFamilies] = {-200, -200, -200, -200, -200};
     void finish() {
         for (const Zone& z : zones) { lo[z.family] = std::min(lo[z.family], z.root); hi[z.family] = std::max(hi[z.family], z.root); }
+        for (Wavetable& t : tables) if (!t.raw.empty() && t.mip.empty()) t.build();
     }
     bool has(int fam) const { return hi[fam] >= lo[fam]; }
 };
@@ -26,6 +57,8 @@ struct SampleBank {
 class Engine {
 public:
     static constexpr int kVoices = 32, kOsc = 6, kGrains = 4, kCtl = 32;
+    // Sound sources in the 3D room: the six oscillators, the four recorded layers, the robot
+    static constexpr int kRobotSrc = kOsc + kFamilies, kSources = kOsc + kFamilies + 1;
 
     void prepare(double sampleRate, int maxBlock);
     void reset();
@@ -46,11 +79,15 @@ public:
     void process(float* left, float* right, int n);
 
     // For the screen: what the chord is right now.
-    struct Display { int root = -1; Quality q = Quality::Unknown; int notes[16]; int count = 0; float subLevel = 0; };
+    struct Display {
+        int root = -1; Quality q = Quality::Unknown; int notes[16]; int count = 0; float subLevel = 0;
+        float pos[kSources][3] = {};  // azimuth, elevation (radians), distance (m)
+        float level[kSources] = {};   // how loud each source is now
+    };
     Display display() const { return disp; }
 
 private:
-    struct Osc { float ph = 0, last = 0, inc = 0, pw = .5f, pwPh = 0, pwRate = .2f; Wander drift; GlideHold hold; };
+    struct Osc { float ph = 0, last = 0, inc = 0, pw = .5f, pwPh = 0, pwRate = .2f, morphPh = 0, morphRate = .1f, morph = 0; int level = 0; Wander drift; GlideHold hold; };
     struct Grain { int zone = -1; double pos = 0, rate = 1; int age = 0, len = 0; float pan = 0; };
     struct Layer { Grain g[kGrains]; int countdown = 0; Wander drift; };
     struct Voice {
@@ -60,8 +97,8 @@ private:
         float converge = 1; GlideHold convergeHold;
         Wander voiceDrift; GlideHold cutHold;
         Osc osc[kOsc];
-        float oscGainL[kOsc] = {}, oscGainR[kOsc] = {};
-        Svf filt[2][2];
+        Svf of[kOsc][2];       // each oscillator through the voice filter on its own, so it can sit in its own place
+        Svf lf[kFamilies];
         Layer layer[kFamilies];
         Rng rng;
     };
@@ -70,7 +107,7 @@ private:
     void startVoice(int note, int role, int order, float vel);
     Voice* allocVoice();
     void controlUpdate();
-    float renderGrains(Voice& v, int fam, float& outR, const SampleBank& bank);
+    float renderGrains(Voice& v, int fam, const SampleBank& bank);
     void triggerSub();
     float temperFor(int note) const;
     float temperature() const;
@@ -100,7 +137,7 @@ private:
     float motionPh = 0, motionVals[3] = {}, lorenz[3] = {.1f, 0, 0}, chaosX = 0, chaosZ = 0;
     float cutoffHz = 2000, resQ = .7f, beatHz = 1, capCents = 10, driftSigma = 2, driftTau = 2;
     float oscLevel[kOsc] = {}, oscNorm = .2f, fmIndex = 0, pwmDepth = .4f, driveGain = 1;
-    float choirLevel = 0, celloLevel = 0, voxMix = 0, airLevel = 0, shimmerAmt = 0, widthAmt = 1, ensembleAmt = 0;
+    float layerLevel[kFamilies] = {}, voxMix = 0, airLevel = 0, shimmerAmt = 0, widthAmt = 1, ensembleAmt = 0;
     float vowelPos = 0;
 
     // Bus effects
@@ -109,6 +146,11 @@ private:
     DelayLine ensL, ensR; float ensPh = 0, ensFastPh = 0;
     DelayLine tapeL, tapeR; float wowPh = 0, flutPh = 0; Svf hissF;
     Svf airL[6], airR[6]; float airGain[6] = {}; GlideHold airBreath[6]; int airCount = 0;
+    float airFollow = 0, breathAmt = 0; Svf breathHpL, breathHpR, breathLpL, breathLpR; GlideHold breathHold;
+    // 3D room and robot
+    Binaural space[kSources]; float srcPh[kSources] = {}, srcRate[kSources] = {}, srcDir[kSources] = {}, bus[kSources] = {}, srcMeter[kSources] = {};
+    Vocoder vocoder; MachineWords words; float robotAmt = 0;
+    Voice texVoice; float texEnv = 0;
     DelayLine dubL, dubR; Biquad dubLp, dubHp; float dubTime = .375f;
     // Reverb: 8-line feedback delay network with a shimmer (octave up) in the loop
     DelayLine fdn[8]; float fdnLen[8] = {}, fdnLp[8] = {}, fdnGk[8] = {}, revDamp = .3f; float fdnModPh = 0;

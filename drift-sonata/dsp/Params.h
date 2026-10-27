@@ -18,13 +18,15 @@ enum P {
     // Tone and movement
     Cutoff, Resonance, FilterMotion, Attack, Release, Pwm, Cross, Chaos, Life, Drive,
     // Layers
-    Choir, Cello, Vox, Vowel,
+    Choir, Cello, Vox, Vowel, StringLayer, BrassLayer, TextureLayer,
     // Harmony
     Expand, ChordColor, Key, KeyMinor, KeepBass, Unfold, Glide,
     // Fundament
     FundFade, FundFollow, FundRoot,
     // Space
     Ensemble, Width, Shimmer, Size, Freeze, Delay, DelayTime, Pocket, Motion, MotionBars, Level,
+    // 3D orbit and the vocoder
+    Orbit, OrbitSpeed, Distance, Overhead, Space3D, Robot, RobotVoice, RobotRate,
     COUNT
 };
 
@@ -60,7 +62,7 @@ inline const std::vector<ParamInfo>& params() {
         f(Space, "space", "Space", 0, 1, .5f);
         f(Intensity, "intensity", "Intensity", 0, 1, 1);
         f(Tape, "tape", "Analog", 0, 1, .3f);
-        f(Air, "air", "Air", 0, 1, .2f);
+        f(Air, "air", "Air", 0, 1, .35f);
 
         static const char* oscIds[6][7] = {
             {"o1on", "o1wave", "o1oct", "o1semi", "o1fine", "o1level", "o1pan"}, {"o2on", "o2wave", "o2oct", "o2semi", "o2fine", "o2level", "o2pan"},
@@ -79,7 +81,7 @@ inline const std::vector<ParamInfo>& params() {
         for (int o = 0; o < 6; o++) {
             P base = (P)oscParam(o, 0);
             b(base, oscIds[o][0], oscNames[o][0], true);
-            c((P)(base + 1), oscIds[o][1], oscNames[o][1], {"Saw", "Pulse", "Triangle", "Sine"}, waves[o]);
+            c((P)(base + 1), oscIds[o][1], oscNames[o][1], {"Saw", "Pulse", "Triangle", "Sine", "Morph", "Cello", "Choir", "Strings", "Brass", "Chimera"}, waves[o]);
             i((P)(base + 2), oscIds[o][2], oscNames[o][2], -2, 2, (float)octs[o]);
             i((P)(base + 3), oscIds[o][3], oscNames[o][3], -12, 12, 0);
             f((P)(base + 4), oscIds[o][4], oscNames[o][4], -50, 50, 0, 0, "ct");
@@ -102,6 +104,9 @@ inline const std::vector<ParamInfo>& params() {
         f(Cello, "cello", "Cello", 0, 1, .2f);
         f(Vox, "vox", "Vox", 0, 1, .15f);
         f(Vowel, "vowel", "Vowel", 0, 1, .3f);
+        f(StringLayer, "stringlayer", "Strings", 0, 1, .2f);
+        f(BrassLayer, "brass", "Brass", 0, 1, 0);
+        f(TextureLayer, "texture", "Texture", 0, 1, .2f);
 
         c(Expand, "expand", "Expand", {"Auto", "As played", "Octave & fifth", "Seventh", "Five notes", "Eleven & thirteen"}, 0);
         c(ChordColor, "color", "Colour", {"Bright", "Dark", "Neutral", "Kraftwerk", "Carlos"}, 0);
@@ -126,6 +131,16 @@ inline const std::vector<ParamInfo>& params() {
         f(Motion, "motion", "Motion", 0, 1, .45f);
         c(MotionBars, "motionbars", "Motion bars", {"4", "8", "16", "32"}, 2);
         f(Level, "level", "Level", -24, 6, 0, 0, "dB");
+
+        // Each oscillator, the choir, the cello and the robot is its own sound source around the listener's head.
+        f(Orbit, "orbit", "Orbit", 0, 1, .35f);
+        f(OrbitSpeed, "orbitspeed", "Orbit speed", 0, 1, .3f);
+        f(Distance, "distance", "Distance", 0, 1, .3f);
+        f(Overhead, "overhead", "Overhead", 0, 1, .3f);
+        f(Space3D, "space3d", "Binaural", 0, 1, .85f);
+        f(Robot, "robot", "Robot", 0, 1, 0);
+        c(RobotVoice, "robotvoice", "Robot voice", {"Choir", "Machine words"}, 0);
+        c(RobotRate, "robotrate", "Words", {"1/2", "1/4", "1/8", "1/16"}, 2);
         return v;
     }();
     return t;

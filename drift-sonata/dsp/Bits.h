@@ -71,6 +71,10 @@ struct Biquad {
         float w = kTwoPi * hz / sr, al = std::sin(w) / (2 * q), c = std::cos(w), a0 = 1 + al;
         b0 = (1 + c) / 2 / a0; b1 = -(1 + c) / a0; b2 = b0; a1 = -2 * c / a0; a2 = (1 - al) / a0;
     }
+    void bandpass(float hz, float q, float sr) {  // 0 dB at the centre
+        float w = kTwoPi * hz / sr, al = std::sin(w) / (2 * q), c = std::cos(w), a0 = 1 + al;
+        b0 = al / a0; b1 = 0; b2 = -al / a0; a1 = -2 * c / a0; a2 = (1 - al) / a0;
+    }
     void lowpass(float hz, float q, float sr) {
         float w = kTwoPi * hz / sr, al = std::sin(w) / (2 * q), c = std::cos(w), a0 = 1 + al;
         b0 = (1 - c) / 2 / a0; b1 = (1 - c) / a0; b2 = b0; a1 = -2 * c / a0; a2 = (1 - al) / a0;
@@ -95,6 +99,29 @@ inline float polyBlep(float t, float dt) {
     if (t < dt) { t /= dt; return t + t - t * t - 1; }
     if (t > 1 - dt) { t = (t - 1) / dt; return t * t + t + t + 1; }
     return 0;
+}
+
+// In-place radix-2 FFT (size a power of two). The inverse is not scaled.
+inline void fft(float* re, float* im, int n, bool inverse) {
+    for (int i = 1, j = 0; i < n; i++) {
+        int bit = n >> 1;
+        for (; j & bit; bit >>= 1) j ^= bit;
+        j ^= bit;
+        if (i < j) { std::swap(re[i], re[j]); std::swap(im[i], im[j]); }
+    }
+    for (int len = 2; len <= n; len <<= 1) {
+        const double ang = 2 * 3.14159265358979323846 / len * (inverse ? 1 : -1);
+        const float wr = (float)std::cos(ang), wi = (float)std::sin(ang);
+        for (int i = 0; i < n; i += len) {
+            float cr = 1, ci = 0;
+            for (int k = 0; k < len / 2; k++) {
+                const int a = i + k, b = a + len / 2;
+                const float tr = re[b] * cr - im[b] * ci, ti = re[b] * ci + im[b] * cr;
+                re[b] = re[a] - tr; im[b] = im[a] - ti; re[a] += tr; im[a] += ti;
+                const float nr = cr * wr - ci * wi; ci = cr * wi + ci * wr; cr = nr;
+            }
+        }
+    }
 }
 
 }  // namespace ds

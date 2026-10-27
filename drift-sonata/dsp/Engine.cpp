@@ -14,6 +14,10 @@ const float kVowels[4][3] = {{300, 870, 2240}, {570, 840, 2410}, {730, 1090, 244
 const float kFormGain[3] = {1.f, .55f, .3f}, kFormQ[3] = {6, 8, 11};
 // Voices sum to a level that leaves room: a full chord sits around -18 dBFS RMS before the room.
 const float kVoiceBus = .3f;
+// Machine words: syllable length in quarter notes for 1/2, 1/4, 1/8, 1/16
+const double kWordLen[4] = {2, 1, .5, .25};
+// Recorded layers at full sit a few dB under the synth at full (measured): choir, cello, strings, brass, texture
+const float kLayerGain[5] = {1.3f, 1.4f, 1.2f, 2.2f, 3.5f};
 const float kFdnMs[8] = {37.1f, 41.3f, 47.9f, 53.7f, 59.3f, 67.1f, 73.9f, 83.3f};
 
 inline void hadamard8(float* x) {
@@ -39,6 +43,10 @@ void Engine::prepare(double sampleRate, int maxBlock) {
     hissF.set(6500, .7f, (float)sr);
     dubLp.lowpass(2400, .7f, (float)sr); dubHp.highpass(220, .7f, (float)sr);
     revHpL.highpass(110, .7f, (float)sr); revHpR = revHpL; shimHp.highpass(280, .7f, (float)sr);
+    breathHpL.set(3500, .6f, (float)sr); breathHpR = breathHpL; breathLpL.set(11000, .6f, (float)sr); breathLpR = breathLpL;
+    for (Binaural& b : space) b.prepare((float)sr);
+    vocoder.prepare((float)sr); words.prepare((float)sr);
+    texVoice = Voice(); texVoice.rng = Rng(9001); texEnv = 0;
     reset();
 }
 
@@ -51,6 +59,10 @@ void Engine::reset() {
     std::fill(fdnLp, fdnLp + 8, 0.f);
     std::fill(limBufL.begin(), limBufL.end(), 0.f); std::fill(limBufR.begin(), limBufR.end(), 0.f); std::fill(limGain.begin(), limGain.end(), 1.f);
     for (int i = 0; i < kVoices; i++) voices[i].rng = Rng(0x1234567u * seed + i * 7919u);
+    {
+        Rng r(4242u + seed);
+        for (int k = 0; k < kSources; k++) { srcPh[k] = r.uni() * kTwoPi; srcRate[k] = .6f + .8f * r.uni(); srcDir[k] = r.uni() < .5f ? -1.f : 1.f; srcMeter[k] = 0; }
+    }
     rng = Rng(12345u * seed);
 }
 
@@ -120,7 +132,7 @@ void Engine::startVoice(int note, int role, int order, float vel) {
     v.temper = temperFor(note);
     v.voiceDrift.init(r, .5f);
     v.converge = .7f + .3f * r.uni();
-    for (Osc& o : v.osc) { o.ph = r.uni(); o.pwPh = r.uni() * kTwoPi; o.pwRate = .07f + .35f * r.uni(); o.drift.init(r, driftSigma); }
+    for (Osc& o : v.osc) { o.ph = r.uni(); o.pwPh = r.uni() * kTwoPi; o.pwRate = .07f + .35f * r.uni(); o.morphPh = r.uni() * kTwoPi; o.morphRate = .03f + .22f * r.uni(); o.drift.init(r, driftSigma); }
     for (Layer& l : v.layer) { l.countdown = (int)(r.uni() * 0.02 * sr); l.drift.init(r, 2); }
 }
 
@@ -199,7 +211,8 @@ void Engine::controlUpdate() {
     const float dt = kCtl / (float)sr, sour = p[Drift], life = p[Life], I = p[Intensity];
     // Harmony settings changed while a chord is held: fold it out again.
     const int ex = expandLevel(), co = (int)std::lround(p[ChordColor]), ke = (int)std::lround(p[Key]), km = p[KeyMinor] > .5f, kb = p[KeepBass] > .5f;
-    if ((ex != lastExpand || co != lastColor || ke != lastKey || km != lastKeyMinor || kb != lastKeepBass) && !held.empty() && pendingRecompute < 0) recompute();
+    // (fresh, without leading from the voicing before, so turning a setting back gives back the same chord)
+    if ((ex != lastExpand || co != lastColor || ke != lastKey || km != lastKeyMinor || kb != lastKeepBass) && !held.empty() && pendingRecompute < 0) { prevVoicing.clear(); recompute(); }
     lastExpand = ex; lastColor = co; lastKey = ke; lastKeyMinor = km; lastKeepBass = kb;
 
     beatHz = .06f + 7.f * std::pow(sour, 1.6f);
@@ -239,8 +252,12 @@ void Engine::controlUpdate() {
     fmIndex = p[Cross] * p[Cross] * .22f * (1 + .6f * chaos * chaosX);
     pwmDepth = p[Pwm];
     driveGain = 1 + 4 * p[Drive];
-    choirLevel = p[Choir] * wLayer * (1 + .4f * mot * motionVals[2]);
-    celloLevel = p[Cello] * wLayer;
+    layerLevel[kChoir] = p[Choir] * wLayer * (1 + .4f * mot * motionVals[2]);
+    layerLevel[kCello] = p[Cello] * wLayer;
+    layerLevel[kStrings] = p[StringLayer] * wLayer * (1 + .3f * mot * motionVals[0]);
+    layerLevel[kBrass] = p[BrassLayer] * wLayer;
+    layerLevel[kTexture] = p[TextureLayer] * wLayer * (1 + .3f * mot * motionVals[1]);
+    robotAmt = p[Robot];
     voxMix = p[Vox] * wLayer;
     vowelPos = clampf(p[Vowel] + .3f * mot * motionVals[1], 0, 1);
     airLevel = p[Air] * wTop;
@@ -272,10 +289,31 @@ void Engine::controlUpdate() {
     }
     revDamp = freeze ? 1.f : 1 - std::exp(-kTwoPi * (2500 + 6000 * (1 - size)) / (float)sr);
 
-    for (int a = 0; a < airCount; a++) airGain[a] = clampf(.6f + airBreath[a].step(rng, dt, 1, 5, 1.5f, .5f), 0, 1.4f);
+    // Air breathes, but never far from where the fader puts it (about +-2 dB)
+    for (int a = 0; a < 6; a++) airGain[a] = clampf(.85f + airBreath[a].step(rng, dt, 1, 5, 1.5f, .18f), .6f, 1.1f);
+    breathAmt = clampf(.85f + breathHold.step(rng, dt, 1.5f, 6, 2, .15f), .65f, 1.05f);
+
+    // The 3D room: every source drifts round the head on its own path. Orbit 0 leaves each where its pan puts it.
+    {
+        const float orbit = p[Orbit], hz = .01f + .3f * p[OrbitSpeed] * p[OrbitSpeed], over = p[Overhead], dist = .7f + 2.3f * p[Distance], amt = p[Space3D];
+        const float widthPan = clampf(widthAmt, 0, 1.2f);
+        for (int k = 0; k < kSources; k++) {
+            srcPh[k] += kTwoPi * hz * srcRate[k] * srcDir[k] * dt;
+            if (srcPh[k] > 1000) srcPh[k] -= 100 * kTwoPi; else if (srcPh[k] < -1000) srcPh[k] += 100 * kTwoPi;
+            const float base = k < kOsc ? p[oscParam(k, 6)] * kPi / 2 * widthPan
+                             : k == kRobotSrc ? 0.f : (k - kOsc - (kFamilies - 1) / 2.f) * .5f * widthPan;  // the recorded layers spread left to right
+            const float ph = srcPh[k], phase = (float)k;
+            const float az = base * (1 - .5f * orbit) + orbit * (kPi * .85f * std::sin(ph) + .55f * kPi * std::sin(.37f * ph + phase));
+            const float el = over * (.15f + .85f * orbit) * .9f * std::sin(.53f * ph + 1.3f * phase);
+            const float d = dist * (1 + .35f * orbit * std::sin(.29f * ph + 2 * phase));
+            space[k].place(az, el, d, amt);
+            disp.pos[k][0] = az; disp.pos[k][1] = el; disp.pos[k][2] = d;
+            disp.level[k] = srcMeter[k];
+        }
+    }
 
     // Voices
-    const float glideT = std::max(1e-4f, p[Glide] * .4f), widthPan = clampf(widthAmt, 0, 1);
+    const float glideT = std::max(1e-4f, p[Glide] * .4f);
     for (Voice& v : voices) {
         if (!v.active) continue;
         Rng& r = v.rng;
@@ -301,22 +339,30 @@ void Engine::controlUpdate() {
             o.pwPh += kTwoPi * o.pwRate * dt * (1 + chaos * chaosX * .5f);
             if (o.pwPh > kTwoPi) o.pwPh -= kTwoPi;
             o.pw = clampf(.5f + .42f * pwmDepth * std::sin(o.pwPh), .06f, .94f);
-            const float pan = clampf(p[oscParam(i, 6)] * widthPan, -1, 1), a = (pan + 1) * kPi / 4;
-            v.oscGainL[i] = std::cos(a) * 1.4142f; v.oscGainR[i] = std::sin(a) * 1.4142f;
+            // Morph glides the wave through sine, triangle, saw and pulse, each oscillator at its own pace
+            o.morphPh += kTwoPi * o.morphRate * (.4f + life + mot) * dt * (1 + chaos * chaosX * .5f);
+            if (o.morphPh > kTwoPi) o.morphPh -= kTwoPi;
+            o.morph = 1.5f + 1.5f * std::sin(o.morphPh);
+            // which octave copy of a wavetable this pitch may use: no harmonic above half the sample rate
+            o.level = std::min(Wavetable::kLevels - 1, std::max(0, (int)std::ceil(std::log2(1024.f / std::max(1.f, std::floor(.5f / std::max(o.inc, 1e-6f)))))));
         }
         const float cutMove = v.cutHold.step(r, dt, 1.5f, 6, 2.5f, .5f * p[FilterMotion] * (.4f + life));
         const float hz = cutoffHz * std::pow(2.f, (v.pitch - 60) / 24 + cutMove) * (.55f + .45f * std::min(1.f, v.env * 1.2f));
-        for (int c = 0; c < 2; c++) { v.filt[c][0].set(hz, resQ, (float)sr); v.filt[c][1].set(hz, .6f, (float)sr); }
+        Svf a, b2; a.set(hz, resQ, (float)sr); b2.set(hz, .6f, (float)sr);
+        auto coef = [](Svf& dst, const Svf& src) { dst.a1 = src.a1; dst.a2 = src.a2; dst.a3 = src.a3; dst.k = src.k; };
+        for (int i = 0; i < kOsc; i++) { coef(v.of[i][0], a); coef(v.of[i][1], b2); }
+        for (int f = 0; f < kFamilies; f++) coef(v.lf[f], b2);
         for (Layer& l : v.layer) l.drift.step(r, dt, 3, 3 + 18 * sour);
     }
     disp.subLevel = sub.env * p[SubDrop];
 }
 
-float Engine::renderGrains(Voice& v, int fam, float& outR, const SampleBank& b) {
+float Engine::renderGrains(Voice& v, int fam, const SampleBank& b) {
     Layer& L = v.layer[fam];
     Rng& r = v.rng;
     if (--L.countdown <= 0) {
         // A new grain from a nearby recorded note, pitched to this voice and a little out of tune with the synth.
+        const bool tex = fam == kTexture;
         float note = v.pitch + L.drift.x / 100;
         const float lo = b.lo[fam] - 6, hi = b.hi[fam] + 6;
         while (note < lo) note += 12;
@@ -326,13 +372,13 @@ float Engine::renderGrains(Voice& v, int fam, float& outR, const SampleBank& b) 
         int pick = -1, seen = 0;
         for (int i = 0; i < (int)b.zones.size(); i++) {
             const Zone& z = b.zones[i];
-            if (z.family != fam || std::abs(z.root - note) > best + 1.f) continue;
+            if (z.family != fam || std::abs(z.root - note) > best + (tex ? 2.5f : 1.f)) continue;
             if (r.uni() * (++seen) < 1) pick = i;
         }
         int slot = 0;
         for (int k = 1; k < kGrains; k++) if (L.g[k].age >= L.g[k].len && L.g[slot].age < L.g[slot].len) slot = k; else if (L.g[k].age - L.g[k].len > L.g[slot].age - L.g[slot].len) slot = k;
         Grain& g = L.g[slot];
-        int len = (int)(.16f * sr * (.8f + .4f * r.uni()));
+        int len = (int)((tex ? .5f : .16f) * sr * (.8f + .4f * r.uni()));
         if (pick >= 0) {
             const Zone& z = b.zones[pick];
             const double rate = std::pow(2.0, (note - z.root) / 12.0) * z.sr / sr;
@@ -343,7 +389,7 @@ float Engine::renderGrains(Voice& v, int fam, float& outR, const SampleBank& b) 
         }
         L.countdown = std::max(16, len / 3);
     }
-    float l = 0, rr = 0;
+    float l = 0;
     for (Grain& g : L.g) {
         if (g.zone < 0 || g.age >= g.len || g.zone >= (int)b.zones.size()) continue;
         const std::vector<float>& d = b.zones[g.zone].data;
@@ -352,10 +398,9 @@ float Engine::renderGrains(Voice& v, int fam, float& outR, const SampleBank& b) 
         const float f = (float)(g.pos - i), x = d[i] + (d[i + 1] - d[i]) * f;
         const float w = .5f - .5f * std::cos(kTwoPi * g.age / g.len);
         const float s = x * w;
-        l += s * (1 - g.pan); rr += s * (1 + g.pan);
+        l += s;
         g.pos += g.rate; g.age++;
     }
-    outR = rr * .5f;
     return l * .5f;
 }
 
@@ -366,6 +411,7 @@ void Engine::process(float* outL, float* outR, int n) {
         if (bankChanged) {
             old = std::move(bank); bank = pendingBank; bankChanged = false;
             for (Voice& v : voices) for (Layer& l : v.layer) for (Grain& g : l.g) g.zone = -1;
+            for (Layer& l : texVoice.layer) for (Grain& g : l.g) g.zone = -1;
         }
         bankLock.clear(std::memory_order_release);
     }
@@ -393,43 +439,87 @@ void Engine::process(float* outL, float* outR, int n) {
         }
         if (pendingRecompute > 0 && --pendingRecompute == 0) recompute();
 
-        // Voices
-        float L = 0, R = 0;
+        // Voices: each oscillator and each recorded layer sums into its own source
+        for (int k = 0; k < kSources; k++) bus[k] = 0;
+        float envMax = 0;
+        const bool robotChoir = robotAmt > .001f && p[RobotVoice] < .5f && b && b->has(kChoir);
         for (Voice& v : voices) {
             if (!v.active) continue;
             if (v.delay > 0) { v.delay--; continue; }
             if (v.gate) { v.env += (1.3f - v.env) * v.attackCoef; if (v.env > 1) v.env = 1; }
             else { v.env -= v.env * v.releaseCoef; if (v.env < 1e-4f) { v.active = false; continue; } }
-            float sL = 0, sR = 0, prev = v.osc[kOsc - 1].last;
+            const float a = v.env * v.gain * v.vel;
+            envMax = std::max(envMax, v.gate ? v.env : v.env * .5f);
+            float prev = v.osc[kOsc - 1].last;
             for (int i = 0; i < kOsc; i++) {
                 if (oscLevel[i] <= 0) continue;
                 Osc& o = v.osc[i];
                 const float inc = std::max(1e-6f, o.inc * (1 + fmIndex * prev));
                 o.ph += inc; if (o.ph >= 1) o.ph -= 1;
+                auto shape = [&](int w) {
+                    switch (w) {
+                        case 0: return 2 * o.ph - 1 - polyBlep(o.ph, inc);
+                        case 1: { float y = o.ph < o.pw ? 1.f : -1.f; y += polyBlep(o.ph, inc); float t2 = o.ph + 1 - o.pw; if (t2 >= 1) t2 -= 1; return y - polyBlep(t2, inc); }
+                        case 2: return 1 - 4 * std::fabs(o.ph - .5f);
+                        default: return std::sin(kTwoPi * o.ph);
+                    }
+                };
                 float y;
-                switch (waves[i]) {
-                    case 0: y = 2 * o.ph - 1 - polyBlep(o.ph, inc); break;
-                    case 1: { y = o.ph < o.pw ? 1.f : -1.f; y += polyBlep(o.ph, inc); float t2 = o.ph + 1 - o.pw; if (t2 >= 1) t2 -= 1; y -= polyBlep(t2, inc); break; }
-                    case 2: y = 1 - 4 * std::fabs(o.ph - .5f); break;
-                    default: y = std::sin(kTwoPi * o.ph); break;
-                }
+                if (waves[i] >= 5) {
+                    // A wavetable from the recordings, gliding through its frames with the morph
+                    const Wavetable* t = b ? &b->tables[std::min(kTables - 1, waves[i] - 5)] : nullptr;
+                    if (t && t->frames > 0) {
+                        const float fp = o.morph / 3 * (t->frames - 1); const int f0 = std::min(t->frames - 1, (int)fp), f1 = std::min(t->frames - 1, f0 + 1);
+                        const float ff = fp - f0, pp = o.ph * Wavetable::N; const int i0 = (int)pp & (Wavetable::N - 1), i1 = (i0 + 1) & (Wavetable::N - 1);
+                        const float fr = pp - (int)pp, *A = t->frame(o.level, f0), *B = t->frame(o.level, f1);
+                        const float a0 = A[i0] + (A[i1] - A[i0]) * fr, b0 = B[i0] + (B[i1] - B[i0]) * fr;
+                        y = (a0 + (b0 - a0) * ff) * 1.4f;
+                    } else y = shape(0);
+                } else if (waves[i] == 4) {
+                    // Morph: sine -> triangle -> saw -> pulse, crossfading between neighbours
+                    static const int order[4] = {3, 2, 0, 1};
+                    const int m = std::min(2, (int)o.morph); const float f = o.morph - m;
+                    y = shape(order[m]) * (1 - f) + shape(order[m + 1]) * f;
+                } else y = shape(waves[i]);
                 o.last = y; prev = y;
-                sL += y * oscLevel[i] * v.oscGainL[i]; sR += y * oscLevel[i] * v.oscGainR[i];
+                bus[i] += v.of[i][1].low(v.of[i][0].low(y)) * a;
             }
-            sL *= oscNorm; sR *= oscNorm;
-            if (b) {
-                if (choirLevel > 0 && b->has(kChoir)) { float gr; const float gl = renderGrains(v, kChoir, gr, *b); sL += gl * choirLevel * .9f; sR += gr * choirLevel * .9f; }
-                if (celloLevel > 0 && b->has(kCello)) { float gr; const float gl = renderGrains(v, kCello, gr, *b); sL += gl * celloLevel * .9f; sR += gr * celloLevel * .9f; }
+            if (b) for (int f = 0; f < kFamilies; f++) {
+                if (f == kTexture) continue;
+                if ((layerLevel[f] <= 0 && !(f == kChoir && robotChoir)) || !b->has(f)) continue;
+                bus[kOsc + f] += v.lf[f].low(renderGrains(v, f, *b)) * a;
             }
-            if (driveGain > 1.01f) { sL = std::tanh(sL * driveGain) / driveGain; sR = std::tanh(sR * driveGain) / driveGain; }
-            sL = v.filt[0][1].low(v.filt[0][0].low(sL));
-            sR = v.filt[1][1].low(v.filt[1][0].low(sR));
-            const float a = v.env * v.gain * v.vel;
-            L += sL * a; R += sR * a;
+        }
+        airFollow += (envMax - airFollow) * (envMax > airFollow ? .002f : .0004f);
+        // Texture: one bed for the whole chord, swelling in and out slowly
+        texEnv += (envMax - texEnv) * (envMax > texEnv ? .00004f : .00002f);
+        if (b && layerLevel[kTexture] > 0 && b->has(kTexture) && texEnv > 1e-4f && voicing.chord.root >= 0) {
+            texVoice.pitch = 48.f + voicing.chord.root;
+            bus[kOsc + kTexture] += renderGrains(texVoice, kTexture, *b) * texEnv;
         }
 
-        // Bus: low cut for the fundament, vowel formants, three-phase ensemble, width, tape, vocal pocket
-        L = dcL.run(hpL.run(L * kVoiceBus)); R = dcR.run(hpR.run(R * kVoiceBus));
+        // Robot: the oscillators speak through the choir, or through machine words on the beat
+        float robot = 0;
+        if (robotAmt > .001f) {
+            float car = 0;
+            for (int i = 0; i < kOsc; i++) car += bus[i] * oscLevel[i];
+            const float mod = robotChoir ? bus[kOsc + kChoir] * 3 : words.sample(playing ? ppq : -1, kWordLen[std::min(3, std::max(0, (int)std::lround(p[RobotRate])))], bpm) * .5f;
+            robot = vocoder.process(mod, car) * oscNorm;
+        }
+        // The sources, each placed in the room
+        float L = 0, R = 0;
+        const float dry = 1 - .85f * robotAmt;
+        for (int k = 0; k < kSources; k++) {
+            float x;
+            if (k < kOsc) { if (oscLevel[k] <= 0) continue; x = bus[k] * oscLevel[k] * oscNorm * dry; }
+            else if (k < kRobotSrc) { const float lv = layerLevel[k - kOsc]; if (lv <= 0) continue; x = bus[k] * lv * kLayerGain[k - kOsc]; }
+            else { if (robotAmt <= .001f) continue; x = robot * robotAmt * 1.2f; }
+            x *= kVoiceBus;
+            if (driveGain > 1.01f) x = std::tanh(x * driveGain) / driveGain;
+            space[k].process(x, L, R);
+            srcMeter[k] += (std::fabs(x) - srcMeter[k]) * .0005f;
+        }
+        L = dcL.run(hpL.run(L)); R = dcR.run(hpR.run(R));
         if (voxMix > .001f) {
             float fl = 0, fr = 0;
             for (int k = 0; k < 3; k++) { fl += formL[k].band(L) * kFormGain[k]; fr += formR[k].band(R) * kFormGain[k]; }
@@ -464,12 +554,15 @@ void Engine::process(float* outL, float* outR, int n) {
             L += hiss; R += hiss * .9f;
         }
         L = pocketL.run(L); R = pocketR.run(R);
-        if (airLevel > .001f && airCount > 0) {
+        // Air: noise tuned to the chord, and breath, rising and falling with the voices
+        if (airLevel > .001f && airFollow > 1e-4f) {
             const float nl = rng.bi(), nr = rng.bi();
             float al = 0, ar = 0;
-            for (int k = 0; k < airCount; k++) { al += airL[k].band(nl) * airGain[k]; ar += airR[k].band(nr) * airGain[k]; }
-            const float g = airLevel * .35f * (voicing.notes.empty() ? 0.f : 1.f);
-            L += al * g; R += ar * g;
+            // (a state-variable band-pass peaks at Q; times k brings the peak to 0 dB)
+            for (int k = 0; k < airCount; k++) { al += airL[k].band(nl) * airL[k].k * airGain[k]; ar += airR[k].band(nr) * airR[k].k * airGain[k]; }
+            const float bl = breathLpL.low(breathHpL.high(nl)), br = breathLpR.low(breathHpR.high(nr));
+            const float g = airLevel * airFollow;
+            L += (al * 3.f + bl * .4f * breathAmt) * g; R += (ar * 3.f + br * .4f * breathAmt) * g;
         }
 
         // Dub delay: ping-pong with the echoes getting darker and thinner each time round

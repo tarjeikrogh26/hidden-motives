@@ -1,6 +1,6 @@
 // Reads a folder of single-note recordings into a SampleBank.
 // File names say what they are: <family>_<midi note>[_anything].wav, e.g. "choir_69.92_03.wav" or "cello_41.wav".
-// Families: choir, cello. WAV only (16/24-bit PCM or 32-bit float, mono or stereo).
+// Families: choir, cello, strings, brass, texture (a whole recording; the number is its key's root). WAV only (16/24-bit PCM or 32-bit float, mono or stereo).
 #pragma once
 #include <cstdio>
 #include <cstdlib>
@@ -62,9 +62,21 @@ inline std::shared_ptr<SampleBank> loadSampleFolder(const std::string& folder) {
     for (const auto& e : fs::directory_iterator(folder, ec)) {
         const std::string name = e.path().filename().string();
         if (e.path().extension() != ".wav" && e.path().extension() != ".WAV") continue;
-        int fam = name.rfind("choir_", 0) == 0 ? kChoir : name.rfind("cello_", 0) == 0 ? kCello : -1;
+        // Wavetables: wt_cello.wav, wt_choir.wav, wt_strings.wav, wt_brass.wav, wt_chimera.wav (frames of 2048 samples)
+        static const char* tables[kTables] = {"wt_cello", "wt_choir", "wt_strings", "wt_brass", "wt_chimera"};
+        bool wasTable = false;
+        for (int t = 0; t < kTables; t++)
+            if (name.rfind(tables[t], 0) == 0) {
+                float rate; Wavetable& w = bank->tables[t];
+                if (readWav(e.path().string(), w.raw, rate)) w.frames = (int)(w.raw.size() / Wavetable::N);
+                wasTable = true;
+            }
+        if (wasTable) continue;
+        static const char* prefixes[kFamilies] = {"choir_", "cello_", "strings_", "brass_", "texture_"};
+        int fam = -1;
+        for (int f = 0; f < kFamilies; f++) if (name.rfind(prefixes[f], 0) == 0) fam = f;
         if (fam < 0) continue;
-        const float root = std::strtof(name.c_str() + 6, nullptr);
+        const float root = std::strtof(name.c_str() + std::strlen(prefixes[fam]), nullptr);
         if (root < 12 || root > 120) continue;
         Zone z; z.family = fam; z.root = root;
         if (!readWav(e.path().string(), z.data, z.sr) || z.data.size() < 1024) continue;

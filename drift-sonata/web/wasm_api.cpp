@@ -35,6 +35,11 @@ EXPORT(ds_bank_add) float* dsBankAdd(int family, float root, float sr, int lengt
     building->zones.push_back(std::move(z));
     return building->zones.back().data.data();
 }
+EXPORT(ds_bank_add_table) float* dsBankAddTable(int table, int frames) {
+    if (table < 0 || table >= kTables) return nullptr;
+    Wavetable& t = building->tables[table]; t.frames = frames; t.raw.assign((size_t)frames * Wavetable::N, 0.f);
+    return t.raw.data();
+}
 EXPORT(ds_bank_commit) void dsBankCommit() { building->finish(); engine->setSamples(building); building.reset(); }
 
 // What the chord is right now (for the screen).
@@ -43,3 +48,7 @@ EXPORT(ds_disp_quality) int dsDispQuality() { return (int)engine->display().q; }
 EXPORT(ds_disp_count) int dsDispCount() { return engine->display().count; }
 EXPORT(ds_disp_note) int dsDispNote(int i) { return engine->display().notes[i & 15]; }
 EXPORT(ds_disp_sub) float dsDispSub() { return engine->display().subLevel; }
+// The 3D room: azimuth, elevation, distance and level of each source (six oscillators, five recorded layers, robot)
+EXPORT(ds_sources) int dsSources() { return Engine::kSources; }
+EXPORT(ds_disp_pos) float dsDispPos(int k, int c) { return engine->display().pos[k % Engine::kSources][c % 3]; }
+EXPORT(ds_disp_level) float dsDispLevel(int k) { return engine->display().level[k % Engine::kSources]; }

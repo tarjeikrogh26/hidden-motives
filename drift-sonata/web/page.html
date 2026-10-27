@@ -64,7 +64,12 @@ canvas#trace { width: 100%; height: 104px; display: block; border-radius: 6px; b
 
 /* Cards: pearl with a gilt hairline */
 .macros { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
-.colours { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 14px; align-items: start; }
+.colours { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; align-items: start; }
+.card.wide { grid-column: span 2; }
+.orbit-wrap { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; align-items: center; }
+canvas#orbit { width: 100%; aspect-ratio: 1; max-width: 260px; justify-self: center; display: block; border-radius: 50%; background: radial-gradient(circle, #21474f 0%, #17363e 70%); }
+.orbit-legend { display: flex; flex-wrap: wrap; gap: 4px 10px; font-family: var(--mono); font-size: 10.5px; color: var(--muted); }
+.orbit-legend i { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 4px; vertical-align: middle; }
 .card { background: rgba(255,250,246,.86); border: 1px solid var(--line); border-radius: 10px; padding: 18px; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
 .card.big { padding: 20px 20px 22px; box-shadow: 0 1px 0 #fff inset, 0 10px 30px -18px rgba(29,62,70,.35); }
 .card h2 { font-family: var(--display); font-size: 31px; font-weight: 600; line-height: 1.05; font-style: italic; }
@@ -178,12 +183,14 @@ details.room .eyebrow { color: #9fc3c4; }
   .now { grid-template-columns: 1fr; }
   .macros { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .colours { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .orbit-wrap { grid-template-columns: 1fr; }
   .oscs { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .slots { grid-template-columns: repeat(4, minmax(0, 1fr)); }
   .banks { grid-template-columns: 1fr; }
 }
 @media (max-width: 560px) {
   .macros, .colours, .oscs { grid-template-columns: 1fr; }
+  .card.wide { grid-column: auto; }
   .card h2 { font-size: 27px; }
   .dock .hide-s, .pads { display: none; }
   .more-btn { display: inline-block; margin-left: auto; }
@@ -253,7 +260,7 @@ details.room .eyebrow { color: #9fc3c4; }
 <div class="dock" id="dock">
   <div class="dock-in">
     <div class="banks">
-      <div class="bankrow"><label for="soundSel">Sound · <span id="soundCount">111</span></label>
+      <div class="bankrow"><label for="soundSel">Sound · <span id="soundCount">333</span></label>
         <div class="nav"><button type="button" data-bank="sound" data-d="-10" aria-label="Back 10 sounds">«</button><button type="button" data-bank="sound" data-d="-1" aria-label="Previous sound">‹</button><select id="soundSel" aria-label="Sound"></select><button type="button" data-bank="sound" data-d="1" aria-label="Next sound">›</button><button type="button" data-bank="sound" data-d="10" aria-label="Forward 10 sounds">»</button><button type="button" class="dice" id="soundDice" title="Randomize sound" aria-label="Randomize sound">⚄</button></div></div>
       <div class="bankrow"><label for="lineSel">Chord line · <span id="lineCount">111</span></label>
         <div class="nav"><button type="button" data-bank="line" data-d="-10" aria-label="Back 10 chord lines">«</button><button type="button" data-bank="line" data-d="-1" aria-label="Previous chord line">‹</button><select id="lineSel" aria-label="Chord line"></select><button type="button" data-bank="line" data-d="1" aria-label="Next chord line">›</button><button type="button" data-bank="line" data-d="10" aria-label="Forward 10 chord lines">»</button><button type="button" class="dice" id="lineDice" title="Random chord line" aria-label="Random chord line">⚄</button></div></div>
@@ -323,6 +330,7 @@ class DriftSonata extends AudioWorkletProcessor {
       case 'bank': {
         x.ds_bank_begin();
         for (const z of m.zones) { const ptr = x.ds_bank_add(z.fam, z.root, z.sr, z.data.length); new Float32Array(x.memory.buffer, ptr, z.data.length).set(z.data); }
+        for (const t of m.tables || []) { const ptr = x.ds_bank_add_table(t.table, t.frames); if (ptr) new Float32Array(x.memory.buffer, ptr, t.data.length).set(t.data); }
         x.ds_bank_commit(); break;
       }
       case 'line': this.line = m.line; if (this.playing) this.slot = -2; break;
@@ -376,7 +384,9 @@ class DriftSonata extends AudioWorkletProcessor {
     if (++this.tick % 6 === 0) {
       const c = x.ds_disp_count(), notes = [];
       for (let i = 0; i < c; i++) notes.push(x.ds_disp_note(i));
-      this.port.postMessage({ t: 'disp', root: x.ds_disp_root(), q: x.ds_disp_quality(), notes, sub: x.ds_disp_sub() });
+      const src = [];
+      for (let k = 0, n = x.ds_sources(); k < n; k++) src.push([x.ds_disp_pos(k, 0), x.ds_disp_pos(k, 1), x.ds_disp_pos(k, 2), x.ds_disp_level(k)]);
+      this.port.postMessage({ t: 'disp', root: x.ds_disp_root(), q: x.ds_disp_quality(), notes, sub: x.ds_disp_sub(), src });
     }
     return true;
   }
@@ -426,15 +436,21 @@ async function startAudio() {
   return starting;
 }
 async function loadSamples() {
-  if (!Array.isArray(SAMPLES) || !SAMPLES.length) { setStatus('No choir or cello recordings in this build: the synth plays alone.'); return; }
-  const zones = [];
+  if (!Array.isArray(SAMPLES) || !SAMPLES.length) { setStatus('No recordings in this build: the synth plays alone.'); return; }
+  const zones = [], tables = [];
   for (const s of SAMPLES) {
+    if ('table' in s) {
+      // Raw 16-bit cycles: decoded by hand so nothing resamples or shifts them
+      const bytes = b64ToBytes(s.pcm), pcm = new Int16Array(bytes.buffer, 0, bytes.length >> 1), data = new Float32Array(pcm.length);
+      for (let i = 0; i < pcm.length; i++) data[i] = pcm[i] / 32768;
+      tables.push({ table: s.table, frames: s.frames, data }); continue;
+    }
     try {
       const buf = await ctx.decodeAudioData(b64ToBytes(s.b64).buffer);
       zones.push({ fam: s.fam, root: s.root, sr: buf.sampleRate, data: buf.getChannelData(0).slice() });
     } catch (e) { /* skip a recording the browser cannot decode */ }
   }
-  node.port.postMessage({ t: 'bank', zones }, zones.map(z => z.data.buffer));
+  node.port.postMessage({ t: 'bank', zones, tables }, [...zones.map(z => z.data.buffer), ...tables.map(t => t.data.buffer)]);
 }
 function send(i) { if (node) node.port.postMessage({ t: 'p', i, v: values[i] }); }
 
@@ -469,7 +485,7 @@ function onWorklet(m) {
   if (m.t === 'ready') setStatus(playing ? 'Playing the chord line.' : 'Ready. Play the keyboard, or press ▶.');
   else if (m.t === 'slot') markSlot(m.s);
   else if (m.t === 'disp') {
-    display = m;
+    display = m; orbitSrc = m.src || orbitSrc;
     $('chordName').textContent = chordName(m.root, m.q, m.notes);
     const playedNow = new Set([...held, ...lineHeld]);
     $('voicing').innerHTML = m.notes.length ? m.notes.map(n => `<span class="pill ${playedNow.has(n) ? 'played' : 'added'}">${PLAIN[n % 12]}${Math.floor(n / 12) - 1}</span>`).join('') : '<span class="pill">Silence</span>';
@@ -505,6 +521,32 @@ function drawTrace() {
   requestAnimationFrame(drawTrace);
 }
 requestAnimationFrame(drawTrace);
+
+/* ---------- 3D orbit view: the sources seen from above, you in the middle facing up ---------- */
+const ORBIT_NAMES = ['Osc 1', 'Osc 2', 'Osc 3', 'Osc 4', 'Osc 5', 'Osc 6', 'Choir', 'Cello', 'Strings', 'Brass', 'Texture', 'Robot'];
+const ORBIT_COLORS = ['#e486ab', '#ecd08f', '#e486ab', '#ecd08f', '#e486ab', '#ecd08f', '#7fd3d3', '#3aa3aa', '#b9e3e0', '#c39539', '#f6eee8', '#ffffff'];
+let orbitSrc = [];
+function drawOrbit() {
+  const c = document.getElementById('orbit');
+  if (c) {
+    const g = c.getContext('2d'), w = c.width = c.clientWidth * devicePixelRatio, h = c.height = c.clientHeight * devicePixelRatio, cx = w / 2, cy = h / 2, R = w * .44;
+    g.clearRect(0, 0, w, h);
+    g.strokeStyle = 'rgba(236,208,143,.18)'; g.lineWidth = devicePixelRatio;
+    for (const r of [.33, .66, 1]) { g.beginPath(); g.arc(cx, cy, R * r, 0, Math.PI * 2); g.stroke(); }
+    // the listener: a head with a nose pointing forward (up)
+    g.fillStyle = '#f6eee8'; g.beginPath(); g.arc(cx, cy, w * .035, 0, Math.PI * 2); g.fill();
+    g.beginPath(); g.moveTo(cx - w * .012, cy - w * .03); g.lineTo(cx, cy - w * .055); g.lineTo(cx + w * .012, cy - w * .03); g.fill();
+    orbitSrc.forEach(([az, el, d, lv], k) => {
+      if (lv < .0005) return;
+      const r = Math.min(1, d / 3.4) * R * Math.cos(el * .7), x = cx + Math.sin(az) * r, y = cy - Math.cos(az) * r;
+      const size = (2.5 + 4 * Math.max(0, Math.min(1, (el + .6) / 1.4))) * devicePixelRatio;
+      g.globalAlpha = Math.min(1, .35 + lv * 40); g.fillStyle = ORBIT_COLORS[k];
+      g.beginPath(); g.arc(x, y, size, 0, Math.PI * 2); g.fill(); g.globalAlpha = 1;
+    });
+  }
+  requestAnimationFrame(drawOrbit);
+}
+requestAnimationFrame(drawOrbit);
 
 /* ---------- Controls ---------- */
 const controls = {};  // id -> update function
@@ -580,15 +622,31 @@ for (const [id, title, lo, hi, text, tone] of MAIN) {
 }
 
 // Colour cards
-function colourCard(title, text, lo, hi, build) {
-  const card = document.createElement('div'); card.className = 'card';
+function colourCard(title, text, lo, hi, build, wide) {
+  const card = document.createElement('div'); card.className = 'card' + (wide ? ' wide' : '');
   card.innerHTML = `<div class="head"><h3>${title}</h3></div>${text ? `<p>${text}</p>` : ''}`;
   build(card); $('colours').appendChild(card);
 }
 colourCard('Intensity', 'Verse to chorus: takes away or brings in the octave, the voices, shimmer and air.', 'Verse', 'Chorus', c => c.appendChild(slider('intensity', { label: 'Verse ↔ Chorus' })));
 colourCard('Analog', 'Tape wow, flutter, saturation and hiss.', 'Clean', 'Worn', c => c.appendChild(slider('tape', { label: 'Clean ↔ Worn tape', rose: true })));
 colourCard('Air', 'Breath and noise tuned to the chord.', 'Dry', 'Breath', c => c.appendChild(slider('air', { label: 'Dry ↔ Breath', teal: true })));
-colourCard('Voices', 'Recorded choir and cello, and a vowel filter, mixed into the synth.', '', '', c => { c.appendChild(slider('choir')); c.appendChild(slider('cello')); c.appendChild(slider('vox', { label: 'Vowel voice' })); });
+colourCard('Voices', 'Recordings played under every note, each a little out of tune with the synth. Texture is one bed that follows the chord.', '', '', c => {
+  for (const id of ['choir', 'cello', 'stringlayer', 'brass', 'texture']) c.appendChild(slider(id));
+  c.appendChild(slider('vox', { label: 'Vowel voice' }));
+});
+colourCard('3D orbit', 'Each oscillator, each recording and the robot is its own sound, moving round your head. Best on headphones.', '', '', c => {
+  const w = document.createElement('div'); w.className = 'orbit-wrap';
+  w.innerHTML = '<canvas id="orbit" width="260" height="260" aria-label="Where each sound is, seen from above: you in the middle, facing up"></canvas>';
+  const col = document.createElement('div'); col.style.display = 'flex'; col.style.flexDirection = 'column'; col.style.gap = '6px';
+  col.append(slider('orbit', { label: 'Still ↔ Orbiting', teal: true }), slider('orbitspeed'), slider('distance'), slider('overhead'), slider('space3d', { label: 'Binaural' }));
+  w.appendChild(col); c.appendChild(w);
+  const lg = document.createElement('div'); lg.className = 'orbit-legend';
+  lg.innerHTML = ORBIT_NAMES.map((n, k) => `<span><i style="background:${ORBIT_COLORS[k]}"></i>${n}</span>`).join('');
+  c.appendChild(lg);
+}, true);
+colourCard('Robot with a soul', 'A vocoder: the strings speak through the choir, or through machine words on the beat.', '', '', c => {
+  c.appendChild(slider('robot', { label: 'Human ↔ Machine', rose: true })); c.appendChild(choice('robotvoice', { label: 'Voice' })); c.appendChild(choice('robotrate'));
+});
 colourCard('Harmony', 'How Tension folds the chord out.', '', '', c => { c.appendChild(choice('color', { label: 'Colour' })); c.appendChild(choice('expand')); c.appendChild(choice('key')); });
 
 // Engine room
@@ -632,8 +690,8 @@ const esc = t => String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;',
 function presetValuesOf(pr) { const v = DEFAULTS.slice(); for (const k in pr.set) if (k in idx) v[idx[k]] = pr.set[k]; return v; }
 let loadingSound = false;
 function applyValues(v) { loadingSound = true; v.forEach((x, i) => setValue(P[i].id, x)); loadingSound = false; }
-const SOUND_WORDS = ['', 'Pearl', 'Gilded', 'Low tide', 'Night choir', 'Glass hall', 'Sour milk', 'Moonwax'];
-const soundBank = Array.from({ length: 111 }, (_, i) => {
+const SOUND_WORDS = ['', 'Pearl', 'Gilded', 'Low tide', 'Night choir', 'Glass hall', 'Sour milk', 'Moonwax', 'Orbit'];
+const soundBank = Array.from({ length: 333 }, (_, i) => {
   const base = DATA.presets[i % DATA.presets.length], v = Math.floor(i / DATA.presets.length);
   return { name: base.name + (v ? ' · ' + SOUND_WORDS[v % SOUND_WORDS.length] : ''), base, v, seed: 171 + i * 77 };
 });
@@ -644,7 +702,7 @@ function soundValues(s) {
   const R = rng32(s.seed), get = id => vals[idx[id]];
   const set = (id, x) => { const p = P[idx[id]]; vals[idx[id]] = Math.min(p.max, Math.max(p.min, x)); };
   for (const [id, amt] of [['drift', .15], ['tension', .12], ['cutoff', .08], ['space', .12], ['subdrop', .12], ['tape', .12], ['air', .1], ['motion', .2], ['chaos', .2], ['shimmer', .15]]) set(id, get(id) + (R() * 2 - 1) * amt);
-  switch (s.v % 8) {
+  switch (s.v % 9) {
     case 1: set('choir', get('choir') + .25); set('cutoff', get('cutoff') + .05); break;                          // Pearl
     case 2: set('color', 0); set('ensemble', 1); set('shimmer', get('shimmer') + .2); break;                      // Gilded
     case 3: set('subdrop', get('subdrop') + .25); set('cutoff', get('cutoff') - .08); set('o6oct', -1); break;    // Low tide
@@ -652,6 +710,7 @@ function soundValues(s) {
     case 5: set('space', get('space') + .25); set('o5wave', 2); set('o6wave', 3); break;                          // Glass hall
     case 6: set('drift', get('drift') + .3); set('life', .8); set('tape', get('tape') + .2); break;               // Sour milk
     case 7: set('cello', get('cello') + .3); set('color', 1); set('attack', Math.max(get('attack'), 1.6)); break; // Moonwax
+    case 8: set('orbit', get('orbit') + .4); set('orbitspeed', get('orbitspeed') + .2); set('overhead', get('overhead') + .3); break; // Orbit
   }
   return vals;
 }
@@ -687,7 +746,9 @@ $('soundDice').addEventListener('click', () => {
   const set = { drift: r(.15, .85), tension: r(.3, .85), subdrop: r(.2, .8), space: r(.3, .9), choir: r(0, .6), cello: r(0, .5), vox: r(0, .5), vowel: r(0, 1),
     cutoff: r(.42, .75), tape: r(0, .6), air: r(0, .4), color: pick([0, 0, 1, 1, 2, 3, 4]), ensemble: r(.4, 1), motion: r(.3, .8), shimmer: r(.1, .7), delay: r(0, .35),
     attack: r(.3, 2.5), release: r(1.5, 6), chaos: r(0, .6), cross: r(0, .25), pwm: r(.2, .8), filtermotion: r(.2, .7), life: r(.3, .8) };
-  for (let o = 1; o <= 6; o++) set['o' + o + 'wave'] = pick([0, 0, 0, 1, 1, 2]);
+  // the six oscillators: classic shapes, morph, and the waves made from the recordings
+  for (let o = 1; o <= 6; o++) set['o' + o + 'wave'] = pick([0, 0, 1, 2, 3, 4, 4, 5, 6, 7, 8, 9]);
+  Object.assign(set, { orbit: r(.1, .9), orbitspeed: r(.1, .7), overhead: r(0, .7), stringlayer: r(0, .5), brass: r(0, .3), texture: r(0, .5), robot: pick([0, 0, 0, r(.2, .7)]), robotvoice: pick([0, 1]) });
   set.o6oct = pick([-1, 0, 1, 1]); set.o5oct = pick([0, 0, 1]);
   for (const k in set) setValue(k, set[k]);
   setStatus('Randomized. Save it if you like it.');

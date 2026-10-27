@@ -11,9 +11,14 @@ Motoren er ren C++ (`dsp/`) uten plugin-kode. Den samme koden kjører i dag i ne
 - `dsp/Engine.*`: lydmotoren (stemmer, drift, sub, sample-lag, ensemble, tape, luft, rom med shimmer, dub-delay, limiter).
 - `dsp/Harmony.h`: gjenkjenning av akkorder og harmoni-ekspansjonen.
 - `dsp/Params.h`: alle parametere på ett sted. `dsp/Presets.h`: fabrikklydene.
-- `dsp/SampleLoader.h`: leser en mappe med enkelttoner (`choir_<midi>.wav`, `cello_<midi>.wav`).
+- `dsp/Space3D.h`: binaural plassering. Hver oscillator, hvert opptakslag og roboten er sin egen lydkilde i bane rundt hodet.
+- `dsp/Vocoder.h`: Robot with a soul, en 20-bånds vocoder etter VOXY MUSIC, med kor eller maskinord som stemme.
+- `dsp/SampleLoader.h`: leser en mappe med opptak: `choir_`, `cello_`, `strings_`, `brass_` + midi-tone (enkelttoner),
+  `texture_` + grunntone (hele teksturer), og wavetables `wt_cello`, `wt_choir`, `wt_strings`, `wt_brass`, `wt_chimera`
+  (rammer på 2048 samples, laget av opptakene, som oscillatorene kan bruke som bølgeform).
 - `tools/test_harmony.cpp`: tabell over hvordan akkorder foldes ut, med regelsjekk.
 - `tools/render.cpp`: rendrer en akkordrekke til WAV og måler nivå, DC, hastighet og om drift holder midten stemt.
+- `tools/fader_test.cpp`: skrur hver fader helt ned og opp og tilbake, og sjekker at lyden kommer igjen.
 - `web/`: testsida (`page.html`), C-grensesnittet for WebAssembly (`wasm_api.cpp`) og byggeskriptet (`build.py`).
 
 ## Bygge testsida
