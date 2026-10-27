@@ -1,4 +1,4 @@
-# DROPFATHER — by Tarjei Krogh · v0.5
+# DROPFATHER — by Tarjei Krogh · v0.6
 
 To veier inn fra startskjermen:
 
@@ -69,7 +69,7 @@ Målt på *Television Is Blue*: den faste noten traff sterkeste tone i originale
 ARP-grunntonene treffer **69–74 %** (*The Light*: 77–84 %). Resten kan være omvendinger (ARP gir akkordens
 grunntone, ikke bassnoten) eller kick i målingen. Det må høres, ikke bare måles.
 
-## Make a drop (drop maker, v0.5)
+## Make a drop (drop maker, v0.6)
 
 1. Velg **Make a drop** på startskjermen.
 2. **BPM, toneart og skala** (moll, frygisk, dorisk, harmonisk moll, dur).
@@ -91,6 +91,13 @@ grunntone, ikke bassnoten) eller kick i målingen. Det må høres, ikke bare må
 
    Hver del har egen grid og egne filterknapper. Rekkefølgen blir intro → breakdown → build-up → pre-drop → drop → outro.
 6. **Lyder**:
+   - **Trommer:** 14 trommesett med Stanley Cupids egne innspillinger fra Norwegian Beats. Det er de ferdige
+     sample-settene (Punch, Deep, Dusty, Crisp, Room, Club, Tape, Trap, Boom bap, Heavy, Snaps) og de akustiske
+     settene Pocket 93, Broken 78 og Groovy 102. Hvert sett har kick, clap, snare, hat og open hat, med tonehøyde
+     og lag (f.eks. kick under snaren i Boom bap) som i Norwegian Beats. Hver stil velger et passende sett, og alle
+     kan byttes i **Drum kit**. **Dropfather synth** er de gamle syntetiske trommene. Hvert slag nivåmatches mot
+     synth-slaget i samme linje, så mikseknappene betyr det samme for alle sett. Norwegian Beats' effekter per
+     slag (punch, plate, lofi …) er ikke med.
    - **Bass:** Bass Invaders (2000 fabrikklyder). Basslinjene kommer fra Bass Invaders' egen riff-generator.
    - **Lead:** AVANTGARDIAN ARP med alle 777 lyder gjennom ARP-ens egen kjede (Norwegian Beats v46-stemme, mono
      VoiceOutput, SoundMatch-nivå og lydens StudioFX). Bass Invaders-lydene kan også brukes som lead.
@@ -126,8 +133,12 @@ forsvinner. I droppet pumper alt unntatt kick og clap, og det kommer et impact p
   `performance.js` og `engine.js`. Byggesteget endrer bare stien til ladder-workleten, så den kan ligge inne i
   HTML-filen. Mønsterbiblioteket er de første 4 taktene av ARP-ens `patterns.json`
   (`tools/extract-arp-patterns.py`), med notene uendret.
-- **Trommer, risere, impact**: syntetisert i `src/dsp.js`. Ingen samples. Trommene fra Bass Invaders er bevisst
-  *ikke* brukt, fordi lisensen deres er uavklart (se Bass Invaders `SOURCE-NOTES`).
+- **Trommer i drop maker**: Stanley Cupids (Tarjei Kroghs) egne innspillinger fra Norwegian Beats v43, de
+  innebygde lydene som appen selv merker «Stanley Cupid's own recordings» (`src/vendor/nb-drums.js`). De hentes ut
+  med `tools/extract-nb-drums.mjs`, med lyddata, nivå og settoppsett uendret. Bevisst *ikke* med: breakbeat-trommene
+  i Norwegian Beats' brukerbank (ukjent opphav), Mouth-settet, og trommene fra Bass Invaders (uavklart lisens, se
+  Bass Invaders `SOURCE-NOTES`).
+- **Risere, impact og synth-trommene** (sangmodus og «Dropfather synth»): syntetisert i `src/dsp.js`. Ingen samples.
 - Logo: Tarjei Krogh.
 
 ## Utvikling
@@ -139,13 +150,15 @@ node test-analysis.cjs    # tempo, takt 1 og drop-punkt på syntetiske låter (s
 python3 tools/extract-delaysy.py DELAYSY-vX.html src/vendor/delaysy-engine.js
 python3 tools/extract-bass-host.py Bass-Invaders/source/dist/app.js src/vendor/bass-invaders/bass-host.js
 python3 tools/extract-arp-patterns.py ARP/dist/assets/patterns.json src/vendor/arp/patterns-4bars.json
+node tools/extract-nb-drums.mjs Norwegian_Beats.html assets-1.js assets-2.js assets-3.js
 ```
 
 `src/analysis.js` (tempo/takt/energikart/forslag), `src/dsp.js` (all lyd, offline rendering, WAV/MIDI),
 `src/app.js` (sangmodus-UI), `src/grid.js` + `src/maker.js` (drop maker: motor og UI), `src/decode.js` (formater),
-`src/files.js` (lagring), `src/vendor/` (ARP-analysen, Bass Invaders, DELAYSY).
+`src/files.js` (lagring), `src/kits.js` (trommesett), `src/vendor/` (ARP-analysen, Bass Invaders, DELAYSY,
+Norwegian Beats-trommene).
 
-## Kjente grenser i v0.5
+## Kjente grenser i v0.6
 
 - Takt 1 er en kvalifisert gjetning (seksjoner skifter på 1-ern). Sjekk den med «−1 beat / +1 beat».
 - Taktartsforutsetning 4/4. Tempo må være stabilt (ingen live-tempo-drift).

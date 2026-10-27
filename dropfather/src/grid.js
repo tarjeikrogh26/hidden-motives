@@ -48,15 +48,15 @@ function arpBlend(seed){const N=root.NoteEngine,all=arpPatterns();if(!N?.hybrid|
 
 /* ---------- Styles: each writes a whole drop project, different every time ---------- */
 const STYLES={
- house:{name:'House lift',genre:'house',bpm:[122,126],bass:['pal:house:5:1','pal:house:6:1','pal2:house:1','pal:house:4:1'],group:'soft',hats:['off8','shuffle','sixteen'],clap:['twofour','pickup'],open:['none','offopen'],fill:['none','small'],bassline:['invaders','offbeat','syncopated'],lead:['arp','blend','hook'],
+ house:{kits:['club','deep','crisp','punch'],name:'House lift',genre:'house',bpm:[122,126],bass:['pal:house:5:1','pal:house:6:1','pal2:house:1','pal:house:4:1'],group:'soft',hats:['off8','shuffle','sixteen'],clap:['twofour','pickup'],open:['none','offopen'],fill:['none','small'],bassline:['invaders','offbeat','syncopated'],lead:['arp','blend','hook'],
   build:{bars:8,fx:{hp:.5,riser:.4,pitch:0,roll:'clap',rollAmt:.5,verb:.35,swell:.2,kickOut:.75}},pre:{gapBeats:1,throw:.5,delaysy:8,throwLen:1,reverse:.4},drop:{bars:16,fx:{pump:.35,impact:.4}},gate:{bass:.55,lead:.45}},
- festival:{name:'Festival',genre:'edm',bpm:[126,130],bass:['pal:edm:1:1','pal:edm:0:0','pal:edm:2:1','pal:edm:3:0'],group:'wide',hats:['off8','sixteen'],clap:['twofour','layer'],open:['barend','offopen'],fill:['big','small'],bassline:['invaders','roll16','bounce'],lead:['arp','blend','hook'],
+ festival:{kits:['punch','club','heavy'],name:'Festival',genre:'edm',bpm:[126,130],bass:['pal:edm:1:1','pal:edm:0:0','pal:edm:2:1','pal:edm:3:0'],group:'wide',hats:['off8','sixteen'],clap:['twofour','layer'],open:['barend','offopen'],fill:['big','small'],bassline:['invaders','roll16','bounce'],lead:['arp','blend','hook'],
   build:{bars:16,fx:{hp:.8,riser:.8,pitch:.6,roll:'snare',rollAmt:.85,verb:.6,swell:.5,kickOut:.5}},pre:{gapBeats:4,throw:.6,delaysy:61,throwLen:2,reverse:.8},drop:{bars:16,fx:{pump:.7,impact:.9}},gate:{bass:.7,lead:.75}},
- techno:{name:'Techno tunnel',genre:'motor',bpm:[128,134],bass:['pal:motor:3:1','pal:motor:7:0','pal:motor:2:1','pal:ebm:3:1'],group:'modular',hats:['sixteen','gallop','off8'],clap:['none','rim'],open:['offopen'],fill:['none'],bassline:['invaders','gallop','offbeat'],lead:['arp','blend','none'],
+ techno:{kits:['heavy','room','tape'],name:'Techno tunnel',genre:'motor',bpm:[128,134],bass:['pal:motor:3:1','pal:motor:7:0','pal:motor:2:1','pal:ebm:3:1'],group:'modular',hats:['sixteen','gallop','off8'],clap:['none','rim'],open:['offopen'],fill:['none'],bassline:['invaders','gallop','offbeat'],lead:['arp','blend','none'],
   build:{bars:8,fx:{hp:.7,riser:.6,pitch:0,roll:'kick',rollAmt:.7,verb:.5,swell:.3,kickOut:1}},pre:{gapBeats:2,throw:.7,delaysy:98,throwLen:1,reverse:.3},drop:{bars:16,fx:{pump:.55,impact:.6}},gate:{bass:.6,lead:.3}},
- takeoff:{name:'Take-off',genre:'edm',bpm:[126,130],bass:['pal:edm:0:1','pal:edm:1:1','pal:edm:3:0'],group:'wide',hats:['off8','sixteen'],clap:['twofour','layer'],open:['none','barend'],fill:['small','big'],bassline:['roll16','bounce','invaders'],lead:['arp','blend','hook'],
+ takeoff:{kits:['punch','club','crisp'],name:'Take-off',genre:'edm',bpm:[126,130],bass:['pal:edm:0:1','pal:edm:1:1','pal:edm:3:0'],group:'wide',hats:['off8','sixteen'],clap:['twofour','layer'],open:['none','barend'],fill:['small','big'],bassline:['roll16','bounce','invaders'],lead:['arp','blend','hook'],
   build:{bars:8,fx:{hp:.65,riser:.55,pitch:.5,roll:'snare',rollAmt:.6,verb:.45,swell:.35,kickOut:.6}},pre:{gapBeats:1,throw:.45,delaysy:30,throwLen:1,reverse:.6},drop:{bars:16,fx:{pump:.5,impact:.7}},gate:{bass:.7,lead:.5}},
- ebm:{name:'EBM motor',genre:'ebm',bpm:[116,124],bass:['pal:ebm:3:1','pal:ebm:1:0','pal:ebm:6:1','pal:acid:0:0'],group:'modular',hats:['off8','sparse'],clap:['snare'],open:['none'],fill:['none','small'],bassline:['octave8','invaders','roll16'],lead:['none','arp','blend'],
+ ebm:{kits:['heavy','tape','dusty'],name:'EBM motor',genre:'ebm',bpm:[116,124],bass:['pal:ebm:3:1','pal:ebm:1:0','pal:ebm:6:1','pal:acid:0:0'],group:'modular',hats:['off8','sparse'],clap:['snare'],open:['none'],fill:['none','small'],bassline:['octave8','invaders','roll16'],lead:['none','arp','blend'],
   build:{bars:4,fx:{hp:.55,riser:.3,pitch:0,roll:'snare',rollAmt:.7,verb:.25,swell:.2,kickOut:.75}},pre:{gapBeats:2,throw:.35,delaysy:179,throwLen:.5,reverse:.2},drop:{bars:16,fx:{pump:.3,impact:.5}},gate:{bass:.8,lead:.35}}
 };
 const MIX={kick:.9,clap:.55,snare:.5,hat:.35,open:.3,bass:.7,lead:.45};
@@ -115,7 +115,9 @@ function generate(styleKey,seed,base={}){
  // Build: the drop's drums thinned (no fill, no open hats), hats driving, the lead's first bar as a teaser, no bass.
  const b=p.build.grid;drums(b,16,{...v,fill:'none',open:'none',clap:v.clap==='pickup'?'twofour':v.clap});if(v.hats==='off8'||v.hats==='sparse')for(let i=0;i<16;i+=2)b.hat[i]=b.hat[i]||1;
  for(let i=0;i<16;i++)b.lead[i]=d.lead[i];
- p.desc=[st.name,LABEL[v.hats],LABEL[v.clap],LABEL[v.open],LABEL[v.fill],v.bassline==='gallop'?'galloping bass':LABEL[v.bassline],leadInfo&&('lead: '+leadInfo)].filter(Boolean).join(' · ');
+ // Drum kit last, so a seed's grids and sounds stay what they were before kits existed.
+ if(root.DropKits){const ok=(st.kits||[]).filter(root.DropKits.has);p.sounds.drums=ok.length?pick(ok):'synth';}
+ p.desc=[st.name,LABEL[v.hats],LABEL[v.clap],LABEL[v.open],LABEL[v.fill],v.bassline==='gallop'?'galloping bass':LABEL[v.bassline],leadInfo&&('lead: '+leadInfo),p.sounds.drums&&p.sounds.drums!=='synth'&&('drums: '+root.DropKits.list().find(k=>k.id===p.sounds.drums).n)].filter(Boolean).join(' · ');
  return p;
 }
 function randomize(project,seed){const keys=Object.keys(STYLES),rng=P.rng(seed),style=keys[Math.floor(rng()*keys.length)],p=generate(style,seed,{key:Math.floor(rng()*12),scale:Object.keys(SCALES)[Math.floor(rng()*4)]});const cat=X.bassCatalog();if(cat.length&&rng()<.5)p.sounds.bass=cat[Math.floor(rng()*cat.length)].id;if(root.Delaysy)p.pre.delaysy=Math.floor(rng()*root.Delaysy.presets.length);p.style='random';p.desc='Random · '+p.desc;return p;}
@@ -168,6 +170,12 @@ async function voice(ctx,dest,id,project,base){
  await engine.ready();H.applySound(engine,settings);if(typeof root.balanceSound==='function')await root.balanceSound(engine,structuredClone(settings));
  return engine;
 }
+// One drum hit as a buffer: the project's kit (Stanley Cupid's recordings), or the synth hit when the kit is "synth".
+async function drumShot(ctx,project,k){
+ const d=await P.oneShot(ctx.sampleRate,k==='clap'||k==='snare'||k==='hat'||k==='open'?k:'kick'),K=root.DropKits;
+ const kit=K?await K.lane(ctx.sampleRate,project.sounds.drums,k,d).catch(()=>null):null;if(kit)return K.toBuffer(ctx,kit);
+ const b=ctx.createBuffer(1,d.length,ctx.sampleRate);b.copyToChannel(d,0);return b;
+}
 async function makeGraph(ctx,dest,project,section){
  const g={ctx,section,events:[],out:ctx.createGain(),lane:{},shots:{},noise:P.noiseBuffer(ctx,4,11)},fx=project[section].fx,isBuild=section==='build',isDrop=section==='drop',plain=!isBuild&&!isDrop;
  g.out.gain.value=.6;g.out.connect(dest);g.verb=ctx.createConvolver();g.verb.normalize=true;g.verb.buffer=P.impulse(ctx,2.6,2.6,5,1);const vr=ctx.createGain();vr.gain.value=.4;g.verb.connect(vr).connect(g.out);
@@ -178,7 +186,7 @@ async function makeGraph(ctx,dest,project,section){
  else if(plain){g.lp=ctx.createBiquadFilter();g.lp.type='lowpass';g.lp.frequency.value=20000;g.lp.Q.value=.9;g.body.connect(g.lp).connect(g.out);g.pump.connect(g.lp);const w=ctx.createGain();w.gain.value=fx.verb||0;g.lp.connect(w).connect(g.verb);}
  else{g.body.connect(g.out);g.pump.connect(g.out);}
  const pumped=k=>!isBuild&&(k==='hat'||k==='open'||k==='bass'||k==='lead');
- for(const [k] of DRUMS){const n=ctx.createGain();n.gain.value=project.mix[k];g.lane[k]=n;const d=await P.oneShot(ctx.sampleRate,k==='clap'||k==='snare'||k==='hat'||k==='open'?k:'kick'),b=ctx.createBuffer(1,d.length,ctx.sampleRate);b.copyToChannel(d,0);g.shots[k]=b;}
+ for(const [k] of DRUMS){const n=ctx.createGain();n.gain.value=project.mix[k];g.lane[k]=n;g.shots[k]=await drumShot(ctx,project,k);}
  for(const [k] of DRUMS)if(k!=='kick')g.lane[k].connect(pumped(k)?g.pump:g.body);
  g.kickShaper=P.shaper(ctx,.25);g.lane.kick.connect(g.kickShaper).connect(g.body);
  for(const k of ['bass','lead']){const n=ctx.createGain();n.gain.value=project.mix[k]*(k==='bass'?3:2.2);n.connect(pumped(k)?g.pump:g.body);g.lane[k]=n;}
@@ -187,7 +195,7 @@ async function makeGraph(ctx,dest,project,section){
  if(project.sounds.lead?.startsWith('arp:')&&root.NBVoice)await root.NBVoice.prepare(ctx);
  const [bass,lead]=await Promise.all([voice(ctx,g.lane.bass,project.sounds.bass,project,bassBase(project.key)),voice(ctx,g.lane.lead,project.sounds.lead,project,leadBase(project.key))]);
  g.bass=bass;g.lead=lead;
- if(isBuild){const roll=fx.roll==='off'?null:fx.roll;if(roll){const d=await P.oneShot(ctx.sampleRate,roll),b=ctx.createBuffer(1,d.length,ctx.sampleRate);b.copyToChannel(d,0);g.rollShot=b;g.rollBus=ctx.createGain();g.rollHP=ctx.createBiquadFilter();g.rollHP.type='highpass';g.rollBus.connect(g.rollHP).connect(g.out);const s=ctx.createGain();s.gain.value=.25;g.rollHP.connect(s).connect(g.verb);}}
+ if(isBuild){const roll=fx.roll==='off'?null:fx.roll;if(roll){g.rollShot=await drumShot(ctx,project,roll);g.rollBus=ctx.createGain();g.rollHP=ctx.createBiquadFilter();g.rollHP.type='highpass';g.rollBus.connect(g.rollHP).connect(g.out);const s=ctx.createGain();s.gain.value=.25;g.rollHP.connect(s).connect(g.verb);}}
  return g;
 }
 function hit(g,buffer,dest,t,vel,rate=1){const s=g.ctx.createBufferSource(),v=g.ctx.createGain();s.buffer=buffer;s.playbackRate.value=rate;v.gain.value=vel;s.connect(v).connect(dest);s.start(t);}

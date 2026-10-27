@@ -23,6 +23,7 @@ function buildControls(){
  rows.push(pick(p,pr,'gapBeats','Silence',{0:'None',1:'1 beat',2:'2 beats',4:'1 bar'},ch),knob(p,pr,'throw','Echo throw',ch),pick(p,pr,'delaysy','DELAYSY preset',DELAYSY,ch),pick(p,pr,'throwLen','Throw',{0.5:'Last 1/2 beat',1:'Last beat',2:'Last 2 beats',4:'Last bar'},ch),knob(p,pr,'reverse','Reverse suck',ch));
  rows.push(knob(d,df,'pump','Pump',ch),knob(d,df,'impact','Impact',ch));
  const snd=()=>M.project.sounds,mix=()=>M.project.mix,gate=()=>M.project.gate,sc=()=>{changed();renderGrid();};
+ if(window.DropKits)rows.push(pick(s,snd,'drums','Drum kit (Stanley Cupid’s recordings)',Object.fromEntries(DropKits.list().map(k=>[k.id,k.id==='synth'?k.n:'Stanley Cupid · '+k.n])),sc));
  rows.push(pick(s,snd,'bass','Bass sound (Bass Invaders)',BASSES,sc),pick(s,snd,'lead','Lead sound (AVANTGARDIAN ARP or Bass Invaders)',LEADS,sc));
  // The lead line from ARP: a pattern from its library, the next random one, or a fresh blend ("Make arp").
  const arpRow=pick(s,()=>M.ui,'arp','Lead pattern from ARP’s library',ARPS,()=>{const pat=G.arpPatterns()[M.ui.arp];if(!pat)return;useArpLine(G.arpLane(M.project,pat,64),`ARP pattern “${pat.name}”`);});
@@ -107,7 +108,7 @@ async function exportAll(){const r=await renderAllParts(),whole=r.parts.length>2
 async function exportDrop(){const r=await renderAllParts();if(await save(X.wav(r.buffer,r.tl.dropOut-r.t0,r.tl.dropEndOut-r.t0),name()+' (drop).wav','audio/wav'))status('Exported the drop alone, bar-exact, as 24-bit WAV.');}
 async function exportMidi(){const r=await renderAllParts(),by=l=>r.events.filter(e=>l.includes(e[0])).map(e=>e.slice(1));if(await save(X.midiTracks([{name:'Bass',channel:0,notes:by(['bass'])},{name:'Lead',channel:1,notes:by(['lead'])},{name:'Drums',channel:9,notes:by(['kick','clap','snare','hat','open','roll'])}],M.project.bpm),name()+'.mid','audio/midi'))status('Exported MIDI: bass, lead and drums (GM drum notes), from the start of the arrangement.');}
 function saveProject(){return save(new TextEncoder().encode(JSON.stringify({app:'Dropfather drop maker',version:2,project:M.project},null,1)),name()+'.json','application/json');}
-async function loadProject(file){try{const j=JSON.parse(await file.text()),p=j.project||j;if(!p.build?.grid||!p.drop?.grid)throw Error('not a Dropfather drop maker project');p.song=p.song||{intro:false,breakdown:false,outro:false};M.project=p;M.full=null;stop();buildControls();renderAll();status('Loaded '+file.name);}catch(e){status('Could not load: '+e.message,true);}}
+async function loadProject(file){try{const j=JSON.parse(await file.text()),p=j.project||j;if(!p.build?.grid||!p.drop?.grid)throw Error('not a Dropfather drop maker project');p.song=p.song||{intro:false,breakdown:false,outro:false};p.sounds.drums=window.DropKits?.has(p.sounds.drums)?p.sounds.drums:'synth';M.project=p;M.full=null;stop();buildControls();renderAll();status('Loaded '+file.name);}catch(e){status('Could not load: '+e.message,true);}}
 
 /* ---------- Wiring ---------- */
 function setProject(p,note){M.project=p;M.full=null;buildControls();renderAll();changed();status(note||p.desc);}
