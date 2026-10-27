@@ -1,4 +1,4 @@
-# DROPFATHER — by Tarjei Krogh · v0.6
+# DROPFATHER — by Tarjei Krogh · v0.7
 
 To veier inn fra startskjermen:
 
@@ -69,17 +69,20 @@ Målt på *Television Is Blue*: den faste noten traff sterkeste tone i originale
 ARP-grunntonene treffer **69–74 %** (*The Light*: 77–84 %). Resten kan være omvendinger (ARP gir akkordens
 grunntone, ikke bassnoten) eller kick i målingen. Det må høres, ikke bare måles.
 
-## Make a drop (drop maker, v0.6)
+## Make a drop (drop maker, v0.7)
 
-1. Velg **Make a drop** på startskjermen.
+1. Hele motoren ligger i svart-hvitt under startskjermen. Trykk **Make a drop**, så våkner den i rødt.
 2. **BPM, toneart og skala** (moll, frygisk, dorisk, harmonisk moll, dur).
 3. **Stilknappene** (House lift, Festival, Techno tunnel, Take-off, EBM motor) skriver et **nytt drop hver gang**:
    - Hver stil har sin egen meny av varianter, og hvert trykk trekker en ny kombinasjon: hats, clap/snare, open hats,
      fills, basspattern (Bass Invaders-riff, offbeat, synkopert, rullende 16-deler, gallop, oktav), lead og tempo
      innenfor stilen.
    - Linjen under knappene sier hva som ble valgt.
-   - **🎲 New drop** gir et nytt drop i samme stil, toneart og skala. **Randomize** trekker stil, toneart, skala,
-     basslyd og DELAYSY-preset.
+   - **🎲 New drop** gir et nytt drop i samme stil, toneart og skala. **🎲 Randomize** ligger først i bunnlinjen og
+     trekker stil, toneart, skala, akkorder, basslyd og DELAYSY-preset.
+   - **Akkorder:** hvert drop har en akkordprogresjon på 4 takter (f.eks. Am – F – C – G). Bassriffet flytter seg
+     med akkordene, og leaden lander på akkordtonene. **🎲 New chords** gir nye akkorder og skriver bass og lead på
+     nytt. **🎲 New melody** gir et nytt riff på de samme akkordene.
 4. **Stripen** er arrangementet. Klikk en del for å redigere den.
    - **Grid:** build-up, drop (og intro, breakdown og outro) har hver sin grid, med fem trommelinjer og bass og lead
      i valgt skala. Mønsteret er 1, 2 eller 4 takter.
@@ -99,12 +102,19 @@ grunntone, ikke bassnoten) eller kick i målingen. Det må høres, ikke bare må
      synth-slaget i samme linje, så mikseknappene betyr det samme for alle sett. Norwegian Beats' effekter per
      slag (punch, plate, lofi …) er ikke med.
    - **Bass:** Bass Invaders (2000 fabrikklyder). Basslinjene kommer fra Bass Invaders' egen riff-generator.
-   - **Lead:** AVANTGARDIAN ARP med alle 777 lyder gjennom ARP-ens egen kjede (Norwegian Beats v46-stemme, mono
+   - **Lead:** Dropfathers egne lead-synther er standard: Festival supersaw, Big room stab, Trance pluck, Hoover,
+     Screech lead, House organ stab, Techno dub chord, EBM pulse og Future bass chord. De spiller akkorder med
+     melodien øverst, 3–7 detunede oscillatorer per tone, oktavlag, filterkonvolutt, drive, ping-pong-delay og
+     romklang. Hver akkord rendres én gang og gjenbrukes.
+   - **Filter før droppet:** I build-upen spiller leaden hele droppets melodi gjennom et lowpass som åpner seg fra
+     280 Hz til 9 kHz, med mer romklang. I droppet er filteret helt åpent. Intro, breakdown og outro har et
+     halvlukket filter.
+   - AVANTGARDIAN ARP med alle 777 lyder gjennom ARP-ens egen kjede (Norwegian Beats v46-stemme, mono
      VoiceOutput, SoundMatch-nivå og lydens StudioFX). Bass Invaders-lydene kan også brukes som lead.
    - **Leadlinjen** kan hentes fra **ARP-ens mønsterbibliotek**: velg et av 2281 mønstre, trykk **🎲 Random ARP
      pattern**, eller **🎲 ARP blend (Make arp)**, som er ARP-ens egen `NoteEngine.hybrid` og blander fire mønstre til
      en ny frase. Tonene legges på nærmeste trinn i skalaen.
-7. **Loop section** spiller delen du redigerer, og endringer i griden høres med en gang. **Play all** rendrer hele
+7. **Play all** kan pauses og fortsetter der du stoppet. **Loop section** spiller delen du redigerer, og endringer i griden høres med en gang. **Play all** rendrer hele
    arrangementet. Endrer du noe mens det spiller (stil, lyd, grid), rendres det på nytt og fortsetter fra samme sted.
 8. **Eksport**:
    - WAV i 24-bit: hele arrangementet, eller bare droppet.
@@ -158,7 +168,7 @@ node tools/extract-nb-drums.mjs Norwegian_Beats.html assets-1.js assets-2.js ass
 `src/files.js` (lagring), `src/kits.js` (trommesett), `src/vendor/` (ARP-analysen, Bass Invaders, DELAYSY,
 Norwegian Beats-trommene).
 
-## Kjente grenser i v0.6
+## Kjente grenser i v0.7
 
 - Takt 1 er en kvalifisert gjetning (seksjoner skifter på 1-ern). Sjekk den med «−1 beat / +1 beat».
 - Taktartsforutsetning 4/4. Tempo må være stabilt (ingen live-tempo-drift).

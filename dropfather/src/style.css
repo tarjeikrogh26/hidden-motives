@@ -112,3 +112,14 @@ body[data-mode="maker"] .song-only,body[data-mode="song"] .maker-only{display:no
 .secfx{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 20px;width:100%}
 @media(max-width:700px){.secfx{grid-template-columns:1fr}}
 #mDesc{margin:8px 0 0}
+
+/* Idle: the drop maker's engine lies under the start screen in black and white; Make a drop wakes it in red. */
+.maker-only{transition:filter 1.4s ease,opacity .9s ease}
+body:not([data-mode]) .maker-only{filter:grayscale(1) brightness(.55) contrast(.95);opacity:.55;pointer-events:none;user-select:none}
+body.waking .panel.maker-only,body.waking .maker-only .panel,body.waking .dock.maker-only{animation:blood 1.7s ease-out}
+body.waking .grid .c.on,body.waking .grid .c.acc{animation:pulse 1.2s ease-out}
+@keyframes blood{0%{box-shadow:0 0 0 0 rgba(227,32,27,0)}35%{box-shadow:0 0 42px 6px rgba(255,40,30,.7),inset 0 0 46px rgba(227,32,27,.35);border-color:var(--red2)}100%{box-shadow:0 0 0 0 rgba(227,32,27,0)}}
+@keyframes pulse{0%{background:#fff;box-shadow:0 0 0 0 rgba(255,74,61,0)}40%{background:var(--red2);box-shadow:0 0 10px 2px rgba(255,74,61,.9)}100%{box-shadow:0 0 0 0 rgba(255,74,61,0)}}
+.styles .stylelabel{flex-basis:100%;color:var(--muted);font-size:13px}
+#mRandom{background:#2a0f0d;border-color:var(--red2);color:var(--red2)}
+body:not([data-mode]) .dock.maker-only{position:static;margin-top:14px}

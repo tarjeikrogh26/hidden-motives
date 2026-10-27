@@ -10,7 +10,7 @@ const seed=()=>(Math.random()*2**31)|0;
 /* ---------- Controls ---------- */
 const DELAYSY=Object.fromEntries((window.Delaysy?.presets||[]).map((v,i)=>[i,`${i+1}. ${v.name} · ${v.cat}`]));
 const BASSES=Object.fromEntries(X.bassCatalog().map((v,i)=>[v.id,`${i+1}. ${v.name}`]));
-const LEADS=Object.fromEntries([...G.arpSounds().map((s,i)=>['arp:'+s.id,`ARP ${i+1}. ${s.name} · ${s.group}`]),['minilead','Bass Invaders · Mini Lead'],['lead','Bass Invaders · Saw Lead'],['sqlead','Bass Invaders · Square Lead'],...Object.entries(BASSES).map(([k,v])=>[k,'Bass Invaders '+v])]);
+const LEADS=Object.fromEntries([...(window.DropLead?.list()||[]).map(p=>['dl:'+p.id,'Dropfather · '+p.n]),...G.arpSounds().map((s,i)=>['arp:'+s.id,`ARP ${i+1}. ${s.name} · ${s.group}`]),['minilead','Bass Invaders · Mini Lead'],['lead','Bass Invaders · Saw Lead'],['sqlead','Bass Invaders · Square Lead'],...Object.entries(BASSES).map(([k,v])=>[k,'Bass Invaders '+v])]);
 const ARPS=Object.fromEntries(G.arpPatterns().map((p,i)=>[i,`${i+1}. ${p.name} · ${p.mode}`]));
 function knob(box,obj,key,label,after){const row=document.createElement('div');row.className='knob';row.innerHTML='<label></label><input type="range" min="0" max="1" step="0.01"><output></output>';row.querySelector('label').textContent=label;const r=row.querySelector('input'),o=row.querySelector('output');const show=()=>{r.value=obj()[key];o.textContent=Math.round(r.value*100)+'%';};show();r.oninput=()=>{obj()[key]=+r.value;o.textContent=Math.round(r.value*100)+'%';};r.onchange=()=>after?.();row.sync=show;box.append(row);return row;}
 function pick(box,obj,key,label,opts,after){const long=Object.keys(opts).length>20,row=document.createElement('div');row.className='pick'+(long?' browse':'');row.innerHTML=`<label></label><div class="nav">${long?'<button type="button" aria-label="Back 10">«</button><button type="button" aria-label="Previous">‹</button>':''}<select></select>${long?'<button type="button" aria-label="Next">›</button><button type="button" aria-label="Forward 10">»</button>':''}</div>`;row.querySelector('label').textContent=label;const sel=row.querySelector('select');for(const [v,n] of Object.entries(opts))sel.add(new Option(n,v));const set=v=>{obj()[key]=isNaN(+v)?v:+v;after?.();};sel.onchange=()=>set(sel.value);if(long)row.querySelectorAll('.nav button').forEach((b,i)=>b.onclick=()=>{const n=sel.options.length,s=[-10,-1,1,10][i];sel.selectedIndex=((sel.selectedIndex+s)%n+n)%n;set(sel.value);});row.sync=()=>{sel.value=String(obj()[key]);};row.sync();box.append(row);return row;}
@@ -28,13 +28,17 @@ function buildControls(){
  // The lead line from ARP: a pattern from its library, the next random one, or a fresh blend ("Make arp").
  const arpRow=pick(s,()=>M.ui,'arp','Lead pattern from ARP’s library',ARPS,()=>{const pat=G.arpPatterns()[M.ui.arp];if(!pat)return;useArpLine(G.arpLane(M.project,pat,64),`ARP pattern “${pat.name}”`);});
  const actions=document.createElement('div');actions.className='rowbtns';s.append(actions);
+ button(actions,'🎲 New melody',()=>afterLead(G.newMelody(M.project,seed()))).title='A new lead riff on the same chords';
+ button(actions,'🎲 New chords',()=>{const prog=G.newChords(M.project,seed());descPart('chords',prog);afterLead('Dropfather riff');status('New chords: '+prog+' · bass and lead rewritten on them');}).title='A new chord progression, with the bass and the lead rewritten on it';
  button(actions,'🎲 Random ARP pattern',()=>{const info=G.newArpLead(M.project,seed(),'arp');if(info)afterLead(info);});
  button(actions,'🎲 ARP blend (Make arp)',()=>{const info=G.newArpLead(M.project,seed(),'blend');if(info)afterLead(info);});
  rows.push(arpRow,knob(s,gate,'bass','Bass note length',ch),knob(s,gate,'lead','Lead note length',ch));
  for(const [k,l] of [...G.DRUMS,['bass','Bass'],['lead','Lead']])rows.push(knob(s,mix,k,l+' level',ch));
 }
 function useArpLine(line,info){const p=M.project;if(p.drop.patternBars<4)G.resize(p.drop,4);p.drop.grid.lead=line.slice(0,G.steps(p.drop));for(let i=0;i<G.steps(p.build);i++)p.build.grid.lead[i]=p.drop.grid.lead[i%G.steps(p.drop)];afterLead(info);}
-function afterLead(info){M.project.desc=(M.project.desc||'').replace(/ · lead: .*$/,'')+' · lead: '+info;M.section=M.section==='pre'?'drop':M.section;renderAll();changed();status('New lead line: '+info);}
+// Swap one part of the description line ("chords: …", "lead: …") and keep the rest.
+function descPart(label,text){const d=M.project.desc||'',re=new RegExp(' · '+label+': [^·]*?(?= · |$)');M.project.desc=re.test(d)?d.replace(re,' · '+label+': '+text):d+' · '+label+': '+text;}
+function afterLead(info){descPart('lead',info);M.section=M.section==='pre'?'drop':M.section;renderAll();changed();status('New lead line: '+info);}
 
 /* ---------- Strip, section bar and grid ---------- */
 function renderStrip(){
@@ -80,16 +84,18 @@ function changed(){M.full=null;if(M.player?.playing()){clearTimeout(M.restart);M
 /* ---------- Play ---------- */
 function player(){if(!M.player)M.player=G.createPlayer(ctx(),out());return M.player;}
 async function loop(){
- if(M.section==='pre')M.section='drop';stopBuffer();window.Dropfather.stop();ctx();
+ if(M.section==='pre')M.section='drop';stopBuffer();M.paused=null;playLabel();window.Dropfather.stop();ctx();
  status('Preparing the voices …');await player().play(M.project,M.section);renderStrip();status(`Looping the ${G.NAMES[M.section].toLowerCase()} · edit the grid while it plays`);tick();
 }
 function stopBuffer(){if(M.src){try{M.src.stop();}catch(e){}M.src=null;}}
-function stop(){M.player?.stop();stopBuffer();clearTimeout(M.replay);cancelAnimationFrame(M.raf);markNow(-1);setStripHead(null);}
+function playLabel(){const b=$('mPlayAll');if(b)b.textContent=M.src?'⏸ Pause':M.paused!=null?'▶ Resume':'▶ Play all';}
+function pause(){if(!M.src)return;M.paused=ctx().currentTime-M.srcStart;stopBuffer();cancelAnimationFrame(M.raf);markNow(-1);playLabel();status('Paused · press Resume to play on from here');}
+function stop(){M.paused=null;M.player?.stop();stopBuffer();playLabel();clearTimeout(M.replay);cancelAnimationFrame(M.raf);markNow(-1);setStripHead(null);}
 async function renderAllParts(){if(M.full)return M.full;const p=M.project;status('Rendering '+G.timeline(p).parts.map(x=>G.NAMES[x.name].toLowerCase()).join(' → ')+' …');const t=performance.now(),r=await G.render(p,{sr:ctx().sampleRate});if(M.project!==p)return renderAllParts();M.full=r;const gr=20*Math.log10(r.reduction||1);status(`Rendered in ${((performance.now()-t)/1000).toFixed(1)} s${gr<-.1?` · limiter ${gr.toFixed(1)} dB`:''}`);return r;}
 async function playAll(resume){
- const at=resume&&M.src?ctx().currentTime-M.srcStart:0;M.player?.stop();window.Dropfather.stop();
+ const at=resume&&M.src?ctx().currentTime-M.srcStart:M.paused??0;const back=M.paused!=null;M.paused=null;M.player?.stop();window.Dropfather.stop();
  const r=await renderAllParts();stopBuffer();const c=ctx(),s=c.createBufferSource();s.buffer=r.buffer;s.connect(out());const from=Math.min(at,r.buffer.duration-.1),t0=c.currentTime+.05;s.start(t0,from);M.src=s;M.srcStart=t0-from;
- s.onended=()=>{if(M.src===s){M.src=null;setStripHead(null);markNow(-1);}};status(resume?'Updated · playing on from the same spot':'Playing '+r.parts.map(x=>G.NAMES[x.name].toLowerCase()).join(' → '));tick();
+ s.onended=()=>{if(M.src===s){M.src=null;setStripHead(null);markNow(-1);playLabel();}};playLabel();status(resume?'Updated · playing on from the same spot':back?'Playing on from where you paused':'Playing '+r.parts.map(x=>G.NAMES[x.name].toLowerCase()).join(' → '));tick();
 }
 function markNow(step){if(!M.cells)return;if(M.now!=null&&M.cells[M.now])for(const c of M.cells[M.now])c.classList.remove('now');M.now=step>=0&&M.cells.length?step%M.cells.length:null;if(M.now!=null)for(const c of M.cells[M.now])c.classList.add('now');}
 function setStripHead(t){for(const b of $('strip').querySelectorAll('button')){const i=b.querySelector('i'),a=+b.dataset.a,e=+b.dataset.e;const on=t!=null&&t>=a&&t<e;i.style.display=on?'block':'none';if(on)i.style.left=((t-a)/Math.max(1e-6,e-a)*100)+'%';}}
@@ -112,13 +118,20 @@ async function loadProject(file){try{const j=JSON.parse(await file.text()),p=j.p
 
 /* ---------- Wiring ---------- */
 function setProject(p,note){M.project=p;M.full=null;buildControls();renderAll();changed();status(note||p.desc);}
-function open(){document.body.dataset.mode='maker';window.Dropfather.stop();for(const id of ['makerPanel','makerMachines','makerSounds','makerDock'])$(id).classList.remove('hidden');if(!M.project)setProject(G.generate('house',seed()));else renderAll();}
+// Before anything is chosen, the whole engine lies under the start screen in black and white. Make a drop
+// brings it to life in red.
+function show(){for(const id of ['makerPanel','makerMachines','makerSounds','makerDock'])$(id).classList.remove('hidden');}
+function preview(){M.project=G.generate('house',seed());buildControls();renderAll();show();}
+function open(){
+ const first=!document.body.dataset.mode;document.body.dataset.mode='maker';window.Dropfather.stop();show();if(!M.project)setProject(G.generate('house',seed()));else renderAll();
+ if(first&&!matchMedia('(prefers-reduced-motion: reduce)').matches){document.body.classList.add('waking');setTimeout(()=>document.body.classList.remove('waking'),1800);}
+ status('Engine on · loop a section to hear it while you edit the grid, or play it all.');
+}
 function init(){
  NOTE.forEach((n,i)=>$('mKey').add(new Option(n,i)));for(const [k,[n]] of Object.entries(G.SCALES))$('mScale').add(new Option(n,k));
- const st=$('mStyles'),keep=()=>({key:M.project.key,scale:M.project.scale});
+ const st=$('mStyles'),keep=()=>({key:M.project.key,scale:M.project.scale});{const l=document.createElement('span');l.className='stylelabel';l.textContent='New drop in a style (every click writes a new one):';st.append(l);}
  for(const [k,v] of Object.entries(G.STYLES)){const b=document.createElement('button');b.textContent=v.name;b.dataset.style=k;b.title='Write a new '+v.name+' drop (different every time)';b.onclick=()=>setProject(G.generate(k,seed(),keep()));st.append(b);}
  button(st,'🎲 New drop',()=>{const k=G.STYLES[M.project.style]?M.project.style:Object.keys(G.STYLES)[Math.floor(Math.random()*5)];setProject(G.generate(k,seed(),keep()));}).title='Another drop in the same style, key and scale';
- const rnd=button(st,'Randomize',()=>setProject(G.randomize(M.project,seed())));rnd.dataset.style='random';rnd.title='Random style, key, scale, sounds and DELAYSY preset';
  $('mSketch').onclick=()=>{const p=M.project;if(G.SKETCH.some(k=>p.song?.[k])){p.song={intro:false,breakdown:false,outro:false};if(G.SKETCH.includes(M.section))M.section='drop';status('Back to build-up → pre-drop → drop.');}else{G.sketch(p);status('Suggested: intro (16 bars, filter opening) → breakdown (8 bars, no drums) → build-up → drop → outro (16 bars, filter closing). Each has its own grid.');}M.full=null;renderAll();changed();};
  const bpm=v=>{M.project.bpm=Math.max(60,Math.min(200,Math.round(v)));$('mBpm').value=M.project.bpm;renderStrip();changed();};
  $('mBpm').onchange=e=>bpm(+e.target.value);$('mBpmDown').onclick=()=>bpm(M.project.bpm-1);$('mBpmUp').onclick=()=>bpm(M.project.bpm+1);
@@ -126,10 +139,10 @@ function init(){
  $('mClear').onclick=()=>{for(const s of G.ORDER)if(M.project[s])M.project[s].grid=G.blank(G.steps(M.project[s]));M.full=null;paint();changed();};
  $('grid').onclick=e=>{const c=e.target.closest('.c');if(!c)return;const g=M.project[M.section].grid,l=c.dataset.l,i=+c.dataset.i;if(c.dataset.d!=null){const d=+c.dataset.d;g[l][i]=g[l][i]===d?null:d;}else g[l][i]=(g[l][i]+1)%3;M.full=null;paint();if(M.src){clearTimeout(M.replay);M.replay=setTimeout(()=>playAll(true),700);}};
  $('makeDrop').onclick=open;
- $('mPlayAll').onclick=()=>playAll(false);$('mLoop').onclick=loop;$('mStop').onclick=stop;$('mVolume').oninput=e=>{const g=out();if(g)g.gain.value=+e.target.value;};
+ $('mPlayAll').onclick=()=>M.src?pause():playAll(false);$('mRandom').onclick=()=>setProject(G.randomize(M.project,seed()));$('mLoop').onclick=loop;$('mStop').onclick=stop;$('mVolume').oninput=e=>{const g=out();if(g)g.gain.value=+e.target.value;};
  $('mExAll').onclick=exportAll;$('mExDrop').onclick=exportDrop;$('mExMidi').onclick=exportMidi;$('mSave').onclick=saveProject;$('mLoad').onchange=e=>e.target.files[0]&&loadProject(e.target.files[0]);
  document.addEventListener('keydown',e=>{if(document.body.dataset.mode==='maker'&&e.code==='Space'&&!/INPUT|SELECT|TEXTAREA|BUTTON/.test(e.target.tagName)){e.preventDefault();M.player?.playing()||M.src?stop():loop();}});
  window.DropMaker={M,stop,open,loop,playAll,render:renderAllParts};
 }
-init();
+init();preview();
 })();

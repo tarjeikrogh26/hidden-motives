@@ -8,7 +8,7 @@ const X=root.DropDSP,P=X.parts,clamp=P.clamp;
 
 const SCALES={minor:['Minor',[0,2,3,5,7,8,10]],phrygian:['Phrygian',[0,1,3,5,7,8,10]],dorian:['Dorian',[0,2,3,5,7,9,10]],harmonic:['Harmonic minor',[0,2,3,5,7,8,11]],major:['Major',[0,2,4,5,7,9,11]]};
 const DRUMS=[['kick','Kick'],['clap','Clap'],['snare','Snare'],['hat','Hat'],['open','Open hat']];
-const ROWS={bass:8,lead:11};// scale degrees per note lane, 0 = root
+const ROWS={bass:14,lead:11};// scale degrees per note lane, 0 = root (bass: two octaves, so riffs keep their octave jumps on every chord)
 const NOTE=['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
 // Arrangement order. The pre-drop is the end of the build-up (its silence, throw and reverse suck).
 const ORDER=['intro','breakdown','build','drop','outro'];
@@ -30,7 +30,7 @@ const enabled=(p,name)=>(name==='build'||name==='drop')?true:!!(p.song&&p.song[n
 const arpSounds=()=>root.NB46Bank?.factory||[];
 let library=null;
 function arpPatterns(){if(library)return library;const el=root.document?.getElementById('arp-patterns');library=el?JSON.parse(el.textContent).patterns:[];return library;}
-function leadName(id){if(id?.startsWith('arp:')){const e=arpSounds().find(s=>s.id===id.slice(4));return e?'ARP · '+e.name:id;}return {minilead:'Bass Invaders · Mini Lead',lead:'Bass Invaders · Saw Lead',sqlead:'Bass Invaders · Square Lead'}[id]||id;}
+function leadName(id){if(id?.startsWith('dl:'))return 'Dropfather · '+(root.DropLead?.PATCHES[id.slice(3)]?.n||id);if(id?.startsWith('arp:')){const e=arpSounds().find(s=>s.id===id.slice(4));return e?'ARP · '+e.name:id;}return {minilead:'Bass Invaders · Mini Lead',lead:'Bass Invaders · Saw Lead',sqlead:'Bass Invaders · Square Lead'}[id]||id;}
 
 /* ---------- Turning an ARP pattern into the lead lane ---------- */
 // Pitches relative to the pattern's root become the nearest degree of the project's scale; one note per sixteenth.
@@ -39,7 +39,9 @@ function arpLane(project,pattern,n){
  for(const [beat,,pitch] of [...pattern.notes].sort((a,b)=>a[0]-b[0]||b[2]-a[2])){
   const i=Math.round(beat*4);if(i<0||i>=n||out[i]!=null)continue;
   const rel=pitch-base,oct=Math.floor(rel/12),pc=((rel%12)+12)%12;let best=0,dist=99;sc.forEach((s,k)=>{const d=Math.abs(s-pc);if(d<dist){dist=d;best=k;}});
-  let deg=best+7*oct;while(deg<0)deg+=7;while(deg>=ROWS.lead)deg-=7;out[i]=deg;
+  let deg=best+7*oct;while(deg<0)deg+=7;while(deg>=ROWS.lead)deg-=7;
+  if(project.chords&&i%4===0){const T=chordTones(chordOf(project,i));for(const step of [0,-1,1,-2,2])if(T.includes(pc7(deg+step))&&deg+step>=0&&deg+step<ROWS.lead){deg+=step;break;}}
+  out[i]=deg;
  }
  return out;
 }
@@ -48,15 +50,15 @@ function arpBlend(seed){const N=root.NoteEngine,all=arpPatterns();if(!N?.hybrid|
 
 /* ---------- Styles: each writes a whole drop project, different every time ---------- */
 const STYLES={
- house:{kits:['club','deep','crisp','punch'],name:'House lift',genre:'house',bpm:[122,126],bass:['pal:house:5:1','pal:house:6:1','pal2:house:1','pal:house:4:1'],group:'soft',hats:['off8','shuffle','sixteen'],clap:['twofour','pickup'],open:['none','offopen'],fill:['none','small'],bassline:['invaders','offbeat','syncopated'],lead:['arp','blend','hook'],
+ house:{kits:['club','deep','crisp','punch'],name:'House lift',genre:'house',bpm:[122,126],bass:['pal:house:5:1','pal:house:6:1','pal2:house:1','pal:house:4:1'],group:'soft',hats:['off8','shuffle','sixteen'],clap:['twofour','pickup'],open:['none','offopen'],fill:['none','small'],bassline:['invaders','offbeat','syncopated'],lead:['riff'],leads:['dl:house','dl:trance','dl:future'],riffs:'house',prog:'pop',
   build:{bars:8,fx:{hp:.5,riser:.4,pitch:0,roll:'clap',rollAmt:.5,verb:.35,swell:.2,kickOut:.75}},pre:{gapBeats:1,throw:.5,delaysy:8,throwLen:1,reverse:.4},drop:{bars:16,fx:{pump:.35,impact:.4}},gate:{bass:.55,lead:.45}},
- festival:{kits:['punch','club','heavy'],name:'Festival',genre:'edm',bpm:[126,130],bass:['pal:edm:1:1','pal:edm:0:0','pal:edm:2:1','pal:edm:3:0'],group:'wide',hats:['off8','sixteen'],clap:['twofour','layer'],open:['barend','offopen'],fill:['big','small'],bassline:['invaders','roll16','bounce'],lead:['arp','blend','hook'],
+ festival:{kits:['punch','club','heavy'],name:'Festival',genre:'edm',bpm:[126,130],bass:['pal:edm:1:1','pal:edm:0:0','pal:edm:2:1','pal:edm:3:0'],group:'wide',hats:['off8','sixteen'],clap:['twofour','layer'],open:['barend','offopen'],fill:['big','small'],bassline:['invaders','roll16','bounce'],lead:['riff'],leads:['dl:festival','dl:bigroom','dl:hoover'],riffs:'festival',prog:'pop',
   build:{bars:16,fx:{hp:.8,riser:.8,pitch:.6,roll:'snare',rollAmt:.85,verb:.6,swell:.5,kickOut:.5}},pre:{gapBeats:4,throw:.6,delaysy:61,throwLen:2,reverse:.8},drop:{bars:16,fx:{pump:.7,impact:.9}},gate:{bass:.7,lead:.75}},
- techno:{kits:['heavy','room','tape'],name:'Techno tunnel',genre:'motor',bpm:[128,134],bass:['pal:motor:3:1','pal:motor:7:0','pal:motor:2:1','pal:ebm:3:1'],group:'modular',hats:['sixteen','gallop','off8'],clap:['none','rim'],open:['offopen'],fill:['none'],bassline:['invaders','gallop','offbeat'],lead:['arp','blend','none'],
+ techno:{kits:['heavy','room','tape'],name:'Techno tunnel',genre:'motor',bpm:[128,134],bass:['pal:motor:3:1','pal:motor:7:0','pal:motor:2:1','pal:ebm:3:1'],group:'modular',hats:['sixteen','gallop','off8'],clap:['none','rim'],open:['offopen'],fill:['none'],bassline:['invaders','gallop','offbeat'],lead:['riff','riff','none'],leads:['dl:techno','dl:screech'],riffs:'techno',prog:'dark',
   build:{bars:8,fx:{hp:.7,riser:.6,pitch:0,roll:'kick',rollAmt:.7,verb:.5,swell:.3,kickOut:1}},pre:{gapBeats:2,throw:.7,delaysy:98,throwLen:1,reverse:.3},drop:{bars:16,fx:{pump:.55,impact:.6}},gate:{bass:.6,lead:.3}},
- takeoff:{kits:['punch','club','crisp'],name:'Take-off',genre:'edm',bpm:[126,130],bass:['pal:edm:0:1','pal:edm:1:1','pal:edm:3:0'],group:'wide',hats:['off8','sixteen'],clap:['twofour','layer'],open:['none','barend'],fill:['small','big'],bassline:['roll16','bounce','invaders'],lead:['arp','blend','hook'],
+ takeoff:{kits:['punch','club','crisp'],name:'Take-off',genre:'edm',bpm:[126,130],bass:['pal:edm:0:1','pal:edm:1:1','pal:edm:3:0'],group:'wide',hats:['off8','sixteen'],clap:['twofour','layer'],open:['none','barend'],fill:['small','big'],bassline:['roll16','bounce','invaders'],lead:['riff'],leads:['dl:trance','dl:festival','dl:future'],riffs:'takeoff',prog:'pop',
   build:{bars:8,fx:{hp:.65,riser:.55,pitch:.5,roll:'snare',rollAmt:.6,verb:.45,swell:.35,kickOut:.6}},pre:{gapBeats:1,throw:.45,delaysy:30,throwLen:1,reverse:.6},drop:{bars:16,fx:{pump:.5,impact:.7}},gate:{bass:.7,lead:.5}},
- ebm:{kits:['heavy','tape','dusty'],name:'EBM motor',genre:'ebm',bpm:[116,124],bass:['pal:ebm:3:1','pal:ebm:1:0','pal:ebm:6:1','pal:acid:0:0'],group:'modular',hats:['off8','sparse'],clap:['snare'],open:['none'],fill:['none','small'],bassline:['octave8','invaders','roll16'],lead:['none','arp','blend'],
+ ebm:{kits:['heavy','tape','dusty'],name:'EBM motor',genre:'ebm',bpm:[116,124],bass:['pal:ebm:3:1','pal:ebm:1:0','pal:ebm:6:1','pal:acid:0:0'],group:'modular',hats:['off8','sparse'],clap:['snare'],open:['none'],fill:['none','small'],bassline:['octave8','invaders','roll16'],lead:['riff','riff','none'],leads:['dl:ebm','dl:screech','dl:hoover'],riffs:'ebm',prog:'dark',
   build:{bars:4,fx:{hp:.55,riser:.3,pitch:0,roll:'snare',rollAmt:.7,verb:.25,swell:.2,kickOut:.75}},pre:{gapBeats:2,throw:.35,delaysy:179,throwLen:.5,reverse:.2},drop:{bars:16,fx:{pump:.3,impact:.5}},gate:{bass:.8,lead:.35}}
 };
 const MIX={kick:.9,clap:.55,snare:.5,hat:.35,open:.3,bass:.7,lead:.45};
@@ -74,6 +76,61 @@ function hook(rng,n,density){
  const out=Array(n).fill(null),rhythms=[[0,3,6,10,12],[0,2,4,7,10,14],[0,3,6,8,11,14],[2,6,10,14],[0,4,6,10,12,14]],pool=[0,2,4,6,7,9];
  const r=rhythms[Math.floor(rng()*rhythms.length)].filter(()=>rng()<density+.35),motif=r.map((s,i)=>[s,i===0?(rng()<.5?0:4):pool[Math.floor(rng()*pool.length)]]);
  for(let bar=0;bar*16<n;bar++)motif.forEach(([s,d],i)=>{let deg=d;if(bar%2===1&&i===motif.length-1)deg=rng()<.5?0:4;if(bar%4===3&&i>=motif.length-2)deg=Math.min(9,d+2);out[bar*16+s]=deg;});
+ return out;
+}
+/* ---------- Harmony: a 4-bar chord progression under the drop ---------- */
+// Chords are scale degrees (0 = the key's own chord), one per bar. Bass riffs move with them, the lead's notes
+// land on chord tones, and chord leads stack the bar's chord under the melody note.
+const PROGS={
+ minor:{pop:[[0,5,2,6],[0,5,3,4],[5,3,0,4],[0,3,5,4],[0,6,5,6],[5,6,0,0],[0,2,6,5]],dark:[[0,0,5,6],[0,5,0,6],[0,0,3,4],[0,0,0,5],[0,6,0,5]]},
+ phrygian:{pop:[[0,1,0,6],[0,5,1,0],[0,6,5,1]],dark:[[0,1,0,0],[0,0,1,6],[0,0,0,1]]},
+ dorian:{pop:[[0,3,0,3],[0,6,3,0],[0,3,6,0],[0,2,3,0]],dark:[[0,0,3,3],[0,6,0,3]]},
+ harmonic:{pop:[[0,5,3,4],[0,3,4,4],[0,5,4,4],[0,5,2,4]],dark:[[0,0,4,4],[0,1,4,0]]},
+ major:{pop:[[0,4,5,3],[5,3,0,4],[0,5,3,4],[3,4,0,5],[0,3,5,4]],dark:[[0,0,3,4],[0,6,3,0]]}};
+const pc7=d=>((d%7)+7)%7;
+const chordOf=(p,k)=>{const c=p.chords||[0];return c[Math.floor(k/16)%c.length]||0;};
+const chordTones=(c,seventh)=>[0,2,4].concat(seventh?[6]:[]).map(x=>pc7(c+x));
+function chordName(p,c){const a=degree(p,c),third=degree(p,c+2)-a,fifth=degree(p,c+4)-a;return NOTE[(p.key+a)%12]+(third===3?(fifth===6?'dim':'m'):'');}
+const progName=p=>(p.chords||[0]).map(c=>chordName(p,c)).join(' – ');
+// The lead's chord: the bar's chord tones just below the melody note (the melody stays on top).
+function voiceChord(p,d,k,kind){
+ if(!kind||kind==='single')return [d];
+ if(kind==='power')return [d,d-4,d-7];
+ if(kind==='dyad')return [d,d-2];
+ const T=chordTones(chordOf(p,k),kind==='seventh'),out=[d],want=kind==='seventh'?4:3;
+ if(!T.includes(pc7(d)))return kind==='stack'?[d,d-2,d-4,d-7]:[d,d-2,d-4];
+ for(let x=d-1;x>d-8&&out.length<want;x--)if(T.includes(pc7(x)))out.push(x);
+ if(kind==='stack')out.push(d-7);
+ return out;
+}
+// Bass riffs are written on the key's root; on chords each bar moves to its chord's root.
+function onChords(line,p){return line.map((d,i)=>{if(d==null)return d;let v=d+chordOf(p,i);while(v>ROWS.bass-1)v-=7;return v;});}
+// Lead riffs: a one-bar rhythm (the call) and its answer, notes on the bar's chord tones with smooth voice
+// leading, a contour per phrase, passing notes on weak steps and a lift at the end of the 4 bars.
+const RIFFS={
+ festival:[[0,3,6,8,10,12,14],[0,3,6,10,12],[0,2,3,6,8,11,14],[0,3,6,9,12,14],[0,3,6,8,11,14]],
+ takeoff:[[0,2,4,6,8,10,12,14],[0,3,4,7,8,11,12,14],[0,2,3,5,6,8,10,11,13,14],[0,2,4,7,8,10,12,15]],
+ house:[[2,6,10,14],[0,3,6,10,13],[0,3,7,10,12],[2,5,8,11,14],[0,3,6,8,11,14]],
+ techno:[[0,3,6,10,13],[2,6,10,14],[0,6,12],[3,6,11,14]],
+ ebm:[[0,2,4,6,8,10,12,14],[0,3,4,7,8,10,12,14],[0,2,3,6,8,10,11,14]]};
+function riff(p,rng,kind,n){
+ const pick=a=>a[Math.floor(rng()*a.length)],A=pick(RIFFS[kind]||RIFFS.festival);
+ const B=rng()<.4?A:[...A.filter(s=>s<10),...pick([[10,12,14],[11,14],[12,13,14],[10,14,15],[12,14]])];
+ const contour=kind==='takeoff'?'arp':kind==='techno'||kind==='ebm'?pick(['hold','hold','wave']):pick(['up','down','arch','hold','wave']);
+ const out=Array(n).fill(null),lo=2,hi=10;let prev=7;
+ for(let bar=0;bar*16<n;bar++){
+  const T=chordTones(chordOf(p,bar*16)),tones=[];for(let x=lo;x<=hi;x++)if(T.includes(pc7(x)))tones.push(x);
+  const hits=bar%2?B:A,start=tones.reduce((b,x,i)=>Math.abs(x-prev)<Math.abs(tones[b]-prev)?i:b,0);let idx=start;
+  hits.forEach((s,j)=>{
+   const step=bar*16+s;if(step>=n)return;
+   if(contour==='arp')idx=Math.max(0,Math.min(start,tones.length-3))+[0,1,2,1][j%4];
+   else if(j>0){if(contour==='up')idx+=rng()<.55?1:0;else if(contour==='down')idx-=rng()<.55?1:0;else if(contour==='arch')idx+=j<hits.length/2?(rng()<.6?1:0):(rng()<.6?-1:0);else if(contour==='wave')idx+=j%2?1:-1;else if(j===hits.length-1&&rng()<.5)idx+=rng()<.5?1:-1;}
+   const top=tones.length-1;if(idx>top)idx=Math.max(0,top-1);if(idx<0)idx=Math.min(top,1);let d=tones[idx];
+   if(s%2===1&&rng()<.25)d=Math.max(lo,Math.min(hi,d+(rng()<.5?1:-1)));
+   if(bar%4===3&&j===hits.length-1)d=tones[Math.min(tones.length-1,idx+1)];
+   out[step]=d;prev=d;
+  });
+ }
  return out;
 }
 function bassline(kind,p,st,rng,seed,n,used=()=>{}){
@@ -101,23 +158,25 @@ function drums(g,n,v){
 function generate(styleKey,seed,base={}){
  const st=STYLES[styleKey]||STYLES.house,rng=P.rng(seed||1),pick=a=>a[Math.floor(rng()*a.length)],key=base.key??9,scale=base.scale||'minor';
  const v={hats:pick(st.hats),clap:pick(st.clap),open:pick(st.open),fill:pick(st.fill),bassline:pick(st.bassline),lead:pick(st.lead)};
- const sounds=arpSounds().filter(s=>s.group===st.group),lead=sounds.length?'arp:'+pick(sounds).id:pick(['minilead','lead','sqlead']);
+ const lead=root.DropLead&&st.leads?pick(st.leads):(()=>{const sounds=arpSounds().filter(s=>s.group===st.group);return sounds.length?'arp:'+pick(sounds).id:pick(['minilead','lead','sqlead']);})();
  const bpm=base.keepTempo&&base.bpm?base.bpm:st.bpm[0]+Math.floor(rng()*(st.bpm[1]-st.bpm[0]+1));
  const p={version:2,style:styleKey,seed,bpm,key,scale,sounds:{bass:pick(st.bass),lead},mix:{...MIX},gate:{...st.gate},song:{intro:false,breakdown:false,outro:false},
-  build:{bars:st.build.bars,patternBars:1,grid:blank(16),fx:{...st.build.fx}},pre:{...st.pre},drop:{bars:st.drop.bars,patternBars:2,grid:blank(32),fx:{...st.drop.fx}}};
+  build:{bars:st.build.bars,patternBars:4,grid:blank(64),fx:{...st.build.fx}},pre:{...st.pre},drop:{bars:st.drop.bars,patternBars:4,grid:blank(64),fx:{...st.drop.fx}}};
+ p.chords=pick((PROGS[scale]||PROGS.minor)[st.prog||'pop']).slice();p.v={...v};
  // Lead: an ARP pattern, a fresh ARP blend ("Make arp"), or a short hook. ARP phrases keep all four bars.
  let leadLine=null,leadInfo='';
  if(v.lead==='arp'){const pat=arpPick(rng,scale);if(pat){p.drop.patternBars=4;leadLine=arpLane(p,pat,64);leadInfo=`ARP pattern “${pat.name}”`;}}
  if(v.lead==='blend'){const pat=arpBlend(seed);if(pat){p.drop.patternBars=4;leadLine=arpLane(p,pat,64);leadInfo=`ARP blend ${pat.name.replace('MIDI blend ','#')}`;}}
+ if(v.lead==='riff'){leadLine=riff(p,rng,st.riffs,64);leadInfo='Dropfather riff';}
  if(v.lead==='hook'||(v.lead!=='none'&&!leadLine)){leadLine=hook(rng,32,styleKey==='festival'?.9:.55);leadInfo='hook';}
- if(p.drop.patternBars===4)p.drop.grid=blank(64);
- const d=p.drop.grid,n=steps(p.drop);drums(d,n,v);d.bass=bassline(v.bassline,p,st,rng,seed,n,k=>v.bassline=k);if(leadLine)for(let i=0;i<n;i++)d.lead[i]=leadLine[i%leadLine.length];
- // Build: the drop's drums thinned (no fill, no open hats), hats driving, the lead's first bar as a teaser, no bass.
- const b=p.build.grid;drums(b,16,{...v,fill:'none',open:'none',clap:v.clap==='pickup'?'twofour':v.clap});if(v.hats==='off8'||v.hats==='sparse')for(let i=0;i<16;i+=2)b.hat[i]=b.hat[i]||1;
- for(let i=0;i<16;i++)b.lead[i]=d.lead[i];
+ const d=p.drop.grid,n=steps(p.drop);drums(d,n,v);d.bass=onChords(bassline(v.bassline,p,st,rng,seed,n,k=>v.bassline=p.v.bassline=k),p);if(leadLine)for(let i=0;i<n;i++)d.lead[i]=leadLine[i%leadLine.length];
+ // Build: the drop's drums thinned (no fill, no open hats), hats driving, and the drop's whole lead line, filtered:
+ // it opens up over the build-up and arrives wide open in the drop. No bass.
+ const b=p.build.grid;drums(b,64,{...v,fill:'none',open:'none',clap:v.clap==='pickup'?'twofour':v.clap});if(v.hats==='off8'||v.hats==='sparse')for(let i=0;i<64;i+=2)b.hat[i]=b.hat[i]||1;
+ for(let i=0;i<64;i++)b.lead[i]=d.lead[i%n];
  // Drum kit last, so a seed's grids and sounds stay what they were before kits existed.
  if(root.DropKits){const ok=(st.kits||[]).filter(root.DropKits.has);p.sounds.drums=ok.length?pick(ok):'synth';}
- p.desc=[st.name,LABEL[v.hats],LABEL[v.clap],LABEL[v.open],LABEL[v.fill],v.bassline==='gallop'?'galloping bass':LABEL[v.bassline],leadInfo&&('lead: '+leadInfo),p.sounds.drums&&p.sounds.drums!=='synth'&&('drums: '+root.DropKits.list().find(k=>k.id===p.sounds.drums).n)].filter(Boolean).join(' · ');
+ p.desc=[st.name,LABEL[v.hats],LABEL[v.clap],LABEL[v.open],LABEL[v.fill],v.bassline==='gallop'?'galloping bass':LABEL[v.bassline],'chords: '+progName(p),leadInfo&&('lead: '+leadInfo),p.sounds.drums&&p.sounds.drums!=='synth'&&('drums: '+root.DropKits.list().find(k=>k.id===p.sounds.drums).n)].filter(Boolean).join(' · ');
  return p;
 }
 function randomize(project,seed){const keys=Object.keys(STYLES),rng=P.rng(seed),style=keys[Math.floor(rng()*keys.length)],p=generate(style,seed,{key:Math.floor(rng()*12),scale:Object.keys(SCALES)[Math.floor(rng()*4)]});const cat=X.bassCatalog();if(cat.length&&rng()<.5)p.sounds.bass=cat[Math.floor(rng()*cat.length)].id;if(root.Delaysy)p.pre.delaysy=Math.floor(rng()*root.Delaysy.presets.length);p.style='random';p.desc='Random · '+p.desc;return p;}
@@ -127,6 +186,20 @@ function newArpLead(project,seed,kind='arp'){
  if(project.drop.patternBars<4)resize(project.drop,4);const line=arpLane(project,pat,64);project.drop.grid.lead=line.slice(0,steps(project.drop));
  for(let i=0;i<steps(project.build);i++)project.build.grid.lead[i]=project.drop.grid.lead[i%steps(project.drop)];
  return kind==='blend'?'ARP blend '+pat.name.replace('MIDI blend ','#'):`ARP pattern “${pat.name}”`;
+}
+
+// A new lead riff on the same chords; or new chords, with the bass riff and the lead rewritten on them.
+function leadToBuild(project){if(project.build.patternBars<4)resize(project.build,4);const n=steps(project.drop);for(let i=0;i<steps(project.build);i++)project.build.grid.lead[i]=project.drop.grid.lead[i%n];}
+function newMelody(project,seed){
+ const rng=P.rng(seed),st=STYLES[project.style]||STYLES.festival;if(project.drop.patternBars<4)resize(project.drop,4);
+ project.drop.grid.lead=riff(project,rng,st.riffs||'festival',steps(project.drop));leadToBuild(project);return 'Dropfather riff';
+}
+function newChords(project,seed){
+ const rng=P.rng(seed),st=STYLES[project.style]||STYLES.festival,list=(PROGS[project.scale]||PROGS.minor)[st.prog||'pop'],old=(project.chords||[]).join();
+ const pool=list.filter(c=>c.join()!==old);project.chords=(pool.length?pool:list)[Math.floor(rng()*(pool.length||list.length))].slice();
+ if(project.drop.patternBars<4)resize(project.drop,4);const n=steps(project.drop),v=project.v||{bassline:'offbeat'};
+ project.drop.grid.bass=onChords(bassline(v.bassline,project,st,rng,seed,n),project);newMelody(project,seed+1);
+ return progName(project);
 }
 
 /* ---------- The rest of the song, derived from the drop ---------- */
@@ -165,6 +238,7 @@ async function arpVoice(ctx,dest,id,bpm){
 }
 async function voice(ctx,dest,id,project,base){
  if(id?.startsWith('arp:'))return arpVoice(ctx,dest,id.slice(4),project.bpm);
+ if(id?.startsWith('dl:'))return root.DropLead?root.DropLead.create(ctx,dest,id.slice(3)):null;
  const H=root.BassInvadersHost,K=root.KroghBass;if(!H||!K)return null;
  const settings=H.settingsFor(id,{bpm:project.bpm,root:project.key,octave:base-project.key}),graph=H.makeGraph(ctx,dest,settings),engine=K.create(ctx,graph.input,{preset:id});
  await engine.ready();H.applySound(engine,settings);if(typeof root.balanceSound==='function')await root.balanceSound(engine,structuredClone(settings));
@@ -176,6 +250,7 @@ async function drumShot(ctx,project,k){
  const kit=K?await K.lane(ctx.sampleRate,project.sounds.drums,k,d).catch(()=>null):null;if(kit)return K.toBuffer(ctx,kit);
  const b=ctx.createBuffer(1,d.length,ctx.sampleRate);b.copyToChannel(d,0);return b;
 }
+const LEAD_LEVEL=1.6;
 async function makeGraph(ctx,dest,project,section){
  const g={ctx,section,events:[],out:ctx.createGain(),lane:{},shots:{},noise:P.noiseBuffer(ctx,4,11)},fx=project[section].fx,isBuild=section==='build',isDrop=section==='drop',plain=!isBuild&&!isDrop;
  g.out.gain.value=.6;g.out.connect(dest);g.verb=ctx.createConvolver();g.verb.normalize=true;g.verb.buffer=P.impulse(ctx,2.6,2.6,5,1);const vr=ctx.createGain();vr.gain.value=.4;g.verb.connect(vr).connect(g.out);
@@ -189,12 +264,20 @@ async function makeGraph(ctx,dest,project,section){
  for(const [k] of DRUMS){const n=ctx.createGain();n.gain.value=project.mix[k];g.lane[k]=n;g.shots[k]=await drumShot(ctx,project,k);}
  for(const [k] of DRUMS)if(k!=='kick')g.lane[k].connect(pumped(k)?g.pump:g.body);
  g.kickShaper=P.shaper(ctx,.25);g.lane.kick.connect(g.kickShaper).connect(g.body);
- for(const k of ['bass','lead']){const n=ctx.createGain();n.gain.value=project.mix[k]*(k==='bass'?3:2.2);n.connect(pumped(k)?g.pump:g.body);g.lane[k]=n;}
- const ls=ctx.createGain();ls.gain.value=.25;g.lane.lead.connect(ls).connect(g.verb);
+ for(const k of ['bass','lead']){const n=ctx.createGain();n.gain.value=project.mix[k]*(k==='bass'?3:project.sounds.lead?.startsWith('dl:')?LEAD_LEVEL:2.2);g.lane[k]=n;}
+ g.lane.bass.connect(pumped('bass')?g.pump:g.body);
+ // The lead bus: its own drive, delay and reverb, and a tone filter the section moves. In the build-up it skips the
+ // high-pass (the lead is what opens up there) and goes straight to the swell.
+ if(root.DropLead){g.leadBus=root.DropLead.bus(ctx,isBuild?g.swell:pumped('lead')?g.pump:g.body,project.sounds.lead?.startsWith('dl:')?project.sounds.lead.slice(3):null,project.bpm);g.lane.lead.connect(g.leadBus.input);}
+ else{g.lane.lead.connect(pumped('lead')?g.pump:g.body);const ls=ctx.createGain();ls.gain.value=.25;g.lane.lead.connect(ls).connect(g.verb);}
  // ARP and Bass Invaders share one ladder worklet per context: prepare ARP's first, then both voices.
  if(project.sounds.lead?.startsWith('arp:')&&root.NBVoice)await root.NBVoice.prepare(ctx);
  const [bass,lead]=await Promise.all([voice(ctx,g.lane.bass,project.sounds.bass,project,bassBase(project.key)),voice(ctx,g.lane.lead,project.sounds.lead,project,leadBase(project.key))]);
  g.bass=bass;g.lead=lead;
+ // Dropfather leads render each distinct chord of the section once, before it plays.
+ if(lead?.prepare){const sec=project[section],list=[],seen=new Set();let prev=null;
+  for(let k=0;k<sec.bars*16;k++){const x=noteAt(project,sec,'lead',k,lead);if(!x)continue;const key=(x.chord||[x.midi]).join()+'|'+x.dur+'|'+x.vel+'|'+prev;if(!seen.has(key)){seen.add(key);list.push({midi:x.midi,chord:x.chord,duration:x.dur,velocity:x.vel,glide:prev});}prev=x.midi;}
+  await lead.prepare(list);}
  if(isBuild){const roll=fx.roll==='off'?null:fx.roll;if(roll){g.rollShot=await drumShot(ctx,project,roll);g.rollBus=ctx.createGain();g.rollHP=ctx.createBiquadFilter();g.rollHP.type='highpass';g.rollBus.connect(g.rollHP).connect(g.out);const s=ctx.createGain();s.gain.value=.25;g.rollHP.connect(s).connect(g.verb);}}
  return g;
 }
@@ -203,6 +286,11 @@ const lpHz=x=>120*2**(clamp(x,0,1)*7.4);// 0 → 120 Hz, 1 → ~20 kHz
 // Called at every pass through the section's start: whole-section automation.
 function sectionStart(g,project,t){
  const ctx=g.ctx,tl=timeline(project),sec=project[g.section],fx=sec.fx,len=sec.bars*tl.bar;
+ // Lead tone: closed and narrow before the drop, opening through the build-up, wide open in the drop.
+ if(g.leadBus){const L=g.leadBus,f=L.tone.frequency,at=(x,v)=>{x.cancelScheduledValues(t);x.setValueAtTime(v,t);};
+  if(g.section==='build'){at(f,280);f.exponentialRampToValueAtTime(9000,t+len);at(L.verb.gain,L.base.verb*1.8);at(L.delay.gain,L.base.delay*1.3);}
+  else if(g.section==='drop'){at(f,20000);at(L.verb.gain,L.base.verb);at(L.delay.gain,L.base.delay);}
+  else{at(f,{intro:1400,breakdown:2600,outro:2400}[g.section]||2400);at(L.verb.gain,L.base.verb*(g.section==='breakdown'?2.2:1.4));at(L.delay.gain,L.base.delay*1.2);}}
  if(g.lp){g.lp.frequency.cancelScheduledValues(t);g.lp.frequency.setValueAtTime(lpHz(fx.filterFrom),t);g.lp.frequency.exponentialRampToValueAtTime(lpHz(fx.filterTo),t+len);}
  if(g.section==='build'){
   const hpEnd=20*2**(fx.hp*6.6);g.hp.frequency.cancelScheduledValues(t);g.hp.frequency.setValueAtTime(20,t);g.hp.frequency.exponentialRampToValueAtTime(Math.max(21,hpEnd),t+len);g.hp.Q.setValueAtTime(.7,t);g.hp.Q.linearRampToValueAtTime(.7+fx.hp*2.5,t+len);
@@ -215,15 +303,22 @@ function sectionStart(g,project,t){
  }else if(g.section==='drop'&&fx.impact>0){const o=ctx.createOscillator(),v=ctx.createGain();o.frequency.setValueAtTime(82,t);o.frequency.exponentialRampToValueAtTime(36,t+1.2);v.gain.setValueAtTime(0,t);v.gain.linearRampToValueAtTime(fx.impact*.7,t+.004);v.gain.setTargetAtTime(0,t+.02,.45);o.connect(v).connect(g.out);o.start(t);o.stop(t+3);
   const n=ctx.createBufferSource(),h=ctx.createBiquadFilter(),nv=ctx.createGain();n.buffer=g.noise;h.type='highpass';h.frequency.value=4200;nv.gain.setValueAtTime(fx.impact*.25,t);nv.gain.setTargetAtTime(0,t+.01,.8);n.connect(h).connect(nv).connect(g.out);nv.connect(g.verb);n.start(t,0,3.9);}
 }
+// The note a lane plays at step k of a section: pitch, length up to the next note (times the gate), velocity by
+// position, and for chord leads the chord under it.
+function noteAt(project,sec,lane,k,eng){
+ const n=steps(sec),i=k%n,grid=sec.grid,d=grid[lane][i];if(d==null)return null;let gap=1;while(gap<Math.min(n,16)&&grid[lane][(i+gap)%n]==null)gap++;
+ const midi=midiFor(project,lane,d),dur=Math.max(.04,gap*timeline(project).step*project.gate[lane]),vel=i%16===0?112:i%4===0?104:92;
+ const kind=lane==='lead'&&eng?.patch&&root.DropLead?root.DropLead.VOICING[eng.patch]:null;
+ return {midi,dur,vel,chord:kind?voiceChord(project,d,k,kind).map(x=>midiFor(project,'lead',x)):null};
+}
 // One sixteenth: k = step index within the section (0 .. bars*16-1).
 function scheduleStep(g,project,k,t){
  const sec=project[g.section],n=steps(sec),i=k%n,grid=sec.grid,tl=timeline(project),progress=k/(sec.bars*16);
  if(k===0)sectionStart(g,project,t);
  for(const [lane] of DRUMS){const v=grid[lane][i];if(!v)continue;if(g.section==='build'&&lane==='kick'&&progress>=sec.fx.kickOut)continue;hit(g,g.shots[lane],g.lane[lane],t,v===2?1:.72);g.events.push([lane,t,tl.step*.9,{kick:36,clap:39,snare:38,hat:42,open:46}[lane],v===2?1:.72]);}
  if(g.section!=='build'&&i%4===0&&(sec.fx.pump||0)>0){g.pump.gain.setTargetAtTime(1-sec.fx.pump*.85,t,.003);g.pump.gain.setTargetAtTime(1,t+.03,tl.beat*.17);}
- for(const lane of ['bass','lead']){const d=grid[lane][i],eng=g[lane];if(d==null)continue;let gap=1;while(gap<Math.min(n,16)&&grid[lane][(i+gap)%n]==null)gap++;
-  const midi=midiFor(project,lane,d),dur=Math.max(.04,gap*tl.step*project.gate[lane]),vel=i%16===0?112:i%4===0?104:92;
-  if(eng)eng.play({midi,time:t,duration:dur,velocity:vel,accent:i%4===2&&lane==='bass'});g.events.push([lane,t,dur,midi,vel/127]);}
+ for(const lane of ['bass','lead']){const x=noteAt(project,sec,lane,k,g[lane]);if(!x)continue;const eng=g[lane];
+  if(eng)eng.play({midi:x.midi,time:t,duration:x.dur,velocity:x.vel,accent:i%4===2&&lane==='bass',chord:x.chord});for(const m of x.chord||[x.midi])g.events.push([lane,t,x.dur,m,x.vel/127]);}
 }
 function dispose(g){if(!g)return;try{g.bass?.dispose();g.lead?.dispose();}catch(e){}try{g.out.disconnect();}catch(e){}}
 
@@ -266,6 +361,6 @@ async function render(project,{sr=44100,only=null}={}){
  return {buffer:out,tl,t0,parts,events,peak:lim.peak,reduction:lim.reduction};
 }
 
-const api={SCALES,DRUMS,ROWS,NOTE,ORDER,NAMES,SKETCH,STYLES,steps,blank,resize,degree,midiFor,rowLabel,enabled,arpSounds,arpPatterns,leadName,arpLane,newArpLead,generate,randomize,sketch,timeline,createPlayer,render};
+const api={PROGS,progName,chordName,newMelody,newChords,SCALES,DRUMS,ROWS,NOTE,ORDER,NAMES,SKETCH,STYLES,steps,blank,resize,degree,midiFor,rowLabel,enabled,arpSounds,arpPatterns,leadName,arpLane,newArpLead,generate,randomize,sketch,timeline,createPlayer,render};
 if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.DropGrid=api;
 })(typeof globalThis!=='undefined'?globalThis:this);
