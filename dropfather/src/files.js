@@ -18,11 +18,26 @@ function zipFiles(files){
  return new Blob([...parts,...centrals,end.buffer]);
 }
 const zip=(name,bytes)=>zipFiles([{name,bytes}]);
+// Read a zip (stored or deflated) into {name: Uint8Array}, through its central directory.
+async function unzip(blob){
+ const b=new Uint8Array(await blob.arrayBuffer()),v=new DataView(b.buffer),out={};let e=-1;
+ for(let i=b.length-22;i>=Math.max(0,b.length-65557);i--)if(v.getUint32(i,true)===0x06054b50){e=i;break;}
+ if(e<0)throw Error('not a zip file');
+ let o=v.getUint32(e+16,true);const count=v.getUint16(e+10,true);
+ for(let k=0;k<count;k++){
+  if(v.getUint32(o,true)!==0x02014b50)throw Error('damaged zip');
+  const method=v.getUint16(o+10,true),size=v.getUint32(o+20,true),nl=v.getUint16(o+28,true),xl=v.getUint16(o+30,true),cl=v.getUint16(o+32,true),at=v.getUint32(o+42,true);
+  const name=new TextDecoder().decode(b.subarray(o+46,o+46+nl)),start=at+30+v.getUint16(at+26,true)+v.getUint16(at+28,true),data=b.subarray(start,start+size);
+  if(!name.endsWith('/'))out[name]=method===0?data.slice():method===8?new Uint8Array(await new Response(new Blob([data]).stream().pipeThrough(new DecompressionStream('deflate-raw'))).arrayBuffer()):null;
+  o+=46+nl+xl+cl;
+ }
+ return out;
+}
 // Resolves true when saved; report(text, isError) gets the reason when it is not.
 async function download(bytes,name,type,report=()=>{}){
  const downloads=await saver;
  if(downloads){const packed=!/\.(json|txt|csv|zip)$/.test(name);try{await downloads.save({filename:packed?name.replace(/\.[^.]+$/,'')+'.zip':name,data:packed?zip(name,bytes):new Blob([bytes])});return true;}catch(e){report(e?.code==='declined'?'Save cancelled.':'Could not save: '+(e?.message||e?.code||e),e?.code!=='declined');return false;}}
  const url=URL.createObjectURL(new Blob([bytes],{type})),a=document.createElement('a');a.href=url;a.download=name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),4000);return true;
 }
-root.DropFiles={download,zip,zipFiles};
+root.DropFiles={download,zip,zipFiles,unzip};
 })(typeof globalThis!=='undefined'?globalThis:this);

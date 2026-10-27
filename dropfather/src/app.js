@@ -166,7 +166,8 @@ function init(){
  dz.addEventListener('click',e=>{if(document.body.dataset.mode==='maker'&&S.buffer){e.preventDefault();window.DropMaker?.stop();document.body.dataset.mode='song';}});file.onchange=()=>file.files[0]&&load(file.files[0]);
  for(const ev of ['dragenter','dragover'])document.addEventListener(ev,e=>{e.preventDefault();dz.classList.add('over');});
  for(const ev of ['dragleave','drop'])document.addEventListener(ev,e=>{e.preventDefault();dz.classList.remove('over');});
- document.addEventListener('drop',e=>{const f=e.dataTransfer.files[0];if(f)load(f);});
+ // Files dropped on the song view's timeline are audio clips, not a new song.
+ document.addEventListener('drop',e=>{if(e.target.closest?.('#songWrap'))return;const f=e.dataTransfer.files[0];if(f)load(f);});
  $('bpm').onchange=e=>setTempo(+e.target.value);$('bpmDown').onclick=()=>setTempo(Math.round((S.plan.bpm-1)*100)/100);$('bpmUp').onclick=()=>setTempo(Math.round((S.plan.bpm+1)*100)/100);
  $('bpmHalf').onclick=()=>setTempo(S.plan.bpm/2);$('bpmDouble').onclick=()=>setTempo(S.plan.bpm*2);
  $('tap').onclick=()=>{const now=performance.now();S.taps=S.taps.filter(t=>now-t<3000);S.taps.push(now);if(S.taps.length>=4){const d=(S.taps[S.taps.length-1]-S.taps[0])/(S.taps.length-1);setTempo(Math.round(60000/d*10)/10);}};

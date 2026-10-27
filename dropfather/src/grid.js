@@ -12,7 +12,7 @@ const ROWS={bass:14,lead:11};// scale degrees per note lane, 0 = root (bass: two
 const NOTE=['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
 // Arrangement order. The pre-drop is the end of the build-up (its silence, throw and reverse suck).
 const ORDER=['intro','breakdown','build','drop','outro'];
-const NAMES={intro:'INTRO',breakdown:'BREAKDOWN',build:'BUILD-UP',drop:'DROP',outro:'OUTRO'};
+const NAMES={intro:'INTRO',breakdown:'BREAKDOWN',build:'BUILD-UP',drop:'DROP',outro:'OUTRO',space:'SPACE'};
 const SKETCH=['intro','breakdown','outro'];
 
 const steps=p=>p.patternBars*16;
@@ -283,6 +283,16 @@ function makeSong(p,seed){
 const chordRoot=(p,k)=>{let v=chordOf(p,k);while(v>ROWS.bass-1)v-=7;return v;};
 // A new lead line for one part: the song melody in breakdowns, the style's riff elsewhere.
 function newPartMelody(p,key,seed){const sec=p[key],type=typeOf(p,key),st=STYLES[p.style]||STYLES.festival;if(sec.patternBars<4)resize(sec,4);sec.grid.lead=riff(p,P.rng(seed>>>0),type==='breakdown'?'melody':st.riffs||'festival',steps(sec));if(key==='drop')leadToBuild(p);return labelOf(p,key);}
+// Insert space: an empty part of n bars after position `at` of the arrangement; audio clips after it move along.
+function insertSpace(p,at,bars){
+ let n=1;while(p['space'+n])n++;const id='space'+n;
+ p[id]={type:'space',label:'SPACE',bars,patternBars:1,grid:blank(16),fx:{filterFrom:1,filterTo:1,verb:0,pump:0}};
+ const tl=timeline(p,true),from=tl.parts[at]?Math.round(tl.parts[at].end/tl.bar):Math.round(tl.total/tl.bar);
+ p.arrangement.splice(at+1,0,id);for(const c of p.audio?.clips||[])if(c.start>=from-1e-6)c.start+=bars;
+ return id;
+}
+// Where the last audio clip ends, in bars.
+const clipEnd=p=>Math.max(0,...(p.audio?.clips||[]).map(c=>c.start+c.len));
 // A new part of a type: the existing pattern of that type if there is one, else a copy derived from the drop.
 function partOfType(p,type){if(p[type]?.grid)return type;if(SKETCH.includes(type)){ensureSongParts(p);return type;}return 'drop';}
 
@@ -312,16 +322,16 @@ async function drumShot(ctx,project,k){
  const b=ctx.createBuffer(1,d.length,ctx.sampleRate);b.copyToChannel(d,0);return b;
 }
 const LEAD_LEVEL=1.6;
-// Four stems (drums, bass, lead, fx), each through its own copy of the section's chain, so the mix can be
+// Five stems (drums, bass, lead, fx, and the song's audio clips), each through its own copy of the section's chain, so the mix can be
 // changed after rendering. The chain is linear (filters, gains, reverb), so the stems sum to the same mix.
-const STEMS=['drums','bass','lead','fx'];
+const STEMS=['drums','bass','lead','fx','audio'],CH=STEMS.length*2;
 // dest: one node for everything, or {drums,bass,lead,fx} with a node per stem.
 async function makeGraph(ctx,dest,project,section){
  const leadId=project[section].sounds?.lead||project.sounds.lead;
  const g={ctx,section,type:typeOf(project,section),events:[],lane:{},shots:{},grp:{},noise:P.noiseBuffer(ctx,4,11)},fx=project[section].fx,type=typeOf(project,section),isBuild=type==='build',isDrop=type==='drop',plain=!isBuild&&!isDrop,ir=P.impulse(ctx,2.6,2.6,5,1);
  // Build: everything through one high-pass that opens. Drop: everything but kick and clap pumps.
  // Intro, breakdown, outro: one low-pass that moves over the section, plus reverb and optional pump.
- for(const stem of STEMS){
+ for(const stem of STEMS.slice(0,4)){
   const G={out:ctx.createGain(),verb:ctx.createConvolver(),body:ctx.createGain(),pump:ctx.createGain()},vr=ctx.createGain();
   G.out.gain.value=.6;G.out.connect(dest[stem]||dest);G.verb.normalize=true;G.verb.buffer=ir;vr.gain.value=.4;G.verb.connect(vr).connect(G.out);
   if(isBuild){G.hp=ctx.createBiquadFilter();G.hp.type='highpass';G.hp.frequency.value=20;G.swell=ctx.createGain();G.wash=ctx.createGain();G.wash.gain.value=0;G.body.connect(G.hp).connect(G.swell).connect(G.out);G.hp.connect(G.wash).connect(G.verb);}
@@ -411,14 +421,14 @@ function createPlayer(ctx,dest){
 /* ---------- Offline render of the arrangement ---------- */
 // Notes are scheduled one bar ahead while rendering (suspend/resume): ARP builds a full voice per note, and
 // creating a whole section's voices up front makes the offline render crawl.
-// A stem's stereo pair into channels 2i, 2i+1 of an 8-channel output (mono sources spread to both sides).
+// A stem's stereo pair into channels 2i, 2i+1 of the stems output (mono sources spread to both sides).
 function stemRouter(ctx,dest){
- const merge=ctx.createChannelMerger(8),map={};merge.connect(dest);
+ const merge=ctx.createChannelMerger(CH),map={};merge.connect(dest);
  STEMS.forEach((stem,i)=>{const n=ctx.createGain();n.channelCount=2;n.channelCountMode='explicit';n.channelInterpretation='speakers';const split=ctx.createChannelSplitter(2);n.connect(split);split.connect(merge,0,2*i);split.connect(merge,1,2*i+1);map[stem]=n;});
  return map;
 }
 async function renderSection(project,section,sr,tick=()=>{}){
- const tl=timeline(project),bars=project[section].bars,len=bars*tl.bar,ctx=new OfflineAudioContext(8,Math.round((len+3)*sr),sr),g=await makeGraph(ctx,stemRouter(ctx,ctx.destination),project,section);
+ const tl=timeline(project),bars=project[section].bars,len=bars*tl.bar,ctx=new OfflineAudioContext(CH,Math.round((len+3)*sr),sr),g=await makeGraph(ctx,stemRouter(ctx,ctx.destination),project,section);
  const bar=b=>{for(let k=b*16;k<(b+1)*16;k++)scheduleStep(g,project,k,k*tl.step);};
  bar(0);
  for(let b=1;b<bars;b++){const at=Math.floor((b*tl.bar-tl.beat)*sr/128)*128/sr;ctx.suspend(at).then(()=>{bar(b);tick();ctx.resume();});}
@@ -427,8 +437,8 @@ async function renderSection(project,section,sr,tick=()=>{}){
 }
 // Fader value (0..1, 0.8 = unity) → gain.
 const faderGain=v=>v<=0?0:(v/.8)**2;
-const busOf=p=>({drums:.8,bass:.8,lead:.8,fx:.8,...(p.bus||{})});
-// Stems (8 channels) → stereo, each stem at its fader.
+const busOf=p=>({drums:.8,bass:.8,lead:.8,fx:.8,audio:.8,...(p.bus||{})});
+// Stems (a stereo pair each) → stereo, each stem at its fader.
 function mixdown(stems,gains=[1,1,1,1]){
  const n=stems.length,out=new AudioBuffer({numberOfChannels:2,length:n,sampleRate:stems.sampleRate}),L=out.getChannelData(0),R=out.getChannelData(1);
  for(let s=0;s*2+1<stems.numberOfChannels;s++){const gn=gains[s]??1;if(!gn)continue;const a=stems.getChannelData(2*s),b=stems.getChannelData(2*s+1);for(let i=0;i<n;i++){L[i]+=a[i]*gn;R[i]+=b[i]*gn;}}
@@ -438,12 +448,12 @@ function mixdown(stems,gains=[1,1,1,1]){
 function mix(result,project){const bus=busOf(project),buf=mixdown(result.stems,STEMS.map(k=>faderGain(bus[k]))),lim=P.limit(buf,0,buf.duration);return {buffer:buf,peak:lim.peak,reduction:lim.reduction};}
 // opts.progress(0..1) is called as the bars render.
 // opts.song: the song view's arrangement instead of the drop view. opts.progress(0..1) is called as bars render.
-async function render(project,{sr=44100,only=null,song=false,progress=()=>{}}={}){
+async function render(project,{sr=44100,only=null,song=false,samples={},progress=()=>{}}={}){
  const tl=timeline(project,song),parts=tl.parts.filter(x=>!only||only.includes(x.name)||only.includes(x.type)),pre=project.pre,beat=tl.beat,fade=.006;
  const keys=[...new Set(parts.map(x=>x.name))],pairs=parts.filter((x,i)=>x.pre&&parts[i+1]===tl.parts[x.index+1]);
  const total=keys.reduce((a,k)=>a+project[k].bars,0)+2*pairs.length+2;let done=0;const tick=()=>{done++;progress(Math.min(.99,done/total));};progress(0);
  const rendered=await Promise.all(keys.map(k=>renderSection(project,k,sr,tick))),by=Object.fromEntries(keys.map((k,i)=>[k,rendered[i]]));
- const t0=parts[0].start,length=parts[parts.length-1].end-t0+3,ctx=new OfflineAudioContext(8,Math.round(length*sr),sr),fxStem=stemRouter(ctx,ctx.destination).fx;
+ const t0=parts[0].start,length=parts[parts.length-1].end-t0+3,audioEnd=song?clipEnd(project)*tl.bar:0,ctx=new OfflineAudioContext(CH,Math.round(Math.max(length,audioEnd-t0+1)*sr),sr),router=stemRouter(ctx,ctx.destination),fxStem=router.fx;
  const place=(buf,at,offset=0,dur=buf.duration-offset)=>{const s=ctx.createBufferSource(),v=ctx.createGain();s.buffer=buf;v.gain.setValueAtTime(1,Math.max(0,at+dur-fade));v.gain.linearRampToValueAtTime(0,at+dur);s.connect(v).connect(ctx.destination);s.start(Math.max(0,at),offset+Math.max(0,-at),dur);};
  // Parts ring into the next one, except a build-up before a drop: it stops dead at the pre-drop.
  for(const x of parts){const R=by[x.name],at=x.start-t0;if(x.pre)place(R.buffer,at,0,x.gapOut-x.start+fade);else place(R.buffer,at);}
@@ -455,12 +465,15 @@ async function render(project,{sr=44100,only=null,song=false,progress=()=>{}}={}
   if(pre.reverse>0&&by[D.name]){const R=swells[D.name]||(swells[D.name]=await P.reverseSwell(mixdown(by[D.name].buffer),0,beat,2.4)),len=clamp(Math.max(D.start-x.gapOut,2*beat),.2,R.duration-.05),a=dropOut-len,s=ctx.createBufferSource(),v=ctx.createGain();s.buffer=R;v.gain.setValueAtTime(0,a);v.gain.linearRampToValueAtTime(pre.reverse*.9,dropOut-.01);v.gain.linearRampToValueAtTime(0,dropOut+.004);s.connect(v).connect(fxStem);s.start(a,R.duration-len);s.stop(dropOut+.02);}
   tick();
  }
+ // Audio clips (song view): warped to the song tempo, looped or cut to their length, on the audio stem.
+ if(song)for(const c of project.audio?.clips||[]){const src=samples[c.sample];if(!src)continue;const W=root.DropWarp.render(src,c,project.bpm,sr),at=c.start*tl.bar-t0,len=c.len*tl.bar,v=ctx.createGain();v.gain.value=c.gain??.8;v.connect(router.audio);
+  for(let o=0;o<len-1e-3;o+=W.duration){const s=ctx.createBufferSource(),f=ctx.createGain(),d=Math.min(W.duration,len-o);s.buffer=W;f.gain.setValueAtTime(1,Math.max(0,at+o+d-.006));f.gain.linearRampToValueAtTime(0,at+o+d);s.connect(f).connect(v);if(at+o+d>0)s.start(Math.max(0,at+o),Math.max(0,-(at+o)),d-Math.max(0,-(at+o)));if(!c.loop)break;}}
  const stems=await ctx.startRendering(),m=mix({stems},project);tick();
  const events=parts.flatMap(x=>by[x.name].events.filter(e=>!x.pre||e[1]<x.gapOut-x.start).map(e=>[e[0],e[1]+x.start-t0,...e.slice(2)]));
  progress(1);
  return {stems,buffer:m.buffer,tl,t0,parts,events,peak:m.peak,reduction:m.reduction,song};
 }
 
-const api={makeSong,newPartMelody,typeOf,labelOf,SONG_DEFAULT,songOrder,ensureSongParts,variation,partOfType,STEMS,faderGain,busOf,mixdown,mix,PROGS,progName,chordName,newMelody,newChords,SCALES,DRUMS,ROWS,NOTE,ORDER,NAMES,SKETCH,STYLES,steps,blank,resize,degree,midiFor,rowLabel,enabled,arpSounds,arpPatterns,leadName,arpLane,newArpLead,generate,randomize,sketch,timeline,createPlayer,render};
+const api={insertSpace,clipEnd,makeSong,newPartMelody,typeOf,labelOf,SONG_DEFAULT,songOrder,ensureSongParts,variation,partOfType,STEMS,faderGain,busOf,mixdown,mix,PROGS,progName,chordName,newMelody,newChords,SCALES,DRUMS,ROWS,NOTE,ORDER,NAMES,SKETCH,STYLES,steps,blank,resize,degree,midiFor,rowLabel,enabled,arpSounds,arpPatterns,leadName,arpLane,newArpLead,generate,randomize,sketch,timeline,createPlayer,render};
 if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.DropGrid=api;
 })(typeof globalThis!=='undefined'?globalThis:this);

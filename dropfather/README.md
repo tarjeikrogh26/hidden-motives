@@ -1,4 +1,4 @@
-# DROPFATHER — by Tarjei Krogh · v0.9
+# DROPFATHER — by Tarjei Krogh · v0.10
 
 To veier inn fra startskjermen:
 
@@ -154,7 +154,34 @@ drop-vinduet gjør det samme.
   - 🎲 New melody lager en ny lead-linje. **Lead** velger egen lyd for delen. **Length** setter antall takter.
 - Hver build-up rett før et drop får pre-drop (pause, DELAYSY-kast, reverse suck).
 - Hver del rendres én gang, også når den gjentas.
-- Eksport: hele låta som WAV, stems (4 spor fra takt 1) eller MIDI.
+- Eksport: hele låta som WAV, stems (fra takt 1) eller MIDI.
+
+### DAW-funksjoner (v0.10)
+
+- **Linjal og spoling:** klikk linjalen for å spille eller starte derfra (Shift: på slag). ⏮ går til start,
+  ⏪ og ⏩ hopper 4 takter. Space spiller og pauser, Home går til start. **Follow** lar visningen følge
+  spillehodet. **− og +** zoomer.
+- **Lydspor:** dra lydfiler (WAV, AIFF, MP3, M4A, FLAC …) rett inn på tidslinjen. De lander på takten du slipper
+  dem på.
+  - Tempoet gjettes: looper som et helt antall takter, lengre lyd med Dropfathers tempo- og takt-analyse.
+  - Lyden følger låtas tempo med **warp**: **Beats** (kutter ved slagene og flytter bitene, for trommer og
+    looper), **Tones** (WSOLA-strekk, for pads og vokal), **Re-pitch** (raskere og lysere) eller **Off**.
+  - Klipp: dra for å flytte (Shift: på slag), opp og ned til et annet spor. ←→ flytter, ↑↓ transponerer
+    (Shift: en oktav), Ctrl/Cmd+D dupliserer, Delete sletter. Verktøylinjen har warp, klipp-BPM, pitch, gain,
+    lengde og loop.
+  - Lydsporene er en egen stem og har egen fader (Audio).
+- **␣ Insert space:** skyver alt etter valgt del en del-lengde fram og lar rommet stå tomt (Ableton: Insert
+  Time). Lydklipp etter innsettingspunktet flytter seg med.
+- **Notemarkering i griden** (drop-vinduet): dra over rutene for å markere. ←→ flytter (Shift: et slag), ↑↓
+  pitcher bass og lead (Shift: en oktav), Ctrl/Cmd+D dupliserer mot høyre, Delete tømmer, Esc slipper.
+  Knappene over hintet gjør det samme.
+- **Save project** samler sampler inn i én zip når låta har lydklipp (Collect All and Save). **Load project**
+  tar både .json og .zip.
+- **Ableton pack:** en mappe med stems fra takt 1, MIDI (Bass, Lead, Drums), prosjektet og en kort
+  bruksanvisning. Et ekte Ableton-sett (.als) krever en mal fra Live: send et tomt sett lagret i din
+  Live-versjon.
+- **Egne instrumenter:** `DropLead.register(id, {name, voicing, create})` legger en ekstern motor til som
+  lead-lyd. Strings-motoren og de andre maskinene kan kobles inn her (se `docs/strings-engine-brief.md`).
 
 ## Opphav og rettigheter (viktig før salg)
 

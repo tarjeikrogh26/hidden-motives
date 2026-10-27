@@ -142,29 +142,45 @@ body:not([data-mode]) .dock.maker-only{position:static;margin-top:14px}
 #app{padding-bottom:280px}
 @media(max-width:600px){#app{padding-bottom:300px}.dock.maker-only{grid-template-columns:1fr;gap:8px;padding:10px}.mixer{border-left:0;padding-left:0;border-top:1px solid var(--line);padding-top:6px;justify-content:space-around}.mixer input[type=range]{height:70px}.progress{flex:0 0 150px}}
 
-/* Song view: the arrangement as blocks over four lanes (drums, bass, lead, fx). */
+/* Song view: a small DAW. Parts over the instrument lanes, then audio tracks; all on one time axis. */
 body:not([data-view="song"]) #songPanel,body[data-view="song"] #makerPanel,body[data-view="song"] #makerMachines{display:none!important}
 .viewseg{display:flex;border:2px solid var(--white);border-radius:8px;overflow:hidden}
 .viewseg button{border:0;border-radius:0;min-height:40px;padding:0 14px;font-family:'Bowlby One','Arial Black',Impact,sans-serif;font-weight:400;letter-spacing:.03em}
 .viewseg button.on{background:var(--white);color:#000}
 .songtop{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap}.songtop h2{margin:0;color:var(--red2)}
-.palette{margin:10px 0}
-.songwrap{overflow-x:auto;border:1px solid var(--line);border-radius:8px;background:#0b0b0b}
-.song{display:grid;grid-template-columns:62px minmax(0,1fr);min-width:0}
-.song .lanes{display:grid;grid-template-rows:42px repeat(4,24px);border-right:1px solid var(--line);position:sticky;left:0;background:#0b0b0b;z-index:2}
-.song .lanes span{font-size:11px;font-weight:700;color:var(--muted);padding:0 8px;display:flex;align-items:center}
-.blocks{position:relative;display:flex;gap:2px;padding:0 2px}
-.blk{display:flex;flex-direction:column;min-width:0;border-radius:6px;border:2px solid transparent;cursor:pointer;overflow:hidden;background:#1d1d1d}
-.blk .bh{height:38px;padding:3px 7px;display:flex;flex-direction:column;justify-content:center;overflow:hidden;white-space:nowrap}
+.palette{margin:10px 0;align-items:center}
+.palette .zoom{display:inline-flex;gap:4px;margin-left:auto}.palette .zoom button{min-width:36px}
+.songwrap{overflow-x:auto;border:1px solid var(--line);border-radius:8px;background:#0b0b0b;user-select:none;-webkit-user-select:none}
+.songwrap.filedrop{outline:2px dashed var(--red2);outline-offset:-2px;background:#160a09}
+.song{display:flex;align-items:flex-start;width:max-content;min-width:100%}
+.song .lanes{flex:0 0 74px;display:grid;grid-template-rows:22px 41px repeat(4,24px) 1px;grid-auto-rows:44px;border-right:1px solid var(--line);position:sticky;left:0;background:#0b0b0b;z-index:4}
+.song .lanes span{font-size:11px;font-weight:700;color:var(--muted);padding:0 8px;display:flex;align-items:center;overflow:hidden;white-space:nowrap}
+.song .lanes .al{color:#cfe3ff;border-top:1px solid var(--line)}.song .lanes .add{color:var(--muted);font-weight:400}
+.tlcol{position:relative;flex:1 0 auto}
+.ruler{position:relative;height:22px;border-bottom:1px solid var(--line);cursor:pointer;background:#111}
+.ruler span{position:absolute;top:3px;font-size:10px;color:var(--muted);padding-left:3px;border-left:1px solid #444;height:16px;pointer-events:none}
+.partsrow{position:relative;height:138px}
+.blk{position:absolute;top:0;height:138px;box-sizing:border-box;display:flex;flex-direction:column;min-width:0;border-radius:6px;border:1px solid transparent;cursor:pointer;overflow:hidden;background:#1d1d1d}
+.blk .bh{height:40px;padding:3px 7px;display:flex;flex-direction:column;justify-content:center;overflow:hidden;white-space:nowrap}
 .blk .bh b{font-family:'Bowlby One','Arial Black',Impact,sans-serif;font-weight:400;font-size:13px;letter-spacing:.03em;overflow:hidden;text-overflow:ellipsis}
 .blk .bh small{font-size:10px;color:var(--muted)}
 .blk canvas{display:block;width:100%;height:96px}
-.blk.intro,.blk.outro{background:#1f1f1f}.blk.breakdown{background:#17222f}.blk.build{background:#26241f}.blk.drop{background:#2a0f0d}.blk.drop .bh b{color:var(--red2)}
-.blk.on{border-color:var(--white)}.blk.over{border-color:var(--red2);border-style:dashed}.blk.drag{opacity:.4}
-.blk:focus-visible{outline:2px solid var(--red2);outline-offset:1px}
+.blk.intro,.blk.outro{background:#1f1f1f}.blk.breakdown{background:#17222f}.blk.build{background:#26241f}.blk.drop{background:#2a0f0d}.blk.drop .bh b{color:var(--red2)}.blk.space{background:repeating-linear-gradient(45deg,#121212 0 8px,#181818 8px 16px)}
+.blk.on{border-color:var(--white);box-shadow:inset 0 0 0 1px var(--white)}.blk.over{border-color:var(--red2);border-style:dashed}.blk.drag{opacity:.4}
+.blk:focus-visible,.clip:focus-visible{outline:2px solid var(--red2);outline-offset:1px}
+.arow{position:relative;height:44px;border-top:1px solid var(--line);background:#0f1318}
+.arow.add{display:flex;align-items:center;padding:0 10px;font-size:11px;color:var(--muted);background:repeating-linear-gradient(90deg,#0f0f0f 0 6px,#121212 6px 12px)}
+.clip{position:absolute;top:3px;height:36px;box-sizing:border-box;border-radius:5px;background:#1f3550;border:1px solid #3d6a9e;overflow:hidden;cursor:grab;touch-action:none}
+.clip canvas{position:absolute;inset:0;width:100%;height:100%}
+.clip span{position:absolute;left:4px;top:1px;font-size:10px;font-weight:700;color:#fff;text-shadow:0 1px 2px #000;white-space:nowrap;pointer-events:none}
+.clip.on{border-color:#fff;box-shadow:0 0 0 1px #fff}.clip.missing{background:#3a1d1d;border-style:dashed}
 .songhead{position:absolute;top:0;bottom:0;width:2px;background:#fff;box-shadow:0 0 8px #fff;display:none;pointer-events:none;z-index:3}
 .songsel{margin-top:10px;align-items:center}
 .songsel .selinfo{font-family:'Bowlby One','Arial Black',Impact,sans-serif;font-size:14px;color:var(--white);margin-right:6px}
-.songsel .sellen{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted)}
+.sellen{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--muted)}
+.sellen input[type=number]{width:76px}.sellen input[type=range]{width:110px;min-height:0}
 .songsel button.danger{border-color:#7a1d18;color:#ff8a80}
-@media(max-width:600px){.viewseg button{padding:0 10px;min-height:38px}}
+.seekbtns{display:inline-flex;gap:4px}.seekbtns button{min-width:44px;padding:0 8px!important}
+.grid{user-select:none;-webkit-user-select:none}.grid .c.sel{outline:2px solid #5aa9ff;outline-offset:-2px}
+.gselbar{align-items:center}.gselbar span{font-size:12px;color:#9cc8ff;font-weight:700}
+@media(max-width:600px){.viewseg button{padding:0 10px;min-height:38px}.song .lanes{flex-basis:60px}}

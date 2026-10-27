@@ -89,7 +89,12 @@ function renderChord(sr,id,notes,melody,dur,vel,glide){
  JOBS.set(k,job);job.catch(()=>JOBS.delete(k));return job;
 }
 
+// Instruments from outside (Tarjei's other engines: strings, stabs, acid …) register here and then show up as
+// leads in Dropfather: register(id, {name, voicing, create(ctx, dest, opts) → {play({midi,chord,time,duration,velocity}), dispose()}}).
+const EXT={};
+function register(id,def){if(!id||typeof def?.create!=='function')throw Error('DropLead.register(id, {name, create}) needs a create function');EXT[id]=def;VOICING[id]=def.voicing||'single';}
 function create(ctx,dest,patch){
+ if(EXT[patch]){const v=EXT[patch].create(ctx,dest,{});v.patch=patch;return v;}
  const id=PATCHES[patch]?patch:'festival',p=PATCHES[id],live=new Set(),srcs=new Set(),offline=typeof OfflineAudioContext!=='undefined'&&ctx instanceof OfflineAudioContext;let last=null;
  return {
   patch:id,
@@ -105,6 +110,6 @@ function create(ctx,dest,patch){
   dispose(){for(const s of srcs)try{s.stop();}catch(e){}srcs.clear();for(const v of live)for(const o of v.oscs)try{o.stop();}catch(e){}live.clear();}
  };
 }
-const api={PATCHES,VOICING,bus,create,list:()=>Object.entries(PATCHES).map(([id,p])=>({id,n:p.n}))};
+const api={PATCHES,VOICING,bus,create,register,list:()=>[...Object.entries(PATCHES).map(([id,p])=>({id,n:p.n})),...Object.entries(EXT).map(([id,d])=>({id,n:d.name||id,ext:true}))]};
 if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.DropLead=api;
 })(typeof globalThis!=='undefined'?globalThis:this);
