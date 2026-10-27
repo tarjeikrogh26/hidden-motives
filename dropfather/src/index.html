@@ -6,12 +6,13 @@
 <style>/*INLINE:style.css*/</style>
 </head><body>
 <div id="app">
-<header class="hero"><img id="logo" src="/*INLINE-IMG:../assets/dropfather-logo.webp*/" alt="DROPFATHER"><p class="tagline">Build-up · Pre-drop · Drop — by Tarjei Krogh · v0.10</p></header>
+<header class="hero"><img id="logo" src="/*INLINE-IMG:../assets/dropfather-logo.webp*/" alt="DROPFATHER"><p class="tagline">Build-up · Pre-drop · Drop — by Tarjei Krogh · v0.11</p></header>
 
 <section class="panel" id="startPanel">
  <div class="choices">
- <label class="dropzone choice" id="dropzone"><input id="file" type="file" accept="audio/*,video/mp4,video/webm,.wav,.wave,.bwf,.aif,.aiff,.aifc,.mp3,.m4a,.m4b,.mp4,.aac,.adts,.flac,.ogg,.oga,.opus,.webm,.weba,.caf,.alac,.3gp,.mka,.mkv"><b>Drop a song here</b><span>or click to load any audio: WAV · AIFF · MP3 · M4A · AAC · FLAC · OGG · Opus · WebM · MP4. Everything stays on this computer.</span></label>
+ <label class="dropzone choice" id="dropzone"><input id="file" type="file" accept="audio/*,video/mp4,video/webm,.wav,.wave,.bwf,.aif,.aiff,.aifc,.mp3,.m4a,.m4b,.mp4,.aac,.adts,.flac,.ogg,.oga,.opus,.webm,.weba,.caf,.alac,.3gp,.mka,.mkv"><b>Drop a song here</b><span>Opens in song mode at its own tempo and key, ready for a drop. Or click to load any audio: WAV · AIFF · MP3 · M4A · AAC · FLAC · OGG · Opus · WebM · MP4. Everything stays on this computer.</span></label>
  <button type="button" class="choice make" id="makeDrop"><b>Make a drop</b><span>Start from a grid: build-up, pre-drop and drop. No song needed.</span></button>
+ <button type="button" class="choice make songmode" id="openSongMode"><b>Song mode</b><span>The whole track: a song written around your drop, audio tracks, notes, mixer. Export WAV, stems, MIDI or an Ableton pack.</span></button>
  </div>
 </section>
 
@@ -56,7 +57,7 @@
  <div class="planrow">
   <div class="ctl"><span>BPM</span><button id="mBpmDown" aria-label="BPM down">‹</button><input id="mBpm" type="number" min="60" max="200" step="1" value="124"><button id="mBpmUp" aria-label="BPM up">›</button></div>
   <div class="ctl"><span>Key</span><select id="mKey" aria-label="Key"></select><select id="mScale" aria-label="Scale"></select></div>
-  <div class="ctl"><button id="mClear">Clear all</button><button id="mSketch">+ Suggest the rest of the song</button><button id="mFurther" class="primary" title="Open the song view: a whole track built around this drop">Take it further → make a song</button></div>
+  <div class="ctl"><button id="mClear">Clear all</button><button id="mSketch">+ Suggest the rest of the song</button><button id="mFurther" class="songgo" title="Open song mode: a whole track built around this drop">SONG MODE →</button></div>
  </div>
  <div class="styles" id="mStyles"></div>
  <p class="plantext" id="mDesc"></p>
@@ -72,6 +73,7 @@
  <div class="palette rowbtns" id="sPalette"></div>
  <div class="songwrap" id="songWrap"><div id="song" class="song" aria-label="Arrangement"></div></div>
  <div class="songsel rowbtns" id="sSel"></div>
+ <div class="proll hidden" id="proll"></div>
 </section>
 <div class="machines hidden maker-only" id="makerMachines">
  <section class="panel machine"><h2>BUILD-UP</h2><p class="hint">The whole build goes through a high-pass that opens up, with riser and roll on top.</p><div id="mBuildCtl"></div></section>

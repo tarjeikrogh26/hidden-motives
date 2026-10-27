@@ -9,6 +9,8 @@ function audio(){if(!S.ctx){S.ctx=new (window.AudioContext||window.webkitAudioCo
 
 /* ---------- Loading and analysis ---------- */
 async function load(file){
+ // A dropped song opens in the drop maker's song mode (the old insert-a-drop view is kept below, unused).
+ if(window.DropMaker?.openSong)return window.DropMaker.openSong(file);
  stop();status('Reading '+file.name+' …');
  try{
   const ctx=audio(),buffer=await DropDecode.decode(ctx,file);
@@ -163,7 +165,7 @@ function init(){
  const rnd=document.createElement('button');rnd.textContent='Randomize';rnd.dataset.style='random';rnd.onclick=()=>{S.plan=X.randomize(S.plan,(Math.random()*2**31)|0);clampPlan();changed();};st.append(rnd);
  const file=$('file'),dz=$('dropzone');
  // Back from the drop maker to an already loaded song without reopening the file picker.
- dz.addEventListener('click',e=>{if(document.body.dataset.mode==='maker'&&S.buffer){e.preventDefault();window.DropMaker?.stop();document.body.dataset.mode='song';}});file.onchange=()=>file.files[0]&&load(file.files[0]);
+ file.onchange=()=>file.files[0]&&load(file.files[0]);
  for(const ev of ['dragenter','dragover'])document.addEventListener(ev,e=>{e.preventDefault();dz.classList.add('over');});
  for(const ev of ['dragleave','drop'])document.addEventListener(ev,e=>{e.preventDefault();dz.classList.remove('over');});
  // Files dropped on the song view's timeline are audio clips, not a new song.

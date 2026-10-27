@@ -1,4 +1,4 @@
-# DROPFATHER — by Tarjei Krogh · v0.10
+# DROPFATHER — by Tarjei Krogh · v0.11
 
 To veier inn fra startskjermen:
 
@@ -155,6 +155,35 @@ drop-vinduet gjør det samme.
 - Hver build-up rett før et drop får pre-drop (pause, DELAYSY-kast, reverse suck).
 - Hver del rendres én gang, også når den gjentas.
 - Eksport: hele låta som WAV, stems (fra takt 1) eller MIDI.
+
+### Tre veier inn (v0.11)
+
+- **Drop a song here** åpner låta rett i Song mode. Den legges på et lydspor i sitt eget tempo, med takt 1 og
+  toneart funnet (kromagram mot Krumhansl-profiler).
+  - Klikk linjalen der droppet skal komme, og trykk **⤵ Insert a drop here**. Build-up og drop settes inn der,
+    skrevet i låtas toneart og tempo.
+  - Låta deles der, og resten flyttes fram.
+  - Det gamle «sett inn et drop i en låt»-vinduet (med ARP-analysen) er tatt ut av startskjermen. Koden ligger
+    fortsatt i `app.js`.
+- **Make a drop** åpner drop-vinduet.
+- **Song mode** åpner hele låta. I drop-vinduet fører **SONG MODE →** dit, og bryteren nederst bytter når som
+  helst.
+
+### Notes, klipp og miks (v0.11)
+
+- **Notes**: notene til delen du har valgt, under tidslinjen, med fanene Lead, Bass og Drums.
+  - Klikk en tom plass for å legge til en note, og dra for å sette lengden.
+  - Dra en note for å flytte den, og høyre kant for å endre lengden. Shift+dra markerer flere. Dobbeltklikk
+    sletter.
+  - Taster: ←→ flytter (Shift: et slag), ↑↓ endrer tonehøyde (Shift: en oktav), Ctrl/Cmd+D dupliserer,
+    Ctrl/Cmd+A markerer alt, Delete sletter.
+  - Notene har egen lengde, som overstyrer gate-knappen. Én note per steg per spor, i låtas skala.
+- **Klipp:** dra kantene for å trimme. Fade inn og ut. ✂ Split (Ctrl/Cmd+E) ved spillehodet, startpunktet eller
+  midten.
+- **Spor:** mute (M), solo (S) og farge per lydspor. Dobbeltklikk navnet for å endre det. Mikseren har M og S på
+  hver kanal.
+- **Raskere:** hver del rendres bare på nytt når den er endret, og lydspor rendres for seg. Etter en
+  note-endring tok ny rendring 10 s i stedet for 38 s. Klipp-endringer gir bare ny rendring av lydsporene.
 
 ### DAW-funksjoner (v0.10)
 

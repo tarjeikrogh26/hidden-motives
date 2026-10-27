@@ -65,6 +65,21 @@ function render(buffer,clip,songBpm,sr){
 }
 // Peaks for drawing a waveform: n columns of [min, max].
 function peaks(buffer,n){const d=buffer.getChannelData(0),step=Math.max(1,Math.floor(d.length/n)),out=[];for(let i=0;i<n;i++){let lo=0,hi=0;for(let j=i*step;j<Math.min(d.length,(i+1)*step);j+=4){const v=d[j];if(v<lo)lo=v;if(v>hi)hi=v;}out.push([lo,hi]);}return out;}
-const api={guess,render,peaks,MODES:{beats:'Beats',tones:'Tones',repitch:'Re-pitch',off:'Off'}};
+// Key of a recording: a chromagram (11 kHz, 90 s from the middle) against the Krumhansl-Kessler key profiles.
+async function key(buffer){
+ const SR=11025,dur=Math.min(buffer.duration,90),from=Math.max(0,(buffer.duration-dur)/2),c=new OfflineAudioContext(1,Math.ceil(dur*SR),SR),s=c.createBufferSource();s.buffer=buffer;s.connect(c.destination);s.start(0,from,dur);
+ const x=(await c.startRendering()).getChannelData(0),N=4096,chroma=new Float64Array(12),re=new Float64Array(N),im=new Float64Array(N),win=new Float64Array(N).map((_,i)=>.5-.5*Math.cos(2*Math.PI*i/N));
+ for(let o=0;o+N<=x.length;o+=N/2){
+  for(let i=0;i<N;i++){re[i]=x[o+i]*win[i];im[i]=0;}fft(re,im);
+  for(let k=Math.ceil(55*N/SR);k<Math.min(N/2,2000*N/SR);k++){const f=k*SR/N,m=Math.sqrt(re[k]*re[k]+im[k]*im[k]),pc=((Math.round(12*Math.log2(f/440))+69)%12+12)%12;chroma[pc]+=m;}
+ }
+ const MAJ=[6.35,2.23,3.48,2.33,4.38,4.09,2.52,5.19,2.39,3.66,2.29,2.88],MIN=[6.33,2.68,3.52,5.38,2.6,3.53,2.54,4.75,3.98,2.69,3.34,3.17];
+ const corr=(prof,r)=>{const xs=[...chroma],ys=prof.map((_,i)=>prof[(i-r+12)%12]),mx=xs.reduce((a,b)=>a+b)/12,my=ys.reduce((a,b)=>a+b)/12;let n=0,dx=0,dy=0;for(let i=0;i<12;i++){n+=(xs[i]-mx)*(ys[i]-my);dx+=(xs[i]-mx)**2;dy+=(ys[i]-my)**2;}return n/Math.sqrt(dx*dy||1);};
+ let best={key:9,scale:'minor',r:-2};for(let r=0;r<12;r++){const a=corr(MAJ,r),b=corr(MIN,r);if(a>best.r)best={key:r,scale:'major',r:a};if(b>best.r)best={key:r,scale:'minor',r:b};}
+ return {key:best.key,scale:best.scale,confidence:+best.r.toFixed(2)};
+}
+function fft(re,im){const n=re.length;for(let i=1,j=0;i<n;i++){let bit=n>>1;for(;j&bit;bit>>=1)j^=bit;j^=bit;if(i<j){[re[i],re[j]]=[re[j],re[i]];[im[i],im[j]]=[im[j],im[i]];}}
+ for(let len=2;len<=n;len<<=1){const ang=-2*Math.PI/len,wr=Math.cos(ang),wi=Math.sin(ang);for(let i=0;i<n;i+=len){let cr=1,ci=0;for(let j=0;j<len/2;j++){const a=i+j,b=a+len/2,tr=re[b]*cr-im[b]*ci,ti=re[b]*ci+im[b]*cr;re[b]=re[a]-tr;im[b]=im[a]-ti;re[a]+=tr;im[a]+=ti;const t=cr*wr-ci*wi;ci=cr*wi+ci*wr;cr=t;}}}}
+const api={guess,key,render,peaks,MODES:{beats:'Beats',tones:'Tones',repitch:'Re-pitch',off:'Off'}};
 if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.DropWarp=api;
 })(typeof globalThis!=='undefined'?globalThis:this);
