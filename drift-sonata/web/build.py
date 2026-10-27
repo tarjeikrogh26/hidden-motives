@@ -54,7 +54,10 @@ def main():
         ext = os.path.splitext(a.header)[1].lower().lstrip('.')
         mime = {'jpg': 'jpeg', 'jpeg': 'jpeg', 'png': 'png', 'webp': 'webp'}.get(ext, 'jpeg')
         img = base64.b64encode(open(a.header, 'rb').read()).decode()
-        page = page.replace('<!--@@HEADER@@-->', f'<img src="data:image/{mime};base64,{img}" alt=""><style>.banner .word,.banner .orb{{display:none}}</style>')
+        # The art carries the name itself, so the painted sky and wordmark step aside, and the banner keeps the
+        # art's own 3:1 shape on phones too (cropping it would cut the name).
+        page = page.replace('<!--@@HEADER@@-->', f'<img src="data:image/{mime};base64,{img}" alt="">'
+                            '<style>.banner .word,.banner .orb{display:none}.banner{aspect-ratio:3/1!important;border:none}</style>')
     os.makedirs(os.path.dirname(os.path.abspath(a.out)), exist_ok=True)
     open(a.out, 'w').write(page)
     print(f'{a.out}: {len(page) / 1e6:.2f} MB, {len(samples)} recordings')

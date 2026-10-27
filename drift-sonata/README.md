@@ -20,7 +20,7 @@ Motoren er ren C++ (`dsp/`) uten plugin-kode. Den samme koden kjører i dag i ne
 
 ```sh
 python3 web/build.py --wasi-sdk /sti/til/wasi-sdk --out dist/DriftSonata.html \
-    --samples /sti/til/enkelttoner --header header.jpg
+    --samples /sti/til/enkelttoner --header assets/header.webp
 ```
 
 Opptakene kommer fra samplepakker og ligger derfor ikke i repoet. Uten `--samples` spiller synthen alene.
