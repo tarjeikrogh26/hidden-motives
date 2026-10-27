@@ -59,10 +59,14 @@ const STYLES={
  takeoff:{kits:['punch','club','crisp'],name:'Take-off',genre:'edm',bpm:[126,130],bass:['pal:edm:0:1','pal:edm:1:1','pal:edm:3:0'],group:'wide',hats:['off8','sixteen'],clap:['twofour','layer'],open:['none','barend'],fill:['small','big'],bassline:['roll16','bounce','invaders'],lead:['riff'],leads:['dl:trance','dl:festival','dl:future'],riffs:'takeoff',prog:'pop',
   build:{bars:8,fx:{hp:.65,riser:.55,pitch:.5,roll:'snare',rollAmt:.6,verb:.45,swell:.35,kickOut:.6}},pre:{gapBeats:1,throw:.45,delaysy:30,throwLen:1,reverse:.6},drop:{bars:16,fx:{pump:.5,impact:.7}},gate:{bass:.7,lead:.5}},
  ebm:{kits:['heavy','tape','dusty'],name:'EBM motor',genre:'ebm',bpm:[116,124],bass:['pal:ebm:3:1','pal:ebm:1:0','pal:ebm:6:1','pal:acid:0:0'],group:'modular',hats:['off8','sparse'],clap:['snare'],open:['none'],fill:['none','small'],bassline:['octave8','invaders','roll16'],lead:['riff','riff','none'],leads:['dl:ebm','dl:screech','dl:hoover'],riffs:'ebm',prog:'dark',
-  build:{bars:4,fx:{hp:.55,riser:.3,pitch:0,roll:'snare',rollAmt:.7,verb:.25,swell:.2,kickOut:.75}},pre:{gapBeats:2,throw:.35,delaysy:179,throwLen:.5,reverse:.2},drop:{bars:16,fx:{pump:.3,impact:.5}},gate:{bass:.8,lead:.35}}
+  build:{bars:4,fx:{hp:.55,riser:.3,pitch:0,roll:'snare',rollAmt:.7,verb:.25,swell:.2,kickOut:.75}},pre:{gapBeats:2,throw:.35,delaysy:179,throwLen:.5,reverse:.2},drop:{bars:16,fx:{pump:.3,impact:.5}},gate:{bass:.8,lead:.35}},
+ progressive:{kits:['club','crisp','punch'],name:'Progressive trance',genre:'edm',bpm:[126,132],bass:['pal:edm:0:1','pal:edm:2:1','pal:house:5:1'],group:'wide',hats:['off8','sixteen'],clap:['twofour','layer'],open:['offopen','barend'],fill:['small','none'],bassline:['offbeat','gallop','roll16'],lead:['riff'],leads:['dl:trance','dl:glass','dl:festival'],riffs:'progressive',prog:'pop',
+  build:{bars:16,fx:{hp:.7,riser:.65,pitch:.35,roll:'snare',rollAmt:.55,verb:.55,swell:.4,kickOut:.75}},pre:{gapBeats:2,throw:.55,delaysy:30,throwLen:1,reverse:.5},drop:{bars:16,fx:{pump:.6,impact:.55}},gate:{bass:.5,lead:.55}},
+ ambient:{kits:['deep','room','dusty'],name:'Ambient chill',genre:'house',bpm:[96,108],bass:['pal:house:5:1','pal:house:6:1','pal2:house:1'],group:'soft',hats:['sparse','off8'],clap:['rim'],open:['none'],fill:['none'],bassline:['held','offbeat'],lead:['riff'],leads:['dl:pad','dl:glass','dl:future'],riffs:'ambient',prog:'pop',
+  build:{bars:8,fx:{hp:.35,riser:.25,pitch:0,roll:'off',rollAmt:0,verb:.7,swell:.2,kickOut:.5}},pre:{gapBeats:2,throw:.6,delaysy:8,throwLen:2,reverse:.6},drop:{bars:16,fx:{pump:.25,impact:.2}},gate:{bass:.95,lead:.9}}
 };
 const MIX={kick:.9,clap:.55,snare:.5,hat:.35,open:.3,bass:.7,lead:.45};
-const LABEL={off8:'offbeat hats',shuffle:'shuffled hats',sixteen:'16th hats',gallop:'galloping hats',sparse:'sparse hats',twofour:'clap on 2 and 4',pickup:'clap with pickup',layer:'clap + snare',rim:'soft snare',snare:'snare on 2 and 4',none:'',offopen:'open hats on the off',barend:'open hat at the bar end',small:'small fill',big:'snare fill',invaders:'Bass Invaders riff',offbeat:'offbeat bass',syncopated:'syncopated bass',roll16:'rolling 16ths',gallop2:'galloping bass',bounce:'octave bounce',octave8:'octave motor'};
+const LABEL={off8:'offbeat hats',shuffle:'shuffled hats',sixteen:'16th hats',gallop:'galloping hats',sparse:'sparse hats',twofour:'clap on 2 and 4',pickup:'clap with pickup',layer:'clap + snare',rim:'soft snare',snare:'snare on 2 and 4',none:'',offopen:'open hats on the off',barend:'open hat at the bar end',small:'small fill',big:'snare fill',invaders:'Bass Invaders riff',offbeat:'offbeat bass',syncopated:'syncopated bass',roll16:'rolling 16ths',gallop2:'galloping bass',bounce:'octave bounce',octave8:'octave motor',held:'held bass'};
 
 // The bass riff from Bass Invaders' own phrase generator, quantised to the scale (root..octave).
 function invadersLine(project,genre,seed,n){
@@ -112,11 +116,13 @@ const RIFFS={
  takeoff:[[0,2,4,6,8,10,12,14],[0,3,4,7,8,11,12,14],[0,2,3,5,6,8,10,11,13,14],[0,2,4,7,8,10,12,15]],
  house:[[2,6,10,14],[0,3,6,10,13],[0,3,7,10,12],[2,5,8,11,14],[0,3,6,8,11,14]],
  techno:[[0,3,6,10,13],[2,6,10,14],[0,6,12],[3,6,11,14]],
- ebm:[[0,2,4,6,8,10,12,14],[0,3,4,7,8,10,12,14],[0,2,3,6,8,10,11,14]]};
+ ebm:[[0,2,4,6,8,10,12,14],[0,3,4,7,8,10,12,14],[0,2,3,6,8,10,11,14]],
+ progressive:[[0,2,3,5,6,8,10,11,13,14],[0,2,4,6,8,10,12,14],[0,3,6,8,11,14],[0,1,3,4,6,8,9,11,12,14]],
+ ambient:[[0,6,10],[0,8],[2,8,14],[0,4,8,12],[0,10]]};
 function riff(p,rng,kind,n){
  const pick=a=>a[Math.floor(rng()*a.length)],A=pick(RIFFS[kind]||RIFFS.festival);
  const B=rng()<.4?A:[...A.filter(s=>s<10),...pick([[10,12,14],[11,14],[12,13,14],[10,14,15],[12,14]])];
- const contour=kind==='takeoff'?'arp':kind==='techno'||kind==='ebm'?pick(['hold','hold','wave']):pick(['up','down','arch','hold','wave']);
+ const contour=kind==='takeoff'||kind==='progressive'?'arp':kind==='ambient'?pick(['arch','wave','down']):kind==='techno'||kind==='ebm'?pick(['hold','hold','wave']):pick(['up','down','arch','hold','wave']);
  const out=Array(n).fill(null),lo=2,hi=10;let prev=7;
  for(let bar=0;bar*16<n;bar++){
   const T=chordTones(chordOf(p,bar*16)),tones=[];for(let x=lo;x<=hi;x++)if(T.includes(pc7(x)))tones.push(x);
@@ -142,7 +148,8 @@ function bassline(kind,p,st,rng,seed,n,used=()=>{}){
  if(kind==='gallop')for(let i=0;i<n;i++)if(i%4===2||i%4===3)b[i]=0;
  if(kind==='bounce')for(let i=0;i<n;i+=2)b[i]=i%4===2?7:0;
  if(kind==='octave8')for(let i=0;i<n;i+=2)b[i]=(i/2)%2?7:0;
- if(kind!=='bounce'&&kind!=='octave8')turn();
+ if(kind==='held')for(let i=0;i<n;i+=16)b[i]=0;
+ if(kind!=='bounce'&&kind!=='octave8'&&kind!=='held')turn();
  return b;
 }
 function drums(g,n,v){
@@ -251,25 +258,34 @@ async function drumShot(ctx,project,k){
  const b=ctx.createBuffer(1,d.length,ctx.sampleRate);b.copyToChannel(d,0);return b;
 }
 const LEAD_LEVEL=1.6;
+// Four stems (drums, bass, lead, fx), each through its own copy of the section's chain, so the mix can be
+// changed after rendering. The chain is linear (filters, gains, reverb), so the stems sum to the same mix.
+const STEMS=['drums','bass','lead','fx'];
+// dest: one node for everything, or {drums,bass,lead,fx} with a node per stem.
 async function makeGraph(ctx,dest,project,section){
- const g={ctx,section,events:[],out:ctx.createGain(),lane:{},shots:{},noise:P.noiseBuffer(ctx,4,11)},fx=project[section].fx,isBuild=section==='build',isDrop=section==='drop',plain=!isBuild&&!isDrop;
- g.out.gain.value=.6;g.out.connect(dest);g.verb=ctx.createConvolver();g.verb.normalize=true;g.verb.buffer=P.impulse(ctx,2.6,2.6,5,1);const vr=ctx.createGain();vr.gain.value=.4;g.verb.connect(vr).connect(g.out);
+ const g={ctx,section,events:[],lane:{},shots:{},grp:{},noise:P.noiseBuffer(ctx,4,11)},fx=project[section].fx,isBuild=section==='build',isDrop=section==='drop',plain=!isBuild&&!isDrop,ir=P.impulse(ctx,2.6,2.6,5,1);
  // Build: everything through one high-pass that opens. Drop: everything but kick and clap pumps.
  // Intro, breakdown, outro: one low-pass that moves over the section, plus reverb and optional pump.
- g.body=ctx.createGain();g.pump=ctx.createGain();
- if(isBuild){g.hp=ctx.createBiquadFilter();g.hp.type='highpass';g.hp.frequency.value=20;g.swell=ctx.createGain();g.wash=ctx.createGain();g.wash.gain.value=0;g.body.connect(g.hp).connect(g.swell).connect(g.out);g.hp.connect(g.wash).connect(g.verb);}
- else if(plain){g.lp=ctx.createBiquadFilter();g.lp.type='lowpass';g.lp.frequency.value=20000;g.lp.Q.value=.9;g.body.connect(g.lp).connect(g.out);g.pump.connect(g.lp);const w=ctx.createGain();w.gain.value=fx.verb||0;g.lp.connect(w).connect(g.verb);}
- else{g.body.connect(g.out);g.pump.connect(g.out);}
+ for(const stem of STEMS){
+  const G={out:ctx.createGain(),verb:ctx.createConvolver(),body:ctx.createGain(),pump:ctx.createGain()},vr=ctx.createGain();
+  G.out.gain.value=.6;G.out.connect(dest[stem]||dest);G.verb.normalize=true;G.verb.buffer=ir;vr.gain.value=.4;G.verb.connect(vr).connect(G.out);
+  if(isBuild){G.hp=ctx.createBiquadFilter();G.hp.type='highpass';G.hp.frequency.value=20;G.swell=ctx.createGain();G.wash=ctx.createGain();G.wash.gain.value=0;G.body.connect(G.hp).connect(G.swell).connect(G.out);G.hp.connect(G.wash).connect(G.verb);}
+  else if(plain){G.lp=ctx.createBiquadFilter();G.lp.type='lowpass';G.lp.frequency.value=20000;G.lp.Q.value=.9;G.body.connect(G.lp).connect(G.out);G.pump.connect(G.lp);const w=ctx.createGain();w.gain.value=fx.verb||0;G.lp.connect(w).connect(G.verb);}
+  else{G.body.connect(G.out);G.pump.connect(G.out);}
+  g.grp[stem]=G;
+ }
+ // Risers, impact and the like go to the fx stem.
+ g.out=g.grp.fx.out;g.verb=g.grp.fx.verb;const D=g.grp.drums,B=g.grp.bass,L=g.grp.lead;
  const pumped=k=>!isBuild&&(k==='hat'||k==='open'||k==='bass'||k==='lead');
  for(const [k] of DRUMS){const n=ctx.createGain();n.gain.value=project.mix[k];g.lane[k]=n;g.shots[k]=await drumShot(ctx,project,k);}
- for(const [k] of DRUMS)if(k!=='kick')g.lane[k].connect(pumped(k)?g.pump:g.body);
- g.kickShaper=P.shaper(ctx,.25);g.lane.kick.connect(g.kickShaper).connect(g.body);
+ for(const [k] of DRUMS)if(k!=='kick')g.lane[k].connect(pumped(k)?D.pump:D.body);
+ g.kickShaper=P.shaper(ctx,.25);g.lane.kick.connect(g.kickShaper).connect(D.body);
  for(const k of ['bass','lead']){const n=ctx.createGain();n.gain.value=project.mix[k]*(k==='bass'?3:project.sounds.lead?.startsWith('dl:')?LEAD_LEVEL:2.2);g.lane[k]=n;}
- g.lane.bass.connect(pumped('bass')?g.pump:g.body);
+ g.lane.bass.connect(pumped('bass')?B.pump:B.body);
  // The lead bus: its own drive, delay and reverb, and a tone filter the section moves. In the build-up it skips the
  // high-pass (the lead is what opens up there) and goes straight to the swell.
- if(root.DropLead){g.leadBus=root.DropLead.bus(ctx,isBuild?g.swell:pumped('lead')?g.pump:g.body,project.sounds.lead?.startsWith('dl:')?project.sounds.lead.slice(3):null,project.bpm);g.lane.lead.connect(g.leadBus.input);}
- else{g.lane.lead.connect(pumped('lead')?g.pump:g.body);const ls=ctx.createGain();ls.gain.value=.25;g.lane.lead.connect(ls).connect(g.verb);}
+ if(root.DropLead){g.leadBus=root.DropLead.bus(ctx,isBuild?L.swell:pumped('lead')?L.pump:L.body,project.sounds.lead?.startsWith('dl:')?project.sounds.lead.slice(3):null,project.bpm);g.lane.lead.connect(g.leadBus.input);}
+ else{g.lane.lead.connect(pumped('lead')?L.pump:L.body);const ls=ctx.createGain();ls.gain.value=.25;g.lane.lead.connect(ls).connect(L.verb);}
  // ARP and Bass Invaders share one ladder worklet per context: prepare ARP's first, then both voices.
  if(project.sounds.lead?.startsWith('arp:')&&root.NBVoice)await root.NBVoice.prepare(ctx);
  const [bass,lead]=await Promise.all([voice(ctx,g.lane.bass,project.sounds.bass,project,bassBase(project.key)),voice(ctx,g.lane.lead,project.sounds.lead,project,leadBase(project.key))]);
@@ -278,7 +294,7 @@ async function makeGraph(ctx,dest,project,section){
  if(lead?.prepare){const sec=project[section],list=[],seen=new Set();let prev=null;
   for(let k=0;k<sec.bars*16;k++){const x=noteAt(project,sec,'lead',k,lead);if(!x)continue;const key=(x.chord||[x.midi]).join()+'|'+x.dur+'|'+x.vel+'|'+prev;if(!seen.has(key)){seen.add(key);list.push({midi:x.midi,chord:x.chord,duration:x.dur,velocity:x.vel,glide:prev});}prev=x.midi;}
   await lead.prepare(list);}
- if(isBuild){const roll=fx.roll==='off'?null:fx.roll;if(roll){g.rollShot=await drumShot(ctx,project,roll);g.rollBus=ctx.createGain();g.rollHP=ctx.createBiquadFilter();g.rollHP.type='highpass';g.rollBus.connect(g.rollHP).connect(g.out);const s=ctx.createGain();s.gain.value=.25;g.rollHP.connect(s).connect(g.verb);}}
+ if(isBuild){const roll=fx.roll==='off'?null:fx.roll;if(roll){g.rollShot=await drumShot(ctx,project,roll);g.rollBus=ctx.createGain();g.rollHP=ctx.createBiquadFilter();g.rollHP.type='highpass';g.rollBus.connect(g.rollHP).connect(D.out);const s=ctx.createGain();s.gain.value=.25;g.rollHP.connect(s).connect(D.verb);}}
  return g;
 }
 function hit(g,buffer,dest,t,vel,rate=1){const s=g.ctx.createBufferSource(),v=g.ctx.createGain();s.buffer=buffer;s.playbackRate.value=rate;v.gain.value=vel;s.connect(v).connect(dest);s.start(t);}
@@ -291,10 +307,11 @@ function sectionStart(g,project,t){
   if(g.section==='build'){at(f,280);f.exponentialRampToValueAtTime(9000,t+len);at(L.verb.gain,L.base.verb*1.8);at(L.delay.gain,L.base.delay*1.3);}
   else if(g.section==='drop'){at(f,20000);at(L.verb.gain,L.base.verb);at(L.delay.gain,L.base.delay);}
   else{at(f,{intro:1400,breakdown:2600,outro:2400}[g.section]||2400);at(L.verb.gain,L.base.verb*(g.section==='breakdown'?2.2:1.4));at(L.delay.gain,L.base.delay*1.2);}}
- if(g.lp){g.lp.frequency.cancelScheduledValues(t);g.lp.frequency.setValueAtTime(lpHz(fx.filterFrom),t);g.lp.frequency.exponentialRampToValueAtTime(lpHz(fx.filterTo),t+len);}
+ for(const G of Object.values(g.grp))if(G.lp){G.lp.frequency.cancelScheduledValues(t);G.lp.frequency.setValueAtTime(lpHz(fx.filterFrom),t);G.lp.frequency.exponentialRampToValueAtTime(lpHz(fx.filterTo),t+len);}
  if(g.section==='build'){
-  const hpEnd=20*2**(fx.hp*6.6);g.hp.frequency.cancelScheduledValues(t);g.hp.frequency.setValueAtTime(20,t);g.hp.frequency.exponentialRampToValueAtTime(Math.max(21,hpEnd),t+len);g.hp.Q.setValueAtTime(.7,t);g.hp.Q.linearRampToValueAtTime(.7+fx.hp*2.5,t+len);
-  g.swell.gain.cancelScheduledValues(t);g.swell.gain.setValueAtTime(1,t);g.swell.gain.linearRampToValueAtTime((1+fx.swell*.3)/(1+fx.verb*.9),t+len);g.wash.gain.cancelScheduledValues(t);g.wash.gain.setValueAtTime(0,t);g.wash.gain.linearRampToValueAtTime(fx.verb*.9,t+len);
+  const hpEnd=20*2**(fx.hp*6.6);
+  for(const G of Object.values(g.grp)){G.hp.frequency.cancelScheduledValues(t);G.hp.frequency.setValueAtTime(20,t);G.hp.frequency.exponentialRampToValueAtTime(Math.max(21,hpEnd),t+len);G.hp.Q.setValueAtTime(.7,t);G.hp.Q.linearRampToValueAtTime(.7+fx.hp*2.5,t+len);
+   G.swell.gain.cancelScheduledValues(t);G.swell.gain.setValueAtTime(1,t);G.swell.gain.linearRampToValueAtTime((1+fx.swell*.3)/(1+fx.verb*.9),t+len);G.wash.gain.cancelScheduledValues(t);G.wash.gain.setValueAtTime(0,t);G.wash.gain.linearRampToValueAtTime(fx.verb*.9,t+len);}
   if(fx.riser>0){const s=ctx.createBufferSource(),bp=ctx.createBiquadFilter(),v=ctx.createGain();s.buffer=g.noise;s.loop=true;bp.type='bandpass';bp.Q.value=.9;bp.frequency.setValueAtTime(300,t);bp.frequency.exponentialRampToValueAtTime(9000,t+len);v.gain.setValueAtTime(.0001,t);v.gain.exponentialRampToValueAtTime(fx.riser*.5,t+len);v.gain.linearRampToValueAtTime(0,t+len+.03);s.connect(bp).connect(v).connect(g.out);v.connect(g.verb);s.start(t);s.stop(t+len+.05);}
   if(fx.pitch>0){const f0=P.mtof(48+project.key),st=fx.pitch>.6?24:12,lp=ctx.createBiquadFilter(),v=ctx.createGain();lp.type='lowpass';lp.frequency.setValueAtTime(500,t);lp.frequency.exponentialRampToValueAtTime(7000,t+len);v.gain.setValueAtTime(.0001,t);v.gain.exponentialRampToValueAtTime(fx.pitch*.25,t+len);v.gain.linearRampToValueAtTime(0,t+len+.02);lp.connect(v).connect(g.out);v.connect(g.verb);
    for(const [type,det,mul,lv] of [['sawtooth',-11,1,.5],['sawtooth',11,1,.5],['square',0,2,.25]]){const o=ctx.createOscillator(),og=ctx.createGain();o.type=type;o.detune.value=det;og.gain.value=lv;o.frequency.setValueAtTime(f0*mul,t);o.frequency.exponentialRampToValueAtTime(f0*mul*2**(st/12),t+len);o.connect(og).connect(lp);o.start(t);o.stop(t+len+.05);}}
@@ -316,11 +333,11 @@ function scheduleStep(g,project,k,t){
  const sec=project[g.section],n=steps(sec),i=k%n,grid=sec.grid,tl=timeline(project),progress=k/(sec.bars*16);
  if(k===0)sectionStart(g,project,t);
  for(const [lane] of DRUMS){const v=grid[lane][i];if(!v)continue;if(g.section==='build'&&lane==='kick'&&progress>=sec.fx.kickOut)continue;hit(g,g.shots[lane],g.lane[lane],t,v===2?1:.72);g.events.push([lane,t,tl.step*.9,{kick:36,clap:39,snare:38,hat:42,open:46}[lane],v===2?1:.72]);}
- if(g.section!=='build'&&i%4===0&&(sec.fx.pump||0)>0){g.pump.gain.setTargetAtTime(1-sec.fx.pump*.85,t,.003);g.pump.gain.setTargetAtTime(1,t+.03,tl.beat*.17);}
+ if(g.section!=='build'&&i%4===0&&(sec.fx.pump||0)>0)for(const G of Object.values(g.grp)){G.pump.gain.setTargetAtTime(1-sec.fx.pump*.85,t,.003);G.pump.gain.setTargetAtTime(1,t+.03,tl.beat*.17);}
  for(const lane of ['bass','lead']){const x=noteAt(project,sec,lane,k,g[lane]);if(!x)continue;const eng=g[lane];
   if(eng)eng.play({midi:x.midi,time:t,duration:x.dur,velocity:x.vel,accent:i%4===2&&lane==='bass',chord:x.chord});for(const m of x.chord||[x.midi])g.events.push([lane,t,x.dur,m,x.vel/127]);}
 }
-function dispose(g){if(!g)return;try{g.bass?.dispose();g.lead?.dispose();}catch(e){}try{g.out.disconnect();}catch(e){}}
+function dispose(g){if(!g)return;try{g.bass?.dispose();g.lead?.dispose();}catch(e){}for(const G of Object.values(g.grp))try{G.out.disconnect();}catch(e){}}
 
 /* ---------- Live looping of one section ---------- */
 function createPlayer(ctx,dest){
@@ -330,7 +347,7 @@ function createPlayer(ctx,dest){
   g=graph;k=0;next=start=ctx.currentTime+.08;timer=setInterval(pump,25);pump();
  }
  function pump(){const sec=project[g.section],total=sec.bars*16,sd=timeline(project).step;while(next<ctx.currentTime+.15){scheduleStep(g,project,k%total,next);g.events.length=0;k++;next+=sd;}}
- function stop(){ticket++;clearInterval(timer);timer=null;if(g){const old=g;old.out.gain.setTargetAtTime(0,ctx.currentTime,.01);setTimeout(()=>dispose(old),300);}g=null;}
+ function stop(){ticket++;clearInterval(timer);timer=null;if(g){const old=g;for(const G of Object.values(old.grp))G.out.gain.setTargetAtTime(0,ctx.currentTime,.01);setTimeout(()=>dispose(old),300);}g=null;}
  // Where the loop is now, as a step within the section (for the playhead).
  function position(){if(!g)return null;const total=project[g.section].bars*16;return {section:g.section,step:Math.max(0,Math.floor((ctx.currentTime-start)/timeline(project).step))%total};}
  return {play,stop,position,playing:()=>!!g};
@@ -339,28 +356,52 @@ function createPlayer(ctx,dest){
 /* ---------- Offline render of the arrangement ---------- */
 // Notes are scheduled one bar ahead while rendering (suspend/resume): ARP builds a full voice per note, and
 // creating a whole section's voices up front makes the offline render crawl.
-async function renderSection(project,section,sr){
- const tl=timeline(project),bars=project[section].bars,len=bars*tl.bar,ctx=new OfflineAudioContext(2,Math.round((len+3)*sr),sr),g=await makeGraph(ctx,ctx.destination,project,section);
+// A stem's stereo pair into channels 2i, 2i+1 of an 8-channel output (mono sources spread to both sides).
+function stemRouter(ctx,dest){
+ const merge=ctx.createChannelMerger(8),map={};merge.connect(dest);
+ STEMS.forEach((stem,i)=>{const n=ctx.createGain();n.channelCount=2;n.channelCountMode='explicit';n.channelInterpretation='speakers';const split=ctx.createChannelSplitter(2);n.connect(split);split.connect(merge,0,2*i);split.connect(merge,1,2*i+1);map[stem]=n;});
+ return map;
+}
+async function renderSection(project,section,sr,tick=()=>{}){
+ const tl=timeline(project),bars=project[section].bars,len=bars*tl.bar,ctx=new OfflineAudioContext(8,Math.round((len+3)*sr),sr),g=await makeGraph(ctx,stemRouter(ctx,ctx.destination),project,section);
  const bar=b=>{for(let k=b*16;k<(b+1)*16;k++)scheduleStep(g,project,k,k*tl.step);};
  bar(0);
- for(let b=1;b<bars;b++){const at=Math.floor((b*tl.bar-tl.beat)*sr/128)*128/sr;ctx.suspend(at).then(()=>{bar(b);ctx.resume();});}
- return {buffer:await ctx.startRendering(),events:g.events};
+ for(let b=1;b<bars;b++){const at=Math.floor((b*tl.bar-tl.beat)*sr/128)*128/sr;ctx.suspend(at).then(()=>{bar(b);tick();ctx.resume();});}
+ const buffer=await ctx.startRendering();tick();
+ return {buffer,events:g.events};
 }
-async function render(project,{sr=44100,only=null}={}){
+// Fader value (0..1, 0.8 = unity) → gain.
+const faderGain=v=>v<=0?0:(v/.8)**2;
+const busOf=p=>({drums:.8,bass:.8,lead:.8,fx:.8,...(p.bus||{})});
+// Stems (8 channels) → stereo, each stem at its fader.
+function mixdown(stems,gains=[1,1,1,1]){
+ const n=stems.length,out=new AudioBuffer({numberOfChannels:2,length:n,sampleRate:stems.sampleRate}),L=out.getChannelData(0),R=out.getChannelData(1);
+ for(let s=0;s*2+1<stems.numberOfChannels;s++){const gn=gains[s]??1;if(!gn)continue;const a=stems.getChannelData(2*s),b=stems.getChannelData(2*s+1);for(let i=0;i<n;i++){L[i]+=a[i]*gn;R[i]+=b[i]*gn;}}
+ return out;
+}
+// The finished stereo mix at the project's fader settings, limited.
+function mix(result,project){const bus=busOf(project),buf=mixdown(result.stems,STEMS.map(k=>faderGain(bus[k]))),lim=P.limit(buf,0,buf.duration);return {buffer:buf,peak:lim.peak,reduction:lim.reduction};}
+// opts.progress(0..1) is called as the bars render.
+async function render(project,{sr=44100,only=null,progress=()=>{}}={}){
  const tl=timeline(project),parts=tl.parts.filter(x=>!only||only.includes(x.name)),pre=project.pre,beat=tl.beat,fade=.006;
- const rendered=await Promise.all(parts.map(x=>renderSection(project,x.name,sr))),by=Object.fromEntries(parts.map((x,i)=>[x.name,rendered[i]]));
- const t0=parts[0].start,total=parts[parts.length-1].end-t0+3,ctx=new OfflineAudioContext(2,Math.round(total*sr),sr);
+ const total=parts.reduce((a,x)=>a+project[x.name].bars,0)+4;let done=0;const tick=()=>{done++;progress(Math.min(.99,done/total));};progress(0);
+ const rendered=await Promise.all(parts.map(x=>renderSection(project,x.name,sr,tick))),by=Object.fromEntries(parts.map((x,i)=>[x.name,rendered[i]]));
+ const t0=parts[0].start,length=parts[parts.length-1].end-t0+3,ctx=new OfflineAudioContext(8,Math.round(length*sr),sr),fxStem=stemRouter(ctx,ctx.destination).fx;
  const place=(buf,at,offset=0,dur=buf.duration-offset)=>{const s=ctx.createBufferSource(),v=ctx.createGain();s.buffer=buf;v.gain.setValueAtTime(1,Math.max(0,at+dur-fade));v.gain.linearRampToValueAtTime(0,at+dur);s.connect(v).connect(ctx.destination);s.start(Math.max(0,at),offset+Math.max(0,-at),dur);};
  // Sections ring into the next one, except the build-up: it stops dead at the pre-drop.
  for(const x of parts){const R=by[x.name],at=x.start-t0;if(x.name==='build')place(R.buffer,at,0,tl.gapOut-x.start+fade);else place(R.buffer,at);}
  const B=by.build,D=by.drop;
- if(B&&D&&pre.throw>0&&root.Delaysy){const len=Math.min(pre.throwLen*beat,tl.gapOut-tl.buildOut),W=await P.delaysyThrow(B.buffer,tl.gapOut-tl.buildOut-len,len,pre.delaysy,project.bpm),v=ctx.createGain(),s=ctx.createBufferSource(),at=tl.gapOut-len-W.lead-t0;s.buffer=W.buffer;v.gain.setValueAtTime(pre.throw*W.gain,0);v.gain.setValueAtTime(pre.throw*W.gain,tl.dropOut-t0);v.gain.setTargetAtTime(pre.throw*W.gain*.3,tl.dropOut-t0,beat*.5);s.connect(v).connect(ctx.destination);if(at>=0)s.start(at);else s.start(0,-at);}
- if(B&&D&&pre.reverse>0){const R=await P.reverseSwell(D.buffer,0,beat,2.4),len=clamp(Math.max(tl.gap,2*beat),.2,R.duration-.05),a=tl.dropOut-len-t0,s=ctx.createBufferSource(),v=ctx.createGain();s.buffer=R;v.gain.setValueAtTime(0,a);v.gain.linearRampToValueAtTime(pre.reverse*.9,tl.dropOut-t0-.01);v.gain.linearRampToValueAtTime(0,tl.dropOut-t0+.004);s.connect(v).connect(ctx.destination);s.start(a,R.duration-len);s.stop(tl.dropOut-t0+.02);}
- const out=await ctx.startRendering(),lim=P.limit(out,0,out.duration);
+ // The throw and the reverse suck are made from the mixed build-up and drop, and land on the fx stem.
+ if(B&&D&&pre.throw>0&&root.Delaysy){const len=Math.min(pre.throwLen*beat,tl.gapOut-tl.buildOut),W=await P.delaysyThrow(mixdown(B.buffer),tl.gapOut-tl.buildOut-len,len,pre.delaysy,project.bpm),v=ctx.createGain(),s=ctx.createBufferSource(),at=tl.gapOut-len-W.lead-t0;s.buffer=W.buffer;v.gain.setValueAtTime(pre.throw*W.gain,0);v.gain.setValueAtTime(pre.throw*W.gain,tl.dropOut-t0);v.gain.setTargetAtTime(pre.throw*W.gain*.3,tl.dropOut-t0,beat*.5);s.connect(v).connect(fxStem);s.start(Math.max(0,at),Math.max(0,-at));}
+ tick();
+ if(B&&D&&pre.reverse>0){const R=await P.reverseSwell(mixdown(D.buffer),0,beat,2.4),len=clamp(Math.max(tl.gap,2*beat),.2,R.duration-.05),a=tl.dropOut-len-t0,s=ctx.createBufferSource(),v=ctx.createGain();s.buffer=R;v.gain.setValueAtTime(0,a);v.gain.linearRampToValueAtTime(pre.reverse*.9,tl.dropOut-t0-.01);v.gain.linearRampToValueAtTime(0,tl.dropOut-t0+.004);s.connect(v).connect(fxStem);s.start(a,R.duration-len);s.stop(tl.dropOut-t0+.02);}
+ tick();
+ const stems=await ctx.startRendering(),m=mix({stems},project);tick();
  const events=parts.flatMap(x=>by[x.name].events.filter(e=>x.name!=='build'||e[1]<tl.gapOut-x.start).map(e=>[e[0],e[1]+x.start-t0,...e.slice(2)]));
- return {buffer:out,tl,t0,parts,events,peak:lim.peak,reduction:lim.reduction};
+ progress(1);
+ return {stems,buffer:m.buffer,tl,t0,parts,events,peak:m.peak,reduction:m.reduction};
 }
 
-const api={PROGS,progName,chordName,newMelody,newChords,SCALES,DRUMS,ROWS,NOTE,ORDER,NAMES,SKETCH,STYLES,steps,blank,resize,degree,midiFor,rowLabel,enabled,arpSounds,arpPatterns,leadName,arpLane,newArpLead,generate,randomize,sketch,timeline,createPlayer,render};
+const api={STEMS,faderGain,busOf,mixdown,mix,PROGS,progName,chordName,newMelody,newChords,SCALES,DRUMS,ROWS,NOTE,ORDER,NAMES,SKETCH,STYLES,steps,blank,resize,degree,midiFor,rowLabel,enabled,arpSounds,arpPatterns,leadName,arpLane,newArpLead,generate,randomize,sketch,timeline,createPlayer,render};
 if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.DropGrid=api;
 })(typeof globalThis!=='undefined'?globalThis:this);

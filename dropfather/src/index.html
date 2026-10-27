@@ -6,7 +6,7 @@
 <style>/*INLINE:style.css*/</style>
 </head><body>
 <div id="app">
-<header class="hero"><img id="logo" src="/*INLINE-IMG:../assets/dropfather-logo.webp*/" alt="DROPFATHER"><p class="tagline">Build-up · Pre-drop · Drop — by Tarjei Krogh · v0.7</p></header>
+<header class="hero"><img id="logo" src="/*INLINE-IMG:../assets/dropfather-logo.webp*/" alt="DROPFATHER"><p class="tagline">Build-up · Pre-drop · Drop — by Tarjei Krogh · v0.8</p></header>
 
 <section class="panel" id="startPanel">
  <div class="choices">
@@ -72,9 +72,12 @@
 </div>
 <section class="panel hidden maker-only" id="makerSounds"><h2>SOUNDS &amp; MIX</h2><p class="hint">Bass: Bass Invaders (2000 factory sounds). Lead: AVANTGARDIAN ARP (777 sounds through its own voice, level match and FX) or Bass Invaders. The lead line can come straight from ARP's pattern library or a fresh ARP blend.</p><div id="mSoundCtl" class="soundgrid"></div></section>
 <footer class="dock hidden maker-only" id="makerDock">
- <div class="transport"><button id="mRandom" title="Surprise me: random style, key, scale, chords, sounds and DELAYSY preset">🎲 Randomize</button><button id="mPlayAll" class="primary">▶ Play all</button><button id="mLoop">▶ Loop section</button><button id="mStop">■ Stop</button><label class="vol">Vol <input id="mVolume" type="range" min="0" max="1" step="0.01" value="0.8"></label></div>
- <div class="exports"><button id="mExAll">WAV · build-up + drop</button><button id="mExDrop">WAV · drop only</button><button id="mExMidi">MIDI</button><button id="mSave">Save project</button><label class="filebtn">Load project<input id="mLoad" type="file" accept=".json,application/json"></label></div>
- <div id="mStatus" role="status" aria-live="polite">Press Make a drop to start the engine.</div>
+ <div class="dockmain">
+  <div class="transport"><button id="mRandom" title="Randomize everything: style, key, scale, chords, sounds and DELAYSY preset">🎲 Randomize all</button><button id="mPlayAll" class="primary">▶ Play all</button><button id="mLoop">▶ Loop section</button><button id="mStop">■ Stop</button><div class="progress hidden" id="mProgress" role="progressbar" aria-label="Render progress"><i></i><span></span></div><label class="vol">Vol <input id="mVolume" type="range" min="0" max="1" step="0.01" value="0.8"></label></div>
+  <div id="mStatus" role="status" aria-live="polite">Press Make a drop to start the engine.</div>
+  <div class="exports"><button id="mExAll">WAV · build-up + drop</button><button id="mExDrop">WAV · drop only</button><button id="mExStems">WAV stems · 4 tracks</button><button id="mExMidi">MIDI</button><button id="mSave">Save project</button><label class="filebtn">Load project<input id="mLoad" type="file" accept=".json,application/json"></label></div>
+ </div>
+ <div class="mixer" id="mMixer" aria-label="Mixer"></div>
 </footer>
 </div>
 <script id="chordino-lib">/*INLINE:vendor/chordino-runtime.js*/

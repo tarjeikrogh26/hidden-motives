@@ -1,4 +1,4 @@
-# DROPFATHER — by Tarjei Krogh · v0.7
+# DROPFATHER — by Tarjei Krogh · v0.8
 
 To veier inn fra startskjermen:
 
@@ -69,16 +69,17 @@ Målt på *Television Is Blue*: den faste noten traff sterkeste tone i originale
 ARP-grunntonene treffer **69–74 %** (*The Light*: 77–84 %). Resten kan være omvendinger (ARP gir akkordens
 grunntone, ikke bassnoten) eller kick i målingen. Det må høres, ikke bare måles.
 
-## Make a drop (drop maker, v0.7)
+## Make a drop (drop maker, v0.8)
 
 1. Hele motoren ligger i svart-hvitt under startskjermen. Trykk **Make a drop**, så våkner den i rødt.
 2. **BPM, toneart og skala** (moll, frygisk, dorisk, harmonisk moll, dur).
-3. **Stilknappene** (House lift, Festival, Techno tunnel, Take-off, EBM motor) skriver et **nytt drop hver gang**:
+3. **Stilknappene** (House lift, Festival, Techno tunnel, Take-off, EBM motor, Progressive trance, Ambient chill)
+   skriver et **nytt drop hver gang**:
    - Hver stil har sin egen meny av varianter, og hvert trykk trekker en ny kombinasjon: hats, clap/snare, open hats,
      fills, basspattern (Bass Invaders-riff, offbeat, synkopert, rullende 16-deler, gallop, oktav), lead og tempo
      innenfor stilen.
    - Linjen under knappene sier hva som ble valgt.
-   - **🎲 New drop** gir et nytt drop i samme stil, toneart og skala. **🎲 Randomize** ligger først i bunnlinjen og
+   - **🎲 Another … drop** gir et nytt drop i samme stil, toneart og skala. **🎲 Randomize all** ligger først i bunnlinjen og
      trekker stil, toneart, skala, akkorder, basslyd og DELAYSY-preset.
    - **Akkorder:** hvert drop har en akkordprogresjon på 4 takter (f.eks. Am – F – C – G). Bassriffet flytter seg
      med akkordene, og leaden lander på akkordtonene. **🎲 New chords** gir nye akkorder og skriver bass og lead på
@@ -114,10 +115,15 @@ grunntone, ikke bassnoten) eller kick i målingen. Det må høres, ikke bare må
    - **Leadlinjen** kan hentes fra **ARP-ens mønsterbibliotek**: velg et av 2281 mønstre, trykk **🎲 Random ARP
      pattern**, eller **🎲 ARP blend (Make arp)**, som er ARP-ens egen `NoteEngine.hybrid` og blander fire mønstre til
      en ny frase. Tonene legges på nærmeste trinn i skalaen.
-7. **Play all** kan pauses og fortsetter der du stoppet. **Loop section** spiller delen du redigerer, og endringer i griden høres med en gang. **Play all** rendrer hele
+7. **Klikk BUILD-UP, PRE eller DROP** i stripen for å spille fra starten av den delen (og redigere den). **Play all**
+   kan pauses og fortsetter der du stoppet. Mens det rendres, viser bunnlinjen hvor mange prosent som er ferdig.
+   **Mikseren** i bunnlinjen har fire loddrette fadere: Drums, Bass, Lead og FX (risere, impact, DELAYSY-kast,
+   reverse suck). Lyden rendres som fire stems, så faderne virker med en gang, også under Play all. Dobbeltklikk
+   setter en fader tilbake til 0 dB. **Loop section** spiller delen du redigerer, og endringer i griden høres med en gang. **Play all** rendrer hele
    arrangementet. Endrer du noe mens det spiller (stil, lyd, grid), rendres det på nytt og fortsetter fra samme sted.
 8. **Eksport**:
-   - WAV i 24-bit: hele arrangementet, eller bare droppet.
+   - WAV i 24-bit: hele arrangementet, eller bare droppet, mikset slik faderne står.
+   - **WAV stems**: Drums, Bass, Lead og FX som fire WAV-filer i én zip, alle fra takt 1.
    - MIDI med bass, lead og trommer.
    - Prosjektet som JSON.
 

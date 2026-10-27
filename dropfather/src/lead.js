@@ -12,10 +12,12 @@ const PATCHES={
  house:{n:'House organ stab',osc:'organ',voices:1,spread:0,layers:[],sub:0,cutoff:5200,env:2600,fdecay:.12,res:.8,kt:0,atk:.002,dec:.26,sus:.18,rel:.1,drive:.25,width:.6,delay:[.25,.25,.16],verb:.26,gain:1.22},
  techno:{n:'Techno dub chord',osc:'saw',voices:3,spread:12,layers:[],sub:0,cutoff:900,env:2400,fdecay:.1,res:4,kt:.4,atk:.002,dec:.18,sus:0,rel:.12,drive:.3,width:.8,delay:[.1875,.55,.42],verb:.45,gain:1.89},
  ebm:{n:'EBM pulse',osc:'square',voices:2,spread:9,layers:[[-12,.5,1]],sub:0,cutoff:900,env:3800,fdecay:.09,res:3,kt:.5,atk:.001,dec:.14,sus:.3,rel:.06,drive:.75,width:.5,delay:[.1875,.22,.12],verb:.18,gain:0.55},
- future:{n:'Future bass chord',osc:'saw',voices:5,spread:24,layers:[[12,.3,2]],sub:0,cutoff:3200,env:3000,fdecay:.4,res:1.5,kt:.3,atk:.03,dec:.6,sus:.65,rel:.3,drive:.3,width:1,wobble:[.5,1800],delay:[.25,.3,.2],verb:.42,gain:1.06}
+ future:{n:'Future bass chord',osc:'saw',voices:5,spread:24,layers:[[12,.3,2]],sub:0,cutoff:3200,env:3000,fdecay:.4,res:1.5,kt:.3,atk:.03,dec:.6,sus:.65,rel:.3,drive:.3,width:1,wobble:[.5,1800],delay:[.25,.3,.2],verb:.42,gain:1.06},
+ pad:{n:'Ambient pad',osc:'saw',voices:5,spread:16,layers:[[12,.2,2]],sub:0,cutoff:900,env:700,fdecay:1.2,res:.8,kt:.3,atk:.35,dec:1.2,sus:.8,rel:1.4,drive:.05,width:1,delay:[.375,.35,.22],verb:.65,gain:1.2},
+ glass:{n:'Glass pluck',osc:'glass',voices:2,spread:7,layers:[[12,.25,1]],sub:0,cutoff:6000,env:2500,fdecay:.3,res:.7,kt:.2,atk:.002,dec:.6,sus:0,rel:.5,drive:.05,width:.8,delay:[.1875,.45,.35],verb:.55,gain:2.2}
 };
 // Which chord each patch plays under the melody note.
-const VOICING={festival:'triad',bigroom:'stack',trance:'dyad',hoover:'power',screech:'single',house:'seventh',techno:'seventh',ebm:'single',future:'seventh'};
+const VOICING={festival:'triad',bigroom:'stack',trance:'dyad',hoover:'power',screech:'single',house:'seventh',techno:'seventh',ebm:'single',future:'seventh',pad:'seventh',glass:'dyad'};
 const mtof=m=>440*2**((m-69)/12);
 
 // Saw and square waves with their own start phase: detuned copies then do not all start in phase (no "zip").
@@ -24,7 +26,7 @@ function wave(ctx,type,i){
  let m=WAVES.get(ctx);if(!m){m={};WAVES.set(ctx,m);}const key=type+i;if(m[key])return m[key];
  const N=200,re=new Float32Array(N),im=new Float32Array(N),phi=((i*0.618034)%1)*2*Math.PI;
  for(let k=1;k<N;k++){
-  let a=0;if(type==='saw')a=1/k;else if(type==='square')a=k%2?1/k:0;else if(type==='organ')a={1:1,2:.55,3:.42,4:.3,6:.2,8:.12}[k]||0;
+  let a=0;if(type==='saw')a=1/k;else if(type==='square')a=k%2?1/k:0;else if(type==='organ')a={1:1,2:.55,3:.42,4:.3,6:.2,8:.12}[k]||0;else if(type==='glass')a={1:1,2:.25,3:.45,5:.22,7:.12,9:.06}[k]||0;
   re[k]=a*Math.sin(k*phi);im[k]=a*Math.cos(k*phi);
  }
  return m[key]=ctx.createPeriodicWave(re,im,{disableNormalization:false});

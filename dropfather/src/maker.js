@@ -44,7 +44,7 @@ function afterLead(info){descPart('lead',info);M.section=M.section==='pre'?'drop
 function renderStrip(){
  const p=M.project,tl=G.timeline(p),el=$('strip');el.replaceChildren();
  const blocks=[];for(const x of tl.parts){if(x.name==='build'){blocks.push(['build',x.start,tl.gapOut,`${p.build.bars} bars`]);blocks.push(['pre',tl.gapOut,tl.dropOut,p.pre.gapBeats?`${p.pre.gapBeats===4?'1 bar':p.pre.gapBeats+' beat'+(p.pre.gapBeats>1?'s':'')}`:'none']);}else blocks.push([x.name,x.start,x.end,`${p[x.name].bars} bars`]);}
- for(const [sec,a,e,info] of blocks){const b=document.createElement('button');b.className=sec+(['intro','breakdown','outro'].includes(sec)?' plain':'')+(M.section===sec?' on':'');b.dataset.sec=sec;b.dataset.a=a;b.dataset.e=e;b.style.flex=sec==='pre'?'0 0 auto':`${(e-a)/tl.total} 1 0`;b.innerHTML='<span></span><small></small><i></i>';b.querySelector('span').textContent=sec==='pre'?'PRE':G.NAMES[sec];b.querySelector('small').textContent=info;b.onclick=()=>{M.section=sec;renderAll();if(M.player?.playing()&&sec!=='pre')loop();};el.append(b);}
+ for(const [sec,a,e,info] of blocks){const b=document.createElement('button');b.className=sec+(['intro','breakdown','outro'].includes(sec)?' plain':'')+(M.section===sec?' on':'');b.dataset.sec=sec;b.dataset.a=a;b.dataset.e=e;b.style.flex=sec==='pre'?'0 0 auto':`${(e-a)/tl.total} 1 0`;b.innerHTML='<span></span><small></small><i></i>';b.querySelector('span').textContent=sec==='pre'?'PRE':G.NAMES[sec];b.querySelector('small').textContent=info;b.title=`Play from the ${sec==='pre'?'pre-drop':G.NAMES[sec].toLowerCase()} (and edit it)`;b.onclick=()=>{M.section=sec;renderAll();if(M.player?.playing()&&sec!=='pre')loop();else playFrom(sec);};el.append(b);}
  const has=G.SKETCH.some(k=>p.song?.[k]),t=$('mSketch');t.textContent=has?'− Remove intro, breakdown, outro':'+ Suggest the rest of the song';t.classList.toggle('on',has);$('mExAll').textContent=has?'WAV · whole song sketch':'WAV · build-up + drop';
 }
 function renderSecbar(){
@@ -75,26 +75,49 @@ function renderAll(){
  const p=M.project;if(M.section!=='pre'&&!G.enabled(p,M.section))M.section='drop';
  $('mBpm').value=p.bpm;$('mKey').value=p.key;$('mScale').value=p.scale;$('mDesc').textContent=p.desc||'';
  document.querySelectorAll('#mStyles button[data-style]').forEach(b=>b.classList.toggle('on',b.dataset.style===p.style));
- renderStrip();renderSecbar();renderGrid();for(const r of rows)r.sync();
+ renderStrip();renderSecbar();renderGrid();for(const r of rows)r.sync();syncMixer();
+ const another=$('mAnother');if(another)another.textContent=`🎲 Another ${G.STYLES[p.style]?.name||'random'} drop`;
 }
 // Grid edits are heard at once while looping (the scheduler reads the grid). Other changes rebuild the loop;
 // while Play all runs, any change re-renders the whole thing and carries on from the same spot.
 function changed(){M.full=null;if(M.player?.playing()){clearTimeout(M.restart);M.restart=setTimeout(loop,250);}if(M.src){clearTimeout(M.replay);M.replay=setTimeout(()=>playAll(true),450);}}
 
+/* ---------- Mixer: four stems (drums, bass, lead, fx) into a master limiter ---------- */
+const STEM_NAMES={drums:'Drums',bass:'Bass',lead:'Lead',fx:'FX'};
+function mixer(){
+ if(M.mixer)return M.mixer;const c=ctx(),master=c.createDynamicsCompressor();
+ master.threshold.value=-1.5;master.knee.value=0;master.ratio.value=20;master.attack.value=.002;master.release.value=.12;master.connect(out());
+ const bus=G.busOf(M.project),nodes={};for(const k of G.STEMS){const g=c.createGain();g.gain.value=G.faderGain(bus[k]);g.connect(master);nodes[k]=g;}
+ return M.mixer=nodes;
+}
+const dB=v=>{const g=G.faderGain(v);return g<=0?'−∞':(20*Math.log10(g)>=0?'+':'')+(20*Math.log10(g)).toFixed(1);};
+function buildMixer(){
+ const box=$('mMixer');box.replaceChildren();
+ for(const k of G.STEMS){const ch=document.createElement('div');ch.className='ch';ch.innerHTML='<output></output><input type="range" min="0" max="1" step="0.01"><label></label>';
+  const r=ch.querySelector('input'),o=ch.querySelector('output');ch.querySelector('label').textContent=STEM_NAMES[k];r.setAttribute('aria-label',STEM_NAMES[k]+' level');
+  r.oninput=()=>{const p=M.project;p.bus={...G.busOf(p),[k]:+r.value};o.textContent=dB(+r.value);if(M.mixer)M.mixer[k].gain.setTargetAtTime(G.faderGain(+r.value),ctx().currentTime,.015);};
+  r.ondblclick=()=>{r.value=.8;r.oninput();};ch.sync=()=>{r.value=G.busOf(M.project)[k];o.textContent=dB(+r.value);if(M.mixer)M.mixer[k].gain.value=G.faderGain(+r.value);};box.append(ch);}
+}
+function syncMixer(){for(const ch of $('mMixer').children)ch.sync?.();}
+function progress(f,label){const el=$('mProgress');if(f==null){el.classList.add('hidden');return;}el.classList.remove('hidden');el.querySelector('i').style.width=Math.round(f*100)+'%';el.querySelector('span').textContent=`${label} ${Math.round(f*100)}%`;}
+
 /* ---------- Play ---------- */
-function player(){if(!M.player)M.player=G.createPlayer(ctx(),out());return M.player;}
+function player(){if(!M.player)M.player=G.createPlayer(ctx(),mixer());return M.player;}
 async function loop(){
  if(M.section==='pre')M.section='drop';stopBuffer();M.paused=null;playLabel();window.Dropfather.stop();ctx();
  status('Preparing the voices …');await player().play(M.project,M.section);renderStrip();status(`Looping the ${G.NAMES[M.section].toLowerCase()} · edit the grid while it plays`);tick();
 }
 function stopBuffer(){if(M.src){try{M.src.stop();}catch(e){}M.src=null;}}
-function playLabel(){const b=$('mPlayAll');if(b)b.textContent=M.src?'⏸ Pause':M.paused!=null?'▶ Resume':'▶ Play all';}
+function playLabel(){const b=$('mPlayAll');if(b)b.textContent=M.src?'❚❚ Pause':M.paused!=null?'▶ Resume':'▶ Play all';}
+// Start Play all at a part of the arrangement (the pre-drop: one bar before it).
+function playFrom(sec){const tl=G.timeline(M.project),part=tl.parts.find(x=>x.name===(sec==='pre'?'build':sec));if(!part)return;M.paused=sec==='pre'?Math.max(0,tl.gapOut-tl.bar):part.start;M.player?.stop();playAll(false).then(()=>status(`Playing from the ${sec==='pre'?'pre-drop':G.NAMES[sec].toLowerCase()}`));}
 function pause(){if(!M.src)return;M.paused=ctx().currentTime-M.srcStart;stopBuffer();cancelAnimationFrame(M.raf);markNow(-1);playLabel();status('Paused · press Resume to play on from here');}
 function stop(){M.paused=null;M.player?.stop();stopBuffer();playLabel();clearTimeout(M.replay);cancelAnimationFrame(M.raf);markNow(-1);setStripHead(null);}
-async function renderAllParts(){if(M.full)return M.full;const p=M.project;status('Rendering '+G.timeline(p).parts.map(x=>G.NAMES[x.name].toLowerCase()).join(' → ')+' …');const t=performance.now(),r=await G.render(p,{sr:ctx().sampleRate});if(M.project!==p)return renderAllParts();M.full=r;const gr=20*Math.log10(r.reduction||1);status(`Rendered in ${((performance.now()-t)/1000).toFixed(1)} s${gr<-.1?` · limiter ${gr.toFixed(1)} dB`:''}`);return r;}
+async function renderAllParts(){if(M.full)return M.full;const p=M.project;status('Rendering '+G.timeline(p).parts.map(x=>G.NAMES[x.name].toLowerCase()).join(' → ')+' …');const t=performance.now(),r=await G.render(p,{sr:ctx().sampleRate,progress:f=>progress(f,'Rendering')});progress(null);if(M.project!==p)return renderAllParts();M.full=r;const gr=20*Math.log10(r.reduction||1);status(`Rendered in ${((performance.now()-t)/1000).toFixed(1)} s${gr<-.1?` · limiter ${gr.toFixed(1)} dB`:''}`);return r;}
 async function playAll(resume){
  const at=resume&&M.src?ctx().currentTime-M.srcStart:M.paused??0;const back=M.paused!=null;M.paused=null;M.player?.stop();window.Dropfather.stop();
- const r=await renderAllParts();stopBuffer();const c=ctx(),s=c.createBufferSource();s.buffer=r.buffer;s.connect(out());const from=Math.min(at,r.buffer.duration-.1),t0=c.currentTime+.05;s.start(t0,from);M.src=s;M.srcStart=t0-from;
+ const r=await renderAllParts();stopBuffer();const c=ctx(),s=c.createBufferSource(),split=c.createChannelSplitter(8),mx=mixer();s.buffer=r.stems;s.connect(split);
+ G.STEMS.forEach((k,i)=>{const m=c.createChannelMerger(2);split.connect(m,2*i,0);split.connect(m,2*i+1,1);m.connect(mx[k]);});const from=Math.min(at,r.buffer.duration-.1),t0=c.currentTime+.05;s.start(t0,from);M.src=s;M.srcStart=t0-from;
  s.onended=()=>{if(M.src===s){M.src=null;setStripHead(null);markNow(-1);playLabel();}};playLabel();status(resume?'Updated · playing on from the same spot':back?'Playing on from where you paused':'Playing '+r.parts.map(x=>G.NAMES[x.name].toLowerCase()).join(' → '));tick();
 }
 function markNow(step){if(!M.cells)return;if(M.now!=null&&M.cells[M.now])for(const c of M.cells[M.now])c.classList.remove('now');M.now=step>=0&&M.cells.length?step%M.cells.length:null;if(M.now!=null)for(const c of M.cells[M.now])c.classList.add('now');}
@@ -110,9 +133,15 @@ function tick(){
 /* ---------- Export ---------- */
 const name=()=>`Dropfather ${G.STYLES[M.project.style]?.name||'drop'} ${NOTE[M.project.key]} ${M.project.bpm}bpm`;
 const save=(bytes,file,type)=>DropFiles.download(bytes,file,type,status);
-async function exportAll(){const r=await renderAllParts(),whole=r.parts.length>2;if(await save(X.wav(r.buffer,0,r.parts[r.parts.length-1].end-r.t0+1.5),name()+(whole?' (song sketch)':'')+'.wav','audio/wav'))status(`Exported ${r.parts.map(x=>G.NAMES[x.name].toLowerCase()).join(' → ')} as 24-bit WAV.`);}
-async function exportDrop(){const r=await renderAllParts();if(await save(X.wav(r.buffer,r.tl.dropOut-r.t0,r.tl.dropEndOut-r.t0),name()+' (drop).wav','audio/wav'))status('Exported the drop alone, bar-exact, as 24-bit WAV.');}
+async function exportAll(){const r=await renderAllParts(),whole=r.parts.length>2;if(await save(X.wav(G.mix(r,M.project).buffer,0,r.parts[r.parts.length-1].end-r.t0+1.5),name()+(whole?' (song sketch)':'')+'.wav','audio/wav'))status(`Exported ${r.parts.map(x=>G.NAMES[x.name].toLowerCase()).join(' → ')} as 24-bit WAV.`);}
+async function exportDrop(){const r=await renderAllParts();if(await save(X.wav(G.mix(r,M.project).buffer,r.tl.dropOut-r.t0,r.tl.dropEndOut-r.t0),name()+' (drop).wav','audio/wav'))status('Exported the drop alone, bar-exact, as 24-bit WAV.');}
 async function exportMidi(){const r=await renderAllParts(),by=l=>r.events.filter(e=>l.includes(e[0])).map(e=>e.slice(1));if(await save(X.midiTracks([{name:'Bass',channel:0,notes:by(['bass'])},{name:'Lead',channel:1,notes:by(['lead'])},{name:'Drums',channel:9,notes:by(['kick','clap','snare','hat','open','roll'])}],M.project.bpm),name()+'.mid','audio/midi'))status('Exported MIDI: bass, lead and drums (GM drum notes), from the start of the arrangement.');}
+// Stems: drums, bass, lead and fx as 24-bit WAVs from the start of the arrangement, at their faders, in one zip.
+async function exportStems(){
+ const r=await renderAllParts(),end=r.parts[r.parts.length-1].end-r.t0+1.5,bus=G.busOf(M.project),files=[];
+ G.STEMS.forEach((k,i)=>{const n=r.stems.length,b=new AudioBuffer({numberOfChannels:2,length:n,sampleRate:r.stems.sampleRate}),gn=G.faderGain(bus[k]);for(let c=0;c<2;c++){const d=b.getChannelData(c),src=r.stems.getChannelData(2*i+c);for(let j=0;j<n;j++)d[j]=src[j]*gn;}files.push({name:`${i+1} ${STEM_NAMES[k]}.wav`,bytes:X.wav(b,0,end)});});
+ if(await save(DropFiles.zipFiles(files),name()+' (stems).zip','application/zip'))status('Exported 4 stems (drums, bass, lead, fx) as 24-bit WAVs in one zip. Drop them in at bar 1 and they line up.');
+}
 function saveProject(){return save(new TextEncoder().encode(JSON.stringify({app:'Dropfather drop maker',version:2,project:M.project},null,1)),name()+'.json','application/json');}
 async function loadProject(file){try{const j=JSON.parse(await file.text()),p=j.project||j;if(!p.build?.grid||!p.drop?.grid)throw Error('not a Dropfather drop maker project');p.song=p.song||{intro:false,breakdown:false,outro:false};p.sounds.drums=window.DropKits?.has(p.sounds.drums)?p.sounds.drums:'synth';M.project=p;M.full=null;stop();buildControls();renderAll();status('Loaded '+file.name);}catch(e){status('Could not load: '+e.message,true);}}
 
@@ -128,10 +157,11 @@ function open(){
  status('Engine on · loop a section to hear it while you edit the grid, or play it all.');
 }
 function init(){
+ buildMixer();
  NOTE.forEach((n,i)=>$('mKey').add(new Option(n,i)));for(const [k,[n]] of Object.entries(G.SCALES))$('mScale').add(new Option(n,k));
- const st=$('mStyles'),keep=()=>({key:M.project.key,scale:M.project.scale});{const l=document.createElement('span');l.className='stylelabel';l.textContent='New drop in a style (every click writes a new one):';st.append(l);}
+ const st=$('mStyles'),keep=()=>({key:M.project.key,scale:M.project.scale});{const l=document.createElement('span');l.className='stylelabel';l.textContent='Pick a style: every click writes a new drop in it. 🎲 Randomize (in the bar at the bottom) picks the style for you too.';st.append(l);}
  for(const [k,v] of Object.entries(G.STYLES)){const b=document.createElement('button');b.textContent=v.name;b.dataset.style=k;b.title='Write a new '+v.name+' drop (different every time)';b.onclick=()=>setProject(G.generate(k,seed(),keep()));st.append(b);}
- button(st,'🎲 New drop',()=>{const k=G.STYLES[M.project.style]?M.project.style:Object.keys(G.STYLES)[Math.floor(Math.random()*5)];setProject(G.generate(k,seed(),keep()));}).title='Another drop in the same style, key and scale';
+ const another=button(st,'🎲 New drop',()=>{const keys=Object.keys(G.STYLES),k=G.STYLES[M.project.style]?M.project.style:keys[Math.floor(Math.random()*keys.length)];setProject(G.generate(k,seed(),keep()));});another.title='Another drop in the same style, key and scale';another.id='mAnother';
  $('mSketch').onclick=()=>{const p=M.project;if(G.SKETCH.some(k=>p.song?.[k])){p.song={intro:false,breakdown:false,outro:false};if(G.SKETCH.includes(M.section))M.section='drop';status('Back to build-up → pre-drop → drop.');}else{G.sketch(p);status('Suggested: intro (16 bars, filter opening) → breakdown (8 bars, no drums) → build-up → drop → outro (16 bars, filter closing). Each has its own grid.');}M.full=null;renderAll();changed();};
  const bpm=v=>{M.project.bpm=Math.max(60,Math.min(200,Math.round(v)));$('mBpm').value=M.project.bpm;renderStrip();changed();};
  $('mBpm').onchange=e=>bpm(+e.target.value);$('mBpmDown').onclick=()=>bpm(M.project.bpm-1);$('mBpmUp').onclick=()=>bpm(M.project.bpm+1);
@@ -140,7 +170,7 @@ function init(){
  $('grid').onclick=e=>{const c=e.target.closest('.c');if(!c)return;const g=M.project[M.section].grid,l=c.dataset.l,i=+c.dataset.i;if(c.dataset.d!=null){const d=+c.dataset.d;g[l][i]=g[l][i]===d?null:d;}else g[l][i]=(g[l][i]+1)%3;M.full=null;paint();if(M.src){clearTimeout(M.replay);M.replay=setTimeout(()=>playAll(true),700);}};
  $('makeDrop').onclick=open;
  $('mPlayAll').onclick=()=>M.src?pause():playAll(false);$('mRandom').onclick=()=>setProject(G.randomize(M.project,seed()));$('mLoop').onclick=loop;$('mStop').onclick=stop;$('mVolume').oninput=e=>{const g=out();if(g)g.gain.value=+e.target.value;};
- $('mExAll').onclick=exportAll;$('mExDrop').onclick=exportDrop;$('mExMidi').onclick=exportMidi;$('mSave').onclick=saveProject;$('mLoad').onchange=e=>e.target.files[0]&&loadProject(e.target.files[0]);
+ $('mExStems').onclick=exportStems;$('mExAll').onclick=exportAll;$('mExDrop').onclick=exportDrop;$('mExMidi').onclick=exportMidi;$('mSave').onclick=saveProject;$('mLoad').onchange=e=>e.target.files[0]&&loadProject(e.target.files[0]);
  document.addEventListener('keydown',e=>{if(document.body.dataset.mode==='maker'&&e.code==='Space'&&!/INPUT|SELECT|TEXTAREA|BUTTON/.test(e.target.tagName)){e.preventDefault();M.player?.playing()||M.src?stop():loop();}});
  window.DropMaker={M,stop,open,loop,playAll,render:renderAllParts};
 }
