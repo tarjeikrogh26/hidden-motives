@@ -28,6 +28,7 @@ function buildControls(){
  // The lead line from ARP: a pattern from its library, the next random one, or a fresh blend ("Make arp").
  const arpRow=pick(s,()=>M.ui,'arp','Lead pattern from ARP’s library',ARPS,()=>{const pat=G.arpPatterns()[M.ui.arp];if(!pat)return;useArpLine(G.arpLane(M.project,pat,64),`ARP pattern “${pat.name}”`);});
  const actions=document.createElement('div');actions.className='rowbtns';s.append(actions);
+ stabRow(s,()=>M.section==='pre'?'drop':M.section,id=>{M.project.sounds.lead=id;for(const r of rows)r.sync();},msg=>{M.full=null;renderAll();changed();status(msg);});
  button(actions,'🎲 New melody',()=>afterLead(G.newMelody(M.project,seed()))).title='A new lead riff on the same chords';
  button(actions,'🎲 New chords',()=>{const prog=G.newChords(M.project,seed());descPart('chords',prog);afterLead('Dropfather riff');status('New chords: '+prog+' · bass and lead rewritten on them');}).title='A new chord progression, with the bass and the lead rewritten on it';
  button(actions,'🎲 Random ARP pattern',()=>{const info=G.newArpLead(M.project,seed(),'arp');if(info)afterLead(info);});
@@ -332,6 +333,7 @@ function renderPianoRoll(key){
  const info=document.createElement('span');info.className='hint';info.textContent=`${G.labelOf(p,key)} · ${sec.patternBars}-bar pattern${G.songOrder(p).filter(k=>k===key).length>1?' · repeats change too':''}`;head.append(info);
  if(!drums){button(head,'Select all',()=>{M.prSel=new Set(prNotes(sec,lane).map(x=>x.i));renderPianoRoll(key);});button(head,'⧉ Duplicate',()=>prKey({key:'d',ctrlKey:true,preventDefault(){}}));button(head,'✕ Delete',()=>prKey({key:'Delete',preventDefault(){}}));}
  box.append(head);
+ if(lane==='lead')stabRow(box,()=>key,id=>{p[key].sounds={...(p[key].sounds||{}),lead:id};},msg=>prCommit(msg));
  const rows=drums?G.DRUMS.map(([k,l])=>({k,label:l})):Array.from({length:G.ROWS[lane]},(_,r)=>{const d=G.ROWS[lane]-1-r;return {d,label:G.rowLabel(p,lane,d),root:d%7===0};});
  const wrap=document.createElement('div');wrap.className='prwrap';box.append(wrap);
  const keys=document.createElement('div');keys.className='prkeys';for(const r of rows){const k=document.createElement('span');k.textContent=r.label;if(r.root)k.className='root';keys.append(k);}wrap.append(keys);
@@ -434,6 +436,16 @@ async function listenForChords(buffer,id){
  const mono=(await c.startRendering()).getChannelData(0);M.harmony=M.harmony||{};
  try{M.harmony[id]=await window.Dropfather.arpHarmony(mono,p=>{if(!M.src)status(`AVANTGARDIAN ARP is listening for the chords … ${Math.round(p*100)} %`);});status('ARP has the chords: a drop inserted now follows the song’s harmony.');}
  catch(e){status('ARP could not read the chords ('+e.message+'); drops use their own progression.',true);}
+}
+// STAB LAB controls for a part: one of its 333 chord lines as the lead, its line tools, and a random Stab Lab sound.
+function stabRow(box,keyOf,onSound,after){
+ if(!window.StabLab)return;const row=document.createElement('div');row.className='stabrow rowbtns';row.innerHTML='<b class="stabtitle">STAB LAB</b><select aria-label="STAB LAB chord line"></select>';
+ const sel=row.querySelector('select'),lines=StabLab.lines();lines.forEach((l,i)=>sel.add(new Option(`${i+1}. ${l.name}`,i)));sel.value=M.stabLine??0;
+ const use=i=>{M.stabLine=i;sel.value=i;const name=G.stabLine(M.project,keyOf(),i);after(`STAB LAB line “${name}” on ${G.labelOf(M.project,keyOf()).toLowerCase()}, on its chords`);};
+ sel.onchange=()=>use(+sel.value);button(row,'🎲 Line',()=>use(Math.floor(Math.random()*lines.length))).title='A random chord line from STAB LAB';
+ for(const [k,n] of Object.entries(G.STAB_TOOLS))button(row,n,()=>{const msg=G.stabTool(M.project,keyOf(),k,seed());after(msg);}).title=`STAB LAB tool: ${n}`;
+ button(row,'🎲 Stab sound',()=>{const all=StabLab.sounds(),s2=all[Math.floor(Math.random()*all.length)];onSound('dl:stab'+s2.i);after(`Sound: Stab Lab · ${s2.name}`);}).title='A random STAB LAB chord sound';
+ box.append(row);
 }
 function renderClipSel(c,tl,sel){
  const p=M.project,info=document.createElement('span');info.className='selinfo';info.textContent=`${c.name} · bar ${+(c.start+1).toFixed(2)}`;sel.append(info);

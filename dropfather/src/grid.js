@@ -305,6 +305,38 @@ function insertDropAt(p,bar){
 }
 // Where the last audio clip ends, in bars.
 const clipEnd=p=>Math.max(0,...(p.audio?.clips||[]).map(c=>c.start+c.len));
+/* ---------- STAB LAB in the grid: its chord lines and a few of its line tools, on a part's lead ----------
+   The lead lane holds the top note; a Stab Lab sound (or any chord lead) plays the bar's chord under it. */
+const SL_FILL={offs:[3,7,11,15],push:[1,5,9,13],gallop:[2,3,10,11],stutter:[6,7,14,15],pickup:[13,14,15],scatter:[1,3,5,6,7,9,11,13,14,15]};
+const SL_SPAS={'3 over 4':o=>[...Array(11).keys()].map(i=>o+i*3).filter(p=>p<32),'5s':o=>[...Array(7).keys()].map(i=>o+i*5).filter(p=>p<32),late:()=>[1,7,10,13,17,23,26,29],skip:()=>[5,6,14,21,22,30],stutter:()=>[14,15,30,31,6,7]};
+const SL_DUST={up:[0,1,2],down:[2,1,0],'up and down':[0,2,1],octave:[0,3,0]};
+const SL_MV=[[1,2],[-1,-2],[1,0],[-1,0],[1,2,1],[2,1],[-2,-1],[1,-1]];
+function stabPrep(p,key){const sec=p[key];if(sec.patternBars<4)resize(sec,4);const n=steps(sec);sec.len=sec.len||{};if(!sec.len.lead||sec.len.lead.length!==n)sec.len.lead=Array(n).fill(null);return {sec,n,g:sec.grid.lead,len:sec.len.lead};}
+// The top note for step k: a tone of that bar's chord, close to the previous top note.
+function stabTop(p,k,prev){const T=chordTones(chordOf(p,k)),tones=[];for(let x=3;x<=9;x++)if(T.includes(pc7(x)))tones.push(x);return tones.reduce((b,x)=>Math.abs(x-prev)<Math.abs(b-prev)?x:b,tones[0]);}
+// A STAB LAB chord line (0..332) as the part's lead: its hits repeated over the pattern, the chord tones on top.
+function stabLine(p,key,index){
+ const L=root.STABLAB_DATA?.lines?.[index];if(!L)return null;const {sec,n,g,len}=stabPrep(p,key);g.fill(null);len.fill(null);let prev=7;
+ const hits=[];for(let s0=0;s0<n;s0+=L.period)for(const h of L.hits)if(s0+h<n)hits.push(s0+h);hits.sort((a,b)=>a-b);
+ hits.forEach((k,j)=>{const next=hits[j+1]??n+hits[0],gap=next-k;g[k]=prev=stabTop(p,k,prev);len[k]=gap>=4?2:Math.max(.5,gap-.5);});
+ if(key==='drop')leadToBuild(p);return L.name;
+}
+// STAB LAB's line tools, on the lead lane: Air, Length, Rhythmic, Spastic, Moves, Arp dust, Reverse.
+function stabTool(p,key,tool,seed){
+ const {sec,n,g,len}=stabPrep(p,key),R=P.rng(seed>>>0),pick=a=>a[Math.floor(R()*a.length)],on=()=>g.map((d,i)=>d==null?-1:i).filter(i=>i>=0),prevTop=k=>{for(let i=k;i>=0;i--)if(g[i]!=null)return g[i];return 7;};
+ let msg='';
+ if(tool==='air'){const used=[...new Set(on().map(i=>i%16))].filter(x=>x);used.sort(()=>R()-.5).sort((a,b)=>(a%2?0:a%4?1:2)-(b%2?0:b%4?1:2));const kill=new Set(used.slice(0,Math.min(used.length,1+Math.floor(R()*2)+(used.length>8?1:0))));for(const i of on())if(kill.has(i%16)){g[i]=null;len[i]=null;}msg='More air';}
+ if(tool==='len'){const used=[...new Set(on().map(i=>i%16))].sort(()=>R()-.5).slice(0,2+Math.floor(R()*3)),plan=Object.fromEntries(used.map(u=>[u,pick(['long','long','short','short','stacc'])]));const hits=on();
+  hits.forEach((i,j)=>{const a=plan[i%16];if(!a)return;const gap=(hits[j+1]??n+hits[0])-i;len[i]=a==='long'?Math.max(1,gap-.25):a==='short'?.5:.35;});msg='Lengths changed';}
+ if(tool==='rhy'){const ty=pick(Object.keys(SL_FILL)),c=SL_FILL[ty].slice().sort(()=>R()-.5).slice(0,2+Math.floor(R()*2));for(let s0=0;s0<n;s0+=16)for(const q of c){const k=s0+q;if(g[k]==null){g[k]=stabTop(p,k,prevTop(k));len[k]=1;}}msg='Rhythmic: '+ty;}
+ if(tool==='spas'){const ty=pick(Object.keys(SL_SPAS)),c=SL_SPAS[ty](1+Math.floor(R()*2)).filter(q=>q%4!==0).sort(()=>R()-.5).slice(0,3+Math.floor(R()*2));for(let s0=0;s0<n;s0+=32)for(const q of c){const k=s0+q;if(k<n){g[k]=stabTop(p,k,prevTop(k))+(R()<.3?7:0);len[k]=.45;}}msg='Spastic: '+ty;}
+ if(tool==='moves'){const hits=on(),starts=[...new Set(hits.map(i=>i%32))].filter(x=>x>=4);if(starts.length){const at=pick(starts),sh=pick(SL_MV);for(let s0=0;s0<n;s0+=32){let k=0;for(const i of hits){const r=i-s0;if(r<at||r>=at+16||k>=sh.length)continue;if(sh[k])g[i]=Math.max(0,Math.min(ROWS.lead-1,g[i]+sh[k]));k++;}}}msg='Moves';}
+ if(tool==='dust'){const ty=pick(Object.keys(SL_DUST)),ps=[...Array(29).keys()].filter(q=>q%4!==0).sort(()=>R()-.5).slice(0,1+(R()<.4?1:0));
+  for(let s0=0;s0<n;s0+=32)for(const q of ps){const T=chordTones(chordOf(p,s0+q)),base=prevTop(s0+q),tones=[];for(let x=base-4;x<=base+4;x++)if(T.includes(pc7(x))&&x>=0&&x<ROWS.lead)tones.push(x);if(!tones.length)continue;tones.push(Math.min(ROWS.lead-1,tones[0]+7));SL_DUST[ty].forEach((t,i)=>{const k=s0+q+i;if(k<n&&g[k]==null){g[k]=tones[Math.min(t,tones.length-1)];len[k]=.85;}});}msg='Arp dust: '+ty;}
+ if(tool==='rev'){const z=pick([4,8,8,16]),a0=Math.floor(R()*(64/z))*z;for(let s0=0;s0+a0+z<=n;s0+=64){const a=s0+a0,seg=g.slice(a,a+z),sl=len.slice(a,a+z);seg.reverse();sl.reverse();for(let i=0;i<z;i++){g[a+i]=seg[i];len[a+i]=sl[i];}}msg=`Reversed ${z/4} beat${z>4?'s':''} in every 4 bars`;}
+ if(key==='drop')leadToBuild(p);return msg;
+}
+const STAB_TOOLS={air:'Air',len:'Length',rhy:'Rhythmic',spas:'Spastic',moves:'Moves',dust:'Arp dust',rev:'Reverse'};
 // A new part of a type: the existing pattern of that type if there is one, else a copy derived from the drop.
 function partOfType(p,type){if(p[type]?.grid)return type;if(SKETCH.includes(type)){ensureSongParts(p);return type;}return 'drop';}
 
@@ -551,6 +583,6 @@ async function render(project,{sr=44100,only=null,song=false,samples={},progress
  return {stems,audio,buffer:m.buffer,tl,t0,parts,events,peak:m.peak,reduction:m.reduction,song};
 }
 
-const api={AUTO_KINDS,autoValue,autoChain,mixOffline,chordsFromHarmony,setChords,insertDropAt,MIXER,busGains,trackGains,renderAudio,insertSpace,clipEnd,makeSong,newPartMelody,typeOf,labelOf,SONG_DEFAULT,songOrder,ensureSongParts,variation,partOfType,STEMS,faderGain,busOf,mixdown,mix,PROGS,progName,chordName,newMelody,newChords,SCALES,DRUMS,ROWS,NOTE,ORDER,NAMES,SKETCH,STYLES,steps,blank,resize,degree,midiFor,rowLabel,enabled,arpSounds,arpPatterns,leadName,arpLane,newArpLead,generate,randomize,sketch,timeline,createPlayer,render};
+const api={stabLine,stabTool,STAB_TOOLS,AUTO_KINDS,autoValue,autoChain,mixOffline,chordsFromHarmony,setChords,insertDropAt,MIXER,busGains,trackGains,renderAudio,insertSpace,clipEnd,makeSong,newPartMelody,typeOf,labelOf,SONG_DEFAULT,songOrder,ensureSongParts,variation,partOfType,STEMS,faderGain,busOf,mixdown,mix,PROGS,progName,chordName,newMelody,newChords,SCALES,DRUMS,ROWS,NOTE,ORDER,NAMES,SKETCH,STYLES,steps,blank,resize,degree,midiFor,rowLabel,enabled,arpSounds,arpPatterns,leadName,arpLane,newArpLead,generate,randomize,sketch,timeline,createPlayer,render};
 if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.DropGrid=api;
 })(typeof globalThis!=='undefined'?globalThis:this);

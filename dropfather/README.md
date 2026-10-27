@@ -1,4 +1,4 @@
-# DROPFATHER — by Tarjei Krogh · v0.12
+# DROPFATHER — by Tarjei Krogh · v0.13
 
 To veier inn fra startskjermen:
 
@@ -156,6 +156,23 @@ drop-vinduet gjør det samme.
 - Hver del rendres én gang, også når den gjentas.
 - Eksport: hele låta som WAV, stems (fra takt 1) eller MIDI.
 
+### STAB LAB inne i Dropfather (v0.13)
+
+En del av STAB LAB v0.4 er bygget inn. Resten blir i STAB LAB: 6-oscillator-editoren, tone-oppskriftene,
+Delayzy-bankene, legacy-lydene og opptakeren.
+
+- **210 stab-lyder** med STAB LAB-navnene, fra synthmotorene classic, analog, modular, FM og West Coast. De
+  ligger i lead-listen som «Stab Lab · …». Motoren er STAB LABs egen akkordrendrer, med oscillatorer,
+  filterkonvolutt, drive og panorering over akkorden. Hver akkord rendres én gang, med samme lydstyrke.
+- **333 akkordlinjer** (rytmene): **STAB LAB**-raden i Notes (Lead) og i lydpanelet i drop-vinduet.
+  - Velg en linje eller trykk **🎲 Line**, så skrives delens lead som linjen. Toppnoten legges på delens
+    akkorder, og akkorden under spilles av lyden.
+  - Verktøyene **Air, Length, Rhythmic, Spastic, Moves, Arp dust og Reverse** er STAB LABs linjeverktøy,
+    tilpasset Dropfathers grid.
+  - **🎲 Stab sound** velger en tilfeldig stab-lyd.
+- Hentes ut med `node tools/extract-stablab.mjs STAB-LAB-v0.4.html`. STAB LABs egen generator lager
+  bibliotekene, så lyder og navn er de samme som i STAB LAB.
+
 ### Automasjon, angre og låtas akkorder (v0.12)
 
 - **Automasjon:** en egen rad under lydsporene. Velg kanal og type (volum eller filter for Drums, Bass, Lead, FX
@@ -251,6 +268,8 @@ drop-vinduet gjør det samme.
   i Norwegian Beats' brukerbank (ukjent opphav), Mouth-settet, og trommene fra Bass Invaders (uavklart lisens, se
   Bass Invaders `SOURCE-NOTES`).
 - **Risere, impact og synth-trommene** (sangmodus og «Dropfather synth»): syntetisert i `src/dsp.js`. Ingen samples.
+- **STAB LAB** (Tarjei Krogh): stab-lydene og akkordlinjene fra STAB LAB v0.4 (`src/vendor/stablab-data.js`,
+  motoren i `src/stablab.js`). Lydene bygger på Norwegian Beats v46-presetene.
 - Logo: Tarjei Krogh.
 
 ## Utvikling
