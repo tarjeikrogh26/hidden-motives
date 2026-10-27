@@ -1,4 +1,4 @@
-# DROPFATHER — by Tarjei Krogh · v0.13
+# DROPFATHER — by Tarjei Krogh · v0.14
 
 To veier inn fra startskjermen:
 
@@ -156,6 +156,22 @@ drop-vinduet gjør det samme.
 - Hver del rendres én gang, også når den gjentas.
 - Eksport: hele låta som WAV, stems (fra takt 1) eller MIDI.
 
+### DRIFT SONATA inne i Dropfather (v0.14)
+
+DriftSonatas motor for strings, kor og pads er bygget inn, i versjonen jeg har fått.
+
+- **111 lyder** i lead-listen som «Drift · …»: de 15 presetene (Strings, Choir, Dark, Space) og variasjonene
+  deres, laget av DriftSonatas egen kode.
+- **Motoren** er den samme WASM-synthen med kor- og cello-opptakene, som kjører i en AudioWorklet
+  (`src/drift-worklet.js`).
+  - Lyden, opptakene og notene med eksakt sample-posisjon sendes inn ved oppstart, så renderingen blir lik
+    hver gang.
+  - Akkordene rendres i én omgang, hver med plass til halen, og lydstyrken matches.
+- **Låtas melodi:** «Make a song» kan nå legge breakdown-melodien på Drift-strings, kor eller space-pads.
+  Ambient chill kan bruke dem som lead.
+- Ikke med: DriftSonatas side, akkordlinjer, tastatur og trommer.
+- Hentes ut med `node tools/extract-drift.mjs DriftSonata.html`.
+
 ### STAB LAB inne i Dropfather (v0.13)
 
 En del av STAB LAB v0.4 er bygget inn. Resten blir i STAB LAB: 6-oscillator-editoren, tone-oppskriftene,
@@ -268,6 +284,8 @@ Delayzy-bankene, legacy-lydene og opptakeren.
   i Norwegian Beats' brukerbank (ukjent opphav), Mouth-settet, og trommene fra Bass Invaders (uavklart lisens, se
   Bass Invaders `SOURCE-NOTES`).
 - **Risere, impact og synth-trommene** (sangmodus og «Dropfather synth»): syntetisert i `src/dsp.js`. Ingen samples.
+- **DRIFT SONATA** (Tarjei Krogh): WASM-motoren, kor- og cello-opptakene og 111 lyder (`src/vendor/drift-data.js`,
+  `src/drift-worklet.js`, `src/drift.js`).
 - **STAB LAB** (Tarjei Krogh): stab-lydene og akkordlinjene fra STAB LAB v0.4 (`src/vendor/stablab-data.js`,
   motoren i `src/stablab.js`). Lydene bygger på Norwegian Beats v46-presetene.
 - Logo: Tarjei Krogh.

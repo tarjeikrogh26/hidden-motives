@@ -66,7 +66,7 @@ const STYLES={
   build:{bars:4,fx:{hp:.55,riser:.3,pitch:0,roll:'snare',rollAmt:.7,verb:.25,swell:.2,kickOut:.75}},pre:{gapBeats:2,throw:.35,delaysy:179,throwLen:.5,reverse:.2},drop:{bars:16,fx:{pump:.3,impact:.5}},gate:{bass:.8,lead:.35}},
  progressive:{kits:['club','crisp','punch'],name:'Progressive trance',genre:'edm',bpm:[126,132],bass:['pal:edm:0:1','pal:edm:2:1','pal:house:5:1'],group:'wide',hats:['off8','sixteen'],clap:['twofour','layer'],open:['offopen','barend'],fill:['small','none'],bassline:['offbeat','gallop','roll16'],lead:['riff'],leads:['dl:trance','dl:glass','dl:festival'],riffs:'progressive',prog:'pop',
   build:{bars:16,fx:{hp:.7,riser:.65,pitch:.35,roll:'snare',rollAmt:.55,verb:.55,swell:.4,kickOut:.75}},pre:{gapBeats:2,throw:.55,delaysy:30,throwLen:1,reverse:.5},drop:{bars:16,fx:{pump:.6,impact:.55}},gate:{bass:.5,lead:.55}},
- ambient:{kits:['deep','room','dusty'],name:'Ambient chill',genre:'house',bpm:[96,108],bass:['pal:house:5:1','pal:house:6:1','pal2:house:1'],group:'soft',hats:['sparse','off8'],clap:['rim'],open:['none'],fill:['none'],bassline:['held','offbeat'],lead:['riff'],leads:['dl:pad','dl:glass','dl:future'],riffs:'ambient',prog:'pop',
+ ambient:{kits:['deep','room','dusty'],name:'Ambient chill',genre:'house',bpm:[96,108],bass:['pal:house:5:1','pal:house:6:1','pal2:house:1'],group:'soft',hats:['sparse','off8'],clap:['rim'],open:['none'],fill:['none'],bassline:['held','offbeat'],lead:['riff'],leads:['dl:pad','dl:glass','dl:future','dl:drift0','dl:drift11'],riffs:'ambient',prog:'pop',
   build:{bars:8,fx:{hp:.35,riser:.25,pitch:0,roll:'off',rollAmt:0,verb:.7,swell:.2,kickOut:.5}},pre:{gapBeats:2,throw:.6,delaysy:8,throwLen:2,reverse:.6},drop:{bars:16,fx:{pump:.25,impact:.2}},gate:{bass:.95,lead:.9}}
 };
 const MIX={kick:.9,clap:.55,snare:.5,hat:.35,open:.3,bass:.7,lead:.45};
@@ -171,7 +171,7 @@ function drums(g,n,v){
 function generate(styleKey,seed,base={}){
  const st=STYLES[styleKey]||STYLES.house,rng=P.rng(seed||1),pick=a=>a[Math.floor(rng()*a.length)],key=base.key??9,scale=base.scale||'minor';
  const v={hats:pick(st.hats),clap:pick(st.clap),open:pick(st.open),fill:pick(st.fill),bassline:pick(st.bassline),lead:pick(st.lead)};
- const lead=root.DropLead&&st.leads?pick(st.leads):(()=>{const sounds=arpSounds().filter(s=>s.group===st.group);return sounds.length?'arp:'+pick(sounds).id:pick(['minilead','lead','sqlead']);})();
+ const lead=root.DropLead&&st.leads?pick(st.leads.filter(have)):(()=>{const sounds=arpSounds().filter(s=>s.group===st.group);return sounds.length?'arp:'+pick(sounds).id:pick(['minilead','lead','sqlead']);})();
  const bpm=base.keepTempo&&base.bpm?base.bpm:st.bpm[0]+Math.floor(rng()*(st.bpm[1]-st.bpm[0]+1));
  const p={version:2,style:styleKey,seed,bpm,key,scale,sounds:{bass:pick(st.bass),lead},mix:{...MIX},gate:{...st.gate},song:{intro:false,breakdown:false,outro:false},
   build:{bars:st.build.bars,patternBars:4,grid:blank(64),fx:{...st.build.fx}},pre:{...st.pre},drop:{bars:st.drop.bars,patternBars:4,grid:blank(64),fx:{...st.drop.fx}}};
@@ -259,7 +259,9 @@ const FORMS={
  festival:[['intro',8],['breakdown',16],['build',16],['drop',16],['breakdown2',16],['build',16],['drop2',16],['outro',8]],
  chill:[['intro',8],['breakdown',16],['groove',16],['build',8],['drop',16],['breakdown2',16],['outro',16]]};
 const FORM_OF={house:'club',techno:'club',ebm:'club',progressive:'club',festival:'festival',takeoff:'festival',ambient:'chill'};
-const MELODY_SOUNDS=['dl:pad','dl:future','dl:glass'];
+// The song melody's sounds: Dropfather's pads, and DRIFT SONATA's strings, choirs and space pads when it is in.
+const MELODY_SOUNDS=['dl:pad','dl:future','dl:glass','dl:drift0','dl:drift1','dl:drift3','dl:drift4','dl:drift7','dl:drift11'];
+const have=id=>!id.startsWith('dl:')||!!root.DropLead?.PATCHES[id.slice(3)]||!!root.DropLead?.list().some(x=>x.id===id.slice(3));
 function makeSong(p,seed){
  const rng=P.rng(seed>>>0),pick=a=>a[Math.floor(rng()*a.length)],st=STYLES[p.style]||STYLES.festival,form=FORMS[FORM_OF[p.style]]||FORMS[pick(Object.keys(FORMS))];
  const flags={...(p.song||{})};sketch(p);p.song={intro:!!flags.intro,breakdown:!!flags.breakdown,outro:!!flags.outro};
@@ -267,7 +269,7 @@ function makeSong(p,seed){
  // The melody: a 4-bar phrase on the drop's chords, played as chords by a pad, a future-bass chord or a glass pluck.
  const mel=blank(64);mel.lead=riff(p,rng,'melody',64);for(let i=0;i<64;i+=16)mel.bass[i]=chordRoot(p,i);
  if(rng()<.5)for(let i=8;i<64;i+=16)mel.hat[i]=1;
- const sound=pick(MELODY_SOUNDS);
+ const sound=pick(MELODY_SOUNDS.filter(have));
  p.breakdown={type:'breakdown',label:'BREAKDOWN',bars:bars('breakdown')||16,patternBars:4,grid:mel,sounds:{lead:sound},gate:{lead:.95,bass:.98},fx:{filterFrom:.5,filterTo:.92,verb:.45,pump:0}};
  const mel2=copy(mel);if(rng()<.5)for(let i=0;i<64;i+=4)mel2.kick[i]=i%16===0?1:0;
  p.breakdown2={type:'breakdown',label:'BREAKDOWN 2',bars:bars('breakdown2')||8,patternBars:4,grid:mel2,sounds:{lead:sound},gate:{lead:.95,bass:.98},fx:{filterFrom:.4,filterTo:.85,verb:.55,pump:0}};
