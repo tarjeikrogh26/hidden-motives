@@ -87,12 +87,16 @@ function snareVoice(ctx,dest,t,vel,noise,type){
  n.connect(f).connect(g).connect(dest);n.start(t,.1,.35);
 }
 
+function hatVoice(ctx,dest,t,vel,noise,open){
+ const n=ctx.createBufferSource(),hp=ctx.createBiquadFilter(),bp=ctx.createBiquadFilter(),g=ctx.createGain();n.buffer=noise;hp.type='highpass';hp.frequency.value=7000;bp.type='bandpass';bp.frequency.value=10500;bp.Q.value=.8;
+ g.gain.setValueAtTime(vel,t);g.gain.setTargetAtTime(0,t+.002,open?.11:.018);n.connect(hp).connect(bp).connect(g).connect(dest);n.start(t,.2,open?.6:.12);
+}
 // Drum hits are rendered once and mixed in JS: hundreds of live nodes make OfflineAudioContext crawl.
 const shotCache=new Map();
 async function oneShot(sr,type){
  const key=sr+type;if(shotCache.has(key))return shotCache.get(key);
- const c=new OfflineAudioContext(1,Math.round(sr*(type==='kick'?.7:.4)),sr),noise=noiseBuffer(c,1,type.length);
- if(type==='kick')kickVoice(c,c.destination,0,1,noise);else snareVoice(c,c.destination,0,1,noise,type);
+ const c=new OfflineAudioContext(1,Math.round(sr*(type==='kick'?.7:type==='open'?.6:.4)),sr),noise=noiseBuffer(c,1,type.length);
+ if(type==='kick')kickVoice(c,c.destination,0,1,noise);else if(type==='hat'||type==='open')hatVoice(c,c.destination,0,1,noise,type==='open');else snareVoice(c,c.destination,0,1,noise,type);
  const d=(await c.startRendering()).getChannelData(0);let pk=0;for(const v of d)pk=Math.max(pk,Math.abs(v));if(pk)for(let i=0;i<d.length;i++)d[i]/=pk;
  shotCache.set(key,d);return d;
 }
@@ -278,14 +282,16 @@ function randomize(plan,seed){
  return p;
 }
 
-// Standard MIDI file (format 1, 480 ppq): Bass, Kick, Roll. Positions from the rendered song's time zero.
-function midi(events,bpm){
+// Standard MIDI file (format 1, 480 ppq). tracks: [{name, channel, notes:[[time, duration, note, velocity 0..1]]}].
+function midiTracks(tracks,bpm){
  const ppq=480,tick=t=>Math.max(0,Math.round(t*bpm/60*ppq)),vlq=n=>{const b=[n&127];while(n>>=7)b.unshift((n&127)|128);return b;},str=s=>[...s].map(c=>c.charCodeAt(0)&127);
  const chunk=(id,data)=>[...str(id),(data.length>>>24)&255,(data.length>>>16)&255,(data.length>>>8)&255,data.length&255,...data];
  const track=(name,list,ch)=>{const ev=[];for(const [t,d,n,v] of list){const vel=clamp(Math.round(v*110),1,127);ev.push([tick(t),0x90|ch,n,vel],[tick(t+d),0x80|ch,n,0]);}ev.sort((a,b)=>a[0]-b[0]||(a[1]&0xf0)-(b[1]&0xf0));let last=0;const data=[0,0xff,3,name.length,...str(name)];for(const [t,s,n,v] of ev){data.push(...vlq(t-last),s,n,v);last=t;}data.push(0,0xff,0x2f,0);return chunk('MTrk',data);};
  const us=Math.round(60e6/bpm),tempoTrack=chunk('MTrk',[0,0xff,0x51,3,(us>>16)&255,(us>>8)&255,us&255,0,0xff,0x58,4,4,2,24,8,0,0xff,0x2f,0]);
- return new Uint8Array([...chunk('MThd',[0,1,0,4,ppq>>8,ppq&255]),...tempoTrack,...track('Dropfather Bass',events.bass,0),...track('Dropfather Kick',events.kick,9),...track('Dropfather Roll',events.roll,9)]);
+ return new Uint8Array([...chunk('MThd',[0,1,0,tracks.length+1,ppq>>8,ppq&255]),...tempoTrack,...tracks.flatMap(t=>track(t.name,t.notes,t.channel))]);
 }
+// Song mode: Bass, Kick, Roll. Positions from the rendered song's time zero.
+function midi(events,bpm){return midiTracks([{name:'Dropfather Bass',channel:0,notes:events.bass},{name:'Dropfather Kick',channel:9,notes:events.kick},{name:'Dropfather Roll',channel:9,notes:events.roll}],bpm);}
 
 function wav(buffer,t0=0,t1=buffer.duration){
  const sr=buffer.sampleRate,a=Math.max(0,Math.round(t0*sr)),b=Math.min(buffer.length,Math.round(t1*sr)),n=b-a,ch=buffer.numberOfChannels,bytes=3,size=44+n*ch*bytes,out=new DataView(new ArrayBuffer(size)),w=(o,s)=>{for(let i=0;i<s.length;i++)out.setUint8(o+i,s.charCodeAt(i));};
@@ -295,6 +301,8 @@ function wav(buffer,t0=0,t1=buffer.duration){
  return new Uint8Array(out.buffer);
 }
 
-const api={STYLES,PATTERNS,ROLLS,bassCatalog,defaultPlan,timeline,outToSrc,rootAt,render,renderSong,randomize,midi,wav};
+const api={STYLES,PATTERNS,ROLLS,bassCatalog,defaultPlan,timeline,outToSrc,rootAt,render,renderSong,randomize,midi,midiTracks,wav,
+ // Shared with the drop maker (grid.js): the same voices, engines and limiter.
+ parts:{rng,noiseBuffer,impulse,shaper,oneShot,hitTrack,invadersBass,delaysyThrow,reverseSwell,limit,clamp,mtof}};
 if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.DropDSP=api;
 })(typeof globalThis!=='undefined'?globalThis:this);

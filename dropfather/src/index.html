@@ -6,13 +6,16 @@
 <style>/*INLINE:style.css*/</style>
 </head><body>
 <div id="app">
-<header class="hero"><img id="logo" src="/*INLINE-IMG:../assets/dropfather-logo.webp*/" alt="DROPFATHER"><p class="tagline">Build-up · Pre-drop · Drop — by Tarjei Krogh · v0.3</p></header>
+<header class="hero"><img id="logo" src="/*INLINE-IMG:../assets/dropfather-logo.webp*/" alt="DROPFATHER"><p class="tagline">Build-up · Pre-drop · Drop — by Tarjei Krogh · v0.4</p></header>
 
-<section class="panel" id="loadPanel">
- <label class="dropzone" id="dropzone"><input id="file" type="file" accept="audio/*,.wav,.aif,.aiff,.mp3,.m4a,.flac"><b>Drop a song here</b><span>or click to load WAV · AIFF · MP3. Everything stays on this computer.</span></label>
+<section class="panel" id="startPanel">
+ <div class="choices">
+ <label class="dropzone choice" id="dropzone"><input id="file" type="file" accept="audio/*,video/mp4,video/webm,.wav,.wave,.bwf,.aif,.aiff,.aifc,.mp3,.m4a,.m4b,.mp4,.aac,.adts,.flac,.ogg,.oga,.opus,.webm,.weba,.caf,.alac,.3gp,.mka,.mkv"><b>Drop a song here</b><span>or click to load any audio: WAV · AIFF · MP3 · M4A · AAC · FLAC · OGG · Opus · WebM · MP4. Everything stays on this computer.</span></label>
+ <button type="button" class="choice make" id="makeDrop"><b>Make a drop</b><span>Start from a grid: build-up, pre-drop and drop. No song needed.</span></button>
+ </div>
 </section>
 
-<section class="panel hidden" id="trackPanel">
+<section class="panel hidden song-only" id="trackPanel">
  <div class="trackbar">
   <div class="trackname"><b id="trackName">—</b><small id="trackMeta"></small></div>
   <div class="ctl"><span>BPM</span><button id="bpmDown" aria-label="BPM down">‹</button><input id="bpm" type="number" step="0.01" min="60" max="200" value="120"><button id="bpmUp" aria-label="BPM up">›</button><button id="bpmHalf">÷2</button><button id="bpmDouble">×2</button><button id="tap">Tap</button></div>
@@ -24,7 +27,7 @@
  <div class="cands"><div class="seg" role="group" aria-label="What a click on the map sets"><button data-pick="insert">Click map: new part</button><button data-pick="src">Click map: drop material</button></div><span>Suggestions</span><div id="candidates"></div></div>
 </section>
 
-<section class="panel hidden" id="planPanel">
+<section class="panel hidden song-only" id="planPanel">
  <div class="planrow">
   <div class="ctl"><span>New part at bar</span><button id="insDown" aria-label="Earlier">‹</button><output id="insertBar">—</output><button id="insUp" aria-label="Later">›</button><small id="insTime" class="muted"></small></div>
   <div class="ctl"><span>Drop made of bars</span><button id="srcDown" aria-label="Earlier">‹</button><output id="srcBar">—</output><button id="srcUp" aria-label="Later">›</button><select id="srcBars" aria-label="Length of the drop material"><option value="4">4 bars</option><option value="8" selected>8 bars</option><option value="16">16 bars</option></select></div>
@@ -37,16 +40,40 @@
  <canvas id="zoom" height="130" aria-label="Rendered build-up and drop. Click to listen from there."></canvas>
 </section>
 
-<div class="machines hidden" id="machines">
+<div class="machines hidden song-only" id="machines">
  <section class="panel machine"><h2>BUILD-UP</h2><p class="hint">The bars before the new part, replayed: the bass is filtered away and the tension rises.</p><div id="buildCtl"></div></section>
  <section class="panel machine"><h2>PRE-DROP</h2><p class="hint">The breath before the hit. The echo throw comes from DELAYSY.</p><div id="preCtl"></div></section>
  <section class="panel machine red"><h2>DROP</h2><p class="hint">The drop material, looped, with its own bass cut. A Bass Invaders bass plays only ARP's roots for those bars.</p><div id="dropCtl"></div></section>
 </div>
 
-<footer class="dock hidden" id="dock">
+<footer class="dock hidden song-only" id="dock">
  <div class="transport"><button id="playDrop" class="primary">▶ Play new part</button><button id="playSong">▶ Whole song</button><button id="playOrig">Original material</button><button id="stop">■ Stop</button><label class="vol">Vol <input id="volume" type="range" min="0" max="1" step="0.01" value="0.8"></label></div>
  <div class="exports"><button id="exSong">WAV · whole song</button><button id="exSection">WAV · new part only</button><button id="exLayers">WAV · layers only</button><button id="exMidi">MIDI</button><button id="exPlan">Save plan</button></div>
  <div id="status" role="status" aria-live="polite">Load a song to start.</div>
+</footer>
+
+<section class="panel hidden maker-only" id="makerPanel">
+ <div class="planrow">
+  <div class="ctl"><span>BPM</span><button id="mBpmDown" aria-label="BPM down">‹</button><input id="mBpm" type="number" min="60" max="200" step="1" value="124"><button id="mBpmUp" aria-label="BPM up">›</button></div>
+  <div class="ctl"><span>Key</span><select id="mKey" aria-label="Key"></select><select id="mScale" aria-label="Scale"></select></div>
+  <div class="ctl"><button id="mClear">Clear all</button></div>
+ </div>
+ <div class="styles" id="mStyles"></div>
+ <div class="strip" id="strip" role="group" aria-label="Arrangement: click a part to edit it"></div>
+ <div class="secbar" id="secbar"></div>
+ <div class="gridwrap"><div id="grid" class="grid"></div></div>
+ <p class="hint" id="mHint"></p>
+</section>
+<div class="machines hidden maker-only" id="makerMachines">
+ <section class="panel machine"><h2>BUILD-UP</h2><p class="hint">The whole build goes through a high-pass that opens up, with riser and roll on top.</p><div id="mBuildCtl"></div></section>
+ <section class="panel machine"><h2>PRE-DROP</h2><p class="hint">The breath before the hit: silence, the last beat thrown into DELAYSY, reverse suck.</p><div id="mPreCtl"></div></section>
+ <section class="panel machine red"><h2>DROP</h2><p class="hint">Impact on the one, everything but kick and clap pumps.</p><div id="mDropCtl"></div></section>
+</div>
+<section class="panel hidden maker-only" id="makerSounds"><h2>SOUNDS &amp; MIX</h2><p class="hint">Bass and lead are Bass Invaders voices: all 2000 factory sounds, plus its lead patches for the lead.</p><div id="mSoundCtl" class="soundgrid"></div></section>
+<footer class="dock hidden maker-only" id="makerDock">
+ <div class="transport"><button id="mPlayAll" class="primary">▶ Play all</button><button id="mLoop">▶ Loop section</button><button id="mStop">■ Stop</button><label class="vol">Vol <input id="mVolume" type="range" min="0" max="1" step="0.01" value="0.8"></label></div>
+ <div class="exports"><button id="mExAll">WAV · build-up + drop</button><button id="mExDrop">WAV · drop only</button><button id="mExMidi">MIDI</button><button id="mSave">Save project</button><label class="filebtn">Load project<input id="mLoad" type="file" accept=".json,application/json"></label></div>
+ <div id="mStatus" role="status" aria-live="polite">Loop a section to hear it while you edit the grid.</div>
 </footer>
 </div>
 <script id="chordino-lib">/*INLINE:vendor/chordino-runtime.js*/
@@ -54,7 +81,11 @@
 <script>window.DROPFATHER_WASM_B64="/*INLINE-B64:vendor/chordino.wasm*/";</script>
 <!--BASS-INVADERS-->
 <script>/*INLINE:vendor/delaysy-engine.js*/</script>
+<script>/*INLINE:decode.js*/</script>
 <script>/*INLINE:analysis.js*/</script>
 <script>/*INLINE:dsp.js*/</script>
+<script>/*INLINE:files.js*/</script>
 <script>/*INLINE:app.js*/</script>
+<script>/*INLINE:grid.js*/</script>
+<script>/*INLINE:maker.js*/</script>
 </body></html>

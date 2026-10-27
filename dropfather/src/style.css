@@ -63,3 +63,43 @@ input[type=range]{width:100%;accent-color:var(--red);min-height:26px}
 
 .arp b{font-size:13px;color:#ffb3ad;font-weight:600}
 .cands .seg button{min-width:0;font-size:12px;min-height:32px}
+/* Start: two ways in. Once one is chosen the cards shrink to a row of tabs. */
+.choices{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.choice{position:relative}
+.choice.make{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;min-height:150px;border:3px solid var(--red);border-radius:10px;background:#1b0d0c;text-align:center;padding:18px}
+.choice.make b{font-family:'Bowlby One','Arial Black',Impact,sans-serif;font-weight:400;font-size:28px;color:var(--red2)}
+.choice.make span{color:var(--muted);font-weight:400}
+body[data-mode] .choice{min-height:0;flex-direction:row;gap:12px;padding:10px;border-width:2px}
+body[data-mode] .choice b{font-size:16px}
+body[data-mode] .choice span{display:none}
+body[data-mode="song"] #dropzone,body[data-mode="maker"] .choice.make{border-color:var(--white);background:#222}
+body[data-mode="maker"] .song-only,body[data-mode="song"] .maker-only{display:none!important}
+/* Drop maker */
+.strip{display:flex;gap:4px;margin:12px 0 8px;min-height:58px}
+.strip button{display:flex;flex-direction:column;justify-content:center;align-items:flex-start;min-width:64px;padding:6px 10px;border-radius:8px;text-align:left;font-family:'Bowlby One','Arial Black',Impact,sans-serif;font-weight:400;font-size:15px;letter-spacing:.02em;border:2px solid #3a3a3a;position:relative;overflow:hidden}
+.strip button small{font-family:Inter,system-ui,sans-serif;font-size:11px;color:var(--muted);font-weight:600}
+.strip .build{background:#26241f}.strip .pre{background:#000;flex:0 0 auto}.strip .drop{background:#2a0f0d;color:var(--red2)}
+.strip button.on{border-color:var(--white)}
+.strip i{position:absolute;top:0;bottom:0;width:2px;background:#fff;left:0;display:none}
+.secbar{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;margin-bottom:8px}
+.gridwrap{overflow-x:auto;border:1px solid var(--line);border-radius:8px;background:#0a0a0a;padding:6px}
+.grid{display:inline-block;min-width:100%}
+.grid .grp{font-size:11px;font-weight:800;letter-spacing:.08em;color:var(--muted);margin:8px 0 3px;text-transform:uppercase}
+.grid .grp:first-child{margin-top:0}
+.grid .row{display:flex;align-items:center;gap:0;height:24px}
+.grid .row>label{flex:0 0 66px;font-size:11px;color:var(--muted);padding-right:6px;text-align:right;white-space:nowrap}
+.grid .row.root>label{color:var(--white);font-weight:800}
+.grid .c{flex:0 0 22px;height:20px;min-height:0;margin:1px;padding:0;border:0;border-radius:3px;background:#1d1d1d}
+.grid .c.b4{margin-left:4px}.grid .c.b16{margin-left:9px}
+.grid .c:hover{background:#3a3a3a}
+.grid .c.on{background:var(--white)}.grid .c.acc{background:var(--red2)}
+.grid .notes .c.on{background:var(--red2)}
+.grid .c.now{outline:2px solid #fff;outline-offset:-2px}
+.grid .notes .row{height:18px}.grid .notes .c{height:15px}
+.prenote{padding:18px;color:var(--muted)}
+.filebtn{display:inline-flex;align-items:center;background:#1d1d1d;border:1px solid #3a3a3a;border-radius:8px;min-height:34px;padding:6px 11px;font-size:12px;font-weight:600;cursor:pointer}
+.filebtn input{position:absolute;opacity:0;width:1px;height:1px}
+#mStatus{font-size:12px;color:#ffb3ad;margin-top:6px;min-height:18px}
+.soundgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px 24px}
+@media(max-width:900px){.soundgrid{grid-template-columns:1fr}}
+@media(max-width:600px){.choices{grid-template-columns:1fr}.grid .row>label{flex-basis:44px;font-size:10px}.strip button{font-size:12px;padding:6px}}

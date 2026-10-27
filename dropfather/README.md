@@ -1,8 +1,18 @@
-# DROPFATHER — by Tarjei Krogh · v0.3
+# DROPFATHER — by Tarjei Krogh · v0.4
 
-Lager et **nytt parti** (build-up, pre-drop og drop) av låtens egen lyd og setter det inn i låta. Bassen i droppet
-spiller bare AVANTGARDIAN ARP-ens grunntoner. Lokal nettleserapp, ingen server, ingen konto.
-Åpne `Dropfather.html` i Chrome, Edge eller Safari og dra inn en WAV/AIFF/MP3.
+To veier inn fra startskjermen:
+
+- **Drop a song here**: lager et **nytt parti** (build-up, pre-drop og drop) av låtens egen lyd og setter det inn i
+  låta. Bassen i droppet spiller bare AVANTGARDIAN ARP-ens grunntoner.
+- **Make a drop**: bygg build-up, pre-drop og drop fra bunnen av på en grid. Ingen låt trengs.
+
+Lokal nettleserapp, ingen server, ingen konto. Åpne `Dropfather.html` i Chrome, Edge eller Safari.
+
+**Formater** (`src/decode.js`):
+- **Nettleserens egen dekoder:** MP3, M4A/AAC (som Suno), MP4, FLAC, OGG, Opus, WebM og WAV.
+- **Dropfathers egne lesere:** AIFF/AIFC, ukomprimert CAF og WAV-varianter nettleseren ikke tar (f.eks. 64-bit float).
+  Chrome og Firefox kan ikke åpne AIFF selv.
+- **Apple Lossless (ALAC):** åpnes i Safari. I Chrome sier appen tydelig fra.
 
 ## Hva et drop egentlig er (kort research)
 
@@ -58,6 +68,32 @@ Målt på *Television Is Blue*: den faste noten traff sterkeste tone i originale
 ARP-grunntonene treffer **69–74 %** (*The Light*: 77–84 %). Resten kan være omvendinger (ARP gir akkordens
 grunntone, ikke bassnoten) eller kick i målingen. Det må høres, ikke bare måles.
 
+## Make a drop (drop maker, v0.4)
+
+1. Velg **Make a drop** på startskjermen.
+2. **BPM, toneart og skala** (moll, frygisk, dorisk, harmonisk moll, dur). Stilknappene skriver et helt nytt forslag
+   (build-up + drop). **Randomize** blander stil, toneart og lyder.
+3. **Stripen** `BUILD-UP │ PRE │ DROP` er arrangementet. Klikk en del for å redigere den.
+   - **Build-up** og **drop** har hver sin grid:
+     - Fem trommelinjer: kick, clap, snare, hat og open hat. Ett klikk gir på, to gir aksent.
+     - To notelinjer, bass og lead, med én note per steg i valgt skala.
+     - Mønsteret er 1, 2 eller 4 takter og loopes over delens lengde.
+   - **Pre-drop** har ingen grid. Den er pausen, DELAYSY-kastet av build-upens siste slag og reverse suck.
+4. **Lyder**:
+   - **Bass og lead** er Bass Invaders-stemmer: alle 2000 fabrikklyder, og lead i tillegg Mini Lead, Saw Lead og
+     Square Lead.
+   - **Basslinjene** i House, Festival og Techno skrives av Bass Invaders' egen riff-generator, tilpasset skalaen.
+   - **Trommer, roll og risere** er Dropfathers egne (syntetiserte).
+5. **Loop section** spiller delen du redigerer, og endringer i griden høres med en gang. **Play all** rendrer
+   build-up → pre-drop → drop med alle effekter.
+6. **Eksport**:
+   - WAV i 24-bit: build-up + drop, eller bare droppet.
+   - MIDI med bass, lead og trommer (GM-noter).
+   - Prosjektet som JSON. Det kan lastes inn igjen.
+
+Build-upen går gjennom ett high-pass som åpner seg, med riser, roll og romklang. «Kick plays until» bestemmer når kicken
+forsvinner. I droppet pumper alt unntatt kick og clap, og det kommer et impact på 1-eren.
+
 ## Opphav og rettigheter (viktig før salg)
 
 - **Analyse**: fra AVANTGARDIAN ARP v0.18 (`src/vendor/`). Chordino/NNLS-Chroma er **GPL-2.0-or-later**
@@ -80,18 +116,21 @@ grunntone, ikke bassnoten) eller kick i målingen. Det må høres, ikke bare må
 
 ```
 node build.mjs            # bygger Dropfather.html fra src/
-node test-analysis.cjs    # tempo, takt 1 og drop-punkt på syntetiske låter
+node test-analysis.cjs    # tempo, takt 1 og drop-punkt på syntetiske låter (sangmodus)
 # hente motorene på nytt fra nye versjoner av appene:
 python3 tools/extract-delaysy.py DELAYSY-vX.html src/vendor/delaysy-engine.js
 python3 tools/extract-bass-host.py Bass-Invaders/source/dist/app.js src/vendor/bass-invaders/bass-host.js
 ```
 
 `src/analysis.js` (tempo/takt/energikart/forslag), `src/dsp.js` (all lyd, offline rendering, WAV/MIDI),
-`src/app.js` (UI), `src/vendor/` (ARP-analysen, Bass Invaders, DELAYSY).
+`src/app.js` (sangmodus-UI), `src/grid.js` + `src/maker.js` (drop maker: motor og UI), `src/decode.js` (formater),
+`src/files.js` (lagring), `src/vendor/` (ARP-analysen, Bass Invaders, DELAYSY).
 
-## Kjente grenser i v0.3
+## Kjente grenser i v0.4
 
 - Takt 1 er en kvalifisert gjetning (seksjoner skifter på 1-ern). Sjekk den med «−1 beat / +1 beat».
 - Taktartsforutsetning 4/4. Tempo må være stabilt (ingen live-tempo-drift).
 - Bassen er aldri bedre enn ARP-analysen. I takter der ARP tar feil, tar bassen feil.
 - Ikke lyttetestet av meg (Claude kan ikke høre). Tallene er målt (nivå, tonehøyde, tidsplassering), smaken er ikke.
+- Drop maker: leadens hook-generator er Dropfathers egen (enkel). Bass og lead er monofone, én note per steg.
+- Drop maker: en full render tar noen sekunder (Bass Invaders kalibrerer nivået på hver lyd først).

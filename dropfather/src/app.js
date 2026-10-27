@@ -11,7 +11,7 @@ function audio(){if(!S.ctx){S.ctx=new (window.AudioContext||window.webkitAudioCo
 async function load(file){
  stop();status('Reading '+file.name+' …');
  try{
-  const ctx=audio(),data=await file.arrayBuffer(),buffer=await ctx.decodeAudioData(data);
+  const ctx=audio(),buffer=await DropDecode.decode(ctx,file);
   S.buffer=buffer;S.name=file.name.replace(/\.[^.]+$/,'');S.harmony=S.roots=null;S.arpDone=false;S.preview=S.full=null;
   status('Finding tempo, bars and drop points …');await new Promise(r=>setTimeout(r,30));
   const off=new OfflineAudioContext(1,Math.ceil(buffer.duration*A.SR),A.SR),s=off.createBufferSource();s.buffer=buffer;s.connect(off.destination);s.start();
@@ -19,11 +19,12 @@ async function load(file){
   S.an=A.analyse(S.mono);S.plan.bpm=S.an.bpm;S.plan.offset=S.an.offset;
   const c=S.an.candidates[0],bar=c?c.bar:Math.min(S.an.bars.length-8,32);S.plan.insertBar=bar;S.plan.srcBar=bar;clampPlan();
   $('trackName').textContent=S.name;$('trackMeta').textContent=`${fmt(buffer.duration)} · ${buffer.sampleRate} Hz · ${S.an.bars.length} bars`;
+  document.body.dataset.mode='song';window.DropMaker?.stop();
   for(const id of ['trackPanel','planPanel','machines','dock'])$(id).classList.remove('hidden');$('dropzone').classList.add('loaded');$('dropzone').querySelector('b').textContent='Change song';
   syncUI();drawOverview();invalidate();
   status(`${S.an.bpm} BPM · waiting for the ARP analysis: the bass follows it, so nothing renders before it is done.`);
   harmony();
- }catch(e){console.error(e);status('Could not read this file: '+e.message,true);}
+ }catch(e){console.error(e);status('Could not read '+file.name+': '+e.message,true);}
 }
 
 // AVANTGARDIAN ARP's Chordino engine, off the UI thread when the browser allows it.
@@ -101,7 +102,7 @@ async function renderPreview(){
  catch(e){console.error(e);status('Render failed: '+e.message,true);return null;}
 }
 async function playBuffer(buffer,at,mode,base){
- stop();const ctx=audio(),s=ctx.createBufferSource();s.buffer=buffer;s.connect(S.gain);s.start(ctx.currentTime+.03,Math.max(0,at));
+ stop();window.DropMaker?.stop();const ctx=audio(),s=ctx.createBufferSource();s.buffer=buffer;s.connect(S.gain);s.start(ctx.currentTime+.03,Math.max(0,at));
  S.src=s;S.play={start:ctx.currentTime+.03-at,mode,base};s.onended=()=>{if(S.src===s)stop();};tick();
 }
 function stop(){if(S.src){try{S.src.stop();}catch(e){}S.src=null;}S.play=null;cancelAnimationFrame(S.raf);if(S.preview)drawZoom();drawOverview();}
@@ -147,36 +148,22 @@ function drawZoom(){
 }
 
 /* ---------- Export ---------- */
-// Inside a claude.ai artifact files go through the downloads capability, which takes zip but not wav/mid,
-// so those are packed into a zip there. Opened as a local file, the browser saves them directly.
-const saver=window.claude?.use?window.claude.use('downloads').catch(()=>null):Promise.resolve(null);
-const CRC=Array.from({length:256},(_,n)=>{for(let k=0;k<8;k++)n=n&1?0xedb88320^(n>>>1):n>>>1;return n>>>0;});
-function zip(name,bytes){
- let crc=~0;for(let i=0;i<bytes.length;i++)crc=CRC[(crc^bytes[i])&255]^(crc>>>8);crc=~crc>>>0;
- const n=new TextEncoder().encode(name),head=(sig,extra)=>{const h=new DataView(new ArrayBuffer(extra));h.setUint32(0,sig,true);return h;};
- const local=head(0x04034b50,30+n.length);local.setUint16(4,20,true);local.setUint16(6,0x800,true);local.setUint32(14,crc,true);local.setUint32(18,bytes.length,true);local.setUint32(22,bytes.length,true);local.setUint16(26,n.length,true);new Uint8Array(local.buffer).set(n,30);
- const central=head(0x02014b50,46+n.length);central.setUint16(4,20,true);central.setUint16(6,20,true);central.setUint16(8,0x800,true);central.setUint32(16,crc,true);central.setUint32(20,bytes.length,true);central.setUint32(24,bytes.length,true);central.setUint16(28,n.length,true);new Uint8Array(central.buffer).set(n,46);
- const end=head(0x06054b50,22);end.setUint16(8,1,true);end.setUint16(10,1,true);end.setUint32(12,central.byteLength,true);end.setUint32(16,local.byteLength+bytes.length,true);
- return new Blob([local.buffer,bytes,central.buffer,end.buffer]);
-}
-async function download(bytes,name,type){
- const downloads=await saver;
- if(downloads){const packed=!/\.(json|txt|csv|zip)$/.test(name);try{await downloads.save({filename:packed?name.replace(/\.[^.]+$/,'')+'.zip':name,data:packed?zip(name,bytes):new Blob([bytes])});return true;}catch(e){status(e?.code==='declined'?'Save cancelled.':'Could not save: '+(e?.message||e?.code||e),e?.code!=='declined');return false;}}
- const url=URL.createObjectURL(new Blob([bytes],{type})),a=document.createElement('a');a.href=url;a.download=name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),4000);return true;
-}
+const download=(bytes,name,type)=>DropFiles.download(bytes,name,type,status);
 const fileBase=()=>`${S.name||'song'} - Dropfather bar ${S.plan.insertBar+1}`;
 async function exportSong(){const r=await fullRender();if(await download(X.wav(r.buffer),fileBase()+'.wav','audio/wav'))status('Exported the whole song as 24-bit WAV.');}
 async function exportSection(){const r=await fullRender(),tl=r.tl;if(await download(X.wav(r.buffer,tl.buildOut,tl.dropEndOut),fileBase()+' (new part).wav','audio/wav'))status('Exported the new part alone: build-up, pre-drop and drop, bar-exact.');}
 async function exportLayers(){status('Rendering layers …');if(!S.arpDone){status('Still waiting for the ARP analysis.');return;}const r=await X.renderSong(S.buffer,S.plan,{roots:S.roots,original:false});if(await download(X.wav(r.buffer),fileBase()+' (layers).wav','audio/wav'))status('Exported only the Dropfather layers. Line it up with the start of the exported song.');}
 async function exportMidi(){const r=await fullRender();if(await download(X.midi(r.events,S.plan.bpm),fileBase()+'.mid','audio/midi'))status('Exported MIDI: bass, kick and roll, from the start of the rendered song.');}
-function exportPlan(){return download(new TextEncoder().encode(JSON.stringify({app:'Dropfather 0.3',track:S.name,plan:S.plan},null,1)),fileBase()+'.json','application/json');}
+function exportPlan(){return download(new TextEncoder().encode(JSON.stringify({app:'Dropfather 0.4',track:S.name,plan:S.plan},null,1)),fileBase()+'.json','application/json');}
 
 /* ---------- Wiring ---------- */
 function init(){
  controls('buildCtl','build',BUILD);controls('preCtl','pre',PRE);controls('dropCtl','drop',DROP);
  const st=$('styles');for(const [k,v] of Object.entries(X.STYLES)){const b=document.createElement('button');b.textContent=v.name;b.dataset.style=k;b.onclick=()=>applyStyle(k);st.append(b);}
  const rnd=document.createElement('button');rnd.textContent='Randomize';rnd.dataset.style='random';rnd.onclick=()=>{S.plan=X.randomize(S.plan,(Math.random()*2**31)|0);clampPlan();changed();};st.append(rnd);
- const file=$('file'),dz=$('dropzone');file.onchange=()=>file.files[0]&&load(file.files[0]);
+ const file=$('file'),dz=$('dropzone');
+ // Back from the drop maker to an already loaded song without reopening the file picker.
+ dz.addEventListener('click',e=>{if(document.body.dataset.mode==='maker'&&S.buffer){e.preventDefault();window.DropMaker?.stop();document.body.dataset.mode='song';}});file.onchange=()=>file.files[0]&&load(file.files[0]);
  for(const ev of ['dragenter','dragover'])document.addEventListener(ev,e=>{e.preventDefault();dz.classList.add('over');});
  for(const ev of ['dragleave','drop'])document.addEventListener(ev,e=>{e.preventDefault();dz.classList.remove('over');});
  document.addEventListener('drop',e=>{const f=e.dataTransfer.files[0];if(f)load(f);});
@@ -192,10 +179,10 @@ function init(){
  $('playDrop').onclick=()=>playDrop(0);$('playSong').onclick=playSong;$('playOrig').onclick=playOriginal;$('stop').onclick=stop;
  $('volume').oninput=e=>{if(S.gain)S.gain.gain.value=+e.target.value;};
  $('exSong').onclick=exportSong;$('exSection').onclick=exportSection;$('exLayers').onclick=exportLayers;$('exMidi').onclick=exportMidi;$('exPlan').onclick=exportPlan;
- document.addEventListener('keydown',e=>{if(e.code==='Space'&&S.buffer&&!/INPUT|SELECT|TEXTAREA|BUTTON/.test(e.target.tagName)){e.preventDefault();S.play?stop():playDrop(0);}});
+ document.addEventListener('keydown',e=>{if(e.code==='Space'&&S.buffer&&document.body.dataset.mode==='song'&&!/INPUT|SELECT|TEXTAREA|BUTTON/.test(e.target.tagName)){e.preventDefault();S.play?stop():playDrop(0);}});
  window.addEventListener('resize',()=>{drawOverview();drawZoom();});
  syncUI();
- window.Dropfather={S,load};
+ window.Dropfather={S,load,audio,stop};
 }
 init();
 })();
