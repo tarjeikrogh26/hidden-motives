@@ -53,7 +53,7 @@ void Engine::prepare(double sampleRate, int maxBlock) {
 void Engine::reset() {
     for (Voice& v : voices) v = Voice();
     held.clear(); voicing = {}; prevVoicing.clear(); pendingRecompute = -1;
-    sub = Sub(); limEnv = 1; ctlCount = 0; lastBar = -1;
+    sub = Sub(); limEnv = 1; limMin = 1; ctlCount = 0; lastBar = -1;
     ensL.clear(); ensR.clear(); tapeL.clear(); tapeR.clear(); dubL.clear(); dubR.clear(); preL.clear(); preR.clear(); shimBuf.clear();
     for (auto& d : fdn) d.clear();
     std::fill(fdnLp, fdnLp + 8, 0.f);
@@ -576,7 +576,7 @@ void Engine::process(float* outL, float* outR, int n) {
                         case 0: return 2 * o.ph - 1 - polyBlep(o.ph, inc);
                         case 1: { float y = o.ph < o.pw ? 1.f : -1.f; y += polyBlep(o.ph, inc); float t2 = o.ph + 1 - o.pw; if (t2 >= 1) t2 -= 1; return y - polyBlep(t2, inc); }
                         case 2: return 1 - 4 * std::fabs(o.ph - .5f);
-                        default: return std::sin(kTwoPi * o.ph);
+                        default: return fastSin(kTwoPi * o.ph);
                     }
                 };
                 float y;
@@ -598,7 +598,7 @@ void Engine::process(float* outL, float* outR, int n) {
                 } else y = shape(waves[i]);
                 // the lane's shape also folds the plain waves: more harmonics as it leans away from the middle
                 const float fold = std::min(.9f, lifeFold[i] + twFold[i]);
-                if (fold > .02f && waves[i] != 1) { const float f = fold; y = y * (1 - f) + std::sin(y * (1 + 3 * f) * kPi * .5f) * f; }
+                if (fold > .02f && waves[i] != 1) { const float f = fold; y = y * (1 - f) + fastSin(y * (1 + 3 * f) * kPi * .5f) * f; }
                 o.last = y; prev = y;
                 bus[i] += v.of[i][1].low(v.of[i][0].low(y)) * a;
             }
@@ -640,7 +640,7 @@ void Engine::process(float* outL, float* outR, int n) {
             else if (k < kRobotSrc) { const float lv = layerLevel[k - kOsc]; if (lv <= 0) continue; x = bus[k] * lv * kLayerGain[k - kOsc]; }
             else { if (robotAmt <= .001f) continue; x = robot * robotAmt * 1.2f; }
             x *= kVoiceBus;
-            if (driveGain > 1.01f) x = std::tanh(x * driveGain) / driveGain;
+            if (driveGain > 1.01f) x = fastTanh(x * driveGain) / driveGain;
             space[k].process(x, L, R);
             srcMeter[k] += (std::fabs(x) - srcMeter[k]) * .0005f;
         }
@@ -657,8 +657,8 @@ void Engine::process(float* outL, float* outR, int n) {
             float wl = 0, wr = 0;
             for (int k = 0; k < 3; k++) {
                 const float a = kTwoPi * (ensPh + k / 3.f), f = kTwoPi * (ensFastPh + k / 3.f);
-                wl += ensL.at((.006f + .0016f * std::sin(a) + .0002f * std::sin(f)) * (float)sr);
-                wr += ensR.at((.006f + .0016f * std::sin(a + kPi / 3) + .0002f * std::sin(f + kPi / 3)) * (float)sr);
+                wl += ensL.at((.006f + .0016f * fastSin(a) + .0002f * fastSin(f)) * (float)sr);
+                wr += ensR.at((.006f + .0016f * fastSin(a + kPi / 3) + .0002f * fastSin(f + kPi / 3)) * (float)sr);
             }
             L = L * (1 - .5f * ensembleAmt) + wl * (1 / 3.f) * ensembleAmt * 1.1f;
             R = R * (1 - .5f * ensembleAmt) + wr * (1 / 3.f) * ensembleAmt * 1.1f;
@@ -671,10 +671,10 @@ void Engine::process(float* outL, float* outR, int n) {
         flutPh += 6.3f / (float)sr; if (flutPh >= 1) flutPh -= 1;
         tapeL.push(L); tapeR.push(R);
         {
-            const float d = (.003f + tape * (.0018f * std::sin(kTwoPi * wowPh) + .00012f * std::sin(kTwoPi * flutPh))) * (float)sr;
+            const float d = (.003f + tape * (.0018f * fastSin(kTwoPi * wowPh) + .00012f * fastSin(kTwoPi * flutPh))) * (float)sr;
             L = tapeL.at(d); R = tapeR.at(d + tape * .00004f * (float)sr);
             const float k = 1 + 2.5f * tape;
-            L = std::tanh(L * k) / k; R = std::tanh(R * k) / k;
+            L = fastTanh(L * k) / k; R = fastTanh(R * k) / k;
             // hiss only when the tape is pushed: below about a third Analog gives warmth and wow without noise
             const float hiss = hissF.low(rng.bi()) * std::max(0.f, tape - .35f) * .006f;
             L += hiss; R += hiss * .9f;
@@ -709,7 +709,7 @@ void Engine::process(float* outL, float* outR, int n) {
         const float inL = freeze ? 0 : revHpL.run(preL.at(pre)), inR = freeze ? 0 : revHpR.run(preR.at(pre));
         float o[8];
         fdnModPh += .37f / (float)sr; if (fdnModPh >= 1) fdnModPh -= 1;
-        const float mod = std::sin(kTwoPi * fdnModPh) * .0008f * (float)sr;
+        const float mod = fastSin(kTwoPi * fdnModPh) * .0008f * (float)sr;
         for (int k = 0; k < 8; k++) {
             float x = fdn[k].at(fdnLen[k] + (k == 0 ? mod : k == 3 ? -mod : 0));
             fdnLp[k] += (x - fdnLp[k]) * revDamp;
@@ -723,7 +723,7 @@ void Engine::process(float* outL, float* outR, int n) {
         {
             shimPh -= 1.f / (.1f * (float)sr); if (shimPh < 0) shimPh += 1;
             const float W = .1f * (float)sr, a = shimPh, b2 = shimPh + .5f >= 1 ? shimPh - .5f : shimPh + .5f;
-            const float w1 = std::sin(kPi * a), w2 = std::sin(kPi * b2);
+            const float w1 = fastSin(kPi * a), w2 = fastSin(kPi * b2);
             const float y = shimBuf.at(1 + W * a) * w1 * w1 + shimBuf.at(1 + W * b2) * w2 * w2;
             shimFb = freeze ? 0 : shimHp.run(y) * shimmerAmt * .3f;
         }
@@ -736,16 +736,18 @@ void Engine::process(float* outL, float* outR, int n) {
             if (sub.attacking) { sub.env += 1.f / sub.attackLen; if (sub.env >= 1) { sub.env = 1; sub.attacking = false; } }
             else sub.env *= sub.decay;
             sub.ph += sub.freq / sr; if (sub.ph >= 1) sub.ph -= 1;
-            sv = std::tanh(std::sin(kTwoPi * (float)sub.ph) * subDrive) * subNorm * sub.env * fund * .5f;
+            sv = fastTanh(fastSin(kTwoPi * (float)sub.ph) * subDrive) * subNorm * sub.env * fund * .5f;
         }
         L = (L + sv) * level; R = (R + sv) * level;
 
         // Look-ahead limiter: never above -1 dBFS
         const float pk = std::max(std::fabs(L), std::fabs(R));
-        limGain[limPos] = pk > ceiling ? ceiling / pk : 1.f;
-        limBufL[limPos] = L; limBufR[limPos] = R;
-        float g = 1;
-        for (int k = 0; k < limLen; k++) g = std::min(g, limGain[k]);
+        const float gIn = pk > ceiling ? ceiling / pk : 1.f, gOut = limGain[limPos];
+        limGain[limPos] = gIn; limBufL[limPos] = L; limBufR[limPos] = R;
+        // the window's smallest gain, kept as it moves: a full look only when the smallest one leaves
+        if (gIn <= limMin) limMin = gIn;
+        else if (gOut <= limMin && gOut < 1) { limMin = 1; for (int k = 0; k < limLen; k++) limMin = std::min(limMin, limGain[k]); }
+        const float g = limMin;
         limEnv += (g - limEnv) * (g < limEnv ? .3f : relCoef);
         limPos = (limPos + 1) % limLen;
         outL[s] = clampf(limBufL[limPos] * limEnv, -ceiling, ceiling);

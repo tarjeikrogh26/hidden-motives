@@ -177,7 +177,7 @@ private:
     DelayLine shimBuf; float shimPh = 0; float shimFb = 0; Biquad revHpL, revHpR, shimHp;
     DelayLine preL, preR;
     // Limiter
-    std::vector<float> limBufL, limBufR, limGain; int limPos = 0, limLen = 64; float limEnv = 1;
+    std::vector<float> limBufL, limBufR, limGain; int limPos = 0, limLen = 64; float limEnv = 1, limMin = 1;
     std::vector<float> scratchL, scratchR;
 
     Display disp;

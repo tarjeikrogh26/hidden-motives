@@ -14,6 +14,17 @@ inline float mtof(float m) { return 440.f * std::pow(2.f, (m - 69.f) / 12.f); }
 inline float clampf(float x, float lo, float hi) { return std::min(hi, std::max(lo, x)); }
 inline float smoothstep(float a, float b, float x) { float t = clampf((x - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); }
 inline float dbToGain(float db) { return std::pow(10.f, db / 20.f); }
+// Sine for the audio paths (oscillators, folding, modulated delays): folded to a quarter turn and a 9th-order
+// polynomial there, within 4e-6 of std::sin and several times faster.
+inline float fastSin(float x) {
+    float t = x * 0.15915494309f; t -= std::floor(t);
+    float u = t < .5f ? t : t - 1;
+    if (u > .25f) u = .5f - u; else if (u < -.25f) u = -.5f - u;
+    const float z = u * 6.28318531f, z2 = z * z;
+    return z * (1 + z2 * (-0.16666667f + z2 * (0.0083333333f + z2 * (-0.00019841270f + z2 * 2.7557319e-6f))));
+}
+// Soft saturation: a rational curve that follows tanh closely up to |x| = 3 and then holds at ±1
+inline float fastTanh(float x) { if (x > 3) return 1; if (x < -3) return -1; const float x2 = x * x; return x * (27 + x2) / (27 + 9 * x2); }
 
 struct Rng {
     uint32_t s;

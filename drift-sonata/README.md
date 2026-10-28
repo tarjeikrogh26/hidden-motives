@@ -47,6 +47,12 @@ holdte vokaler, starten på stavelser blir korte ordbiter (aldri hele ord), og p
 toneart i filnavnet (`..._choir_Gmaj.wav`) kuttes i myke vinduer. `--vox` legger bitene inn i sida, der de stemmes
 til akkordene, legges i skyer på tvers av vokalistene, og flyr hver sin bane gjennom 3D-rommet.
 
+Moods er presets for hele maskinen: 16 familier med 12 stemninger hver (lyd, akkordlinje, toneart, tempo, trommer,
+arp, vox, bevegelse og rom), laget av bankene etter familiens smak. Et valg fader alt over på neste taktstrek, og
+tempoet glir dit. Endless reiser selv mellom stemningene (mest i samme familie, ellers en nabo med nært tempo), og
+gjør små endringer på taktstrekene innimellom: ny akkordlinje, en annen arp, et trommebrekk, vox inn eller ut, mer
+eller mindre Twist, av og til en ny toneart. Opptak tar mikset, eller mikset og hver kanal for seg, som WAV.
+
 Lydbytter fader over: motoren har to motorer per kanal (akkord og arp), og trommesett, grooves, arp-mønstre og
 vox-stiler fader også over tiden som er valgt under Fade.
 

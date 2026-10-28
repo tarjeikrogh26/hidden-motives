@@ -166,7 +166,22 @@ details.room .eyebrow { color: #9fc3c4; }
 .dock .stepper button { min-width: 22px; padding: 0 4px; }
 .play { width: 40px; height: 40px; border-radius: 50%; border: none; background: radial-gradient(circle at 35% 30%, #f6b9d0, var(--rose) 55%, var(--rose-deep)); color: #fff; display: grid; place-items: center; flex: none; box-shadow: 0 4px 14px -4px rgba(201,97,139,.6); }
 .play svg { width: 16px; height: 16px; fill: currentColor; }
-.status { font-size: 11.5px; color: var(--muted); align-self: center; min-width: 0; flex: 1 1 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.toast { position: fixed; left: 50%; bottom: calc(var(--dock-h, 220px) + 10px); transform: translate(-50%, 6px); z-index: 30; max-width: min(640px, calc(100vw - 32px));
+  background: var(--night); color: var(--cream); border: 1px solid #2c5a62; border-radius: 999px; padding: 6px 14px; font-size: 12.5px; opacity: 0; pointer-events: none; transition: opacity .4s, transform .4s; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.toast.on { opacity: .96; transform: translate(-50%, 0); }
+.moodbank { flex: 1 1 260px; min-width: 0; display: grid; grid-template-columns: 44px minmax(0, 1fr); gap: 5px; align-items: center; }
+.transport.top { align-items: center; }
+.transport.top .play { width: 36px; height: 36px; }
+.moodbank .nav select { font-size: 16px; }
+.spacer { flex: 1 1 0; }
+.moodbank .tag { color: var(--rose-deep); }
+.endless-group, .recgroup { display: inline-flex; gap: 4px; align-items: center; align-self: center; }
+.btn.small { padding: 4px 8px; font-family: var(--mono); font-size: 10.5px; color: var(--muted); }
+.btn.endless { font-family: var(--body); font-style: normal; font-size: 13px; }
+.btn.rec { color: var(--rose-deep); font-size: 14px; padding: 4px 9px; }
+.btn.rec[aria-pressed=true] { background: var(--rose-deep); color: #fff; border-color: var(--rose-deep); animation: recblink 1.2s infinite; }
+@keyframes recblink { 50% { opacity: .65; } }
+@media (prefers-reduced-motion: reduce) { .btn.rec[aria-pressed=true] { animation: none; } .toast { transition: none; } }
 .master { flex: none; }
 .masterrow { display: flex; align-items: center; gap: 6px; }
 .mixer { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
@@ -216,7 +231,7 @@ details.room .eyebrow { color: #9fc3c4; }
   /* phones: the three channels side by side to swipe through */
   .mixer, .no-arp .mixer { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; gap: 8px; padding-bottom: 2px; }
   .strip { flex: 0 0 88%; scroll-snap-align: start; }
-  .pads, .status { display: none; }
+  .pads { display: none; } .transport.top { flex-wrap: wrap; } .moodbank { flex-basis: 100%; order: 5; } .recgroup, .endless-group .small { display: none; } .spacer { display: none; }
   .transport .field[title] { display: none; }
   .master { flex: 1 1 auto; min-width: 0; } .masterrow .meter { display: none; } .master .lvl { flex: 1 1 auto; width: auto; min-width: 60px; }
 }
@@ -391,15 +406,22 @@ canvas#lifeView { width: 100%; height: 180px; display: block; border-radius: 6px
   </details>
 </div>
 
+<div class="toast" id="status" role="status" aria-live="polite"></div>
 <div class="dock" id="dock">
   <div class="dock-in">
-    <div class="transport">
+    <div class="transport top">
       <button class="play" id="play" type="button" aria-label="Play the chord line"><svg viewBox="0 0 20 20" id="playIcon"><path d="M5 3l12 7-12 7z"/></svg></button>
+      <span class="endless-group"><button class="btn sw endless" id="endlessOn" type="button" aria-pressed="false" title="Endless: a journey through the moods that never repeats">∞ Endless</button><button class="btn small" id="paceBtn" type="button" title="How fast the journey moves">Drifting</button></span>
+      <div class="moodbank"><label class="tag" for="moodSel"><span class="tl">Mood</span><span class="ts">Mood</span><b id="moodCount"></b></label>
+        <div class="nav"><button type="button" data-bank="mood" data-d="-10" aria-label="Back 10 moods">«</button><button type="button" data-bank="mood" data-d="-1" aria-label="Previous mood">‹</button><select id="moodSel" aria-label="Mood"></select><button type="button" data-bank="mood" data-d="1" aria-label="Next mood">›</button><button type="button" data-bank="mood" data-d="10" aria-label="Forward 10 moods">»</button><button type="button" class="dice" id="moodDice" title="A random mood" aria-label="A random mood">⚄</button></div></div>
+      <span class="recgroup"><button class="btn rec" id="recBtn" type="button" aria-pressed="false" title="Record">●</button><button class="btn small" id="recWhat" type="button" data-v="mix" title="Record the mix, or the mix and each channel on its own">Mix</button><span id="recTime" class="db"></span></span>
+    </div>
+    <div class="transport">
       <label class="field">BPM<input type="number" id="tempo" min="40" max="200" value="84"></label>
       <label class="field">Key<select id="lineKey"></select></label>
       <label class="field" title="How long a new sound, kit, groove or arp takes to fade in">Fade<select id="fadeSel"><option value="1">1 s</option><option value="2">2 s</option><option value="4">4 s</option><option value="8" selected>8 s</option><option value="16">16 s</option></select></label>
       <label class="field" title="How many bars each chord lasts">Bars<select id="lineBars"><option value="1">1</option><option value="2" selected>2</option><option value="4">4</option><option value="8">8</option><option value="16">16</option><option value="32">32</option></select></label>
-      <span class="status" id="status">Paused. Press ▶ to hear the chord line, hold a chord pad, or play the keyboard.</span>
+      <span class="spacer"></span>
       <label class="field master">Master<span class="masterrow"><span class="meter" aria-hidden="true"><b id="masterMeter"></b></span><input type="range" id="master" class="lvl" min="-24" max="6" step="0.5" value="0" aria-label="Master level"><output id="masterOut" class="db">0 dB</output></span></label>
     </div>
     <div class="mixer">
@@ -626,6 +648,26 @@ class DriftSonata extends AudioWorkletProcessor {
   }
 }
 registerProcessor('drift-sonata', DriftSonata);
+// The recorder: what the master and each channel's fader send, handed to the page once a second as 16-bit
+class Rec extends AudioWorkletProcessor {
+  constructor() {
+    super(); this.on = false; this.n = 5; this.reset();
+    this.port.onmessage = e => { if (e.data.t === 'start') { this.on = true; this.n = e.data.inputs; this.reset(); } else if (e.data.t === 'stop') { this.flush(); this.on = false; this.port.postMessage({ t: 'done' }); } };
+  }
+  reset() { this.parts = Array.from({ length: this.n }, () => [[], []]); this.len = 0; }
+  process(inputs) {
+    if (!this.on) return true;
+    for (let k = 0; k < this.n; k++) { const inp = inputs[k] || []; for (let c = 0; c < 2; c++) { const ch = inp[c] || inp[0], a = new Float32Array(128); if (ch) a.set(ch); this.parts[k][c].push(a); } }
+    this.len += 128; if (this.len >= sampleRate) this.flush();
+    return true;
+  }
+  flush() {
+    if (!this.len) return;
+    const out = this.parts.map(p => p.map(chs => { const a = new Int16Array(this.len); let o = 0; for (const b of chs) for (let i = 0; i < b.length; i++) { const v = Math.max(-1, Math.min(1, b[i])); a[o++] = v < 0 ? v * 32768 : v * 32767; } return a; }));
+    this.port.postMessage({ t: 'chunk', out }, out.flat().map(a => a.buffer)); this.reset();
+  }
+}
+registerProcessor('ds-rec', Rec);
 </script>
 
 <script>
@@ -667,6 +709,9 @@ async function startAudio() {
     master = ctx.createGain(); chordBus = ctx.createGain();
     node.connect(chordBus, 0); chordBus.connect(master); master.connect(analyser); analyser.connect(safety); safety.connect(ctx.destination);
     drumAudio(); drumFx.bus.connect(master); drumTempo();
+    recNode = new AudioWorkletNode(ctx, 'ds-rec', { numberOfInputs: 5, numberOfOutputs: 0, channelCount: 2, channelCountMode: 'explicit' });
+    recNode.port.onmessage = e => { if (e.data.t === 'chunk') recChunk(e.data); else if (e.data.t === 'done' && recDone) { const f = recDone; recDone = null; pendingRec = null; f(); } };
+    recConnect(safety, 0); recConnect(chordBus, 1); recConnect(drumFx.bus, 2);
     mixApply(true); meterOn(chordBus, 'chordLevelMeter'); meterOn(drumFx.bus, 'drumLevelMeter'); meterOn(master, 'masterMeter');
     node.port.onmessage = e => onWorklet(e.data);
     node.port.postMessage({ t: 'fade', s: fadeTime() });
@@ -1082,7 +1127,7 @@ $('soundDice').addEventListener('click', () => {
 });
 // « ‹ › » step through a bank by one or ten
 document.querySelectorAll('[data-bank]').forEach(b => b.addEventListener('click', () => {
-  const sel = $({ sound: 'soundSel', line: 'lineSel', arp: 'arpSel', arps: 'arpSoundSel', kit: 'kitSel', groove: 'drumSel', voxstyle: 'voxStyleSel', voxspace: 'voxSpaceSel' }[b.dataset.bank]), opts = [...sel.options].filter(o => o.value !== 'x');
+  const sel = $({ sound: 'soundSel', line: 'lineSel', arp: 'arpSel', arps: 'arpSoundSel', kit: 'kitSel', groove: 'drumSel', voxstyle: 'voxStyleSel', voxspace: 'voxSpaceSel', mood: 'moodSel' }[b.dataset.bank]), opts = [...sel.options].filter(o => o.value !== 'x');
   let i = opts.findIndex(o => o.value === sel.value);
   if (i < 0) i = opts.findIndex(o => o.value === (b.dataset.bank === 'sound' ? soundChoice : String(lineChoice)));
   i = ((Math.max(0, i) + +b.dataset.d) % opts.length + opts.length) % opts.length;
@@ -1700,7 +1745,8 @@ $('fadeSel').value = String(store.get('ds-fade', 8));
 $('fadeSel').addEventListener('change', () => { store.set('ds-fade', fadeTime()); if (node) node.port.postMessage({ t: 'fade', s: fadeTime() }); setStatus(`New sounds, kits, grooves and arps now fade in over ${fadeTime()} s.`); });
 $('tempo').addEventListener('change', () => { $('tempo').value = tempo(); drumTempo(); store.set('ds-tempo', tempo()); if (node) node.port.postMessage({ t: 'bpm', bpm: tempo() }); });
 $('tempo').value = store.get('ds-tempo', 84);
-function setStatus(t) { $('status').textContent = t; }
+let toastTimer = 0;
+function setStatus(t) { const el = $('status'); el.textContent = t; el.classList.add('on'); clearTimeout(toastTimer); toastTimer = setTimeout(() => el.classList.remove('on'), 5000); }
 $('play').addEventListener('click', async () => {
   await startAudio();
   playing = !playing;
@@ -1881,7 +1927,7 @@ async function arpAudio() {
     await startAudio();
     const sum = ctx.createGain(), hp = ctx.createBiquadFilter(), lp = ctx.createBiquadFilter(), out = ctx.createGain(), lev = leveler(-24);
     hp.type = 'highpass'; hp.frequency.value = 150; hp.Q.value = .5; lp.type = 'lowpass'; lp.Q.value = .4; lp.frequency.value = arpPrefs.tone;
-    out.gain.value = dbGain(arpPrefs.level);
+    out.gain.value = dbGain(arpPrefs.level); recConnect(out, 3);
     node.connect(sum, 3); sum.connect(hp); hp.connect(lp); lp.connect(lev.in); lev.out.connect(out); out.connect(master);
     await NBVoice.prepare(ctx);
     arpG = { sum, hp, lp, out, chain: null };
@@ -2297,7 +2343,7 @@ async function voxAudio() {
     await startAudio();
     const sum = ctx.createGain(), hp = ctx.createBiquadFilter(), soft = ctx.createBiquadFilter(), lev = leveler(-26), out = ctx.createGain(), fade = ctx.createGain();
     hp.type = 'highpass'; hp.frequency.value = 110; soft.type = 'lowpass'; soft.frequency.value = 6500; soft.Q.value = .5; out.gain.value = dbGain(voxPrefs.level);
-    sum.connect(fade); fade.connect(hp); hp.connect(soft); soft.connect(lev.in); lev.out.connect(out); out.connect(master);
+    sum.connect(fade); fade.connect(hp); hp.connect(soft); soft.connect(lev.in); lev.out.connect(out); out.connect(master); recConnect(out, 4);
     // the long echo: ping-pong, darker and a little wobbly on every repeat
     const din = ctx.createGain(), dl = ctx.createDelay(4), dr = ctx.createDelay(4), fl = ctx.createGain(), fr = ctx.createGain(), tl = ctx.createBiquadFilter(), tr = ctx.createBiquadFilter(), merge = ctx.createChannelMerger(2);
     tl.type = tr.type = 'lowpass'; tl.frequency.value = tr.frequency.value = 2400;
@@ -2512,6 +2558,320 @@ if (HAS_VOX) {
   voxControlsShow();
 }
 
+/* ---------- Moods: the whole machine at once (sound, chord line, key, tempo, drums, arp, vox, movement and room) ----------
+   Sixteen families of mood, twelve of each, every one made from the banks above by its family's taste. Choosing one
+   fades everything over to it on the next bar; the tempo glides there. Your saved sessions are moods too. */
+const MOOD_KINDS = [
+  { kind: 'Night bus', bpm: [70, 80], keys: [9, 4, 2, 7], clean: .35, lines: ['Night drive', 'Last tram', 'Sad robot', 'Radio silence'], bars: [2, 2, 4],
+    drums: .85, kits: ['Breaks', 'Hybrid', 'Bristol', 'Lull'], grooves: ['Trip-hop / Darkwave', 'Rap', 'Chill / Ambient'], arp: .6, arpSimple: .3, arpSix: .6, vox: .6,
+    styles: ['Ghost syllables', 'Hum pad', 'Breath and air'], spaces: ['Dub tunnel', 'Close whisper', 'Behind you'], p: { twist: [.4, .7], space: [.45, .7], drift: [.3, .6], tension: [.4, .7], subdrop: [.4, .7] },
+    names: ['Night Bus to Bergen', 'Last Tram Home', 'Rain on the Window Seat', 'Sodium Lights', 'Empty Platform', 'Taxi at 4 AM', 'Wet Asphalt Glow', 'Neon in the Puddles', 'Ferry Lights', 'Underpass Choir', 'Midnight Kiosk', 'Slow Lane Home'] },
+  { kind: 'Glacier', bpm: [60, 70], keys: [9, 2, 4, 11], clean: .5, lines: ['Drone', 'Nordic light', 'Cathedral', 'Halo'], bars: [4, 8, 8],
+    drums: 0, arp: .35, arpSimple: .7, arpSix: .8, arpDensity: [30, 60], vox: .75, styles: ['Hum pad', 'Sung halo', 'Orbiting hymn'], spaces: ['Cathedral', 'Deep space'],
+    p: { twist: [.5, .8], space: [.75, 1], drift: [.2, .5], tension: [.3, .6], subdrop: [.5, .9] },
+    names: ['Glacier at Dawn', 'Blue Ice Cathedral', 'Snow Light', 'Frozen Fjord', 'First Light on Jostedal', 'Polar Morning', 'Whiteout Hymn', 'Ice Shelf Breathing', 'Silent Firn', 'Meltwater Choir', 'Aurora Hour', 'Pale Sun Rising'] },
+  { kind: 'Orbital sunrise', bpm: [118, 124], keys: [9, 2, 7, 4], clean: .7, lines: ['Halo', 'Low orbit', 'Nordic light', 'Cathedral'], bars: [2, 4],
+    drums: 1, kits: ['Orbit', 'Electro', 'Round', 'Hybrid'], grooves: ['House / Broken', 'Electronic'], arp: .9, arpSimple: .2, arpSix: .7, arpOct: [0, 1], vox: .4,
+    styles: ['Choir swarm', 'Tape chant', 'Sung halo'], spaces: ['Round your head', 'Ping-pong chapel'], p: { twist: [.5, .8], space: [.4, .65], drift: [.2, .45], tension: [.5, .8], subdrop: [.3, .6] },
+    names: ['Sunrise over the Field', 'Lifted Hands', 'Chime Morning', 'Halcyon Drive', 'Open Air at Six', 'Belfast Dawn', 'Green Laser Fade', 'Afterparty Sky', 'Golden Fields', 'Warm Concrete', 'The Long Way Home', 'Morning Ravers'] },
+  { kind: 'Shoegaze haze', bpm: [88, 100], keys: [4, 9, 11, 2], clean: .45, lines: ['Halo', 'Low orbit', 'Nordic light', 'Night drive'], bars: [2, 4],
+    drums: .75, kits: ['Pillow', 'Hybrid', 'Round', 'Lull'], grooves: ['Breaks', 'Chill / Ambient', 'Electronic'], arp: .85, arpSimple: .3, arpSix: .75, arpOct: [0, 1], vox: .55,
+    styles: ['Sung halo', 'Choir swarm', 'Hum pad'], spaces: ['Round your head', 'Cathedral', 'Overhead rain'], p: { twist: [.55, .85], space: [.6, .85], drift: [.4, .7], tension: [.55, .85], subdrop: [.3, .6] },
+    names: ['Far Away Trains', 'Wherever You Are Tonight', 'Pastel Motorway', 'Wild Light', 'Passing Clouds', 'Under the Pink Sky', 'Blurred Horizon', 'Weekend Haze', 'Satellite Summer', 'Soft Focus', 'Sweet Static', 'Endless Afternoon'] },
+  { kind: 'Radio-Activity', bpm: [96, 108], keys: [9, 0, 2], clean: 1, lines: ['Radio silence', 'Clockwork march', 'Sad robot', 'Low orbit'], bars: [2, 4],
+    drums: .7, kits: ['Kraft', 'Circuit', 'Glass', 'Electro'], grooves: ['Electronic', 'House / Broken'], arp: .9, arpSimple: .5, arpSix: 1, vox: .35,
+    styles: ['Stutter robot', 'Little people', 'Tape chant'], spaces: ['Ping-pong chapel', 'Dub tunnel'], p: { twist: [.4, .7], space: [.3, .55], drift: [.1, .35], tension: [.3, .6], subdrop: [.3, .6] },
+    names: ['Radio Stars', 'Geiger Pulse', 'Transmitter', 'Morse Lullaby', 'Antenna Garden', 'Ohm Sweet Ohm', 'Shortwave Hymn', 'Signal from Uranus', 'Electric Café at Night', 'Pocket Calculator Dreams', 'Metal on Metal Rain', 'Spectrum Weather'] },
+  { kind: 'Bristol smoke', bpm: [70, 80], keys: [7, 2, 0, 5], clean: .3, lines: ['Witch', 'Lament', 'Night drive', 'Sad robot'], bars: [2, 2, 4],
+    drums: .95, kits: ['Breaks', 'Bristol', 'Hybrid'], grooves: ['Trip-hop / Darkwave', 'Breaks'], arp: .4, arpSimple: .5, arpSix: .5, vox: .7,
+    styles: ['Ghost syllables', 'Giant voice', 'Breath and air'], spaces: ['Dub tunnel', 'Behind you', 'Close whisper'], p: { twist: [.35, .6], space: [.45, .7], drift: [.5, .8], tension: [.4, .7], subdrop: [.5, .8] },
+    names: ['Smoke in the Studio', 'Glory Box Evening', 'Sour Velvet', 'Dusty Reel', 'Cold Hands', 'Harbour Fog', 'Black Coffee Room', 'Spy Theme for Nobody', 'Old Film Grain', 'Midnight Strings', 'Velvet Undertow', 'Grey Saturday'] },
+  { kind: 'Darkwave', bpm: [108, 118], keys: [4, 9, 11], clean: .6, lines: ['Clockwork march', 'Witch', 'Night drive', 'Last tram'], bars: [1, 2, 2],
+    drums: 1, kits: ['Haze', 'Electro', 'Hybrid'], grooves: ['Trip-hop / Darkwave', 'Electronic'], arp: .8, arpSimple: .3, arpSix: .6, vox: .5,
+    styles: ['Giant voice', 'Ghost syllables', 'Tape chant'], spaces: ['Dub tunnel', 'Cathedral', 'Behind you'], p: { twist: [.5, .8], space: [.45, .7], drift: [.3, .6], tension: [.4, .7], subdrop: [.4, .7] },
+    names: ['Black Leather Moon', 'Neon Confession', 'Cold Mirror', 'Chrome Tears', 'Dark Disco Heart', 'Fog Machine Love', 'Night Swimming in Chrome', 'Violet Strobe', 'Sleepless City', 'Lost in the Club', 'Satin Shadows', 'Static Romance'] },
+  { kind: 'Dub lull', bpm: [66, 76], keys: [9, 2, 7], clean: .5, lines: ['Low orbit', 'Drone', 'Radio silence', 'Halo'], bars: [4, 8],
+    drums: .75, kits: ['Dub', 'Lull', 'Percussion', 'Hybrid'], grooves: ['Ambient / Dub', 'Chill / Ambient'], arp: .45, arpSimple: .6, arpSix: .6, arpDensity: [35, 70], vox: .7,
+    styles: ['Breath and air', 'Hum pad', 'Call and echo'], spaces: ['Dub tunnel', 'Deep space', 'Round your head'], p: { twist: [.45, .75], space: [.6, .85], drift: [.3, .6], tension: [.3, .6], subdrop: [.6, .9] },
+    names: ['Little Fluffy Cloud', 'Dub Moon', 'Floating over Brixton', 'Ultraworld Lull', 'Sheep in Space', 'Lazy Sunday Satellite', 'Toxygene Dream', 'Blue Room', 'Dub of the Spheres', 'Hammock in Orbit', 'Seaside Sound System', 'Slow Bubble'] },
+  { kind: 'Berlin sequence', bpm: [108, 122], keys: [4, 9, 2], clean: .8, lines: ['Drone', 'Cathedral', 'Clockwork march', 'Lament'], bars: [4, 8],
+    drums: .2, kits: ['Circuit', 'Kraft'], grooves: ['Electronic'], arp: 1, arpSimple: .4, arpSix: .9, arpDensity: [85, 100], vox: .3,
+    styles: ['Sung halo', 'Orbiting hymn', 'Hum pad'], spaces: ['Cathedral', 'Deep space'], p: { twist: [.6, .9], space: [.55, .8], drift: [.2, .5], tension: [.4, .7], subdrop: [.5, .8] },
+    names: ['Phaedra Morning', 'Rubycon River', 'Sequencer Dawn', 'Stratosphere Night', 'Electronic Meditation', 'Desert Sequencer', 'Cyclone Glow', 'Force Majeure Sky', 'Logos Light', 'Tangram Drift', 'Hyperborea', 'Moog River'] },
+  { kind: 'Switched-on', bpm: [84, 96], keys: [0, 2, 9, 7], clean: 1, lines: ['Cathedral', 'Lament', 'Halo', 'Nordic light'], bars: [1, 2, 2],
+    drums: .15, kits: ['Glass', 'Circuit'], grooves: ['Chill / Ambient'], arp: .95, arpSimple: .8, arpSix: 1, vox: .3,
+    styles: ['Sung halo', 'Tape chant'], spaces: ['Cathedral', 'Ping-pong chapel'], p: { twist: [.3, .6], space: [.4, .7], drift: [.05, .25], tension: [.2, .5], subdrop: [.2, .5] },
+    names: ['Switched-On Morning', 'Sine Fugue', 'Well-Tempered Glow', 'Moog Chorale', 'Clockwork Bach', 'Glass Harpsichord', 'Timesteps', 'Sonic Seasonings', 'Synthetic Spring', 'Tuning Fork Garden', 'Pure Fifths', 'Crystal Counterpoint'] },
+  { kind: 'Cathedral', bpm: [58, 66], keys: [2, 9, 4], clean: .3, lines: ['Drone', 'Cathedral', 'Lament'], bars: [8, 16],
+    drums: 0, arp: .25, arpSimple: .8, arpSix: .6, arpDensity: [25, 50], vox: .85, styles: ['Sung halo', 'Hum pad', 'Orbiting hymn'], spaces: ['Cathedral', 'Deep space'],
+    p: { twist: [.4, .7], space: [.85, 1], drift: [.3, .6], tension: [.35, .65], subdrop: [.6, 1] },
+    names: ['Nave of Light', 'Stone and Breath', 'Long Vigil', 'Bell Tower Hum', 'Candle Smoke', 'Crypt Choir', "Pilgrim's Rest", 'Sanctuary', 'Vespers', 'Organ of Air', 'Lantern Procession', 'Still Water Chapel'] },
+  { kind: 'Deep sea', bpm: [64, 74], keys: [2, 7, 9], clean: .55, lines: ['Low orbit', 'Drone', 'Radio silence'], bars: [4, 8],
+    drums: .45, kits: ['Dub', 'Pillow', 'Lull'], grooves: ['Ambient / Dub', 'Chill / Ambient'], arp: .5, arpSimple: .6, arpSix: .7, arpOct: [-1, 0], arpDensity: [30, 60], vox: .6,
+    styles: ['Breath and air', 'Hum pad', 'Giant voice'], spaces: ['Deep space', 'Dub tunnel', 'Behind you'], p: { twist: [.5, .85], space: [.7, .95], drift: [.4, .7], tension: [.3, .6], subdrop: [.6, .95] },
+    names: ['Abyssal Plain', 'Whale Song Radio', 'Bioluminescence', 'Kelp Forest', 'Pressure and Light', 'Sunken Ferry', 'Deep Current', 'Jellyfish Ballet', 'Trench Lullaby', 'Sonar Garden', 'Blue Hole', 'Tidal Hymn'] },
+  { kind: 'Space station', bpm: [90, 100], keys: [9, 4, 11, 2], clean: .9, lines: ['Low orbit', 'Halo', 'Nordic light', 'Radio silence'], bars: [2, 4],
+    drums: .55, kits: ['Glass', 'Circuit', 'Round', 'Orbit'], grooves: ['Electronic', 'Chill / Ambient'], arp: .85, arpSimple: .3, arpSix: 1, arpOct: [0, 1], vox: .4,
+    styles: ['Little people', 'Orbiting hymn', 'Sung halo'], spaces: ['Round your head', 'Overhead rain', 'Deep space'], p: { twist: [.55, .85], space: [.5, .8], drift: [.15, .4], tension: [.45, .75], subdrop: [.3, .6] },
+    names: ['Orbit Six', 'Docking at Dawn', 'Zero-G Garden', 'Solar Panel Glint', 'Lunar Laundry', 'Mission Control Lullaby', 'Earthrise', 'Station Night Shift', 'Cosmic Commute', 'Satellite Waltz', 'Low Orbit Café', 'Spacewalk'] },
+  { kind: 'Forest rain', bpm: [76, 86], keys: [4, 9, 2, 7], clean: .45, lines: ['Nordic light', 'Halo', 'Lament', 'Low orbit'], bars: [2, 4],
+    drums: .7, kits: ['Percussion', 'Lull', 'Pillow'], grooves: ['Percussion', 'Chill / Ambient', 'Ambient / Dub'], arp: .5, arpSimple: .6, arpSix: .6, vox: .6,
+    styles: ['Breath and air', 'Whisper rain', 'Hum pad'], spaces: ['Overhead rain', 'Round your head', 'Close whisper'], p: { twist: [.45, .75], space: [.5, .8], drift: [.3, .6], tension: [.4, .7], subdrop: [.3, .6] },
+    names: ['Moss and Rain', 'Fern Light', 'Birch Shadows', 'Rain on Leaves', 'Woodland Hum', 'Owl Hour', 'Forest Floor', 'Mushroom Circle', 'Hidden Creek', 'Pine Smoke', 'Green Silence', 'Dew Choir'] },
+  { kind: 'City dusk', bpm: [82, 92], keys: [9, 2, 4, 7], clean: .4, lines: ['Night drive', 'Last tram', 'Halo', 'Sad robot'], bars: [2, 2, 4],
+    drums: .9, kits: ['Breaks', 'Hybrid', 'Round', 'Pillow'], grooves: ['Rap', 'Breaks', 'Chill / Ambient'], arp: .6, arpSimple: .5, arpSix: .5, vox: .5,
+    styles: ['Ghost syllables', 'Tape chant', 'Hum pad'], spaces: ['Close whisper', 'Dub tunnel', 'Ping-pong chapel'], p: { twist: [.4, .7], space: [.4, .65], drift: [.35, .65], tension: [.5, .8], subdrop: [.4, .7] },
+    names: ['Rooftop Dusk', 'Balcony Radio', 'Late Train West', 'Blue Hour Laundromat', 'Corner Shop Glow', 'Window Plants', 'Streetlight Waltz', 'Bike Ride Home', 'Pink Skyline', 'Tram Bells', 'Overpass Sunset', 'Lazy Delivery'] },
+  { kind: 'Desert night', bpm: [70, 82], keys: [4, 2, 9], clean: .6, lines: ['Witch', 'Drone', 'Lament', 'Radio silence'], bars: [4, 8],
+    drums: .4, kits: ['Percussion', 'Dub', 'Hybrid'], grooves: ['Percussion', 'Ambient / Dub'], arp: .55, arpSimple: .5, arpSix: .7, arpDensity: [40, 75], vox: .65,
+    styles: ['Ghost syllables', 'Call and echo', 'Breath and air'], spaces: ['Deep space', 'Behind you', 'Dub tunnel'], p: { twist: [.45, .75], space: [.6, .9], drift: [.4, .7], tension: [.35, .65], subdrop: [.5, .8] },
+    names: ['Desert Stars', 'Mirage Radio', 'Sand Dune Choir', 'Cold Desert Night', 'Caravan Lights', 'Moonlit Mesa', 'Dust Devil Dream', 'Oasis Signal', 'Silent Canyon', 'Salt Flat Echo', 'Night Road', 'Coyote Moon'] },
+];
+const MOODS = [];
+MOOD_KINDS.forEach((K, ki) => K.names.forEach((name, n) => {
+  const R = rng32(70001 + ki * 1009 + n * 97), pick = a => a[Math.floor(R() * a.length)], rr = ([a, b]) => a + (b - a) * R();
+  const sounds = soundBank.map((s, i) => [s, i]).filter(([s]) => !!s.clean === (R() < K.clean)).map(([, i]) => i);
+  const base = LINE_BASES.findIndex(b => b[0] === pick(K.lines)), line = Math.max(0, base) + LINE_BASES.length * Math.floor(R() * 9);
+  const kitList = KITS.map((k, i) => [k, i]).filter(([k]) => K.kits && K.kits.some(w => k.group === w || k.name.startsWith(w))).map(([, i]) => i);
+  const grooveList = DRUMS.filter(d => K.grooves && K.grooves.includes(d.group)).map(d => d.i);
+  const st = (list, names) => { const c = list.map((s, i) => [s, i]).filter(([s]) => names.some(w => s.name.startsWith(w))).map(([, i]) => i); return c.length ? pick(c) : 0; };
+  const p = {}; for (const k in K.p) p[k] = rr(K.p[k]); p.lifeheads = R(); p.lifeseq = .35 + .4 * R();
+  MOODS.push({ name, kind: K.kind, sound: pick(sounds.length ? sounds : [0]), line, key: pick(K.keys), bpm: Math.round(rr(K.bpm)), bars: pick(K.bars), params: p,
+    drums: { on: R() < K.drums && kitList.length > 0, kit: kitList.length ? pick(kitList) : 0, groove: grooveList.length ? pick(grooveList) : 0, level: -4 - 4 * R() },
+    arp: { on: R() < K.arp, simple: R() < K.arpSimple, six: R() < K.arpSix, pat: R(), snd: R(), density: K.arpDensity ? Math.round(rr(K.arpDensity)) : Math.round(70 + 30 * R()), octave: K.arpOct ? pick(K.arpOct) : 0, level: -6 - 4 * R(), seed: 1 + Math.floor(R() * 9999) },
+    vox: { on: R() < K.vox, style: st(VOX_STYLES, K.styles), space: st(VOX_SPACES, K.spaces), level: -8 - 4 * R() } });
+}));
+// The arp's pattern and sound for a mood (only known once the ARP is loaded)
+function moodArp(m) {
+  if (!HAS_ARP) return null;
+  const simple = NoteEngine.SIMPLE_PATTERNS.length, pat = m.arp.simple ? arpPatterns[Math.floor(m.arp.pat * simple)] : arpPatterns[simple + Math.floor(m.arp.pat * ARP_META.length)];
+  const pool = arpSounds.filter(e => !e.made && (m.arp.six ? e.six && e.clean : e.group === 'soft'));
+  return { pattern: pat.id, sound: pool[Math.floor(m.arp.snd * pool.length)].id };
+}
+
+// A channel switched on or off by a mood fades in or out rather than starting or stopping
+function rampGain(g, to, dur) { if (!g || !ctx) return; const t = ctx.currentTime; g.cancelScheduledValues(t); g.setValueAtTime(g.value, t); g.linearRampToValueAtTime(to, t + dur); }
+async function channelTo(ch, on, dur) {
+  if (ch === 'drums') {
+    if (on && !drumPrefs.on) { setDrumsOn(true); if (drumFx) { drumFx.bus.gain.setValueAtTime(0, ctx.currentTime); rampGain(drumFx.bus.gain, dbGain(drumPrefs.level), dur); } }
+    else if (!on && drumPrefs.on) { if (drumFx) rampGain(drumFx.bus.gain, 0, dur); setTimeout(() => { if (!moodWants.drums) { setDrumsOn(false); mixApply(); } }, dur * 1000); }
+  } else if (ch === 'arp' && HAS_ARP) {
+    if (on && !arpPrefs.on) { await setArpOn(true, true); await arpAudio(); arpG.out.gain.setValueAtTime(0, ctx.currentTime); rampGain(arpG.out.gain, dbGain(arpPrefs.level), dur); }
+    else if (!on && arpPrefs.on) { if (arpG) rampGain(arpG.out.gain, 0, dur); setTimeout(() => { if (!moodWants.arp) { setArpOn(false); if (arpG) arpG.out.gain.value = dbGain(arpPrefs.level); } }, dur * 1000); }
+  } else if (ch === 'vox' && HAS_VOX) {
+    if (on && !voxPrefs.on) { await setVoxOn(true, true); await voxAudio(); voxG.out.gain.setValueAtTime(0, ctx.currentTime); rampGain(voxG.out.gain, dbGain(voxPrefs.level), dur); }
+    else if (!on && voxPrefs.on) { if (voxG) rampGain(voxG.out.gain, 0, dur); setTimeout(() => { if (!moodWants.vox) { setVoxOn(false); if (voxG) voxG.out.gain.value = dbGain(voxPrefs.level); } }, dur * 1000); }
+  }
+}
+const moodWants = { drums: false, arp: false, vox: false };
+// The tempo glides to a mood's over the fade
+let tempoGlide = null;
+function glideTempo(to, dur) {
+  clearInterval(tempoGlide); const from = tempo(), t0 = performance.now();
+  if (Math.abs(to - from) < .5) return;
+  tempoGlide = setInterval(() => {
+    const k = Math.min(1, (performance.now() - t0) / (dur * 1000)), v = Math.round((from + (to - from) * (.5 - .5 * Math.cos(Math.PI * k))) * 10) / 10;
+    $('tempo').value = v; if (node) node.port.postMessage({ t: 'bpm', bpm: v }); drumTempo(); if (typeof voxSpaceApply === 'function') voxSpaceApply();
+    if (k >= 1) { clearInterval(tempoGlide); store.set('ds-tempo', tempo()); }
+  }, 120);
+}
+// Run something on the next bar line while the chord line plays (at once otherwise)
+function onNextBar(fn) {
+  if (!playing || !lineAnchor || !ctx) { fn(); return; }
+  const a = lineAnchor, bpm = tempo(), beat = a.ppq + (ctx.currentTime - a.time) * bpm / 60, next = Math.ceil((beat + .25) / 4) * 4;
+  setTimeout(fn, Math.max(0, (a.time + (next - a.ppq) * 60 / bpm - ctx.currentTime - .06) * 1000));
+}
+let moodChoice = store.get('ds-mood', -1);
+function applyMood(m, opts = {}) {
+  const fade = opts.fade ?? Math.max(fadeTime(), 4);
+  // the sound: the bank's, with the mood's movement and room, faded over
+  const v = soundValues(soundBank[m.sound]);
+  for (const k in m.params) if (k in idx) v[idx[k]] = m.params[k];
+  applyValues(v, 'chord', fade); soundChoice = String(m.sound); soundDirty = true; fillSounds();
+  onNextBar(() => {
+    // the chord line, key and bars per chord change on a bar line
+    lineKey = m.key; $('lineKey').value = String(lineKey); if ($('lineKey')._sync) $('lineKey')._sync();
+    $('lineBars').value = String(m.bars); if ($('lineBars')._sync) $('lineBars')._sync();
+    lineChoice = m.line; lineDirty = false; line = lineFrom(lineBank[lineChoice], lineKey); fillLines(); lineChanged();
+  });
+  glideTempo(m.bpm, fade);
+  // drums: a new kit and groove fade over the old; switched on or off softly
+  moodWants.drums = m.drums.on;
+  if (m.drums.on) { drumPrefs.level = m.drums.level; $('drumSel').value = String(m.drums.groove); sendDrums(); pickKit(m.drums.kit); mixApply(); }
+  channelTo('drums', m.drums.on, fade);
+  // arp
+  const ma = moodArp(m);
+  moodWants.arp = !!(ma && m.arp.on);
+  if (ma && m.arp.on) {
+    Object.assign(arpPrefs, { density: m.arp.density, octave: m.arp.octave, level: m.arp.level, seed: m.arp.seed });
+    arpPrefs.pattern = ma.pattern; arpDirty++; fillArp();
+    // the arp's sound changes once the chords have crossed, so no more than three engines ever run at once
+    if (arpPrefs.sound !== ma.sound) { const sound = ma.sound; setTimeout(() => { arpPrefs.sound = sound; fillArp(); arpUseSound(fade); saveArp(); }, (arpPrefs.on ? fade : 0) * 1000 + 300); }
+    saveArp(); arpControlsShow();
+  }
+  if (HAS_ARP) channelTo('arp', moodWants.arp, fade);
+  // vox
+  moodWants.vox = HAS_VOX && m.vox.on;
+  if (moodWants.vox) { voxPrefs.level = m.vox.level; if (voxPrefs.style !== m.vox.style) pickVoxStyle(m.vox.style); if (voxPrefs.space !== m.vox.space) pickVoxSpace(m.vox.space); }
+  if (HAS_VOX) channelTo('vox', moodWants.vox, fade);
+  if (!opts.quiet) setStatus(`${m.name} · ${m.kind} · ${m.bpm} BPM${m.drums.on ? '' : ' · no drums'}`);
+}
+function fillMoods() {
+  const mine = sessions();
+  $('moodSel').innerHTML = MOOD_KINDS.map(K => `<optgroup label="${esc(K.kind)}">${MOODS.map((m, i) => [m, i]).filter(([m]) => m.kind === K.kind).map(([m, i]) => `<option value="${i}">${String(i + 1).padStart(3, '0')} / ${esc(m.name)}</option>`).join('')}</optgroup>`).join('') +
+    (mine.length ? `<optgroup label="Your sessions">${mine.map((s, k) => `<option value="s${k}">${esc(s.name)}</option>`).join('')}</optgroup>` : '');
+  $('moodSel').value = String(moodChoice >= 0 ? moodChoice : 0); $('moodCount').textContent = MOODS.length;
+}
+async function pickMood(v, why) {
+  v = String(v); $('moodSel').value = v;
+  if (v[0] === 's') { const se = sessions()[+v.slice(1)]; if (se) openSession(se); return; }
+  moodChoice = +v; store.set('ds-mood', moodChoice);
+  await startAudio();
+  applyMood(MOODS[moodChoice]);
+  if (why) setStatus(why + ' · ' + MOODS[moodChoice].name);
+}
+fillMoods();
+$('moodSel').addEventListener('change', () => pickMood($('moodSel').value));
+$('moodDice').addEventListener('click', () => pickMood(Math.floor(Math.random() * MOODS.length), 'A random mood'));
+
+/* ---------- Endless: a journey that never repeats ----------
+   While it plays, it moves on by itself: now and then to another mood (mostly of the same family, sometimes a
+   neighbour), and in between it changes smaller things on the bar lines: a new chord line in the mood's colours,
+   another arp, a drum break, the vox coming or going, the sound twisting more or less, now and then a new key. */
+const PACE = { calm: [[48, 96], [16, 32]], drift: [[32, 64], [8, 24]], restless: [[16, 32], [4, 12]] };
+const endless = { on: false, pace: store.get('ds-pace', 'drift'), nextMood: 0, nextSmall: 0, bar: 0, breakUntil: -1, R: rng32(Date.now() >>> 0) };
+function endlessBar() { if (!playing || !lineAnchor || !ctx) return -1; const a = lineAnchor; return Math.floor((a.ppq + (ctx.currentTime - a.time) * tempo() / 60) / 4); }
+function endlessPlan(bar, kind) { const [lo, hi] = PACE[endless.pace][kind === 'mood' ? 0 : 1]; return bar + lo + Math.floor(endless.R() * (hi - lo + 1)); }
+async function setEndless(on) {
+  endless.on = on; $('endlessOn').setAttribute('aria-pressed', on);
+  if (!on) { setStatus('Endless off: it stays where it is.'); return; }
+  if (!playing) $('play').click();
+  if (moodChoice < 0) await pickMood(Math.floor(Math.random() * MOODS.length));
+  endless.nextMood = -1; endless.nextSmall = -1;
+  setStatus(`Endless · ${endless.pace} · starting from ${MOODS[Math.max(0, moodChoice)].name}`);
+}
+function endlessTick() {
+  if (!endless.on) return;
+  const bar = endlessBar(); if (bar < 0) return;
+  const R = endless.R, m = MOODS[Math.max(0, moodChoice)], K = MOOD_KINDS.find(k => k.kind === m.kind);
+  if (endless.nextMood < 0) { endless.nextMood = endlessPlan(bar, 'mood'); endless.nextSmall = endlessPlan(bar, 'small'); }
+  if (endless.breakUntil >= 0 && bar >= endless.breakUntil) { endless.breakUntil = -1; moodWants.drums = true; channelTo('drums', true, 8); }
+  if (bar >= endless.nextMood) {
+    // on to another mood: the same family half the time, otherwise one whose tempo is near
+    const same = MOODS.map((x, i) => [x, i]).filter(([x, i]) => x.kind === m.kind && i !== moodChoice);
+    const near = MOODS.map((x, i) => [x, i]).filter(([x]) => x.kind !== m.kind && Math.abs(x.bpm - tempo()) < 14);
+    const list = R() < .5 && same.length ? same : near.length ? near : same;
+    const [nm, ni] = list[Math.floor(R() * list.length)];
+    moodChoice = ni; store.set('ds-mood', ni); $('moodSel').value = String(ni);
+    applyMood(nm, { fade: Math.max(12, fadeTime() * 2), quiet: true });
+    setStatus(`Endless · drifting into ${nm.name} (${nm.kind})`);
+    endless.nextMood = endlessPlan(bar, 'mood'); endless.nextSmall = endlessPlan(bar, 'small');
+    return;
+  }
+  if (bar >= endless.nextSmall) {
+    const u = R();
+    if (u < .3) {
+      // a new chord line in the mood's colours, sometimes in a new key a fourth or fifth away
+      const base = LINE_BASES.findIndex(b => b[0] === K.lines[Math.floor(R() * K.lines.length)]), newKey = R() < .2 ? (lineKey + (R() < .5 ? 5 : 7)) % 12 : lineKey;
+      onNextBar(() => { lineKey = newKey; $('lineKey').value = String(lineKey); lineChoice = Math.max(0, base) + LINE_BASES.length * Math.floor(R() * 9); lineDirty = false; line = lineFrom(lineBank[lineChoice], lineKey); fillLines(); lineChanged(); });
+      setStatus(`Endless · a new chord line${newKey !== lineKey ? ' in ' + NAMES[newKey] + ' minor' : ''}`);
+    } else if (u < .5 && HAS_ARP && arpPrefs.on) {
+      const simple = NoteEngine.SIMPLE_PATTERNS.length; pickArp(R() < (K.arpSimple || .3) ? Math.floor(R() * simple) : simple + Math.floor(R() * ARP_META.length), 'Endless · the arp turns');
+    } else if (u < .65 && drumPrefs.on && moodWants.drums) {
+      // a break: the drums step out for a while
+      moodWants.drums = false; channelTo('drums', false, 6); endless.breakUntil = bar + [8, 8, 16][Math.floor(R() * 3)];
+      setStatus('Endless · the drums step out for a while');
+    } else if (u < .8 && HAS_VOX) {
+      moodWants.vox = !voxPrefs.on || R() < .4; if (moodWants.vox && voxPrefs.on) pickVoxStyle(Math.floor(R() * VOX_STYLES.length)); channelTo('vox', moodWants.vox, 10);
+      setStatus(moodWants.vox ? 'Endless · the voices drift in' : 'Endless · the voices fade away');
+    } else {
+      // the sound twists more or less for a while
+      const to = Math.max(.2, Math.min(1, values[idx.twist] + (R() - .45) * .6)), from = values[idx.twist], t0 = performance.now(), dur = 16000;
+      const iv = setInterval(() => { const k = Math.min(1, (performance.now() - t0) / dur); setValue('twist', from + (to - from) * (.5 - .5 * Math.cos(Math.PI * k))); if (k >= 1) clearInterval(iv); }, 200);
+      setStatus(`Endless · the sound ${to > from ? 'twists more' : 'settles'}`);
+    }
+    endless.nextSmall = endlessPlan(bar, 'small');
+  }
+}
+setInterval(endlessTick, 400);
+$('endlessOn').addEventListener('click', () => setEndless(!endless.on));
+// the pace: calm, drifting or restless, one press each
+const PACE_NAMES = { calm: 'Calm', drift: 'Drifting', restless: 'Restless' };
+$('paceBtn').textContent = PACE_NAMES[endless.pace];
+$('paceBtn').addEventListener('click', () => { const k = Object.keys(PACE), i = (k.indexOf(endless.pace) + 1) % k.length; endless.pace = k[i]; store.set('ds-pace', endless.pace); $('paceBtn').textContent = PACE_NAMES[endless.pace]; endless.nextMood = endless.nextSmall = -1; setStatus('Endless moves ' + PACE_NAMES[endless.pace].toLowerCase() + '.'); });
+
+/* ---------- Recording: the mix, or the mix and each channel on its own (stems), as WAV ----------
+   A small worklet takes what the master and each channel's fader send, sample for sample together, and hands it over
+   once a second as 16-bit. Stopping makes the files: one WAV for the mix, or a zip with the mix and the stems. */
+let recNode = null, rec = null;
+const REC_NAMES = ['mix', 'chord', 'drums', 'arp', 'vox'];
+function recConnect(src, k) { if (recNode && src) src.connect(recNode, 0, k); }
+async function recStart() {
+  await startAudio();
+  if (HAS_ARP && arpPrefs.on) await arpAudio();
+  if (HAS_VOX && voxPrefs.on) await voxAudio();
+  const stems = $('recWhat').dataset.v === 'stems';
+  rec = { stems, parts: REC_NAMES.map(() => [[], []]), frames: 0, t0: performance.now(), max: (stems ? 15 : 30) * 60 * ctx.sampleRate };
+  recNode.port.postMessage({ t: 'start', inputs: 5 });
+  $('recBtn').setAttribute('aria-pressed', true); recClock();
+  setStatus(stems ? 'Recording the mix and each channel on its own.' : 'Recording the mix.');
+}
+function recClock() {
+  if (!rec) { $('recTime').textContent = ''; return; }
+  const s = Math.floor(rec.frames / ctx.sampleRate); $('recTime').textContent = `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+  setTimeout(recClock, 500);
+}
+function recChunk(m) {
+  const r = rec || pendingRec; if (!r) return;  // the last chunk comes after stop
+  m.out.forEach((chs, k) => { if (k === 0 || r.stems) chs.forEach((a, c) => r.parts[k][c].push(a)); });
+  r.frames += m.out[0][0].length;
+  if (rec && rec.frames >= rec.max) recStop();
+}
+function recStop() {
+  if (!rec) return;
+  const r = rec; rec = null; pendingRec = r; $('recTime').textContent = '';
+  recNode.port.postMessage({ t: 'stop' });
+  $('recBtn').setAttribute('aria-pressed', false);
+  setStatus('Making the files…');
+  // the last chunk arrives with 'done'
+  recDone = () => {
+    const sr = ctx.sampleRate, base = 'drift-sonata-' + fileName(moodChoice >= 0 ? MOODS[moodChoice].name : 'session');
+    const files = REC_NAMES.map((n, k) => [n, k]).filter(([, k]) => k === 0 || r.stems).map(([n, k]) => [`${base}-${n}.wav`, wavOf(r.parts[k], sr)]);
+    if (files.length === 1 && !claudeDownloads) download(files[0][0], new Blob([files[0][1]], { type: 'audio/wav' }));
+    else download(`${base}${r.stems ? '-stems' : ''}.zip`, zipMany(files));
+    setStatus(`Recorded ${Math.round(r.frames / sr)} s${r.stems ? ': the mix and four stems' : ''}.`);
+  };
+}
+let recDone = null, pendingRec = null;
+function wavOf(chs, sr) {
+  const n = chs[0].reduce((a, b) => a + b.length, 0), out = new Uint8Array(44 + n * 4), dv = new DataView(out.buffer);
+  const w = (o, s) => { for (let i = 0; i < s.length; i++) out[o + i] = s.charCodeAt(i); };
+  w(0, 'RIFF'); dv.setUint32(4, 36 + n * 4, true); w(8, 'WAVEfmt '); dv.setUint32(16, 16, true); dv.setUint16(20, 1, true); dv.setUint16(22, 2, true);
+  dv.setUint32(24, sr, true); dv.setUint32(28, sr * 4, true); dv.setUint16(32, 4, true); dv.setUint16(34, 16, true); w(36, 'data'); dv.setUint32(40, n * 4, true);
+  let o = 44;
+  for (let b = 0; b < chs[0].length; b++) { const L = chs[0][b], R = chs[1][b]; for (let i = 0; i < L.length; i++) { dv.setInt16(o, L[i], true); dv.setInt16(o + 2, R[i], true); o += 4; } }
+  return out;
+}
+// Several files in one zip, stored as they are
+function zipMany(files) {
+  const parts = [], central = [], u16 = n => [n & 255, n >> 8 & 255], u32 = n => [n & 255, n >> 8 & 255, n >> 16 & 255, n >>> 24];
+  let offset = 0;
+  for (const [name, bytes] of files) {
+    let crc = -1; for (let i = 0; i < bytes.length; i++) { crc ^= bytes[i]; for (let k = 0; k < 8; k++) crc = crc >>> 1 ^ (0xEDB88320 & -(crc & 1)); } crc = ~crc >>> 0;
+    const nm = new TextEncoder().encode(name);
+    const common = [...u16(20), 0, 0, 0, 0, 0, 0, 0x21, 0, ...u32(crc), ...u32(bytes.length), ...u32(bytes.length), ...u16(nm.length), 0, 0];
+    const local = new Uint8Array([0x50, 0x4b, 3, 4, ...common, ...nm]);
+    parts.push(local, bytes);
+    central.push(new Uint8Array([0x50, 0x4b, 1, 2, ...u16(20), ...common, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, ...u32(offset), ...nm]));
+    offset += local.length + bytes.length;
+  }
+  const size = central.reduce((a, c) => a + c.length, 0);
+  const end = new Uint8Array([0x50, 0x4b, 5, 6, 0, 0, 0, 0, ...u16(files.length), ...u16(files.length), ...u32(size), ...u32(offset), 0, 0]);
+  return new Blob([...parts, ...central, end], { type: 'application/zip' });
+}
+$('recBtn').addEventListener('click', () => rec ? recStop() : recStart());
+$('recWhat').addEventListener('click', () => { const b = $('recWhat'); if (rec) return; b.dataset.v = b.dataset.v === 'stems' ? 'mix' : 'stems'; b.textContent = b.dataset.v === 'stems' ? 'Stems' : 'Mix'; });
+
 /* ---------- Keyboard, computer keys and MIDI ---------- */
 const LOW = 36, HIGH = 84, keyEls = {};
 (() => {
@@ -2575,7 +2935,7 @@ function arrowize(sel) {
   new MutationObserver(sync).observe(sel, { childList: true, subtree: true, attributes: true });
   sel._sync = sync;
 }
-document.querySelectorAll('select').forEach(sel => { if (!['soundSel', 'lineSel', 'soundFilter', 'arpSel', 'arpSoundSel', 'kitSel', 'drumSel', 'voxStyleSel', 'voxSpaceSel'].includes(sel.id)) arrowize(sel); });
+document.querySelectorAll('select').forEach(sel => { if (!['soundSel', 'lineSel', 'soundFilter', 'arpSel', 'arpSoundSel', 'kitSel', 'drumSel', 'voxStyleSel', 'voxSpaceSel', 'moodSel'].includes(sel.id)) arrowize(sel); });
 // keep the arrows right when a menu is set from code (a sound loads, a chord is picked)
 setInterval(() => document.querySelectorAll('.stepper select').forEach(sel => sel._sync && sel._sync()), 400);
 fillSessions(); fillLines(); drawSlots(); drawPads(); lastNotes = voiceLine();
