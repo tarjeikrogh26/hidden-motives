@@ -25,7 +25,8 @@ Motoren er ren C++ (`dsp/`) uten plugin-kode. Den samme koden kjører i dag i ne
 
 ```sh
 python3 web/build.py --wasi-sdk /sti/til/wasi-sdk --out dist/DriftSonata.html \
-    --samples /sti/til/enkelttoner --header assets/header.webp --arp /sti/til/AVANTGARDIAN-ARP/dist
+    --samples /sti/til/enkelttoner --header assets/header.webp --arp /sti/til/AVANTGARDIAN-ARP/dist \
+    --drums /sti/til/trommeslag
 ```
 
 Opptakene kommer fra samplepakker og ligger derfor ikke i repoet. Uten `--samples` spiller synthen alene.
@@ -34,6 +35,12 @@ Opptakene kommer fra samplepakker og ligger derfor ikke i repoet. Uten `--sample
 seks byte per note. Arpen følger akkordlinja på motorens taktklokke (sida starter avspillingen på et avtalt
 lydtidspunkt, og motoren melder hvor slaget er), eller akkorden du holder når transporten står. Uten `--arp`
 er arp-menyene skjult.
+
+Trommeslagene klippes ut av trommeloops og perkusjonsopptak med `tools/chop_drums.py <mappe> <ut-mappe>`:
+spektral fluks finner slagene, og hvor energien ligger sorterer dem i spark, skarp, hi-hat og perc. Skarper
+og hi-hats får lavkutt, så sparken i en break ikke blør med. `--drums` legger dem inn i sida, der de blir til
+trommesett sammen med syntetiserte lyder (343 sett: elektroniske, breaks, hybrider og perkusjon). Uten
+`--drums` finnes bare de elektroniske settene.
 
 ## Teste motoren
 

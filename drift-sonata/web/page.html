@@ -152,47 +152,66 @@ details.room .eyebrow { color: #9fc3c4; }
 .osc:nth-child(even) .head h3 { color: var(--gold-hi) !important; }
 .osc.off { opacity: .5; }
 
-/* Fixed bottom bar, laid out like STAB LAB, kept tight: four banks in two rows (sound, chord line, arp, arp sound),
-   one transport row with the drums and the arp, and twelve thin chord pads */
-.dock { position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; background: rgba(255,250,246,.95); border-top: 1px solid var(--gold-hi); backdrop-filter: blur(10px);
+/* Fixed bottom bar: the transport and master on top, then a mixer with three channels (chord, drums, arp), each
+   with its switch, meter and fader over its two banks, then twelve thin chord pads */
+.dock { position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; background: rgba(255,250,246,.96); border-top: 1px solid var(--gold-hi); backdrop-filter: blur(10px);
   padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-top: 7px; padding-bottom: calc(7px + env(safe-area-inset-bottom, 0px)); }
-.dock-in { max-width: 1180px; margin: 0 auto; display: flex; flex-direction: column; gap: 6px; }
-.banks { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 5px 16px; }
-.bankrow { display: grid; grid-template-columns: 74px minmax(0, 1fr); align-items: center; gap: 6px; min-width: 0; }
-.tag { font-family: var(--mono); font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--teal); line-height: 1.15; display: flex; flex-direction: column; }
-.tag b { font-weight: 500; color: var(--muted); letter-spacing: .04em; }
-.bankrow.line .tag { color: var(--rose-deep); }
-.bankrow.arp .tag { color: var(--gold); }
-.bankrow.arps .tag { color: #7a8fbd; }
-.nav { display: flex; gap: 3px; align-items: stretch; min-width: 0; }
-.nav button { flex: none; min-width: 27px; padding: 3px 5px; background: var(--pearl); border: 1px solid var(--line); border-radius: 6px; font-size: 15px; line-height: 1; }
-.nav button:hover { border-color: var(--gold); }
-.nav select { flex: 1 1 auto; min-width: 0; font-family: var(--display); font-style: italic; font-weight: 600; font-size: 15.5px; padding: 3px 7px; }
-.nav select.mini { flex: none; width: 62px; font-family: var(--mono); font-style: normal; font-weight: 400; font-size: 10.5px; padding: 2px 3px; }
-.nav .dice { color: var(--gold); font-size: 17px; }
-.transport { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: end; }
-.group { display: inline-flex; gap: 6px; align-items: end; padding-left: 10px; border-left: 1px solid var(--line); }
+.dock-in { max-width: 1180px; margin: 0 auto; display: flex; flex-direction: column; gap: 7px; }
+.transport { display: flex; gap: 10px; align-items: end; min-width: 0; }
 .field { display: flex; flex-direction: column; gap: 1px; font-family: var(--mono); font-size: 9.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
 .field select, .field input { font-family: var(--body); letter-spacing: 0; text-transform: none; font-size: 13.5px; color: var(--ink); }
 .dock select { padding: 4px 6px; }
-.dock input[type=number], .dock input[type=text] { background: var(--pearl); border: 1px solid var(--line); border-radius: 6px; padding: 4px 6px; width: 58px; font-family: var(--mono); }
-.dock .btn { padding: 5px 9px; }
-.play { width: 40px; height: 40px; border-radius: 50%; border: none; background: radial-gradient(circle at 35% 30%, #f6b9d0, var(--rose) 55%, var(--rose-deep)); color: #fff; display: grid; place-items: center; flex: none; box-shadow: 0 4px 14px -4px rgba(201,97,139,.6); }
-.play svg { width: 16px; height: 16px; fill: currentColor; }
-.btn.sw[aria-pressed=true] { background: var(--gold-hi); border-color: var(--gold); }
-.btn.sw::before { content: "○ "; color: var(--muted); }
-.btn.sw[aria-pressed=true]::before { content: "● "; color: var(--rose-deep); }
-.dock .lvl { width: 84px; height: 24px; }
-.dock .lvl.sm { width: 64px; }
+.dock input[type=number] { background: var(--pearl); border: 1px solid var(--line); border-radius: 6px; padding: 4px 6px; width: 58px; font-family: var(--mono); }
 .dock .stepper { gap: 2px; }
 .dock .stepper button { min-width: 22px; padding: 0 4px; }
-#drumSel { max-width: 170px; }
-#lineAs { min-width: 112px; } #lineReg { min-width: 76px; }
+.play { width: 40px; height: 40px; border-radius: 50%; border: none; background: radial-gradient(circle at 35% 30%, #f6b9d0, var(--rose) 55%, var(--rose-deep)); color: #fff; display: grid; place-items: center; flex: none; box-shadow: 0 4px 14px -4px rgba(201,97,139,.6); }
+.play svg { width: 16px; height: 16px; fill: currentColor; }
 .status { font-size: 11.5px; color: var(--muted); align-self: center; min-width: 0; flex: 1 1 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.master { flex: none; }
+.masterrow { display: flex; align-items: center; gap: 6px; }
+.mixer { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.no-arp .mixer { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.strip { border: 1px solid var(--line); border-radius: 9px; padding: 6px 8px 7px; display: flex; flex-direction: column; gap: 4px; min-width: 0; background: rgba(255,255,255,.55); border-top: 3px solid var(--strip, var(--teal)); }
+.strip.chord { --strip: var(--teal); } .strip.drums { --strip: var(--rose); } .strip.arp { --strip: var(--gold); }
+.strip-head { display: flex; align-items: center; gap: 7px; min-width: 0; }
+.btn.sw { padding: 3px 9px; font-family: var(--display); font-style: italic; font-weight: 600; font-size: 15px; flex: none; }
+.btn.sw::before { content: "○ "; font-style: normal; color: var(--muted); font-size: 11px; vertical-align: 1px; }
+.btn.sw[aria-pressed=true] { border-color: var(--strip, var(--gold)); }
+.btn.sw[aria-pressed=true]::before { content: "● "; color: var(--strip, var(--rose-deep)); }
+.meter { flex: 1 1 auto; min-width: 24px; height: 6px; border-radius: 3px; background: var(--line); overflow: hidden; }
+.meter b { display: block; height: 100%; width: 0%; background: linear-gradient(90deg, var(--teal) 0%, var(--gold) 75%, var(--rose-deep) 100%); background-size: var(--mw, 200px) 100%; }
+.masterrow .meter { width: 70px; flex: none; }
+.strip .lvl, .master .lvl { width: 92px; height: 22px; flex: none; --fill: var(--strip, var(--gold)); }
+.db { font-family: var(--mono); font-size: 10.5px; letter-spacing: 0; text-transform: none; color: var(--muted); width: 54px; white-space: nowrap; text-align: right; flex: none; font-variant-numeric: tabular-nums; }
+.bankrow { display: grid; grid-template-columns: 50px minmax(0, 1fr); align-items: center; gap: 5px; min-width: 0; }
+.tag { font-family: var(--mono); font-size: 9.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); line-height: 1.15; display: flex; flex-direction: column; }
+.tag b { font-weight: 400; letter-spacing: .02em; opacity: .75; }
+.nav { display: flex; gap: 3px; align-items: stretch; min-width: 0; }
+.nav button { flex: none; min-width: 24px; padding: 2px 4px; background: var(--pearl); border: 1px solid var(--line); border-radius: 6px; font-size: 14px; line-height: 1; }
+.nav button:hover { border-color: var(--gold); }
+.nav select { flex: 1 1 auto; min-width: 0; font-family: var(--display); font-style: italic; font-weight: 600; font-size: 14.5px; padding: 3px 6px; }
+.nav select.mini { flex: none; width: 54px; font-family: var(--mono); font-style: normal; font-weight: 400; font-size: 10px; padding: 2px 2px; }
+.nav .dice { color: var(--gold); font-size: 16px; }
+.nav .dice.bpm { font-size: 11px; font-family: var(--mono); color: var(--muted); }
 .pads { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 5px; }
 .pad { padding: 4px 0; border-radius: 6px; border: 1px solid var(--line); background: var(--pearl); font-family: var(--display); font-style: italic; font-weight: 600; font-size: 14.5px; touch-action: none; user-select: none; color: var(--ink); }
 .pad.out { background: transparent; color: var(--muted); }
+@media (max-width: 1100px) { .nav button[data-d="-10"], .nav button[data-d="10"] { display: none; } }
+@media (max-width: 760px) {
+  /* phones: the three channels side by side to swipe through */
+  .mixer, .no-arp .mixer { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; gap: 8px; padding-bottom: 2px; }
+  .strip { flex: 0 0 88%; scroll-snap-align: start; }
+  .pads, .status { display: none; }
+  .transport .field[title] { display: none; }
+  .master { flex: 1 1 auto; min-width: 0; } .masterrow .meter { display: none; } .master .lvl { flex: 1 1 auto; width: auto; min-width: 60px; }
+}
 .no-arp .arp-only { display: none !important; }
+#lineAs { min-width: 112px; } #lineReg { min-width: 76px; }
+.glide-mark { position: fixed; z-index: 50; width: 14px; height: 14px; margin: -7px 0 0 -7px; border-radius: 50%; pointer-events: none;
+  background: radial-gradient(circle, #fff 0%, #ffe9a8 35%, rgba(236,208,143,0) 70%); box-shadow: 0 0 10px 4px rgba(236,208,143,.75), 0 0 22px 8px rgba(228,134,171,.35);
+  opacity: 0; transform: scale(.4); transition: opacity .18s ease, transform .18s ease; }
+.glide-mark.on { opacity: 1; transform: scale(1); }
+@media (prefers-reduced-motion: reduce) { .glide-mark { transition: none; } }
 /* Folding cards: the heading is the handle */
 details.fold > summary { cursor: pointer; list-style: none; }
 details.fold > summary::-webkit-details-marker { display: none; }
@@ -201,7 +220,6 @@ details.fold[open] > summary h2::before, details.fold[open] > summary h3::before
 details.fold:not([open]) { padding-block: 12px; }
 .card.arpcard h2 { font-family: var(--display); font-size: 30px; font-weight: 600; font-style: italic; }
 canvas#arpView { width: 100%; height: 110px; display: block; border-radius: 6px; background: var(--night); }
-.more-btn { display: none; }
 .stepper { display: flex; gap: 4px; align-items: stretch; min-width: 0; }
 .stepper select { flex: 1 1 auto; min-width: 0; }
 .stepper button { flex: none; min-width: 30px; padding: 0 7px; background: var(--pearl); border: 1px solid var(--line); border-radius: 6px; font-size: 15px; line-height: 1; color: var(--ink); }
@@ -225,17 +243,10 @@ canvas#lifeView { width: 100%; height: 180px; display: block; border-radius: 6px
   .oscs { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .slots { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 }
-@media (max-width: 760px) { .banks { grid-template-columns: 1fr; } }
 @media (max-width: 560px) {
   .macros, .colours, .oscs { grid-template-columns: 1fr; }
   .card.wide { grid-column: auto; }
   .card h2 { font-size: 27px; }
-  .dock .hide-s, .pads { display: none; }
-  .more-btn { display: inline-block; margin-left: auto; }
-  .dock:not(.open) .more-s, .dock:not(.open) .bankrow.arps { display: none !important; }
-  .nav button[data-d="-10"], .nav button[data-d="10"] { display: none; }
-  .status { display: none; }
-  .bankrow { grid-template-columns: 58px minmax(0, 1fr); }
   .banner { aspect-ratio: 2 / 1; }
 }
 @media (prefers-reduced-motion: reduce) { .sub-meter i b { transition: none; } }
@@ -318,7 +329,7 @@ canvas#lifeView { width: 100%; height: 180px; display: block; border-radius: 6px
         <button class="btn" id="sessDownload" type="button">Download session file</button>
         <label class="btn" for="sessFile" style="cursor:pointer">Open session file</label><input type="file" id="sessFile" accept=".json,application/json" hidden>
       </div>
-      <p class="keys-note">The MIDI file has the chords as DRIFT SONATA plays them (folded out by Tension), the Sub-Drop and, when it is on, the arp, each on its own track. Sessions are kept in this browser. Inside Claude you are asked before a file is saved, and the MIDI comes in a zip.</p>
+      <p class="keys-note">The MIDI file has the chords as DRIFT SONATA plays them (folded out by Tension), the Sub-Drop and, when they are on, the drums and the arp, each on its own track. Sessions are kept in this browser. Inside Claude you are asked before a file is saved, and the MIDI comes in a zip.</p>
     </details>
   </section>
 
@@ -335,34 +346,36 @@ canvas#lifeView { width: 100%; height: 180px; display: block; border-radius: 6px
 
 <div class="dock" id="dock">
   <div class="dock-in">
-    <div class="banks">
-      <div class="bankrow"><label class="tag" for="soundSel">Sound<b id="soundCount">533</b></label>
-        <div class="nav"><button type="button" data-bank="sound" data-d="-10" aria-label="Back 10 sounds">«</button><button type="button" data-bank="sound" data-d="-1" aria-label="Previous sounds">‹</button><select id="soundSel" aria-label="Sound"></select><button type="button" data-bank="sound" data-d="1" aria-label="Next sounds">›</button><button type="button" data-bank="sound" data-d="10" aria-label="Forward 10 sounds">»</button><button type="button" class="dice" id="soundDice" title="Randomize the sound" aria-label="Randomize the sound">⚄</button><select id="soundFilter" class="mini" aria-label="Which sounds to show" title="Which sounds to show"><option value="all">All</option><option value="clean">Clean</option><option value="warm">Warm</option></select></div></div>
-      <div class="bankrow line"><label class="tag" for="lineSel">Chord line<b id="lineCount">111</b></label>
-        <div class="nav"><button type="button" data-bank="line" data-d="-10" aria-label="Back 10 chord lines">«</button><button type="button" data-bank="line" data-d="-1" aria-label="Previous chord lines">‹</button><select id="lineSel" aria-label="Chord line"></select><button type="button" data-bank="line" data-d="1" aria-label="Next chord lines">›</button><button type="button" data-bank="line" data-d="10" aria-label="Forward 10 chord lines">»</button><button type="button" class="dice" id="lineDice" title="Random chord line" aria-label="Random chord line">⚄</button></div></div>
-      <div class="bankrow arp arp-only"><label class="tag" for="arpSel">Arp<b id="arpCount">0</b></label>
-        <div class="nav"><button type="button" data-bank="arp" data-d="-10" aria-label="Back 10 arps">«</button><button type="button" data-bank="arp" data-d="-1" aria-label="Previous arps">‹</button><select id="arpSel" aria-label="Arp pattern"></select><button type="button" data-bank="arp" data-d="1" aria-label="Next arps">›</button><button type="button" data-bank="arp" data-d="10" aria-label="Forward 10 arps">»</button><button type="button" class="dice" id="arpDice" title="Random arp" aria-label="Random arp">⚄</button><button type="button" class="dice" id="arpMake" title="Make a new arp: rhythm and contour blended from four patterns" aria-label="Make a new arp">✧</button></div></div>
-      <div class="bankrow arps arp-only"><label class="tag" for="arpSoundSel">Arp sound<b id="arpSoundCount">0</b></label>
-        <div class="nav"><button type="button" data-bank="arps" data-d="-10" aria-label="Back 10 arp sounds">«</button><button type="button" data-bank="arps" data-d="-1" aria-label="Previous arp sounds">‹</button><select id="arpSoundSel" aria-label="Arp sound"></select><button type="button" data-bank="arps" data-d="1" aria-label="Next arp sounds">›</button><button type="button" data-bank="arps" data-d="10" aria-label="Forward 10 arp sounds">»</button><button type="button" class="dice" id="arpSoundDice" title="Random soft arp sound" aria-label="Random arp sound">⚄</button><button type="button" class="dice" id="arpSoundMake" title="Make a new arp sound" aria-label="Make a new arp sound">✧</button></div></div>
-    </div>
     <div class="transport">
       <button class="play" id="play" type="button" aria-label="Play the chord line"><svg viewBox="0 0 20 20" id="playIcon"><path d="M5 3l12 7-12 7z"/></svg></button>
       <label class="field">BPM<input type="number" id="tempo" min="40" max="200" value="84"></label>
       <label class="field">Key<select id="lineKey"></select></label>
-      <label class="field more-s" title="How many bars each chord lasts">Bars<select id="lineBars"><option value="1">1</option><option value="2" selected>2</option><option value="4">4</option><option value="8">8</option><option value="16">16</option><option value="32">32</option></select></label>
-      <span class="group more-s">
-        <button class="btn sw" id="drumOn" type="button" aria-pressed="false">Drums</button>
-        <label class="field">Groove<select id="drumSel"></select></label>
-        <input type="range" id="drumLevel" class="lvl sm hide-s" min="0" max="1" step="0.01" value="0.5" aria-label="Drum level" title="Drum level">
-        <button class="btn hide-s" id="matchBpm" type="button" title="Set the tempo to the groove's">BPM</button>
-      </span>
-      <span class="group arp-only">
-        <button class="btn sw" id="arpOn" type="button" aria-pressed="false">Arp</button>
-        <input type="range" id="arpLevel" class="lvl" min="-30" max="6" step="0.5" value="-4" aria-label="Arp level" title="Arp level">
-      </span>
-      <label class="field hide-s">Level<input type="range" id="level" class="lvl" min="-24" max="6" step="0.5" value="0"></label>
-      <button class="btn more-btn" id="dockMore" type="button" aria-expanded="false">More</button>
+      <label class="field" title="How many bars each chord lasts">Bars<select id="lineBars"><option value="1">1</option><option value="2" selected>2</option><option value="4">4</option><option value="8">8</option><option value="16">16</option><option value="32">32</option></select></label>
       <span class="status" id="status">Paused. Press ▶ to hear the chord line, hold a chord pad, or play the keyboard.</span>
+      <label class="field master">Master<span class="masterrow"><span class="meter" aria-hidden="true"><b id="masterMeter"></b></span><input type="range" id="master" class="lvl" min="-24" max="6" step="0.5" value="0" aria-label="Master level"><output id="masterOut" class="db">0 dB</output></span></label>
+    </div>
+    <div class="mixer">
+      <section class="strip chord" aria-label="Chord">
+        <div class="strip-head"><button class="btn sw" id="chordOn" type="button" aria-pressed="true">Chord</button><span class="meter" aria-hidden="true"><b id="chordLevelMeter"></b></span><input type="range" id="chordLevel" class="lvl" min="-30" max="6" step="0.5" value="0" aria-label="Chord level"><output id="chordLevelOut" class="db">0 dB</output></div>
+        <div class="bankrow"><label class="tag" for="soundSel">Sound<b id="soundCount"></b></label>
+          <div class="nav"><button type="button" data-bank="sound" data-d="-10" aria-label="Back 10 sounds">«</button><button type="button" data-bank="sound" data-d="-1" aria-label="Previous sounds">‹</button><select id="soundSel" aria-label="Sound"></select><button type="button" data-bank="sound" data-d="1" aria-label="Next sounds">›</button><button type="button" data-bank="sound" data-d="10" aria-label="Forward 10 sounds">»</button><button type="button" class="dice" id="soundDice" title="Randomize the sound" aria-label="Randomize the sound">⚄</button><select id="soundFilter" class="mini" aria-label="Which sounds to show" title="Which sounds to show"><option value="all">All</option><option value="clean">Clean</option><option value="warm">Warm</option></select></div></div>
+        <div class="bankrow"><label class="tag" for="lineSel">Line<b id="lineCount"></b></label>
+          <div class="nav"><button type="button" data-bank="line" data-d="-10" aria-label="Back 10 chord lines">«</button><button type="button" data-bank="line" data-d="-1" aria-label="Previous chord lines">‹</button><select id="lineSel" aria-label="Chord line"></select><button type="button" data-bank="line" data-d="1" aria-label="Next chord lines">›</button><button type="button" data-bank="line" data-d="10" aria-label="Forward 10 chord lines">»</button><button type="button" class="dice" id="lineDice" title="Random chord line" aria-label="Random chord line">⚄</button></div></div>
+      </section>
+      <section class="strip drums" aria-label="Drums">
+        <div class="strip-head"><button class="btn sw" id="drumOn" type="button" aria-pressed="false">Drums</button><span class="meter" aria-hidden="true"><b id="drumLevelMeter"></b></span><input type="range" id="drumLevel" class="lvl" min="-30" max="6" step="0.5" value="-3" aria-label="Drums level"><output id="drumLevelOut" class="db">0 dB</output></div>
+        <div class="bankrow"><label class="tag" for="kitSel">Kit<b id="kitCount"></b></label>
+          <div class="nav"><button type="button" data-bank="kit" data-d="-10" aria-label="Back 10 drum kits">«</button><button type="button" data-bank="kit" data-d="-1" aria-label="Previous drum kits">‹</button><select id="kitSel" aria-label="Drum kit"></select><button type="button" data-bank="kit" data-d="1" aria-label="Next drum kits">›</button><button type="button" data-bank="kit" data-d="10" aria-label="Forward 10 drum kits">»</button><button type="button" class="dice" id="kitDice" title="Random drum kit" aria-label="Random drum kit">⚄</button></div></div>
+        <div class="bankrow"><label class="tag" for="drumSel">Groove<b id="grooveCount"></b></label>
+          <div class="nav"><button type="button" data-bank="groove" data-d="-10" aria-label="Back 10 grooves">«</button><button type="button" data-bank="groove" data-d="-1" aria-label="Previous grooves">‹</button><select id="drumSel" aria-label="Groove"></select><button type="button" data-bank="groove" data-d="1" aria-label="Next grooves">›</button><button type="button" data-bank="groove" data-d="10" aria-label="Forward 10 grooves">»</button><button type="button" class="dice" id="grooveDice" title="Random groove" aria-label="Random groove">⚄</button><button type="button" class="dice bpm" id="matchBpm" title="Set the tempo to the groove’s" aria-label="Set the tempo to the groove’s">♩=</button></div></div>
+      </section>
+      <section class="strip arp arp-only" aria-label="Arp">
+        <div class="strip-head"><button class="btn sw" id="arpOn" type="button" aria-pressed="false">Arp</button><span class="meter" aria-hidden="true"><b id="arpLevelMeter"></b></span><input type="range" id="arpLevel" class="lvl" min="-30" max="6" step="0.5" value="-4" aria-label="Arp level"><output id="arpLevelOut" class="db">0 dB</output></div>
+        <div class="bankrow"><label class="tag" for="arpSel">Pattern<b id="arpCount"></b></label>
+          <div class="nav"><button type="button" data-bank="arp" data-d="-10" aria-label="Back 10 arps">«</button><button type="button" data-bank="arp" data-d="-1" aria-label="Previous arps">‹</button><select id="arpSel" aria-label="Arp pattern"></select><button type="button" data-bank="arp" data-d="1" aria-label="Next arps">›</button><button type="button" data-bank="arp" data-d="10" aria-label="Forward 10 arps">»</button><button type="button" class="dice" id="arpDice" title="Random arp" aria-label="Random arp">⚄</button><button type="button" class="dice" id="arpMake" title="Make a new arp: rhythm and contour blended from four patterns" aria-label="Make a new arp: rhythm and contour blended from four patterns">✧</button></div></div>
+        <div class="bankrow"><label class="tag" for="arpSoundSel">Sound<b id="arpSoundCount"></b></label>
+          <div class="nav"><button type="button" data-bank="arps" data-d="-10" aria-label="Back 10 arp sounds">«</button><button type="button" data-bank="arps" data-d="-1" aria-label="Previous arp sounds">‹</button><select id="arpSoundSel" aria-label="Arp sound"></select><button type="button" data-bank="arps" data-d="1" aria-label="Next arp sounds">›</button><button type="button" data-bank="arps" data-d="10" aria-label="Forward 10 arp sounds">»</button><button type="button" class="dice" id="arpSoundDice" title="Random soft arp sound" aria-label="Random soft arp sound">⚄</button><button type="button" class="dice" id="arpSoundMake" title="Make a new arp sound" aria-label="Make a new arp sound">✧</button></div></div>
+      </section>
     </div>
     <div class="pads" id="pads" role="group" aria-label="Chord pads: hold one to play its chord"></div>
   </div>
@@ -384,8 +397,7 @@ class DriftSonata extends AudioWorkletProcessor {
   constructor(options) {
     super();
     this.ready = false; this.queue = []; this.playing = false; this.ppq = 0; this.bpm = 84; this.slot = -1; this.sounding = []; this.tick = 0;
-    this.line = []; this.drums = { on: false, pattern: [[], [], []], level: .5, slow: false }; this.hits = [];
-    this.makeDrums();
+    this.line = []; this.drums = { on: false, lanes: {}, swing: 0 }; this.kit = {}; this.hits = [];
     this.port.onmessage = e => this.ready ? this.msg(e.data) : this.queue.push(e.data);
     const stub = { fd_close: () => 0, fd_seek: () => 0, fd_write: () => 0 };
     WebAssembly.instantiate(options.processorOptions.wasm, { wasi_snapshot_preview1: stub }).then(({ instance }) => {
@@ -394,22 +406,6 @@ class DriftSonata extends AudioWorkletProcessor {
       this.ready = true; for (const m of this.queue) this.msg(m); this.queue = [];
       this.port.postMessage({ t: 'ready' });
     });
-  }
-  // The drum sounds from STAB LAB: a pitched-down sine kick, a noise snare with body, a ticking hat.
-  makeDrums() {
-    const sr = sampleRate, make = (type, slow) => {
-      const duration = type === 'kick' ? .46 : type === 'snare' ? .21 : .07, a = new Float32Array(Math.ceil(sr * duration)), R = rng32(1451 + type.length + (slow ? 7 : 0));
-      let phase = 0, previous = 0, lp = 0;
-      for (let i = 0; i < a.length; i++) {
-        const t = i / sr, noise = R() * 2 - 1; let v = 0;
-        if (type === 'kick') { phase += 2 * Math.PI * ((slow ? 45 : 51) + 110 * Math.exp(-t * 35)) / sr; v = Math.sin(phase) * Math.exp(-t / (slow ? .12 : .085)) * .8 + noise * Math.exp(-t * 450) * .06; }
-        else if (type === 'snare') { lp += .17 * (noise - lp); v = ((noise - lp) * .55 + Math.sin(t * 2 * Math.PI * 185) * Math.exp(-t * 55) * .35) * Math.exp(-t * 22); }
-        else { v = (noise - previous) * Math.exp(-t / .011) * .23; previous = noise; }
-        a[i] = v * Math.min(1, i / 20, (a.length - i) / 45);
-      }
-      return a;
-    };
-    this.buf = { kick: make('kick', false), kickSlow: make('kick', true), snare: make('snare'), hat: make('hat') };
   }
   msg(m) {
     const x = this.x;
@@ -425,10 +421,11 @@ class DriftSonata extends AudioWorkletProcessor {
       }
       case 'line': this.line = m.line; if (this.playing) this.slot = -2; break;
       case 'drums': this.drums = m.drums; break;
+      case 'kit': this.kit = m.kit; break;  // per lane: the sound, its level, place and sends (made in the page)
       case 'vocal': { const ptr = x.ds_vocal(m.data.length); new Float32Array(x.memory.buffer, ptr, m.data.length).set(m.data); break; }
       case 'bpm': this.bpm = m.bpm; break;
       case 'play': this.startAt = m.at || 0; break;
-      case 'stop': this.playing = false; this.startAt = null; this.release(); this.slot = -1; this.hits = []; this.port.postMessage({ t: 'slot', s: -1 }); break;
+      case 'stop': this.playing = false; this.startAt = null; this.release(); this.slot = -1; this.port.postMessage({ t: 'slot', s: -1 }); break;
     }
   }
   release() { for (const n of this.sounding) this.x.ds_note_off(n); this.sounding = []; }
@@ -454,28 +451,37 @@ class DriftSonata extends AudioWorkletProcessor {
       }
     }
     if (this.playing && this.drums.on) {
-      // Every sixteenth that falls inside this block, placed on its own sample
-      const p = this.drums.pattern;
-      for (let k = Math.ceil(this.ppq / .25 - 1e-9); k * .25 < this.ppq + step; k++) {
-        const off = Math.min(n - 1, Math.max(0, Math.round((k * .25 - this.ppq) / step * n))), s16 = ((k % 16) + 16) % 16, acc = s16 % 4 === 0 ? 1 : .72;
-        if (p[0].includes(s16)) this.hits.push({ b: this.drums.slow ? this.buf.kickSlow : this.buf.kick, pos: -off, g: acc });
-        if (p[1].includes(s16)) this.hits.push({ b: this.buf.snare, pos: -off, g: acc });
-        if (p[2].includes(s16)) this.hits.push({ b: this.buf.hat, pos: -off, g: .6 + .4 * acc });
+      // Every sixteenth that falls inside this block, on its own sample; the odd ones pushed late by the swing
+      const lanes = this.drums.lanes, sw = this.drums.swing * .25 * .42;
+      for (let k = Math.ceil((this.ppq - sw) / .25 - 1e-9); k * .25 < this.ppq + step; k++) {
+        const s16 = ((k % 16) + 16) % 16, at = k * .25 + (s16 % 2 ? sw : 0);
+        if (at < this.ppq - 1e-9 || at >= this.ppq + step) continue;
+        const off = Math.min(n - 1, Math.max(0, Math.round((at - this.ppq) / step * n))), acc = s16 % 4 === 0 ? 1 : s16 % 2 === 0 ? .8 : .66;
+        for (const lane in lanes) {
+          const v = this.kit[lane]; if (!v || !lanes[lane].includes(s16)) continue;
+          if (lane === 'h') for (const h of this.hits) if (h.lane === 'o') h.choke = true;  // a closed hat closes the open one
+          this.hits.push({ v, lane, pos: -off, g: lane === 'k' ? .9 + .1 * acc : acc, choke: false, cg: 1 });
+        }
       }
     }
     x.ds_transport(this.playing ? 1 : 0, this.ppq, this.bpm, 4, 4);
     x.ds_process(n);
     L.set(new Float32Array(x.memory.buffer, x.ds_left(), n));
     if (R !== L) R.set(new Float32Array(x.memory.buffer, x.ds_right(), n));
-    if (this.hits.length) {
-      const lv = this.drums.level * 1.2;
+    // Drums on their own outputs: dry, and the sends (reverb left, echo right) that the page turns into rooms
+    const D = outputs[1], F = outputs[2];
+    if (D && D[0]) { D[0].fill(0); D[1].fill(0); F[0].fill(0); F[1].fill(0); }
+    if (this.hits.length && D && D[0]) {
       for (const h of this.hits) {
-        const a = h.b;
-        for (let i = 0; i < n; i++) { const j = h.pos + i; if (j >= 0 && j < a.length) { const v = a[j] * h.g * lv; L[i] += v; if (R !== L) R[i] += v; } }
+        const a = h.v.data, gl = h.v.gl * h.g, gr = h.v.gr * h.g, rv = h.v.rev * h.g, ec = h.v.echo * h.g;
+        for (let i = 0; i < n; i++) {
+          const j = h.pos + i; if (j < 0) continue; if (j >= a.length) break;
+          if (h.choke) { h.cg *= .9965; if (h.cg < .001) { h.pos = a.length; break; } }
+          const v = a[j] * h.cg; D[0][i] += v * gl; D[1][i] += v * gr; F[0][i] += v * rv; F[1][i] += v * ec;
+        }
         h.pos += n;
       }
-      this.hits = this.hits.filter(h => h.pos < h.b.length);
-      for (let i = 0; i < n; i++) { L[i] = Math.max(-.99, Math.min(.99, L[i])); if (R !== L) R[i] = Math.max(-.99, Math.min(.99, R[i])); }
+      this.hits = this.hits.filter(h => h.pos < h.v.data.length);
     }
     if (this.playing) this.ppq += step;
     if (++this.tick % 6 === 0) {
@@ -507,7 +513,7 @@ const store = {
 };
 
 /* ---------- Audio ---------- */
-let ctx = null, node = null, analyser = null, starting = null;
+let ctx = null, node = null, analyser = null, starting = null, master = null, chordBus = null;
 function b64ToBytes(b64) { const s = atob(b64), a = new Uint8Array(s.length); for (let i = 0; i < s.length; i++) a[i] = s.charCodeAt(i); return a; }
 async function startAudio() {
   if (node) { if (ctx.state !== 'running') await ctx.resume(); return; }
@@ -519,16 +525,20 @@ async function startAudio() {
     try { await ctx.audioWorklet.addModule(URL.createObjectURL(new Blob([code], { type: 'application/javascript' }))); }
     catch (e) { await ctx.audioWorklet.addModule('data:application/javascript;base64,' + btoa(unescape(encodeURIComponent(code)))); }
     const wasm = b64ToBytes(WASM_B64).buffer;
-    node = new AudioWorkletNode(ctx, 'drift-sonata', { numberOfInputs: 0, outputChannelCount: [2], processorOptions: { wasm, seed: (Math.random() * 1e9) | 0 } });
+    // Three outputs: the strings, the drums dry, and the drums' sends to their room and echo
+    node = new AudioWorkletNode(ctx, 'drift-sonata', { numberOfInputs: 0, numberOfOutputs: 3, outputChannelCount: [2, 2, 2], processorOptions: { wasm, seed: (Math.random() * 1e9) | 0 } });
     analyser = ctx.createAnalyser(); analyser.fftSize = 2048;
-    // The engine stops at -1 dBFS by itself; this catches the arp on top of it
+    // The engine stops at -1 dBFS by itself; this catches the drums and the arp on top of it
     const safety = ctx.createDynamicsCompressor(); safety.threshold.value = -1; safety.knee.value = 0; safety.ratio.value = 20; safety.attack.value = .002; safety.release.value = .12;
-    node.connect(analyser); analyser.connect(safety); safety.connect(ctx.destination);
+    master = ctx.createGain(); chordBus = ctx.createGain();
+    node.connect(chordBus, 0); chordBus.connect(master); master.connect(analyser); analyser.connect(safety); safety.connect(ctx.destination);
+    drumAudio(); drumFx.bus.connect(master); drumTempo();
+    mixApply(true); meterOn(chordBus, 'chordLevelMeter'); meterOn(drumFx.bus, 'drumLevelMeter'); meterOn(master, 'masterMeter');
     node.port.onmessage = e => onWorklet(e.data);
     values.forEach((v, i) => node.port.postMessage({ t: 'p', i, v }));
     node.port.postMessage({ t: 'bpm', bpm: tempo() });
     sendLine();
-    sendDrums();
+    sendDrums(); sendKit();
     loadSamples();
     if (ctx.state !== 'running') await ctx.resume();
   })().catch(e => { starting = null; setStatus('The sound engine could not start in this browser: ' + e.message); throw e; });
@@ -623,8 +633,8 @@ function drawTrace() {
 requestAnimationFrame(drawTrace);
 
 /* ---------- 3D orbit view: the sources seen from above, you in the middle facing up ---------- */
-const ORBIT_NAMES = ['Osc 1', 'Osc 2', 'Osc 3', 'Osc 4', 'Osc 5', 'Osc 6', 'Choir', 'Cello', 'Strings', 'Brass', 'Texture', 'Robot'];
-const ORBIT_COLORS = ['#e486ab', '#ecd08f', '#e486ab', '#ecd08f', '#e486ab', '#ecd08f', '#7fd3d3', '#3aa3aa', '#b9e3e0', '#c39539', '#f6eee8', '#ffffff'];
+const ORBIT_NAMES = ['Osc 1', 'Osc 2', 'Osc 3', 'Osc 4', 'Osc 5', 'Osc 6', 'Choir', 'Cello', 'Strings', 'Brass', 'Texture', 'Robot', 'Arp'];
+const ORBIT_COLORS = ['#e486ab', '#ecd08f', '#e486ab', '#ecd08f', '#e486ab', '#ecd08f', '#7fd3d3', '#3aa3aa', '#b9e3e0', '#c39539', '#f6eee8', '#ffffff', '#ffd76a'];
 let orbitSrc = [];
 function drawOrbit() {
   const c = document.getElementById('orbit');
@@ -636,12 +646,14 @@ function drawOrbit() {
     // the listener: a head with a nose pointing forward (up)
     g.fillStyle = '#f6eee8'; g.beginPath(); g.arc(cx, cy, w * .035, 0, Math.PI * 2); g.fill();
     g.beginPath(); g.moveTo(cx - w * .012, cy - w * .03); g.lineTo(cx, cy - w * .055); g.lineTo(cx + w * .012, cy - w * .03); g.fill();
-    orbitSrc.forEach(([az, el, d, lv], k) => {
+    const srcs = orbitSrc.slice(); if (arpPos && arpPrefs.on && arpMode) srcs[12] = [...arpPos, .05];
+    srcs.forEach(([az, el, d, lv], k) => {
       if (lv < .0005) return;
       const r = Math.min(1, d / 3.4) * R * Math.cos(el * .7), x = cx + Math.sin(az) * r, y = cy - Math.cos(az) * r;
       const size = (2.5 + 4 * Math.max(0, Math.min(1, (el + .6) / 1.4))) * devicePixelRatio;
       g.globalAlpha = Math.min(1, .35 + lv * 40); g.fillStyle = ORBIT_COLORS[k];
       g.beginPath(); g.arc(x, y, size, 0, Math.PI * 2); g.fill(); g.globalAlpha = 1;
+      if (k === 12) { g.strokeStyle = ORBIT_COLORS[k]; g.lineWidth = 1.5 * devicePixelRatio; g.beginPath(); g.arc(x, y, size * 2, 0, Math.PI * 2); g.stroke(); }  // the arp, ringed
     });
   }
   requestAnimationFrame(drawOrbit);
@@ -834,10 +846,6 @@ document.querySelectorAll('details.fold').forEach(d => {
   d.addEventListener('toggle', () => store.set(k, d.open));
 });
 $('room').addEventListener('toggle', () => store.set('ds-room', $('room').open));
-// Output level lives in the bottom bar
-$('level').addEventListener('input', () => { setValue('level', +$('level').value); });
-onCtl('level', v => { $('level').value = v; $('level').style.setProperty('--pct', ((v + 24) / 30 * 100) + '%'); });
-$('level').style.setProperty('--pct', '80%');
 
 /* ---------- Sound bank: 111 numbered sounds, variations of the factory sounds (as in STAB LAB) ---------- */
 const DEFAULTS = P.map(p => p.def);
@@ -897,7 +905,7 @@ $('soundDice').addEventListener('click', () => {
 });
 // « ‹ › » step through a bank by one or ten
 document.querySelectorAll('[data-bank]').forEach(b => b.addEventListener('click', () => {
-  const sel = $({ sound: 'soundSel', line: 'lineSel', arp: 'arpSel', arps: 'arpSoundSel' }[b.dataset.bank]), opts = [...sel.options].filter(o => o.value !== 'x');
+  const sel = $({ sound: 'soundSel', line: 'lineSel', arp: 'arpSel', arps: 'arpSoundSel', kit: 'kitSel', groove: 'drumSel' }[b.dataset.bank]), opts = [...sel.options].filter(o => o.value !== 'x');
   let i = opts.findIndex(o => o.value === sel.value);
   if (i < 0) i = opts.findIndex(o => o.value === (b.dataset.bank === 'sound' ? soundChoice : String(lineChoice)));
   i = ((Math.max(0, i) + +b.dataset.d) % opts.length + opts.length) % opts.length;
@@ -1059,7 +1067,7 @@ function drawPads() {
   $('pads').addEventListener('pointerup', up); $('pads').addEventListener('pointercancel', up);
 }
 
-/* ---------- Drums: STAB LAB's grooves, to hear the strings against a beat ---------- */
+/* ---------- Grooves: STAB LAB's, each with an open hat and two percussion lines, and new ones with all six ---------- */
 const DRUMS = [
   ['Floating dust', 68, 'Chill / Ambient', [[0, 10], [8], [2, 6, 10, 14]]], ['Slow neon', 76, 'Chill / Ambient', [[0, 7, 12], [8], [2, 6, 10, 14]]], ['Weightless', 84, 'Chill / Ambient', [[0, 11], [8], [0, 4, 8, 12]]],
   ['Late air', 88, 'Chill / Ambient', [[0, 6, 14], [8], [2, 6, 10, 13, 14]]], ['Tape steps', 72, 'Chill / Ambient', [[0, 10], [7, 15], [2, 4, 6, 10, 12, 14]]], ['Breathing room', 90, 'Chill / Ambient', [[0, 6, 11], [8], [1, 5, 9, 13]]],
@@ -1068,21 +1076,278 @@ const DRUMS = [
   ['Night train', 94, 'Rap', [[0, 6, 9, 14], [4, 12], [0, 2, 4, 6, 8, 10, 12, 14]]], ['Loose hands', 98, 'Rap', [[0, 7, 10, 15], [4, 12], [0, 2, 3, 6, 8, 10, 11, 14]]],
   ['Broken house', 106, 'House / Broken', [[0, 6, 8, 14], [4, 12], [2, 6, 10, 14]]], ['Disco pocket', 110, 'House / Broken', [[0, 4, 8, 12], [4, 12], [2, 6, 10, 14]]], ['Warehouse', 116, 'House / Broken', [[0, 4, 8, 12], [4, 12], [0, 2, 4, 6, 8, 10, 12, 14]]],
   ['Deep steps', 120, 'House / Broken', [[0, 4, 8, 12], [4, 12], [2, 6, 10, 14]]], ['Rubber floor', 122, 'House / Broken', [[0, 4, 8, 12], [4, 12], [1, 2, 5, 6, 9, 10, 13, 14]]], ['Neon engine', 128, 'House / Broken', [[0, 4, 8, 12], [4, 12], [2, 6, 10, 14, 15]]],
-].map(([name, bpm, group, pattern], i) => ({ name, bpm, group, pattern, i }));
-const drumPrefs = store.get('ds-drums', { on: false, i: 6, level: .5 });
-$('drumSel').innerHTML = [...new Set(DRUMS.map(d => d.group))].map(g => `<optgroup label="${g}">${DRUMS.filter(d => d.group === g).map(d => `<option value="${d.i}">${d.name} · ${d.bpm} BPM</option>`).join('')}</optgroup>`).join('');
-$('drumSel').value = String(drumPrefs.i); $('drumLevel').value = drumPrefs.level;
-$('drumLevel').style.setProperty('--pct', drumPrefs.level * 100 + '%');
-function sendDrums() {
-  const d = DRUMS[+$('drumSel').value], on = $('drumOn').getAttribute('aria-pressed') === 'true', level = +$('drumLevel').value;
-  $('drumLevel').style.setProperty('--pct', level * 100 + '%');
-  store.set('ds-drums', { on, i: d.i, level });
-  if (node) node.port.postMessage({ t: 'drums', drums: { on, pattern: d.pattern, level, slow: d.bpm < 92 } });
+].map(([name, bpm, group, pattern], i) => {
+  // STAB LAB's grooves have kick, snare and hat; each gets an open hat and two percussion lines that keep out of their way
+  const [k, s, h] = pattern, used = new Set([...k, ...s]);
+  const O = [[14], [6, 14], [], [10], [2], []][i % 6], Pf = [[3, 11], [7, 15], [3, 6, 11], [10, 13], [2, 7, 10, 15], [6, 14], [5, 13], [3, 10, 14]][i % 8], Q = [[12], [6], [15], [9], [4, 13], []][(i * 5) % 6];
+  const free = a => a.filter(x => !used.has(x));
+  return { name, bpm, group, lanes: { k, s, h, o: free(O), p: free(Pf), q: free(Q) }, swing: group === 'Rap' ? .35 : group === 'Trip-hop / Darkwave' ? .2 : 0 };
+}).concat([
+  ['Motorik', 118, 'Electronic', { k: [0, 4, 8, 12], s: [4, 12], h: [0, 2, 4, 6, 8, 10, 12, 14], p: [6, 14] }],
+  ['Radio pulse', 100, 'Electronic', { k: [0, 8, 11], s: [4, 12], h: [2, 6, 10, 14], o: [14], p: [3, 7, 15], q: [10] }],
+  ['Tin robot', 108, 'Electronic', { k: [0, 6, 8], s: [4, 12], h: [0, 2, 4, 6, 8, 10, 12, 14], p: [3, 11], q: [7, 15] }],
+  ['Glide steps', 90, 'Electronic', { k: [0, 8], s: [4, 12], h: [2, 6, 10, 14], p: [3, 9, 13], q: [6] }],
+  ['Electro four', 124, 'Electronic', { k: [0, 4, 8, 12], s: [4, 12], h: [2, 6, 10, 14], p: [1, 9], q: [7] }],
+  ['Orb lull', 72, 'Ambient / Dub', { k: [0, 10], s: [8], h: [4, 12], o: [14], p: [3, 6, 11], q: [13] }],
+  ['Dub pulse', 74, 'Ambient / Dub', { k: [0, 11], s: [8], h: [2, 6, 10, 14], p: [7, 15], q: [12] }],
+  ['Half-time haze', 70, 'Ambient / Dub', { k: [0, 3], s: [8], h: [2, 6, 10, 14], o: [12], p: [11, 14] }],
+  ['Heartbeat', 64, 'Ambient / Dub', { k: [0, 3], h: [8], p: [12] }],
+  ['Feather', 76, 'Ambient / Dub', { k: [0], s: [8], h: [4, 10, 12], o: [14], p: [6] }],
+  ['Glider', 84, 'Ambient / Dub', { k: [0, 7, 8], s: [4, 12], h: [0, 2, 4, 6, 8, 10, 12, 14], p: [11] }],
+  ['Bristol rain', 80, 'Trip-hop / Darkwave', { k: [0, 7, 10], s: [8], h: [0, 3, 6, 8, 11, 14], p: [13], q: [5] }, .25],
+  ['Darkwave march', 116, 'Trip-hop / Darkwave', { k: [0, 4, 8, 12], s: [4, 12], h: [2, 6, 10, 14], o: [6, 14], q: [3, 11] }],
+  ['Breakbeat bloom', 92, 'Breaks', { k: [0, 10], s: [4, 12], h: [0, 2, 4, 6, 8, 10, 12, 14], p: [7], q: [15] }, .3],
+  ['Hushed break', 86, 'Breaks', { k: [0, 2, 10, 11], s: [4, 7, 12, 15], h: [0, 2, 4, 6, 8, 10, 12, 14], q: [9] }, .25],
+  ['Slow funk', 88, 'Breaks', { k: [0, 3, 10], s: [4, 7, 9, 12, 15], h: [0, 2, 4, 6, 8, 10, 12, 14] }, .3],
+  ['Lazy boom', 80, 'Breaks', { k: [0, 7, 10], s: [4, 12], h: [0, 2, 4, 6, 8, 10, 12, 14], o: [14], p: [11] }, .45],
+  ['Conga drift', 96, 'Percussion', { k: [0, 8], s: [12], h: [2, 6, 10, 14], p: [3, 6, 10, 13], q: [0, 7, 11] }],
+  ['Tom ritual', 84, 'Percussion', { k: [0, 10], s: [8], h: [4, 12], p: [2, 5, 11, 14], q: [7, 9] }],
+  ['Bongo lantern', 100, 'Percussion', { k: [0, 6, 12], s: [4, 12], h: [0, 4, 8, 12], p: [2, 3, 10, 11], q: [7, 15] }, .2],
+  ['Cowbell glow', 110, 'Percussion', { k: [0, 4, 8, 12], s: [4, 12], h: [2, 6, 10, 14], p: [3, 11], q: [6, 14] }],
+  ['Rain on skins', 78, 'Percussion', { k: [0, 11], s: [8], h: [2, 6, 10, 14], p: [1, 3, 5, 9, 13], q: [7, 15] }, .15],
+].map(([name, bpm, group, lanes, swing]) => ({ name, bpm, group, lanes: { k: [], s: [], h: [], o: [], p: [], q: [], ...lanes }, swing: swing || 0 })))
+  .map((g, i) => ({ ...g, i }));
+
+/* ---------- Drum kits: synthesized ones, ones cut from breaks, and the two mixed (as in STAB LAB, but as sound sets) ----------
+   A kit is a sound for each lane (kick, snare, hat, open hat, two percussion), with its level, place and how much of
+   it goes to the drum room and the echo. The sounds are made here at the audio rate, or cut from recordings
+   (tools/chop_drums.py, embedded with build.py --drums). */
+const DRUM_HITS = "@@DRUMHITS@@";
+const LANES = ['k', 's', 'h', 'o', 'p', 'q'], LANE_NAMES = { k: 'Kick', s: 'Snare', h: 'Hat', o: 'Open hat', p: 'Perc', q: 'Perc 2' };
+const hitList = Array.isArray(DRUM_HITS) ? DRUM_HITS : [];
+const hitsOf = (cls, kind) => hitList.map((h, i) => [h, i]).filter(([h]) => h.cls === cls && (!kind || (kind === 'loop' ? h.kind === 'loop' : h.kind !== 'loop'))).map(([, i]) => i);
+const pickR = (R, a) => a[Math.floor(R() * a.length)];
+const between = (R, a, b) => a + (b - a) * R();
+// What each kind of kit is made of; R picks within ranges that always sound good
+const ARCHETYPES = [
+  ['Round', 'plate', R => ({ k: { t: 'kick', f: between(R, 44, 52), sweep: between(R, 80, 120), sd: between(R, 26, 36), dec: between(R, .14, .2), click: .03 }, s: { t: 'snare', tone: between(R, 170, 200), td: 40, nd: between(R, 14, 20), color: .2, mix: .55 },
+    h: { t: 'hat', dec: .012, metal: 0, hp: 7000 }, o: { t: 'hat', dec: .16, metal: 0, hp: 6500 }, p: { t: 'wood', f: between(R, 500, 760), dec: .09 }, q: { t: 'clave', f: between(R, 2000, 2600), dec: .04 } })],
+  ['Velvet', 'hall', R => ({ k: { t: 'kick', f: between(R, 42, 48), sweep: between(R, 70, 100), sd: 22, dec: between(R, .3, .5), click: .02 }, s: { t: 'clap', f: between(R, 1000, 1400), dec: .2 },
+    h: { t: 'hat', dec: .02, metal: 1, hp: 6000 }, o: { t: 'hat', dec: .22, metal: 1, hp: 5500 }, p: { t: 'cow', f: between(R, 520, 600), dec: .14 }, q: { t: 'tom', f: between(R, 110, 150), bend: .5, dec: .3 } })],
+  ['Kraft', 'room', R => ({ k: { t: 'kick', f: 55, sweep: 140, sd: 45, dec: .1, click: .05 }, s: { t: 'zap', f: between(R, 1400, 2200), to: 160, dec: .1, noise: .5 },
+    h: { t: 'hat', dec: .008, metal: 0, hp: 8000 }, o: { t: 'hat', dec: .09, metal: 0, hp: 8000 }, p: { t: 'blip', f: between(R, 600, 1200), ratio: pickR(R, [1.5, 2, 2.5, 3.5]), index: 3, dec: .07 }, q: { t: 'blip', f: between(R, 1200, 2000), ratio: 2, index: 2, dec: .05 } })],
+  ['Bristol', 'dark', R => ({ k: { t: 'kick', f: between(R, 46, 54), sweep: 90, sd: 30, dec: .18, click: .04, drive: .3 }, s: { t: 'snare', tone: between(R, 160, 190), td: 30, nd: 10, color: .1, mix: .7 },
+    h: { t: 'shaker', dec: .05 }, o: { t: 'hat', dec: .14, metal: 0, hp: 5000 }, p: { t: 'rim', f: between(R, 1500, 1900), dec: .025 }, q: { t: 'tom', f: between(R, 80, 110), bend: .3, dec: .35 } })],
+  ['Glass', 'plate', R => ({ k: { t: 'kick', f: 58, sweep: 130, sd: 50, dec: .08, click: .06 }, s: { t: 'rim', f: between(R, 1700, 2300), dec: .03 },
+    h: { t: 'hat', dec: .006, metal: 1, hp: 9000 }, o: { t: 'hat', dec: .07, metal: 1, hp: 8500 }, p: { t: 'blip', f: between(R, 1500, 2600), ratio: 3.5, index: 1.5, dec: .06 }, q: { t: 'wood', f: between(R, 900, 1300), dec: .05 } })],
+  ['Orbit', 'hall', R => ({ k: { t: 'kick', f: 50, sweep: 120, sd: 38, dec: .14, click: .05, drive: .2 }, s: { t: 'clap', f: between(R, 1100, 1600), dec: .16 },
+    h: { t: 'hat', dec: .014, metal: 0, hp: 7500 }, o: { t: 'hat', dec: .2, metal: 0, hp: 7000 }, p: { t: 'zap', f: between(R, 900, 1600), to: 300, dec: .08 }, q: { t: 'cow', f: between(R, 700, 820), dec: .1 } })],
+  ['Lull', 'hall', R => ({ k: { t: 'kick', f: between(R, 42, 50), sweep: 70, sd: 25, dec: .22, click: .01 }, s: { t: 'snare', tone: 200, td: 60, nd: between(R, 8, 12), color: .3, mix: .85 },
+    h: { t: 'shaker', dec: between(R, .05, .08) }, o: { t: 'shaker', dec: .16 }, p: { t: 'tom', f: between(R, 180, 240), bend: .25, dec: .2 }, q: { t: 'tom', f: between(R, 260, 340), bend: .2, dec: .16 } })],
+  ['Electro', 'room', R => ({ k: { t: 'kick', f: 52, sweep: 110, sd: 35, dec: .16, click: .04 }, s: { t: 'snare', tone: 190, td: 45, nd: 20, color: .25, mix: .5 },
+    h: { t: 'hat', dec: .01, metal: 1, hp: 7000 }, o: { t: 'hat', dec: .15, metal: 1, hp: 6500 }, p: { t: 'tom', f: between(R, 90, 130), bend: .7, dec: .25 }, q: { t: 'tom', f: between(R, 150, 210), bend: .7, dec: .2 } })],
+  ['Haze', 'dark', R => ({ k: { t: 'kick', f: 48, sweep: 100, sd: 32, dec: .15, click: .05, drive: .5 }, s: { t: 'snare', tone: 175, td: 35, nd: 9, color: .12, mix: .75 },
+    h: { t: 'hat', dec: .016, metal: 1, hp: 6500 }, o: { t: 'hat', dec: .25, metal: 1, hp: 6000 }, p: { t: 'zap', f: between(R, 600, 1000), to: 90, dec: .14 }, q: { t: 'rim', f: 1600, dec: .03 } })],
+  ['Pillow', 'cloud', R => ({ k: { t: 'kick', f: between(R, 44, 50), sweep: 60, sd: 22, dec: .2, click: .01 }, s: { t: 'snare', tone: 210, td: 70, nd: between(R, 7, 10), color: .35, mix: .9 },
+    h: { t: 'shaker', dec: .06 }, o: { t: 'hat', dec: .3, metal: 0, hp: 9000 }, p: { t: 'wood', f: between(R, 400, 600), dec: .14 }, q: { t: 'clave', f: between(R, 1600, 2000), dec: .06 } })],
+  ['Circuit', 'plate', R => ({ k: { t: 'kick', f: between(R, 48, 56), sweep: 100, sd: 40, dec: .12, click: .03 }, s: { t: 'blip', f: between(R, 300, 500), ratio: 1.41, index: 6, dec: .12, noise: .4 },
+    h: { t: 'blip', f: between(R, 4000, 6000), ratio: 1.7, index: 4, dec: .02 }, o: { t: 'hat', dec: .12, metal: 1, hp: 7000 }, p: { t: 'blip', f: between(R, 700, 1100), ratio: pickR(R, [2.01, 3.5, 1.5]), index: 4, dec: .09 }, q: { t: 'wood', f: between(R, 1100, 1600), dec: .05 } })],
+  ['Dub', 'room', R => ({ k: { t: 'kick', f: between(R, 42, 48), sweep: 80, sd: 26, dec: .25, click: .02 }, s: { t: 'rim', f: between(R, 1400, 1800), dec: .04 },
+    h: { t: 'hat', dec: .012, metal: 0, hp: 6000 }, o: { t: 'hat', dec: .12, metal: 0, hp: 6000 }, p: { t: 'clave', f: between(R, 1800, 2400), dec: .05 }, q: { t: 'tom', f: between(R, 100, 140), bend: .4, dec: .3 } })],
+];
+// Level (dB), place (-1 left .. 1 right), reverb send, echo send per lane; the snare and percussion get the room
+const MIX = { k: [-1, 0, .04, 0], s: [-5, 0, .32, .06], h: [-13, .18, .06, 0], o: [-15, -.2, .14, 0], p: [-10, -.45, .4, .12], q: [-12, .5, .35, .1] };
+const WORDS_A = ['Velvet', 'Moon', 'Glass', 'Paper', 'Slow', 'Quiet', 'Copper', 'Silver', 'Pearl', 'Night', 'Amber', 'Cloud', 'Rubber', 'Linen', 'Opal', 'Dusty', 'Low', 'Soft', 'Late', 'Golden'];
+const WORDS_B = ['Pocket', 'Engine', 'Lantern', 'Garden', 'Signal', 'Room', 'Steps', 'Tide', 'Circuit', 'Halo', 'Orbit', 'Rain', 'Thread', 'Machine', 'Shelter', 'Harbour', 'Stairs', 'Hush', 'Motion', 'Lullaby'];
+const ROOMS = ['room', 'plate', 'hall', 'dark', 'cloud'];
+const KITS = (() => {
+  const out = [], vary = (R, mix) => { const m = {}; for (const l of LANES) m[l] = mix[l].slice(); m.s[2] = between(R, .2, .45); m.p[2] = between(R, .25, .55); m.q[2] = between(R, .2, .5); m.p[1] = -between(R, .3, .7); m.q[1] = between(R, .3, .7); return m; };
+  // Electronic: each kind, then variations of it
+  for (let v = 0; v < 10; v++) ARCHETYPES.forEach(([kind, room], a) => {
+    const R = rng32(4001 + a * 97 + v * 7919), lanes = ARCHETYPES[a][2](R);
+    if (v) for (const l of LANES) if (lanes[l].dec) lanes[l].dec *= between(R, .8, 1.25);
+    out.push({ name: v ? `${kind} · ${pickR(R, WORDS_A)} ${pickR(R, WORDS_B)}` : `${kind} kit`, group: 'Electronic', lanes, mix: vary(R, MIX), room: v % 3 ? pickR(R, ROOMS) : room, seed: 4001 + a * 97 + v * 7919 });
+  });
+  if (hitList.length) {
+    const srcs = [...new Set(hitList.filter(h => h.kind === 'loop').map(h => h.src))];
+    const any = (cls, src, R, kind) => { const own = hitList.map((h, i) => [h, i]).filter(([h]) => h.cls === cls && h.src === src).map(([, i]) => i); return own.length ? pickR(R, own) : pickR(R, hitsOf(cls, kind)); };
+    const percs = hitsOf('perc', 'perc'), hats = hitsOf('hat');
+    // Breaks: a loop's own kick, snare and hat (borrowed when it had none), with its own or a recorded percussion
+    srcs.forEach((src, si) => { for (let v = 0; v < 3; v++) {
+      const R = rng32(7001 + si * 131 + v * 17);
+      const round = v === 1, lanes = { k: round ? ARCHETYPES[0][2](R).k : { t: 'hit', i: any('kick', src, R, 'loop') }, s: { t: 'hit', i: any('snare', src, R, 'loop') }, h: { t: 'hit', i: any('hat', src, R) },
+        o: { t: 'hit', i: pickR(R, hats), rate: .85, len: .35 }, p: { t: 'hit', i: v === 2 ? pickR(R, percs) : any('perc', src, R) }, q: { t: 'hit', i: pickR(R, percs) } };
+      out.push({ name: `${src}${v === 1 ? ' · round kick' : v === 2 ? ' · ' + pickR(R, WORDS_B).toLowerCase() : ''}`, group: 'Breaks', lanes, mix: vary(R, MIX), room: pickR(R, ['room', 'plate', 'dark']), seed: 7001 + si });
+    } });
+    // Hybrid: a synthesized kick, recorded snares, hats and percussion, from all over
+    for (let v = 0; v < 150; v++) {
+      const R = rng32(9001 + v * 613), arch = ARCHETYPES[Math.floor(R() * ARCHETYPES.length)][2](R);
+      const lanes = { k: R() < .75 ? arch.k : { t: 'hit', i: pickR(R, hitsOf('kick')) }, s: R() < .8 ? { t: 'hit', i: pickR(R, hitsOf('snare')) } : arch.s, h: R() < .7 ? { t: 'hit', i: pickR(R, hats) } : arch.h,
+        o: R() < .5 ? { t: 'hit', i: pickR(R, hats), rate: .8, len: .4 } : arch.o, p: { t: 'hit', i: pickR(R, percs), rate: between(R, .9, 1.12) }, q: R() < .6 ? { t: 'hit', i: pickR(R, percs), rate: between(R, .9, 1.2) } : arch.q };
+      const pk = hitList[lanes.p.i];
+      out.push({ name: `${pk.src} ${pickR(R, WORDS_B)} · ${pickR(R, WORDS_A).toLowerCase()}`, group: 'Hybrid', lanes, mix: vary(R, MIX), room: pickR(R, ROOMS), seed: 9001 + v });
+    }
+    // Percussion: hand drums and toms in front, soft kick and rim, and plenty of room
+    for (let v = 0; v < 40; v++) {
+      const R = rng32(12001 + v * 389), mix = vary(R, MIX);
+      mix.p = [-6, -between(R, .3, .6), between(R, .35, .6), .1]; mix.q = [-8, between(R, .3, .6), between(R, .3, .55), .08]; mix.s[0] = -9;
+      const lanes = { k: ARCHETYPES[R() < .5 ? 0 : 6][2](R).k, s: R() < .5 ? { t: 'rim', f: between(R, 1400, 2000), dec: .03 } : { t: 'hit', i: pickR(R, hitsOf('snare')) }, h: { t: 'hit', i: pickR(R, hats) },
+        o: { t: 'shaker', dec: .14 }, p: { t: 'hit', i: pickR(R, percs), rate: between(R, .92, 1.08) }, q: { t: 'hit', i: pickR(R, percs), rate: between(R, .95, 1.15) } };
+      out.push({ name: `${hitList[lanes.p.i].src} & ${hitList[lanes.q.i].src.toLowerCase()} · ${pickR(R, WORDS_B).toLowerCase()}`, group: 'Percussion', lanes, mix, room: pickR(R, ['hall', 'cloud', 'plate']), seed: 12001 + v });
+    }
+  }
+  return out;
+})();
+
+// One drum sound at the audio rate: drums made from oscillators and noise, or a recorded hit (retuned by rate)
+let hitBufs = [], hitsLoading = null;
+function drumSound(v, sr) {
+  if (v.t === 'hit') {
+    const src = hitBufs[v.i]; if (!src) return new Float32Array(16);
+    const rate = v.rate || 1, len = Math.min(Math.floor(src.length / rate), v.len ? Math.floor(v.len * sr) : 1e9), a = new Float32Array(len);
+    for (let i = 0; i < len; i++) { const x = i * rate, j = Math.floor(x), f = x - j; a[i] = (src[j] || 0) * (1 - f) + (src[j + 1] || 0) * f; }
+    const fo = Math.min(len >> 2, Math.floor(sr * .015)); for (let i = 0; i < fo; i++) a[len - 1 - i] *= i / fo;
+    return a;
+  }
+  const R = rng32(v.seed || 1453), dur = { kick: (v.dec || .15) * 6 + .05, snare: .45, clap: (v.dec || .2) + .1, hat: (v.dec || .02) * 7 + .01, tom: (v.dec || .25) * 5, rim: .08, cow: (v.dec || .15) * 5, clave: .12, shaker: (v.dec || .06) * 5 + .02, blip: (v.dec || .08) * 6, zap: (v.dec || .1) * 4, wood: (v.dec || .1) * 6 }[v.t] || .3;
+  const n = Math.ceil(sr * Math.min(1.6, dur)), a = new Float32Array(n), TAU = 2 * Math.PI;
+  let ph = 0, ph2 = 0, lp = 0, lp2 = 0, hp1 = 0, hpx = 0, hp2 = 0, hpx2 = 0, b1 = 0, b2 = 0;
+  const hpk = f => Math.exp(-TAU * f / sr);
+  // a resonant band-pass (state variable) for claps, rims and snare noise colour
+  const bp = (x, f, q) => { const g = Math.tan(Math.PI * Math.min(f, sr * .45) / sr), k = 1 / q, a1 = 1 / (1 + g * (g + k)); const v1 = a1 * (b1 + g * (x - b2)); const v2 = b2 + g * v1; b1 = 2 * v1 - b1; b2 = 2 * v2 - b2; return v1; };
+  const MET = [205.3, 304.4, 369.6, 522.7, 540, 800];
+  for (let i = 0; i < n; i++) {
+    const t = i / sr, noise = R() * 2 - 1; let x = 0;
+    switch (v.t) {
+      case 'kick': {
+        ph += TAU * (v.f + v.sweep * Math.exp(-t * v.sd)) / sr;
+        x = Math.sin(ph) * Math.exp(-t / v.dec) + noise * Math.exp(-t * 500) * (v.click || 0);
+        if (v.drive) x = Math.tanh(x * (1 + v.drive * 3)) / Math.tanh(1 + v.drive * 3);
+        break;
+      }
+      case 'snare': {
+        lp += (v.color || .2) * (noise - lp);
+        const body = Math.sin(TAU * v.tone * t) * Math.exp(-t * v.td) + Math.sin(TAU * v.tone * 1.6 * t) * .4 * Math.exp(-t * v.td * 1.4);
+        x = ((noise - lp) * .9 * v.mix * Math.exp(-t * v.nd) + body * (1 - v.mix) * .9) * Math.min(1, t * 2000);
+        break;
+      }
+      case 'clap': {
+        const burst = [0, .011, .022].reduce((s, o) => s + (t >= o ? Math.exp(-(t - o) * 260) : 0), 0) * .6 + Math.exp(-t / (v.dec * .5)) * .5;
+        x = bp(noise, v.f, 1.4) * burst * 2.2;
+        break;
+      }
+      case 'hat': {
+        let src = noise;
+        if (v.metal) { src = 0; for (const f of MET) src += Math.sign(Math.sin(TAU * f * 1.71 * t)) / 6; src = src * .8 + noise * .2; }
+        const k = hpk(v.hp); hp1 = k * (hp1 + src - hpx); hpx = src; hp2 = k * (hp2 + hp1 - hpx2); hpx2 = hp1;
+        x = hp2 * Math.exp(-t / v.dec) * Math.min(1, t * 4000) * 1.6;
+        break;
+      }
+      case 'tom': {
+        ph += TAU * v.f * (1 + v.bend * Math.exp(-t * 28)) / sr;
+        x = (Math.sin(ph) + .15 * Math.sin(ph * 2.02) * Math.exp(-t * 20)) * Math.exp(-t / v.dec) + noise * Math.exp(-t * 300) * .08;
+        break;
+      }
+      case 'rim': x = bp(noise * Math.exp(-t * 900) + Math.sin(TAU * v.f * t) * .6, v.f, 6) * Math.exp(-t / v.dec) * 3; break;
+      case 'cow': {
+        const sq = Math.sign(Math.sin(TAU * v.f * t)) + Math.sign(Math.sin(TAU * v.f * 1.48 * t)) * .8;
+        lp += .25 * (sq - lp); x = lp * (Math.exp(-t * 60) * .5 + Math.exp(-t / v.dec) * .5) * .5;
+        break;
+      }
+      case 'clave': x = Math.sin(TAU * v.f * t) * Math.exp(-t / v.dec); break;
+      case 'shaker': {
+        const k = hpk(4500); hp1 = k * (hp1 + noise - hpx); hpx = noise;
+        x = hp1 * Math.min(1, t / .008) * Math.exp(-Math.max(0, t - .008) / v.dec);
+        break;
+      }
+      case 'blip': {
+        ph2 += TAU * v.f * v.ratio / sr; ph += TAU * v.f / sr + Math.sin(ph2) * v.index * Math.exp(-t * 25) * TAU * v.f / sr;
+        x = Math.sin(ph) * Math.exp(-t / v.dec) + (v.noise ? noise * v.noise * Math.exp(-t * 40) : 0);
+        break;
+      }
+      case 'zap': {
+        ph += TAU * (v.to + (v.f - v.to) * Math.exp(-t / (v.dec * .35))) / sr;
+        x = Math.sin(ph) * Math.exp(-t / v.dec) + (v.noise ? noise * v.noise * Math.exp(-t * 30) : 0);
+        break;
+      }
+      case 'wood': x = [1, 2.57, 4.1].reduce((s, r, j) => s + Math.sin(TAU * v.f * r * t) * [1, .5, .25][j] * Math.exp(-t / (v.dec * [1, .6, .4][j])), 0) * .6; break;
+    }
+    a[i] = x;
+  }
+  let peak = 1e-6; for (let i = 0; i < n; i++) peak = Math.max(peak, Math.abs(a[i]));
+  const fo = Math.min(n >> 2, Math.floor(sr * .01));
+  for (let i = 0; i < n; i++) a[i] *= .9 / peak * Math.min(1, i / 24, (n - 1 - i) / fo);
+  return a;
 }
-function setDrumsOn(on) { $('drumOn').setAttribute('aria-pressed', on); sendDrums(); }
-$('drumOn').addEventListener('click', () => setDrumsOn($('drumOn').getAttribute('aria-pressed') !== 'true'));
+async function loadHits() {
+  if (hitsLoading) return hitsLoading;
+  hitsLoading = (async () => {
+    for (let i = 0; i < hitList.length; i++) {
+      try {
+        const d = (await ctx.decodeAudioData(b64ToBytes(hitList[i].b64).buffer)).getChannelData(0);
+        // the codec may put a little silence first: start at the attack, whatever the browser did
+        let peak = 0; for (const x of d) peak = Math.max(peak, Math.abs(x));
+        let s = 0; while (s < d.length && Math.abs(d[s]) < peak * .03) s++;
+        hitBufs[i] = d.slice(Math.max(0, s - Math.floor(ctx.sampleRate * .001)));
+      } catch (e) { hitBufs[i] = null; }
+    }
+  })();
+  return hitsLoading;
+}
+
+/* ---------- The drum channel: the kit sent to the engine, the rooms here ---------- */
+const drumPrefs = Object.assign({ on: false, i: 6, kit: 0, level: -3 }, store.get('ds-drums', {}));
+if (drumPrefs.level > 0 && drumPrefs.level <= 1) drumPrefs.level = -3;  // from when the level was 0..1
+let drumFx = null, drumIR = {};
+function drumRoom(style) {
+  // a room as a decaying stereo noise: short and woody, a bright plate, a hall, a dark room, a cloud
+  if (drumIR[style]) return drumIR[style];
+  const [len, damp, pre] = { room: [.7, .55, .008], plate: [1.5, .25, .004], hall: [2.4, .45, .02], dark: [1.6, .8, .012], cloud: [3.2, .5, .03] }[style] || [1, .5, .01];
+  const sr = ctx.sampleRate, n = Math.floor(sr * len), b = ctx.createBuffer(2, n, sr);
+  for (let c = 0; c < 2; c++) { const a = b.getChannelData(c), R = rng32(311 + c * 7 + style.length); let lp = 0;
+    for (let i = 0; i < n; i++) { const t = i / sr; lp = lp * (damp + (1 - damp) * Math.min(.95, t / len)) + (R() * 2 - 1) * (1 - damp); a[i] = t < pre ? 0 : lp * Math.exp(-6.5 * t / len) * Math.min(1, (t - pre) / .005); } }
+  return drumIR[style] = b;
+}
+function drumAudio() {
+  if (drumFx || !ctx) return drumFx;
+  const bus = ctx.createGain(), split = ctx.createChannelSplitter(2), verb = ctx.createConvolver(), verbOut = ctx.createGain(), verbHp = ctx.createBiquadFilter();
+  verbHp.type = 'highpass'; verbHp.frequency.value = 220; verbOut.gain.value = 1.1;
+  node.connect(bus, 1); node.connect(split, 2);
+  split.connect(verbHp, 0); verbHp.connect(verb); verb.connect(verbOut); verbOut.connect(bus);
+  // ping-pong echo on a dotted eighth, darkening on every repeat
+  const dl = ctx.createDelay(3), dr = ctx.createDelay(3), fl = ctx.createGain(), fr = ctx.createGain(), tl = ctx.createBiquadFilter(), tr = ctx.createBiquadFilter(), merge = ctx.createChannelMerger(2), echoOut = ctx.createGain();
+  tl.type = tr.type = 'lowpass'; tl.frequency.value = tr.frequency.value = 2600; fl.gain.value = fr.gain.value = .42; echoOut.gain.value = .8;
+  split.connect(dl, 1); dl.connect(tl); tl.connect(fr); fr.connect(dr); dr.connect(tr); tr.connect(fl); fl.connect(dl);
+  dl.connect(merge, 0, 0); dr.connect(merge, 0, 1); merge.connect(echoOut); echoOut.connect(bus);
+  drumFx = { bus, verb, dl, dr };
+  return drumFx;
+}
+function drumTempo() { if (drumFx) { const t = .75 * 60 / tempo(); drumFx.dl.delayTime.setTargetAtTime(t, ctx.currentTime, .05); drumFx.dr.delayTime.setTargetAtTime(t, ctx.currentTime, .05); } }
+let kitGen = 0;
+async function sendKit() {
+  if (!node) return;
+  const kit = KITS[drumPrefs.kit] || KITS[0], gen = ++kitGen;
+  if (Object.values(kit.lanes).some(v => v.t === 'hit')) await loadHits();
+  if (gen !== kitGen) return;
+  const sr = ctx.sampleRate, out = {}, transfer = [];
+  for (const l of LANES) {
+    const v = kit.lanes[l]; if (!v) continue;
+    const [db, pan, rev, echo] = kit.mix[l], g = Math.pow(10, db / 20), data = drumSound({ seed: kit.seed + l.charCodeAt(0), ...v }, sr);
+    out[l] = { data, gl: g * Math.cos((pan + 1) * Math.PI / 4) * Math.SQRT2, gr: g * Math.sin((pan + 1) * Math.PI / 4) * Math.SQRT2, rev: g * rev, echo: g * echo };
+    transfer.push(data.buffer);
+  }
+  node.port.postMessage({ t: 'kit', kit: out }, transfer);
+  if (drumFx) drumFx.verb.buffer = drumRoom(kit.room);
+}
+function sendDrums() {
+  const d = DRUMS[+$('drumSel').value] || DRUMS[0];
+  drumPrefs.i = d.i; store.set('ds-drums', drumPrefs);
+  if (node) node.port.postMessage({ t: 'drums', drums: { on: drumPrefs.on, lanes: d.lanes, swing: d.swing } });
+}
+function fillDrums() {
+  const groups = list => [...new Set(list.map(x => x.group))];
+  $('drumSel').innerHTML = groups(DRUMS).map(g => `<optgroup label="${g}">${DRUMS.filter(d => d.group === g).map(d => `<option value="${d.i}">${esc(d.name)} · ${d.bpm}</option>`).join('')}</optgroup>`).join('');
+  $('kitSel').innerHTML = groups(KITS).map(g => `<optgroup label="${g}">${KITS.map((k, i) => [k, i]).filter(([k]) => k.group === g).map(([k, i]) => `<option value="${i}">${String(i + 1).padStart(3, '0')} / ${esc(k.name)}</option>`).join('')}</optgroup>`).join('');
+  $('drumSel').value = String(drumPrefs.i); $('kitSel').value = String(Math.min(drumPrefs.kit, KITS.length - 1));
+  $('grooveCount').textContent = DRUMS.length; $('kitCount').textContent = KITS.length;
+}
+function setDrumsOn(on) { drumPrefs.on = on; $('drumOn').setAttribute('aria-pressed', on); sendDrums(); }
+function pickKit(i, why) { drumPrefs.kit = +i; $('kitSel').value = String(i); store.set('ds-drums', drumPrefs); sendKit(); if (why) setStatus(why + ' · ' + KITS[+i].name); }
+$('drumOn').addEventListener('click', () => { setDrumsOn(!drumPrefs.on); if (drumPrefs.on && !playing) setStatus('Drums on: they play with ▶.'); });
 $('drumSel').addEventListener('change', sendDrums);
-$('drumLevel').addEventListener('input', sendDrums);
+$('kitSel').addEventListener('change', () => pickKit($('kitSel').value));
+$('kitDice').addEventListener('click', () => pickKit(Math.floor(Math.random() * KITS.length), 'A random kit'));
+$('grooveDice').addEventListener('click', () => { const i = Math.floor(Math.random() * DRUMS.length); $('drumSel').value = String(i); sendDrums(); setStatus('A random groove · ' + DRUMS[i].name + ' · ' + DRUMS[i].bpm + ' BPM'); });
 $('matchBpm').addEventListener('click', () => { $('tempo').value = DRUMS[+$('drumSel').value].bpm; $('tempo').dispatchEvent(new Event('change')); });
 
 /* ---------- Your vocal for the robot: decoded here, looped in the engine (up to a minute) ---------- */
@@ -1104,7 +1369,7 @@ $('vocalFile').addEventListener('change', async () => {
 function sessionNow(name) {
   const vals = {}; P.forEach((p, i) => vals[p.id] = values[i]);
   return { app: 'DRIFT SONATA', version: 1, name, values: vals, sound: soundChoice, line, lineChoice, lineDirty, lineKey,
-    bars: $('lineBars').value, notes: $('lineAs').value, register: $('lineReg').value, surprise: $('lineSurprise').value, tempo: tempo(), drums: store.get('ds-drums', drumPrefs), arp: arpSession() };
+    bars: $('lineBars').value, notes: $('lineAs').value, register: $('lineReg').value, surprise: $('lineSurprise').value, tempo: tempo(), drums: { ...drumPrefs }, mix: { ...mixPrefs }, arp: arpSession() };
 }
 function openSession(se) {
   if (!se || se.app !== 'DRIFT SONATA' || !se.values) { setStatus('That is not a DRIFT SONATA session.'); return; }
@@ -1117,7 +1382,12 @@ function openSession(se) {
   lineChoice = se.lineChoice ?? lineChoice; lineDirty = !!se.lineDirty;
   if (se.surprise != null) { $('lineSurprise').value = se.surprise; $('lineSurprise').dispatchEvent(new Event('input')); }
   if (se.tempo) { $('tempo').value = se.tempo; $('tempo').dispatchEvent(new Event('change')); }
-  if (se.drums) { setSel('drumSel', se.drums.i); $('drumLevel').value = se.drums.level; setDrumsOn(!!se.drums.on); }
+  if (se.drums) {
+    Object.assign(drumPrefs, se.drums); if (drumPrefs.level > 0 && drumPrefs.level <= 1) drumPrefs.level = -3;
+    fillDrums(); setDrumsOn(!!drumPrefs.on); sendKit();
+  }
+  if (se.mix) Object.assign(mixPrefs, se.mix);
+  mixApply();
   if (se.arp) arpOpenSession(se.arp);
   fillLines(); lineChanged();
   setStatus(`Opened the session “${se.name || 'session'}”.`);
@@ -1225,6 +1495,14 @@ $('midiExport').addEventListener('click', async () => {
   const head = [[0, 0xff, 0x51, 3, us >> 16 & 255, us >> 8 & 255, us & 255], [0, 0xff, 0x58, 4, 4, 2, 24, 8], metaText('DRIFT SONATA', 3)];
   const tracks = [head, [metaText('DRIFT SONATA chords', 3), ...chords]];
   if (sub.length) tracks.push([metaText('Sub-Drop', 3), ...sub]);
+  if (drumPrefs.on) {
+    const g = DRUMS[drumPrefs.i] || DRUMS[0], GM = { k: 36, s: 38, h: 42, o: 46, p: 63, q: 75 }, drums = [];
+    for (let bar = 0; bar < t / PPQ / 4; bar++) for (const l of LANES) for (const st of g.lanes[l] || []) {
+      const at = bar * 4 * PPQ + st * PPQ / 4 + (st % 2 ? Math.round(g.swing * PPQ / 4 * .42) : 0);
+      drums.push([at, 0x99, GM[l], st % 4 === 0 ? 104 : st % 2 === 0 ? 88 : 72], [at + PPQ / 8, 0x89, GM[l], 0]);
+    }
+    tracks.push([metaText('Drums · ' + (KITS[drumPrefs.kit] || KITS[0]).name, 3), ...drums]);
+  }
   const arpNotes = arpMidi(PPQ, t);
   if (arpNotes.length) tracks.push([metaText('AVANTGARDIAN ARP', 3), ...arpNotes]);
   const lineName = lineDirty ? 'my-line' : fileName(lineBank[lineChoice].name);
@@ -1234,7 +1512,7 @@ $('midiExport').addEventListener('click', async () => {
 
 /* ---------- Transport ---------- */
 const tempo = () => Math.max(40, Math.min(200, +$('tempo').value || 84));
-$('tempo').addEventListener('change', () => { $('tempo').value = tempo(); store.set('ds-tempo', tempo()); if (node) node.port.postMessage({ t: 'bpm', bpm: tempo() }); });
+$('tempo').addEventListener('change', () => { $('tempo').value = tempo(); drumTempo(); store.set('ds-tempo', tempo()); if (node) node.port.postMessage({ t: 'bpm', bpm: tempo() }); });
 $('tempo').value = store.get('ds-tempo', 84);
 function setStatus(t) { $('status').textContent = t; }
 $('play').addEventListener('click', async () => {
@@ -1250,8 +1528,78 @@ $('play').addEventListener('click', async () => {
 });
 document.addEventListener('keydown', e => { if (e.code === 'Space' && !/INPUT|SELECT|TEXTAREA|BUTTON/.test(e.target.tagName)) { e.preventDefault(); $('play').click(); } });
 // Keep the page clear of the bar at the bottom, whatever its height
-$('dockMore').addEventListener('click', () => { const open = $('dock').classList.toggle('open'); $('dockMore').setAttribute('aria-expanded', open); $('dockMore').textContent = open ? 'Less' : 'More'; });
 new ResizeObserver(() => document.documentElement.style.setProperty('--dock-h', $('dock').offsetHeight + 'px')).observe($('dock'));
+
+/* ---------- Mixer: chord, drums and arp, each with a switch, a meter and a fader, then the master ---------- */
+const mixPrefs = Object.assign({ chord: 0, chordOn: true, master: 0 }, store.get('ds-mix', {}));
+const dbGain = db => db <= -29.9 ? 0 : Math.pow(10, db / 20);  // the bottom of a fader is silence
+function faderShow(id, db) {
+  const el = $(id); el.value = db; el.style.setProperty('--pct', (db - el.min) / (el.max - el.min) * 100 + '%');
+  const o = $(id + 'Out'); if (o) o.textContent = db <= -29.9 ? '−∞' : (db > 0 ? '+' : '') + db.toFixed(1) + ' dB';
+}
+function mixApply(now) {
+  const t = ctx ? ctx.currentTime : 0, set = (p, v) => now ? p.setValueAtTime(v, t) : p.setTargetAtTime(v, t, .03);
+  if (chordBus) set(chordBus.gain, mixPrefs.chordOn ? dbGain(mixPrefs.chord) : 0);
+  if (drumFx) set(drumFx.bus.gain, dbGain(drumPrefs.level));
+  if (master) set(master.gain, dbGain(mixPrefs.master));
+  faderShow('chordLevel', mixPrefs.chord); faderShow('drumLevel', drumPrefs.level); faderShow('master', mixPrefs.master);
+  $('chordOn').setAttribute('aria-pressed', mixPrefs.chordOn);
+}
+const saveMix = () => { store.set('ds-mix', mixPrefs); store.set('ds-drums', drumPrefs); mixApply(); };
+$('chordLevel').addEventListener('input', () => { mixPrefs.chord = +$('chordLevel').value; saveMix(); });
+$('drumLevel').addEventListener('input', () => { drumPrefs.level = +$('drumLevel').value; saveMix(); });
+$('master').addEventListener('input', () => { mixPrefs.master = +$('master').value; saveMix(); });
+$('chordOn').addEventListener('click', () => { mixPrefs.chordOn = !mixPrefs.chordOn; saveMix(); setStatus(mixPrefs.chordOn ? 'Chord on.' : 'Chord muted: the strings still run underneath, quietly waiting.'); });
+// Meters: the peak of each channel after its fader, quick up and slow down
+const meters = [];
+function meterOn(src, id) { const a = ctx.createAnalyser(); a.fftSize = 512; src.connect(a); meters.push({ a, el: $(id), buf: new Float32Array(512), v: 0 }); }
+(function drawMeters() {
+  for (const m of meters) {
+    m.a.getFloatTimeDomainData(m.buf); let pk = 0; for (const x of m.buf) pk = Math.max(pk, Math.abs(x));
+    const v = Math.max(0, Math.min(1, (20 * Math.log10(pk + 1e-9) + 48) / 48)); m.v = v > m.v ? v : m.v * .93 + v * .07;
+    m.el.style.width = (m.v * 100).toFixed(1) + '%'; m.el.style.backgroundSize = m.el.parentNode.clientWidth + 'px 100%';
+  }
+  requestAnimationFrame(drawMeters);
+})();
+
+/* ---------- Every slider: grab the round head to move it freely. Press anywhere else on it (on the line or above it)
+   and a glowing mark shows where it is going, and the head glides there, slowly and surely: a fade you barely hear ---------- */
+(() => {
+  let glide = null, running = false;
+  const mark = document.createElement('div'); mark.className = 'glide-mark'; mark.hidden = true; document.body.appendChild(mark);
+  const thumbW = el => el.closest('.card.big') ? 26 : 16;
+  const geo = el => { const r = el.getBoundingClientRect(), tw = thumbW(el); return { r, tw, usable: Math.max(1, r.width - tw) }; };
+  const frac = el => (el.value - el.min) / (el.max - el.min);
+  const place = () => { const { r, tw, usable } = geo(glide.el); mark.style.left = (r.left + tw / 2 + glide.to * usable) + 'px'; mark.style.top = (r.top + r.height / 2) + 'px'; };
+  const stop = () => { glide = null; mark.hidden = true; mark.classList.remove('on'); };
+  const onRange = e => e.target instanceof HTMLInputElement && e.target.type === 'range' && !e.target.disabled ? e.target : null;
+  function press(e, x) {
+    const el = onRange(e); if (!el) return;
+    const { r, tw, usable } = geo(el), head = r.left + tw / 2 + frac(el) * usable;
+    if (Math.abs(x - head) <= tw / 2 + 3) { if (glide && glide.el === el) stop(); return; }  // the head itself: free to drag
+    e.preventDefault(); e.stopPropagation();
+    const to = Math.min(1, Math.max(0, (x - r.left - tw / 2) / usable)), from = frac(el), dist = Math.abs(to - from);
+    glide = { el, from, to, cur: +el.value, t0: performance.now(), dur: 350 + 1400 * Math.sqrt(dist), own: false };
+    mark.hidden = false; place(); requestAnimationFrame(() => mark.classList.add('on'));
+    if (!running) step();
+  }
+  function step() {
+    if (!glide) { running = false; return; }
+    running = true;
+    const g = glide, p = Math.min(1, (performance.now() - g.t0) / g.dur), ease = .5 - .5 * Math.cos(Math.PI * p);
+    const f = g.from + (g.to - g.from) * ease, min = +g.el.min, max = +g.el.max;
+    g.el.value = min + f * (max - min); g.cur = g.el.value;
+    g.own = true; g.el.dispatchEvent(new Event('input', { bubbles: true })); g.own = false;
+    place();
+    if (p < 1) requestAnimationFrame(step); else { running = false; g.el.dispatchEvent(new Event('change', { bubbles: true })); mark.classList.remove('on'); setTimeout(() => { if (glide === g) stop(); }, 260); }
+  }
+  document.addEventListener('pointerdown', e => press(e, e.clientX), true);
+  document.addEventListener('mousedown', e => { if (onRange(e) && glide && glide.el === e.target) e.preventDefault(); }, true);
+  document.addEventListener('touchstart', e => { if (onRange(e) && glide && glide.el === e.target && e.cancelable) e.preventDefault(); }, { capture: true, passive: false });
+  // a browser that moves the head on the press anyway is put back on course
+  document.addEventListener('input', e => { if (glide && e.target === glide.el && !glide.own) { e.stopImmediatePropagation(); glide.el.value = glide.cur; } }, true);
+  window.addEventListener('scroll', () => { if (glide) place(); }, { passive: true });
+})();
 
 /* ---------- AVANTGARDIAN ARP: its patterns and voices, folded onto the chords the strings play ---------- */
 // The ARP's scripts and its 2,281 patterns are put into the page when it is built (web/build.py --arp).
@@ -1259,7 +1607,8 @@ new ResizeObserver(() => document.documentElement.style.setProperty('--dock-h', 
 var HAS_ARP = typeof NoteEngine !== 'undefined' && typeof ARP_META !== 'undefined' && typeof NBVoice !== 'undefined';
 var arpDirty = 1;
 if (!HAS_ARP) document.body.classList.add('no-arp');
-const ARP_DEFAULTS = { on: false, pattern: '', sound: '', level: -4, density: 100, variation: 15, swing: 0, gate: 78, octave: 0, direction: 'original', style: 'faithful', phrase: 16, delay: -1, reverb: -1, tone: 6500, seed: 1 };
+const ARP_DEFAULTS = { on: false, pattern: '', sound: '', level: -4, density: 100, variation: 15, swing: 0, gate: 78, octave: 0, direction: 'original', style: 'faithful', phrase: 16, delay: -1, reverb: -1, tone: 6500, seed: 1,
+  orbit: .5, orbitBars: 4, scatter: .15, dist: 1.6, height: .15 };
 const arpPrefs = Object.assign({}, ARP_DEFAULTS, store.get('ds-arp', {}));
 const ARP_PARTS = Array.from({ length: 8 }, () => ({ moves: 0, space: 0, length: 0, spunk: 0, rhythmic: 0, spastic: 0, dust: 0, slide: 0, slup: 0, spsl: 0, fxd: 0, reverse: 0, snote: 0, spasMode: '3 over 4' }));
 const ARP_ENGINES = { an: 'Analogue', mod: 'Modular', wc: 'Wavefold', fm: 'FM', wt: 'Wavetable', vec: 'Vector', add: 'Modal' };
@@ -1316,11 +1665,16 @@ async function arpAudio() {
     const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.Q.value = .4; lp.frequency.value = arpPrefs.tone;
     const out = ctx.createGain(); out.gain.value = Math.pow(10, arpPrefs.level / 20);
     const trim = ctx.createGain(), fx = new StudioFX(ctx, hp);
-    hp.connect(lp); lp.connect(out); out.connect(analyser); trim.connect(fx.input);
+    hp.connect(lp); lp.connect(out); out.connect(master);
+    // the arp's own place in the 3D room, before its echoes (which place themselves)
+    const pan = ctx.createPanner(); pan.panningModel = 'HRTF'; pan.distanceModel = 'inverse'; pan.refDistance = 1; pan.rolloffFactor = .5; pan.positionZ.value = -1.5;
+    // the room's placement costs a few dB (distance, the head's shadow): made up here so the fader means the same
+    const makeup = ctx.createGain(); makeup.gain.value = 1.6;
+    trim.connect(pan); pan.connect(makeup); makeup.connect(fx.input);
     const vo = new VoiceOutput(ctx, trim);
     await NBVoice.prepare(ctx);
-    arpG = { hp, lp, out, trim, fx, vo };
-    arpUseSound();
+    arpG = { hp, lp, out, trim, fx, vo, pan };
+    arpUseSound(); meterOn(out, 'arpLevelMeter');
     return arpG;
   })();
   return arpStarting;
@@ -1395,6 +1749,7 @@ function arpTick() {
     arpMode = want; arpKey = '';
     if (want === 'free') { freeAnchor = { ppq: 0, time: now + .03, bpm }; arpNext = 0; }
   }
+  arpPlace(now);
   if (!arpMode) { arpBeatNow = -1; return; }
   let a = arpMode === 'line' ? lineAnchor : freeAnchor;
   if (a.bpm !== bpm) { a = { ppq: a.ppq + (now - a.time) * a.bpm / 60, time: now, bpm }; if (arpMode === 'line') lineAnchor = a; else freeAnchor = a; }
@@ -1422,6 +1777,21 @@ function arpPlay(e, when, dur) {
   const entry = arpG.vo.create({ ...note, releaseSeconds: AmpEnvelope.seconds(arpPv).release }, t, true);
   arpG.vo.attach(entry, NBVoice.play(ctx, entry.output, note, arpPv, arpSound().id, t, arpLastPitch), true);
   arpLastPitch = e.pitch;
+  if (arpPrefs.scatter > 0) arpScatter.push([t, (Math.random() * 2 - 1) * Math.PI * arpPrefs.scatter]);
+}
+// The arp in the 3D room: between straight ahead and a circle round your head (Orbit), one turn every few bars,
+// each note thrown a little to one side or the other (Scatter), near or far, low or high
+var arpScatter = [], arpPos = null;
+function arpPlace(now) {
+  if (!arpG) return;
+  const p = arpPrefs, t = now + .12, turn = 240 / tempo() * p.orbitBars, az0 = 2 * Math.PI * ((t / turn) % 1);
+  while (arpScatter.length > 1 && arpScatter[1][0] <= t) arpScatter.shift();
+  const off = arpScatter.length && arpScatter[0][0] <= t ? arpScatter[0][1] : 0;
+  let x = Math.sin(az0) * p.orbit, z = -(1 - p.orbit) - Math.cos(az0) * p.orbit;
+  const az = Math.atan2(x, -z) + off, d = p.dist, el = p.height * .9;
+  x = Math.sin(az) * Math.cos(el) * d; z = -Math.cos(az) * Math.cos(el) * d; const y = Math.sin(el) * d;
+  arpG.pan.positionX.linearRampToValueAtTime(x, t); arpG.pan.positionY.linearRampToValueAtTime(y, t); arpG.pan.positionZ.linearRampToValueAtTime(z, t);
+  arpPos = [az, el, d];
 }
 setInterval(arpTick, 40);
 
@@ -1506,8 +1876,8 @@ let arpControlsShow = () => {};
     sel.addEventListener('change', () => { arpPrefs[key] = num ? +sel.value : sel.value; saveArp(); change(); });
     shows.push(show); show(); return w;
   };
-  const regen = () => { arpDirty++; }, pct = v => Math.round(v) + '%';
-  const levelNow = () => { if (arpG) arpG.out.gain.setTargetAtTime(Math.pow(10, arpPrefs.level / 20), ctx.currentTime, .03); $('arpLevel').value = arpPrefs.level; $('arpLevel').style.setProperty('--pct', (arpPrefs.level + 30) / 36 * 100 + '%'); };
+  const regen = () => { arpDirty++; }, pct = v => Math.round(v) + '%', pct100 = v => Math.round(v * 100) + '%';
+  const levelNow = () => { if (arpG) arpG.out.gain.setTargetAtTime(Math.pow(10, arpPrefs.level / 20), ctx.currentTime, .03); faderShow('arpLevel', arpPrefs.level); };
   if (HAS_ARP) {
     $('arpControls').append(
       range('level', 'Level', -30, 6, .5, v => (v > 0 ? '+' : '') + v.toFixed(1) + ' dB', levelNow, 'rose'),
@@ -1522,6 +1892,11 @@ let arpControlsShow = () => {};
       pick('phrase', 'Phrase', [[16, '16 bars'], [32, '32 bars'], [64, '64 bars']], regen),
       pick('delay', 'Echo', [[-1, 'The sound’s own'], ...FXRecipes.delays.map((d, i) => [i, d.name])], arpApplyFx),
       pick('reverb', 'Room', [[-1, 'The sound’s own'], ...FXRecipes.reverbs.map((d, i) => [i, d.name])], arpApplyFx),
+      range('orbit', '3D · Still ↔ Orbiting', 0, 1, .01, pct100, () => {}, 'teal'),
+      pick('orbitBars', 'One turn every', [[1, '1 bar'], [2, '2 bars'], [4, '4 bars'], [8, '8 bars'], [16, '16 bars']], () => {}),
+      range('scatter', 'Scatter notes', 0, 1, .01, pct100, () => {}, 'teal'),
+      range('dist', 'Distance', 1, 4, .01, v => v.toFixed(1) + ' m', () => {}, 'teal'),
+      range('height', 'Height', -.6, 1, .01, v => Math.round(v * 90) + '°', () => {}, 'teal'),
     );
     const seed = document.createElement('div'); seed.className = 'ctl';
     seed.innerHTML = '<label>Variation seed <output id="arpSeedOut"></output></label><button class="btn" type="button" id="arpSeed">New variation</button>';
@@ -1639,11 +2014,12 @@ function arrowize(sel) {
   new MutationObserver(sync).observe(sel, { childList: true, subtree: true, attributes: true });
   sel._sync = sync;
 }
-document.querySelectorAll('select').forEach(sel => { if (!['soundSel', 'lineSel', 'soundFilter', 'arpSel', 'arpSoundSel'].includes(sel.id)) arrowize(sel); });
+document.querySelectorAll('select').forEach(sel => { if (!['soundSel', 'lineSel', 'soundFilter', 'arpSel', 'arpSoundSel', 'kitSel', 'drumSel'].includes(sel.id)) arrowize(sel); });
 // keep the arrows right when a menu is set from code (a sound loads, a chord is picked)
 setInterval(() => document.querySelectorAll('.stepper select').forEach(sel => sel._sync && sel._sync()), 400);
 fillSessions(); fillLines(); drawSlots(); drawPads(); lastNotes = voiceLine();
 if (soundChoice !== '0') loadSound(soundChoice); else fillSounds();
-setDrumsOn(!!drumPrefs.on);
+fillDrums(); setDrumsOn(!!drumPrefs.on); mixApply();
+$('soundCount').textContent = soundBank.length; $('lineCount').textContent = lineBank.length;
 arpInit();
 </script>

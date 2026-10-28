@@ -3,11 +3,12 @@
 and optionally the choir/cello recordings and the header art.
 
   python3 web/build.py --wasi-sdk /path/to/wasi-sdk --out dist/DriftSonata.html \
-      [--samples folder-with-choir_*.wav-and-cello_*.wav] [--header header.jpg] [--arp AVANTGARDIAN-ARP/dist]
+      [--samples folder-with-choir_*.wav-and-cello_*.wav] [--header header.jpg] [--arp AVANTGARDIAN-ARP/dist] [--drums hits-folder]
 
 The recordings come from sample packs, so they stay out of this (public) repository: point --samples at a
 local folder. Without it the page plays the synth alone. --arp points at an AVANTGARDIAN ARP dist folder: its engine,
-sound bank and voices go into the page, and its 2,281 patterns are packed (six bytes a note).
+sound bank and voices go into the page, and its 2,281 patterns are packed (six bytes a note). --drums points at the
+hits tools/chop_drums.py cut from drum loops and percussion recordings (sample packs too, so kept out as well).
 """
 import argparse, base64, json, os, re, subprocess, sys, tempfile
 
@@ -54,6 +55,7 @@ def main():
     ap.add_argument('--samples')
     ap.add_argument('--header')
     ap.add_argument('--arp')
+    ap.add_argument('--drums')
     a = ap.parse_args()
 
     with tempfile.TemporaryDirectory() as tmp:
@@ -88,8 +90,17 @@ def main():
                 samples.append({'fam': fams.index(m.group(1)), 'root': float(m.group(2).rstrip('.')),
                                 'b64': base64.b64encode(open(m4a, 'rb').read()).decode()})
 
+        hits = []
+        if a.drums:
+            # Drum hits cut by tools/chop_drums.py, each as AAC (the page finds the attack again after decoding)
+            for h in json.load(open(os.path.join(a.drums, 'hits.json'))):
+                m4a = os.path.join(tmp, h['file'] + '.m4a')
+                run(['ffmpeg', '-v', 'error', '-y', '-i', os.path.join(a.drums, h['file']), '-ac', '1', '-c:a', 'aac', '-b:a', '128k', m4a])
+                hits.append({'cls': h['cls'], 'src': h['src'], 'kind': h['kind'], 'b64': base64.b64encode(open(m4a, 'rb').read()).decode()})
+
     page = open(os.path.join(HERE, 'page.html')).read()
     page = page.replace('"@@DATA@@"', data).replace('"@@WASM@@"', json.dumps(wasm_b64)).replace('"@@SAMPLES@@"', json.dumps(samples))
+    page = page.replace('"@@DRUMHITS@@"', json.dumps(hits, separators=(',', ':')))
     page = page.replace('<!--@@ARP@@-->', arp_scripts(a.arp) if a.arp else '')
     if a.header:
         ext = os.path.splitext(a.header)[1].lower().lstrip('.')
@@ -101,7 +112,7 @@ def main():
                             '<style>.banner .word,.banner .orb{display:none}.banner{aspect-ratio:3/1!important;border:none}</style>')
     os.makedirs(os.path.dirname(os.path.abspath(a.out)), exist_ok=True)
     open(a.out, 'w').write(page)
-    print(f'{a.out}: {len(page) / 1e6:.2f} MB, {len([x for x in samples if "fam" in x])} recordings, {len([x for x in samples if "table" in x])} wavetables')
+    print(f'{a.out}: {len(page) / 1e6:.2f} MB, {len([x for x in samples if "fam" in x])} recordings, {len([x for x in samples if "table" in x])} wavetables, {len(hits)} drum hits')
 
 
 if __name__ == '__main__':
