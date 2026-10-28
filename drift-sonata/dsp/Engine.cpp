@@ -258,12 +258,27 @@ void Engine::controlUpdate() {
         double pos;
         if (playing) pos = ppq / stepQ; else { lifeClock += dt * bpm / 60.0 / stepQ; pos = lifeClock; }
         lifeStep = (float)std::fmod(pos, (double)steps);
-        const int k = (int)lifeStep;
         const float stepSec = stepQ * 60.f / (float)bpm, glide = std::max(.005f, p[LifeSmooth] * stepSec), g = std::min(1.f, dt / glide);
         const float amt = p[LifeAmt];
         const float weight[LifeSeq::kTargets] = {p[LPitch], p[LShape], p[LSpace], p[LSpace], p[LLevel], p[LFilter], p[LCross], p[LOctave]};
+        // Each lane's playhead: with Playheads up, at its own speed (from half to twice), from its own place, and
+        // (past a third) in its own direction: forwards, backwards, or back and forth. Made from the pattern seed.
+        static const float kRate[kOsc] = {1, .5f, 1.5f, .75f, 2, 2.f / 3};
+        static const int kDir[kOsc] = {0, 1, 2, 0, 2, 1};
+        const float heads = p[LifeHeads];
+        const uint32_t hs = (uint32_t)std::lround(p[LifeSeed]) * 2654435761u;
+        for (int l = 0; l < kOsc; l++) {
+            const int which = (int)(((hs >> (l * 3 + 3)) + (uint32_t)l) % kOsc);
+            const double rate = 1 + (kRate[which] - 1) * heads, start = heads * steps * (((hs >> (l * 5)) & 255) / 256.0);
+            double lp = std::fmod(pos * rate + start, (double)steps);
+            const int dir = heads > .34f ? kDir[(which + l) % kOsc] : 0;
+            if (dir == 1) lp = steps - 1e-6 - lp;
+            else if (dir == 2) { const double q = std::fmod(pos * rate + start, 2.0 * steps); lp = q < steps ? q : 2.0 * steps - 1e-6 - q; }
+            lifeLaneStep[l] = (float)lp;
+        }
         for (int l = 0; l < kOsc; l++) {
             const float depth = amt * p[Lane1 + l];
+            const int k = std::min(steps - 1, std::max(0, (int)lifeLaneStep[l]));
             for (int t = 0; t < LifeSeq::kTargets; t++) {
                 const float target = lifeLanes.pattern[l][t][k] * depth * weight[t];
                 lifeLanes.now[l][t] += (target - lifeLanes.now[l][t]) * (t == LifeSeq::Octave ? 1.f : g);

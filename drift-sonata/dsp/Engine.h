@@ -159,12 +159,13 @@ private:
     std::vector<float> extMod; long long extPos = 0;
     Voice texVoice; float texEnv = 0;
     // Life sequencer state, per oscillator: what the lanes do to it right now
-    LifeSeq lifeLanes; double lifeClock = 0; float lifeStep = 0;
+    LifeSeq lifeLanes; double lifeClock = 0; float lifeStep = 0, lifeLaneStep[kOsc] = {};
     float lifeCents[kOsc] = {}, lifeSemis[kOsc] = {}, lifeShape[kOsc] = {}, lifeFold[kOsc] = {}, lifeAz[kOsc] = {}, lifeEl[kOsc] = {}, lifeCut[kOsc] = {}, lifeFm[kOsc] = {};
 public:
     // For the screen: the lanes' patterns and where the sequencer is
     const LifeSeq& lifeSeq() const { return lifeLanes; }
     float lifePosition() const { return lifeStep; }
+    float lifeLanePosition(int lane) const { return lifeLaneStep[lane % kOsc]; }
     int lifeSteps() const;
 private:
     DelayLine dubL, dubR; Biquad dubLp, dubHp; float dubTime = .375f;

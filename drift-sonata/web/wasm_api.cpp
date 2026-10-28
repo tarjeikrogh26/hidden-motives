@@ -1,5 +1,7 @@
 // The engine as a WebAssembly module for the browser test bench (runs inside an AudioWorklet). The page also loads a
 // second copy on its own thread just for the harmony (ds_harmony_buf / ds_expand), to write MIDI files.
+// The module holds four engines sharing one set of recordings: two for the chords and two for the arp, so a new sound
+// starts in the second engine and the two fade across. ds_use picks the engine the other calls talk to.
 #include "../dsp/Engine.h"
 
 #define EXPORT(name) extern "C" __attribute__((export_name(#name)))
@@ -7,20 +9,35 @@
 using namespace ds;
 
 namespace {
+constexpr int kEngines = 4;
+Engine* engines[kEngines] = {};
+Values valuesOf[kEngines];
 Engine* engine = nullptr;
-Values values = defaults();
+Values* values = nullptr;
 float outL[128], outR[128];
 std::shared_ptr<SampleBank> building;
 }  // namespace
 
 EXPORT(ds_init) void dsInit(float sampleRate, unsigned seed) {
-    if (!engine) engine = new Engine();
-    engine->prepare(sampleRate, 128);
-    engine->setSeed(seed);
-    engine->setParams(values);
+    for (int i = 0; i < kEngines; i++) {
+        if (!engines[i]) engines[i] = new Engine();
+        valuesOf[i] = defaults();
+        engines[i]->prepare(sampleRate, 128);
+        engines[i]->setSeed(seed + 7919u * i);
+        engines[i]->setParams(valuesOf[i]);
+    }
+    engine = engines[0]; values = &valuesOf[0];
 }
+EXPORT(ds_engines) int dsEngines() { return kEngines; }
+EXPORT(ds_use) void dsUse(int i) { i = i < 0 ? 0 : i % kEngines; engine = engines[i]; values = &valuesOf[i]; }
+// Silence an engine that has faded out, so it starts clean when the next sound fades in on it
+EXPORT(ds_reset) void dsReset() { engine->allNotesOff(); engine->reset(); engine->setParams(*values); }
 EXPORT(ds_param_count) int dsParamCount() { return COUNT; }
-EXPORT(ds_set_param) void dsSetParam(int i, float v) { if (i >= 0 && i < COUNT) { values[i] = v; engine->setParams(values); } }
+EXPORT(ds_set_param) void dsSetParam(int i, float v) { if (i >= 0 && i < COUNT) { (*values)[i] = v; engine->setParams(*values); } }
+// A whole sound at once (written to the buffer first): one setParams instead of one per value
+namespace { float paramBuf[COUNT]; }
+EXPORT(ds_param_buf) float* dsParamBuf() { return paramBuf; }
+EXPORT(ds_set_all) void dsSetAll() { for (int i = 0; i < COUNT; i++) (*values)[i] = paramBuf[i]; engine->setParams(*values); }
 EXPORT(ds_note_on) void dsNoteOn(int note, float vel) { engine->noteOn(note, vel); }
 EXPORT(ds_note_off) void dsNoteOff(int note) { engine->noteOff(note); }
 EXPORT(ds_all_off) void dsAllOff() { engine->allNotesOff(); }
@@ -42,7 +59,7 @@ EXPORT(ds_bank_add_table) float* dsBankAddTable(int table, int frames) {
     return t.raw.data();
 }
 EXPORT(ds_vocal) float* dsVocal(int length) { return engine->vocalBuffer(length); }
-EXPORT(ds_bank_commit) void dsBankCommit() { building->finish(); engine->setSamples(building); building.reset(); }
+EXPORT(ds_bank_commit) void dsBankCommit() { building->finish(); for (Engine* e : engines) if (e) e->setSamples(building); building.reset(); }
 
 // What the chord is right now (for the screen).
 EXPORT(ds_disp_root) int dsDispRoot() { return engine->display().root; }
@@ -76,4 +93,5 @@ EXPORT(ds_life_value) float dsLifeValue(int seed, int lane, int target, int step
     return lifeView.pattern[(unsigned)lane % LifeSeq::kLanes][(unsigned)target % LifeSeq::kTargets][(unsigned)step % LifeSeq::kMaxSteps];
 }
 EXPORT(ds_life_pos) float dsLifePos() { return engine ? engine->lifePosition() : 0.f; }
+EXPORT(ds_life_lane_pos) float dsLifeLanePos(int lane) { return engine ? engine->lifeLanePosition(lane) : 0.f; }
 EXPORT(ds_life_steps) int dsLifeSteps() { return engine ? engine->lifeSteps() : 32; }

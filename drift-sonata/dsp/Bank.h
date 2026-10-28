@@ -112,12 +112,30 @@ inline const std::vector<Archetype>& archetypes() {
     return a;
 }
 
-inline Values generated(int gen, uint32_t seed) {
+// The second set: purely electronic and clean, no tape, air or recordings, each kind a different machine
+inline const std::vector<Archetype>& cleanArchetypes() {
+    static const std::vector<Archetype> a = {
+        {{3, 3, 3, 2}, {{"ensemble", .5, 1}, {"cutoff", .6, .85}, {"drift", .1, .35}, {"space", .4, .8}}},                  // sine choir
+        {{1, 1, 1, 4}, {{"pwm", .6, 1}, {"filtermotion", .5, 1}, {"cutoff", .45, .7}, {"resonance", .1, .4}}},               // pulse lattice
+        {{3, 2, 3}, {{"cross", .4, .8}, {"attack", .005, .15}, {"release", 3, 8}, {"cutoff", .75, 1}, {"shimmer", .3, .7}}}, // digital bells
+        {{0, 0, 0, 0, 0}, {{"ensemble", .85, 1}, {"width", .9, 1}, {"cutoff", .5, .8}, {"drift", .25, .55}}},                // clean supersaw
+        {{9, 9, 5, 8, 4}, {{"life", .6, 1}, {"lifeseq", .5, .9}, {"lifeheads", .6, 1}, {"shimmer", .2, .6}}},                // table shimmer
+        {{4, 4, 4, 4}, {{"orbit", .6, 1}, {"orbitspeed", .3, .9}, {"lifeheads", .7, 1}, {"lifeseq", .4, .8}}},               // morph swarm
+        {{3, 2}, {{"drift", .05, .3}, {"space", .2, .55}, {"cutoff", .55, .8}, {"ensemble", 0, .4}}},                        // minimal sine
+        {{1, 1, 2}, {{"pwm", 0, .3}, {"delay", .3, .6}, {"space", .15, .5}, {"cutoff", .5, .75}}},                           // kraft organ
+        {{2, 3, 2, 3}, {{"shimmer", .5, .9}, {"size", .7, 1}, {"space", .7, 1}, {"attack", .8, 3}}},                         // ozone pad
+        {{1, 0, 1}, {{"resonance", .35, .7}, {"filtermotion", .6, 1}, {"cutoff", .35, .6}, {"motion", .5, 1}}},              // laser
+    };
+    return a;
+}
+
+inline Values generated(int gen, uint32_t seed, bool second = false) {
     Values vals = defaults();
     Rng32 R(seed); Setter s{vals};
     auto r = [&](double a, double b) { return a + R() * (b - a); };
     auto pick = [&](const std::vector<double>& v) { return v[(size_t)std::floor(R() * v.size())]; };
-    const Archetype& arch = archetypes()[gen % archetypes().size()];
+    const auto& list = second ? cleanArchetypes() : archetypes();
+    const Archetype& arch = list[gen % list.size()];
     std::vector<double> waves(arch.waves.begin(), arch.waves.end());
     const int count = 3 + (int)std::floor(R() * 4);
     static const std::vector<std::vector<double>> octChoices = {{0, 0, 0, 0, 1, -1}, {0, 0, 1, 1, 2, -1}, {-1, 0, 0, 1, 1, 0}, {0, 0, 0, 0, 0, 1}, {0, 7 / 12., 0, 0, 1, -1}};
@@ -136,6 +154,7 @@ inline Values generated(int gen, uint32_t seed) {
         {"ensemble", 0, 1}, {"width", .6, 1}, {"shimmer", 0, .7}, {"size", .2, .95}, {"delay", 0, .45}, {"orbit", 0, 1}, {"orbitspeed", .05, .8}, {"distance", 0, .8},
         {"overhead", 0, .8}, {"space3d", .5, 1}, {"vox", 0, .25}, {"vowel", 0, 1}, {"drive", 0, .4}, {"tape", 0, .3}, {"glide", 0, .3}, {"unfold", .2, 2.5}};
     for (const Range& w : wide) s.set(w.id, r(w.a, w.b));
+    if (second) { s.set("tape", 0); s.set("drive", r(0, .12)); s.set("vox", 0); s.set("lifeheads", r(.2, 1)); s.set("lifeseq", r(.2, .7)); }
     for (const Range& w : arch.lean) s.set(w.id, r(w.a, w.b));
     s.set("color", pick({0, 0, 1, 1, 2, 3, 4})); s.set("delaytime", std::floor(R() * 5)); s.set("motionbars", std::floor(R() * 4));
     for (const char* id : {"air", "choir", "cello", "stringlayer", "brass", "texture", "robot"}) s.set(id, 0);
@@ -150,7 +169,7 @@ inline const std::vector<BankSound>& soundBank() {
     static const std::vector<BankSound> bank = [] {
         using namespace bank_detail;
         const auto& pr = presets();
-        std::vector<BankSound> varied, clean, out;
+        std::vector<BankSound> varied, clean, clean2, out;
         for (int i = 0; i < 333; i++) {
             const Preset& base = pr[i % pr.size()];
             const int v = i / (int)pr.size(), w = v ? ((v - 1) % 8) + 1 : 0;
@@ -179,14 +198,43 @@ inline const std::vector<BankSound>& soundBank() {
             b.values = generated((int)clean.size(), 9000u + (uint32_t)clean.size() * 131u);
             clean.push_back(std::move(b));
         }
-        size_t a = 0, c = 0;
-        for (int i = 0; a < varied.size() || c < clean.size(); i++) {
-            if (i % 2 == 0 && a < varied.size()) out.push_back(varied[a++]);
-            else if (c < clean.size()) out.push_back(clean[c++]);
-            else out.push_back(varied[a++]);
+        // 300 more, purely electronic and clean, named from a second reel of films
+        static const char* film2[] = {"The {} Conversation", "Paris, {}", "Wings of {}", "Under the {}", "The Man Who Sold {}", "Days of {}", "Chungking {}",
+            "In the Mood for {}", "Stalker {}", "The {} Bureau", "Vertigo {}", "Rear {}", "Night on {}", "Tokyo {}", "The {} Express", "Last Year at {}",
+            "The {} Room", "Her {}", "Ex {}", "Moon {}", "Annihilation {}", "Arrival at {}", "Melancholia {}", "Gattaca {}", "Tron {}", "Koyaanis{}",
+            "The {} Garden", "Sunset {}", "Wild {}", "The {} Lighthouse", "Drive {}", "Heat {}", "Thief of {}", "Alphaville {}", "Silent {}", "Contact {}"};
+        static const char* stuff2[] = {"Sinewave", "Prism", "Neon", "Chrome", "Glass", "Mercury", "Ozone", "Quartz", "Satellite", "Circuit", "Halo", "Pulse",
+            "Ion", "Nebula", "Lumen", "Comet", "Polar", "Silicon", "Aurora", "Pixel", "Signal", "Plasma", "Frost", "Starlight", "Hologram", "Cobalt",
+            "Mirror", "Radar", "Vector", "Oscillator", "Lattice", "Photon", "Zenith", "Echo", "Orion", "Velvet", "Kelvin", "Helium", "Argon", "Xenon"};
+        const int nf2 = sizeof film2 / sizeof *film2, ns2 = sizeof stuff2 / sizeof *stuff2;
+        Rng32 R2(20261103u);
+        for (int i = 0; clean2.size() < 300 && i < 20000; i++) {
+            std::string t = film2[(int)std::floor(R2() * nf2)];
+            const std::string w = stuff2[(int)std::floor(R2() * ns2)];
+            t.replace(t.find("{}"), 2, w);
+            if (std::find(seen.begin(), seen.end(), t) != seen.end()) continue;
+            seen.push_back(t);
+            BankSound b; b.name = t; b.clean = true;
+            b.values = generated((int)clean2.size(), 31000u + (uint32_t)clean2.size() * 197u, true);
+            clean2.push_back(std::move(b));
+        }
+        // mixed evenly: always take from the list that is furthest behind its share
+        std::vector<BankSound>* lists[3] = {&varied, &clean, &clean2};
+        size_t at[3] = {0, 0, 0}, total = varied.size() + clean.size() + clean2.size();
+        for (size_t n = 0; n < total; n++) {
+            int best = -1; double behind = -1;
+            for (int k = 0; k < 3; k++) {
+                if (at[k] >= lists[k]->size()) continue;
+                const double b = (double)(n + 1) * lists[k]->size() / total - at[k];
+                if (b > behind) { behind = b; best = k; }
+            }
+            out.push_back((*lists[best])[at[best]++]);
         }
         // each sound its own Life patterns
         for (size_t i = 0; i < out.size(); i++) out[i].values[LifeSeed] = (float)(i + 1);
+        // and its own playheads, unless its kind set them
+        Rng32 RH(777u);
+        for (BankSound& b : out) { const float h = (float)(.15 + .75 * RH()); if (std::fabs(b.values[LifeHeads] - .5f) < 1e-6f) b.values[LifeHeads] = h; }
         // level trims, measured
         for (size_t i = 0; i < out.size() && i < sizeof kBankTrim / sizeof *kBankTrim; i++) out[i].values[Trim] = kBankTrim[i];
         return out;

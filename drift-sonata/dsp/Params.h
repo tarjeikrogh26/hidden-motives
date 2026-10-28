@@ -33,6 +33,8 @@ enum P {
     LifeAmt, LifeRate, LifeSmooth, LifeSeed, Lane1, Lane2, Lane3, Lane4, Lane5, Lane6,
     LPitch, LShape, LSpace, LLevel, LFilter, LCross, LOctave,
     SubRhythm,
+    // Life sequencer playheads: all together, or each lane at its own speed and direction
+    LifeHeads,
     COUNT
 };
 
@@ -164,6 +166,7 @@ inline const std::vector<ParamInfo>& params() {
         f(LCross, "lcross", "Cross-mod", 0, 1, .25f);
         f(LOctave, "loctave", "Octave jumps", 0, 1, .15f);
         c(SubRhythm, "subrhythm", "Sub rhythm", {"Bar one", "One and three", "Every beat", "Dotted", "Heartbeat", "Push", "Random"}, 0);
+        f(LifeHeads, "lifeheads", "Playheads", 0, 1, .5f);
         return v;
     }();
     return t;
