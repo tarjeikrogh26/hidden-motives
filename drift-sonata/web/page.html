@@ -1579,7 +1579,7 @@ function meterOn(src, id) { const a = ctx.createAnalyser(); a.fftSize = 512; src
     if (Math.abs(x - head) <= tw / 2 + 3) { if (glide && glide.el === el) stop(); return; }  // the head itself: free to drag
     e.preventDefault(); e.stopPropagation();
     const to = Math.min(1, Math.max(0, (x - r.left - tw / 2) / usable)), from = frac(el), dist = Math.abs(to - from);
-    glide = { el, from, to, cur: +el.value, t0: performance.now(), dur: 350 + 1400 * Math.sqrt(dist), own: false };
+    glide = { el, from, to, cur: +el.value, t0: performance.now(), dur: 1750 + 7000 * Math.sqrt(dist), own: false };
     mark.hidden = false; place(); requestAnimationFrame(() => mark.classList.add('on'));
     if (!running) step();
   }
