@@ -26,7 +26,7 @@ Motoren er ren C++ (`dsp/`) uten plugin-kode. Den samme koden kjører i dag i ne
 ```sh
 python3 web/build.py --wasi-sdk /sti/til/wasi-sdk --out dist/DriftSonata.html \
     --samples /sti/til/enkelttoner --header assets/header.webp --arp /sti/til/AVANTGARDIAN-ARP/dist \
-    --drums /sti/til/trommeslag
+    --drums /sti/til/trommeslag --vox /sti/til/vox-biter
 ```
 
 Opptakene kommer fra samplepakker og ligger derfor ikke i repoet. Uten `--samples` spiller synthen alene.
@@ -41,6 +41,14 @@ spektral fluks finner slagene, og hvor energien ligger sorterer dem i spark, ska
 og hi-hats får lavkutt, så sparken i en break ikke blør med. `--drums` legger dem inn i sida, der de blir til
 trommesett sammen med syntetiserte lyder (343 sett: elektroniske, breaks, hybrider og perkusjon). Uten
 `--drums` finnes bare de elektroniske settene.
+
+Vox-sporet lages av vokalister med `tools/chop_vox.py <ut-mappe> <navn>=<fil> ...`: et tonesøk (YIN) finner nynn og
+holdte vokaler, starten på stavelser blir korte ordbiter (aldri hele ord), og pust tas med. Sungne akkorder med
+toneart i filnavnet (`..._choir_Gmaj.wav`) kuttes i myke vinduer. `--vox` legger bitene inn i sida, der de stemmes
+til akkordene, legges i skyer på tvers av vokalistene, og flyr hver sin bane gjennom 3D-rommet.
+
+Lydbytter fader over: motoren har to motorer per kanal (akkord og arp), og trommesett, grooves, arp-mønstre og
+vox-stiler fader også over tiden som er valgt under Fade.
 
 ## Teste motoren
 

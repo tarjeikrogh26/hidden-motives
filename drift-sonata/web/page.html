@@ -169,8 +169,23 @@ details.room .eyebrow { color: #9fc3c4; }
 .status { font-size: 11.5px; color: var(--muted); align-self: center; min-width: 0; flex: 1 1 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .master { flex: none; }
 .masterrow { display: flex; align-items: center; gap: 6px; }
-.mixer { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
-.no-arp .mixer { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.mixer { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.no-arp .mixer, .no-vox .mixer { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.no-arp.no-vox .mixer { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.tag .ts { display: none; }
+@media (min-width: 1500px) { .dock-in { max-width: 1560px; } }
+/* below that the four channels still sit side by side: the labels shorten, the jumps by ten step aside, the meters slim */
+@media (max-width: 1499px) {
+  .bankrow { grid-template-columns: 28px minmax(0, 1fr); }
+  .tag .tl, .tag b { display: none; } .tag .ts { display: block; }
+  .nav button[data-d="-10"], .nav button[data-d="10"] { display: none; }
+  .strip .lvl { width: 60px; } .db { width: 42px; font-size: 10px; }
+  .nav select.mini { display: none; }
+  .nav select { font-size: 13.5px; padding: 3px 4px; }
+  .strip { padding: 6px 6px 7px; }
+  .btn.sw { font-size: 14px; padding: 3px 7px; }
+}
+@media (max-width: 980px) { .mixer { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 .strip { border: 1px solid var(--line); border-radius: 9px; padding: 6px 8px 7px; display: flex; flex-direction: column; gap: 4px; min-width: 0; background: rgba(255,255,255,.55); border-top: 3px solid var(--strip, var(--teal)); }
 .strip.chord { --strip: var(--teal); } .strip.drums { --strip: var(--rose); } .strip.arp { --strip: var(--gold); }
 .strip-head { display: flex; align-items: center; gap: 7px; min-width: 0; }
@@ -196,7 +211,7 @@ details.room .eyebrow { color: #9fc3c4; }
 .pads { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 5px; }
 .pad { padding: 4px 0; border-radius: 6px; border: 1px solid var(--line); background: var(--pearl); font-family: var(--display); font-style: italic; font-weight: 600; font-size: 14.5px; touch-action: none; user-select: none; color: var(--ink); }
 .pad.out { background: transparent; color: var(--muted); }
-@media (max-width: 1100px) { .nav button[data-d="-10"], .nav button[data-d="10"] { display: none; } }
+
 @media (max-width: 760px) {
   /* phones: the three channels side by side to swipe through */
   .mixer, .no-arp .mixer { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; gap: 8px; padding-bottom: 2px; }
@@ -205,7 +220,14 @@ details.room .eyebrow { color: #9fc3c4; }
   .transport .field[title] { display: none; }
   .master { flex: 1 1 auto; min-width: 0; } .masterrow .meter { display: none; } .master .lvl { flex: 1 1 auto; width: auto; min-width: 60px; }
 }
-.no-arp .arp-only { display: none !important; }
+.no-arp .arp-only, .no-vox .vox-only { display: none !important; }
+.strip.vox { --strip: #8e7cc3; }
+.voxcard h2 { font-family: var(--display); font-size: 30px; font-weight: 600; font-style: italic; }
+.vox-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr); gap: 16px; align-items: start; }
+.vox-room .col { display: flex; flex-direction: column; gap: 4px; }
+.voxcard .life-controls { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.singers { display: flex; flex-wrap: wrap; gap: 6px 14px; flex: 1 1 auto; }
+@media (max-width: 980px) { .vox-grid { grid-template-columns: 1fr; } }
 #lineAs { min-width: 112px; } #lineReg { min-width: 76px; }
 .glide-mark { position: fixed; z-index: 50; width: 14px; height: 14px; margin: -7px 0 0 -7px; border-radius: 50%; pointer-events: none;
   background: radial-gradient(circle, #fff 0%, #ffe9a8 35%, rgba(236,208,143,0) 70%); box-shadow: 0 0 10px 4px rgba(236,208,143,.75), 0 0 22px 8px rgba(228,134,171,.35);
@@ -218,6 +240,12 @@ details.fold > summary::-webkit-details-marker { display: none; }
 details.fold > summary h2::before, details.fold > summary h3::before { content: "+ "; font-family: var(--mono); font-style: normal; font-size: .6em; color: var(--gold); vertical-align: middle; }
 details.fold[open] > summary h2::before, details.fold[open] > summary h3::before { content: "– "; }
 details.fold:not([open]) { padding-block: 12px; }
+.arp-six { display: flex; flex-direction: column; gap: 10px; border-top: 1px solid var(--line); padding-top: 12px; transition: opacity .4s; }
+.arp-six.dim { opacity: .45; }
+.arp-six .col { display: flex; flex-direction: column; gap: 6px; }
+.six-note { font-size: 12.5px; }
+canvas#arpLifeView { width: 100%; height: 180px; display: block; border-radius: 6px; background: var(--night); }
+canvas#arpOrbit, canvas#voxOrbit { width: 100%; aspect-ratio: 1; max-width: 260px; justify-self: center; display: block; border-radius: 50%; background: radial-gradient(circle, #21474f 0%, #17363e 70%); }
 .card.arpcard h2 { font-family: var(--display); font-size: 30px; font-weight: 600; font-style: italic; }
 canvas#arpView { width: 100%; height: 110px; display: block; border-radius: 6px; background: var(--night); }
 .stepper { display: flex; gap: 4px; align-items: stretch; min-width: 0; }
@@ -278,7 +306,7 @@ canvas#lifeView { width: 100%; height: 180px; display: block; border-radius: 6px
   <section class="colours" id="colours" aria-label="Colour"></section>
 
   <details class="card fold life" id="lifeCard" data-fold="life" open>
-    <summary class="head"><h2>Life sequencer</h2><span class="eyebrow">six lanes · one per oscillator · 32 bars</span></summary>
+    <summary class="head"><h2>Life sequencer</h2><span class="eyebrow">six lanes · one per oscillator · 32 bars · each lane its own playhead</span></summary>
     <p>Each oscillator gets its own random patterns over 32 bars for everything it has: a little out of tune, its shape, its place in the 3D room, its level, its filter, cross-modulation and the odd octave jump. They follow the bars when the chord line plays.</p>
     <canvas id="lifeView" width="1100" height="240" aria-label="The six lanes over 32 bars: pitch in rose, shape in gold, place in teal, faded where the level dips"></canvas>
     <div class="life-controls" id="lifeControls"></div>
@@ -289,6 +317,25 @@ canvas#lifeView { width: 100%; height: 180px; display: block; border-radius: 6px
     <p>Patterns from AVANTGARDIAN ARP, played by its own voices and folded onto the chords the strings play. Choose them in the bar below; ⚄ picks one, ✧ makes a new one. Without ▶ it plays over the chord you hold.</p>
     <canvas id="arpView" width="1100" height="110" aria-label="The arp over the chord line: each note as a dash, higher notes higher up"></canvas>
     <div class="life-controls" id="arpControls"></div>
+    <div class="arp-six" id="arpSix">
+      <p class="six-note">The six-oscillator arp sounds: each oscillator its own sound in the 3D room and its own Life lane. (An AVANTGARDIAN voice moves round you as one, with the same orbit.)</p>
+      <div class="orbit-wrap"><canvas id="arpOrbit" width="260" height="260" aria-label="Where the arp's sounds are, seen from above"></canvas><div class="col" id="arpOrbitControls"></div></div>
+      <h3>Arp life sequencer</h3>
+      <canvas id="arpLifeView" width="1100" height="180" aria-label="The arp's six Life lanes, each with its own playhead"></canvas>
+      <div class="life-controls" id="arpLifeControls"></div>
+      <h3>The arp's six oscillators</h3>
+      <div class="oscs" id="arpOscs"></div>
+    </div>
+  </details>
+
+  <details class="card fold voxcard vox-only" id="voxCard" data-fold="vox" open>
+    <summary class="head"><h2>Vox</h2><span class="eyebrow"><span id="voxInfo"></span> · no words, a new voice</span></summary>
+    <p>Hums, held vowels, bits of syllables, breaths and sung chords from all the singers, tuned to the chords and laid across each other into a voice nobody has. Each piece takes its own path through the room; now and then one is thrown into the echo or the big room. Choose a Style and a Space in the bar below.</p>
+    <div class="vox-grid">
+      <div class="orbit-wrap vox-room"><canvas id="voxOrbit" width="260" height="260" aria-label="Where the vox pieces are now, seen from above: hums rose, bits of words gold, breaths pale, sung chords teal, clouds white"></canvas><div class="col" id="voxSpaceControls"></div></div>
+      <div class="life-controls" id="voxControls"></div>
+    </div>
+    <div class="row"><span class="eyebrow" style="align-self:center">Singers</span><div class="singers" id="voxSingers"></div><button class="btn" type="button" id="voxSeed">Sing it another way</button></div>
   </details>
 
   <section class="lineup" aria-label="Chord line">
@@ -350,6 +397,7 @@ canvas#lifeView { width: 100%; height: 180px; display: block; border-radius: 6px
       <button class="play" id="play" type="button" aria-label="Play the chord line"><svg viewBox="0 0 20 20" id="playIcon"><path d="M5 3l12 7-12 7z"/></svg></button>
       <label class="field">BPM<input type="number" id="tempo" min="40" max="200" value="84"></label>
       <label class="field">Key<select id="lineKey"></select></label>
+      <label class="field" title="How long a new sound, kit, groove or arp takes to fade in">Fade<select id="fadeSel"><option value="1">1 s</option><option value="2">2 s</option><option value="4">4 s</option><option value="8" selected>8 s</option><option value="16">16 s</option></select></label>
       <label class="field" title="How many bars each chord lasts">Bars<select id="lineBars"><option value="1">1</option><option value="2" selected>2</option><option value="4">4</option><option value="8">8</option><option value="16">16</option><option value="32">32</option></select></label>
       <span class="status" id="status">Paused. Press ▶ to hear the chord line, hold a chord pad, or play the keyboard.</span>
       <label class="field master">Master<span class="masterrow"><span class="meter" aria-hidden="true"><b id="masterMeter"></b></span><input type="range" id="master" class="lvl" min="-24" max="6" step="0.5" value="0" aria-label="Master level"><output id="masterOut" class="db">0 dB</output></span></label>
@@ -357,24 +405,31 @@ canvas#lifeView { width: 100%; height: 180px; display: block; border-radius: 6px
     <div class="mixer">
       <section class="strip chord" aria-label="Chord">
         <div class="strip-head"><button class="btn sw" id="chordOn" type="button" aria-pressed="true">Chord</button><span class="meter" aria-hidden="true"><b id="chordLevelMeter"></b></span><input type="range" id="chordLevel" class="lvl" min="-30" max="6" step="0.5" value="0" aria-label="Chord level"><output id="chordLevelOut" class="db">0 dB</output></div>
-        <div class="bankrow"><label class="tag" for="soundSel">Sound<b id="soundCount"></b></label>
+        <div class="bankrow"><label class="tag" for="soundSel"><span class="tl">Sound</span><span class="ts">Snd</span><b id="soundCount"></b></label>
           <div class="nav"><button type="button" data-bank="sound" data-d="-10" aria-label="Back 10 sounds">«</button><button type="button" data-bank="sound" data-d="-1" aria-label="Previous sounds">‹</button><select id="soundSel" aria-label="Sound"></select><button type="button" data-bank="sound" data-d="1" aria-label="Next sounds">›</button><button type="button" data-bank="sound" data-d="10" aria-label="Forward 10 sounds">»</button><button type="button" class="dice" id="soundDice" title="Randomize the sound" aria-label="Randomize the sound">⚄</button><select id="soundFilter" class="mini" aria-label="Which sounds to show" title="Which sounds to show"><option value="all">All</option><option value="clean">Clean</option><option value="warm">Warm</option></select></div></div>
-        <div class="bankrow"><label class="tag" for="lineSel">Line<b id="lineCount"></b></label>
+        <div class="bankrow"><label class="tag" for="lineSel"><span class="tl">Line</span><span class="ts">Line</span><b id="lineCount"></b></label>
           <div class="nav"><button type="button" data-bank="line" data-d="-10" aria-label="Back 10 chord lines">«</button><button type="button" data-bank="line" data-d="-1" aria-label="Previous chord lines">‹</button><select id="lineSel" aria-label="Chord line"></select><button type="button" data-bank="line" data-d="1" aria-label="Next chord lines">›</button><button type="button" data-bank="line" data-d="10" aria-label="Forward 10 chord lines">»</button><button type="button" class="dice" id="lineDice" title="Random chord line" aria-label="Random chord line">⚄</button></div></div>
       </section>
       <section class="strip drums" aria-label="Drums">
         <div class="strip-head"><button class="btn sw" id="drumOn" type="button" aria-pressed="false">Drums</button><span class="meter" aria-hidden="true"><b id="drumLevelMeter"></b></span><input type="range" id="drumLevel" class="lvl" min="-30" max="6" step="0.5" value="-3" aria-label="Drums level"><output id="drumLevelOut" class="db">0 dB</output></div>
-        <div class="bankrow"><label class="tag" for="kitSel">Kit<b id="kitCount"></b></label>
+        <div class="bankrow"><label class="tag" for="kitSel"><span class="tl">Kit</span><span class="ts">Kit</span><b id="kitCount"></b></label>
           <div class="nav"><button type="button" data-bank="kit" data-d="-10" aria-label="Back 10 drum kits">«</button><button type="button" data-bank="kit" data-d="-1" aria-label="Previous drum kits">‹</button><select id="kitSel" aria-label="Drum kit"></select><button type="button" data-bank="kit" data-d="1" aria-label="Next drum kits">›</button><button type="button" data-bank="kit" data-d="10" aria-label="Forward 10 drum kits">»</button><button type="button" class="dice" id="kitDice" title="Random drum kit" aria-label="Random drum kit">⚄</button></div></div>
-        <div class="bankrow"><label class="tag" for="drumSel">Groove<b id="grooveCount"></b></label>
+        <div class="bankrow"><label class="tag" for="drumSel"><span class="tl">Groove</span><span class="ts">Grv</span><b id="grooveCount"></b></label>
           <div class="nav"><button type="button" data-bank="groove" data-d="-10" aria-label="Back 10 grooves">«</button><button type="button" data-bank="groove" data-d="-1" aria-label="Previous grooves">‹</button><select id="drumSel" aria-label="Groove"></select><button type="button" data-bank="groove" data-d="1" aria-label="Next grooves">›</button><button type="button" data-bank="groove" data-d="10" aria-label="Forward 10 grooves">»</button><button type="button" class="dice" id="grooveDice" title="Random groove" aria-label="Random groove">⚄</button><button type="button" class="dice bpm" id="matchBpm" title="Set the tempo to the groove’s" aria-label="Set the tempo to the groove’s">♩=</button></div></div>
       </section>
       <section class="strip arp arp-only" aria-label="Arp">
         <div class="strip-head"><button class="btn sw" id="arpOn" type="button" aria-pressed="false">Arp</button><span class="meter" aria-hidden="true"><b id="arpLevelMeter"></b></span><input type="range" id="arpLevel" class="lvl" min="-30" max="6" step="0.5" value="-4" aria-label="Arp level"><output id="arpLevelOut" class="db">0 dB</output></div>
-        <div class="bankrow"><label class="tag" for="arpSel">Pattern<b id="arpCount"></b></label>
+        <div class="bankrow"><label class="tag" for="arpSel"><span class="tl">Pattern</span><span class="ts">Pat</span><b id="arpCount"></b></label>
           <div class="nav"><button type="button" data-bank="arp" data-d="-10" aria-label="Back 10 arps">«</button><button type="button" data-bank="arp" data-d="-1" aria-label="Previous arps">‹</button><select id="arpSel" aria-label="Arp pattern"></select><button type="button" data-bank="arp" data-d="1" aria-label="Next arps">›</button><button type="button" data-bank="arp" data-d="10" aria-label="Forward 10 arps">»</button><button type="button" class="dice" id="arpDice" title="Random arp" aria-label="Random arp">⚄</button><button type="button" class="dice" id="arpMake" title="Make a new arp: rhythm and contour blended from four patterns" aria-label="Make a new arp: rhythm and contour blended from four patterns">✧</button></div></div>
-        <div class="bankrow"><label class="tag" for="arpSoundSel">Sound<b id="arpSoundCount"></b></label>
+        <div class="bankrow"><label class="tag" for="arpSoundSel"><span class="tl">Sound</span><span class="ts">Snd</span><b id="arpSoundCount"></b></label>
           <div class="nav"><button type="button" data-bank="arps" data-d="-10" aria-label="Back 10 arp sounds">«</button><button type="button" data-bank="arps" data-d="-1" aria-label="Previous arp sounds">‹</button><select id="arpSoundSel" aria-label="Arp sound"></select><button type="button" data-bank="arps" data-d="1" aria-label="Next arp sounds">›</button><button type="button" data-bank="arps" data-d="10" aria-label="Forward 10 arp sounds">»</button><button type="button" class="dice" id="arpSoundDice" title="Random soft arp sound" aria-label="Random soft arp sound">⚄</button><button type="button" class="dice" id="arpSoundMake" title="Make a new arp sound" aria-label="Make a new arp sound">✧</button></div></div>
+      </section>
+      <section class="strip vox vox-only" aria-label="Vox">
+        <div class="strip-head"><button class="btn sw" id="voxOn" type="button" aria-pressed="false">Vox</button><span class="meter" aria-hidden="true"><b id="voxLevelMeter"></b></span><input type="range" id="voxLevel" class="lvl" min="-30" max="6" step="0.5" value="-6" aria-label="Vox level"><output id="voxLevelOut" class="db">0 dB</output></div>
+        <div class="bankrow"><label class="tag" for="voxStyleSel"><span class="tl">Style</span><span class="ts">Sty</span><b id="voxStyleCount"></b></label>
+          <div class="nav"><button type="button" data-bank="voxstyle" data-d="-10" aria-label="Back 10 vox styles">«</button><button type="button" data-bank="voxstyle" data-d="-1" aria-label="Previous vox styles">‹</button><select id="voxStyleSel" aria-label="Vox style"></select><button type="button" data-bank="voxstyle" data-d="1" aria-label="Next vox styles">›</button><button type="button" data-bank="voxstyle" data-d="10" aria-label="Forward 10 vox styles">»</button><button type="button" class="dice" id="voxStyleDice" title="Random vox style" aria-label="Random vox style">⚄</button></div></div>
+        <div class="bankrow"><label class="tag" for="voxSpaceSel"><span class="tl">Space</span><span class="ts">Spc</span><b id="voxSpaceCount"></b></label>
+          <div class="nav"><button type="button" data-bank="voxspace" data-d="-10" aria-label="Back 10 vox spaces">«</button><button type="button" data-bank="voxspace" data-d="-1" aria-label="Previous vox spaces">‹</button><select id="voxSpaceSel" aria-label="Vox space"></select><button type="button" data-bank="voxspace" data-d="1" aria-label="Next vox spaces">›</button><button type="button" data-bank="voxspace" data-d="10" aria-label="Forward 10 vox spaces">»</button><button type="button" class="dice" id="voxSpaceDice" title="Random vox space" aria-label="Random vox space">⚄</button></div></div>
       </section>
     </div>
     <div class="pads" id="pads" role="group" aria-label="Chord pads: hold one to play its chord"></div>
@@ -393,11 +448,17 @@ window.__arpLadder = async c => {
 
 <script type="text/plain" id="workletSrc">
 const rng32 = seed => () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let x = Math.imul(seed ^ seed >>> 15, 1 | seed); x = x + Math.imul(x ^ x >>> 7, 61 | x) ^ x; return ((x ^ x >>> 14) >>> 0) / 4294967296; };
+// Four engines in one module: 0 and 1 play the chords, 2 and 3 the arp. A new sound starts on the idle engine of its
+// channel and the two cross (equal power) over the fade time; the old one is then silenced and cleared.
+const CH = { chord: [0, 1], arp: [2, 3] };
 class DriftSonata extends AudioWorkletProcessor {
   constructor(options) {
     super();
     this.ready = false; this.queue = []; this.playing = false; this.ppq = 0; this.bpm = 84; this.slot = -1; this.sounding = []; this.tick = 0;
-    this.line = []; this.drums = { on: false, lanes: {}, swing: 0 }; this.kit = {}; this.hits = [];
+    this.line = []; this.drumsOn = false; this.layers = []; this.hits = []; this.fade = 4;
+    this.cur = { chord: 0, arp: 2 };
+    this.eng = [0, 1, 2, 3].map(i => ({ g: i === 0 ? 1 : 0, from: 0, to: i === 0 ? 1 : 0, t: 1, dur: 1, live: i === 0 }));
+    this.held = { chord: new Map(), arp: new Map() }; this.arpQ = []; this.arpOff = [];
     this.port.onmessage = e => this.ready ? this.msg(e.data) : this.queue.push(e.data);
     const stub = { fd_close: () => 0, fd_seek: () => 0, fd_write: () => 0 };
     WebAssembly.instantiate(options.processorOptions.wasm, { wasi_snapshot_preview1: stub }).then(({ instance }) => {
@@ -407,12 +468,34 @@ class DriftSonata extends AudioWorkletProcessor {
       this.port.postMessage({ t: 'ready' });
     });
   }
+  use(i) { this.x.ds_use(i); }
+  // the newest engine of a channel gets parameters and new notes; note-offs go to both, so nothing hangs while they cross
+  on(ch, n, v) { this.held[ch].set(n, v); this.use(this.cur[ch]); this.x.ds_note_on(n, v); if (ch === 'arp') this.eng[this.cur.arp].live = true; }
+  off(ch, n) { this.held[ch].delete(n); for (const i of CH[ch]) { this.use(i); this.x.ds_note_off(n); } }
+  sound(ch, values, fade) {
+    const x = this.x, old = this.cur[ch], nw = CH[ch][0] === old ? CH[ch][1] : CH[ch][0], dur = Math.max(.01, fade ?? this.fade);
+    const E = this.eng, ringing = E[nw].live && E[nw].g > .001;
+    this.use(nw);
+    // an engine still fading out (sounds changed quickly) turns round where it is instead of being cut off
+    if (!ringing) x.ds_reset();
+    if (values) {
+      new Float32Array(x.memory.buffer, x.ds_param_buf(), values.length).set(values); x.ds_set_all();
+      if (!ringing) for (const [n, v] of this.held[ch]) x.ds_note_on(n, v);
+    }
+    Object.assign(E[nw], { from: ringing ? E[nw].g : 0, to: values ? 1 : 0, t: 0, dur, live: ringing || (!!values && (ch === 'chord' || this.held.arp.size > 0 || E[old].live)) });
+    Object.assign(E[old], { from: E[old].g, to: 0, t: 0, dur });
+    this.cur[ch] = nw;
+  }
   msg(m) {
     const x = this.x;
     switch (m.t) {
-      case 'p': x.ds_set_param(m.i, m.v); break;
-      case 'on': x.ds_note_on(m.n, m.v); break;
-      case 'off': x.ds_note_off(m.n); break;
+      case 'p': this.use(this.cur[m.ch || 'chord']); x.ds_set_param(m.i, m.v); break;
+      case 'sound': this.sound(m.ch, m.values, m.fade); break;
+      case 'fade': this.fade = m.s; break;
+      case 'on': this.on(m.ch || 'chord', m.n, m.v); break;
+      case 'off': this.off(m.ch || 'chord', m.n); break;
+      case 'arpnote': this.arpQ.push(m); this.arpQ.sort((a, b) => a.at - b.at); break;
+      case 'arpstop': this.arpQ = []; for (const o of this.arpOff) this.off('arp', o.n); this.arpOff = []; break;
       case 'bank': {
         x.ds_bank_begin();
         for (const z of m.zones) { const ptr = x.ds_bank_add(z.fam, z.root, z.sr, z.data.length); new Float32Array(x.memory.buffer, ptr, z.data.length).set(z.data); }
@@ -420,15 +503,23 @@ class DriftSonata extends AudioWorkletProcessor {
         x.ds_bank_commit(); break;
       }
       case 'line': this.line = m.line; if (this.playing) this.slot = -2; break;
-      case 'drums': this.drums = m.drums; break;
-      case 'kit': this.kit = m.kit; break;  // per lane: the sound, its level, place and sends (made in the page)
-      case 'vocal': { const ptr = x.ds_vocal(m.data.length); new Float32Array(x.memory.buffer, ptr, m.data.length).set(m.data); break; }
+      case 'drums': this.drumsOn = m.on; if (m.lanes) this.drumLayer({ lanes: m.lanes, swing: m.swing }); break;
+      case 'kit': this.drumLayer({ kit: m.kit }); break;  // per lane: the sound, its level, place and sends (made in the page)
+      case 'vocal': for (const i of CH.chord) { this.use(i); const ptr = x.ds_vocal(m.data.length); new Float32Array(x.memory.buffer, ptr, m.data.length).set(m.data); } break;
       case 'bpm': this.bpm = m.bpm; break;
       case 'play': this.startAt = m.at || 0; break;
       case 'stop': this.playing = false; this.startAt = null; this.release(); this.slot = -1; this.port.postMessage({ t: 'slot', s: -1 }); break;
     }
   }
-  release() { for (const n of this.sounding) this.x.ds_note_off(n); this.sounding = []; }
+  // Drums fade too: a new kit or groove is a new layer coming in while the old one goes
+  drumLayer(change) {
+    const top = this.layers[this.layers.length - 1] || { kit: {}, lanes: {}, swing: 0 };
+    const L = { kit: change.kit || top.kit, lanes: change.lanes || top.lanes, swing: change.swing ?? top.swing, g: 0, dir: 1 };
+    if (!this.playing || !this.layers.length) { this.layers = [{ ...L, g: 1 }]; return; }
+    for (const l of this.layers) l.dir = -1;
+    this.layers.push(L);
+  }
+  release() { for (const n of this.sounding) this.off('chord', n); this.sounding = []; }
   process(inputs, outputs) {
     const out = outputs[0], L = out[0], R = out[1] || out[0], n = L.length;
     if (!this.ready) return true;
@@ -446,28 +537,60 @@ class DriftSonata extends AudioWorkletProcessor {
       while (s < this.line.length - 1 && pos >= this.line[s].bars * 4) { pos -= this.line[s].bars * 4; s++; }
       if (s !== this.slot) {
         this.release(); this.slot = s;
-        for (const note of this.line[s].notes) { x.ds_note_on(note, .8); this.sounding.push(note); }
+        for (const note of this.line[s].notes) { this.on('chord', note, .8); this.sounding.push(note); }
         this.port.postMessage({ t: 'slot', s });
       }
     }
-    if (this.playing && this.drums.on) {
+    if (this.playing && this.drumsOn) {
       // Every sixteenth that falls inside this block, on its own sample; the odd ones pushed late by the swing
-      const lanes = this.drums.lanes, sw = this.drums.swing * .25 * .42;
-      for (let k = Math.ceil((this.ppq - sw) / .25 - 1e-9); k * .25 < this.ppq + step; k++) {
-        const s16 = ((k % 16) + 16) % 16, at = k * .25 + (s16 % 2 ? sw : 0);
-        if (at < this.ppq - 1e-9 || at >= this.ppq + step) continue;
-        const off = Math.min(n - 1, Math.max(0, Math.round((at - this.ppq) / step * n))), acc = s16 % 4 === 0 ? 1 : s16 % 2 === 0 ? .8 : .66;
-        for (const lane in lanes) {
-          const v = this.kit[lane]; if (!v || !lanes[lane].includes(s16)) continue;
-          if (lane === 'h') for (const h of this.hits) if (h.lane === 'o') h.choke = true;  // a closed hat closes the open one
-          this.hits.push({ v, lane, pos: -off, g: lane === 'k' ? .9 + .1 * acc : acc, choke: false, cg: 1 });
+      for (const ly of this.layers) {
+        const lanes = ly.lanes, sw = ly.swing * .25 * .42;
+        for (let k = Math.ceil((this.ppq - sw) / .25 - 1e-9); k * .25 < this.ppq + step; k++) {
+          const s16 = ((k % 16) + 16) % 16, at = k * .25 + (s16 % 2 ? sw : 0);
+          if (at < this.ppq - 1e-9 || at >= this.ppq + step || ly.g <= .001) continue;
+          const off = Math.min(n - 1, Math.max(0, Math.round((at - this.ppq) / step * n))), acc = s16 % 4 === 0 ? 1 : s16 % 2 === 0 ? .8 : .66;
+          for (const lane in lanes) {
+            const v = ly.kit[lane]; if (!v || !lanes[lane].includes(s16)) continue;
+            if (lane === 'h') for (const h of this.hits) if (h.lane === 'o') h.choke = true;  // a closed hat closes the open one
+            const lg = Math.sin(ly.g * Math.PI / 2);
+            this.hits.push({ v, lane, pos: -off, g: (lane === 'k' ? .9 + .1 * acc : acc) * lg, choke: false, cg: 1 });
+          }
         }
       }
     }
-    x.ds_transport(this.playing ? 1 : 0, this.ppq, this.bpm, 4, 4);
-    x.ds_process(n);
-    L.set(new Float32Array(x.memory.buffer, x.ds_left(), n));
-    if (R !== L) R.set(new Float32Array(x.memory.buffer, x.ds_right(), n));
+    for (const ly of this.layers) ly.g = Math.max(0, Math.min(1, ly.g + ly.dir * n / sampleRate / this.fade));
+    this.layers = this.layers.filter(ly => ly.dir > 0 || ly.g > 0);
+    // The engines: each live one runs, and is mixed into its channel's output at its fade
+    const A = outputs[3], E = this.eng;
+    if (this.arpQ.length && this.arpQ[0].at < currentTime + n / sampleRate) E[this.cur.arp].live = true;
+    L.fill(0); R.fill(0); if (A && A[0]) { A[0].fill(0); A[1].fill(0); }
+    for (let i = 0; i < 4; i++) {
+      const e = E[i];
+      if (e.t < 1) { e.t = Math.min(1, e.t + n / sampleRate / e.dur); e.g = e.from + (e.to - e.from) * e.t; if (e.t >= 1 && e.to === 0 && e.live) { this.use(i); x.ds_reset(); e.live = false; } }
+      if (!e.live) continue;
+      const arp = i >= 2, oL = arp ? A && A[0] : L, oR = arp ? A && A[1] : R;
+      if (!oL) continue;
+      this.use(i);
+      x.ds_transport(this.playing ? 1 : 0, this.ppq, this.bpm, 4, 4);
+      const gain = Math.sin(e.g * Math.PI / 2), seg = arp && i === this.cur.arp;
+      // the arp's notes land on their own sample: the block is cut where they start and end
+      let done = 0;
+      while (done < n) {
+        let end = n;
+        if (seg) {
+          const tNow = currentTime + done / sampleRate;
+          const nextOn = this.arpQ.length ? Math.round((this.arpQ[0].at - currentTime) * sampleRate) : 1e9, nextOff = this.arpOff.length ? Math.round((Math.min(...this.arpOff.map(o => o.at)) - currentTime) * sampleRate) : 1e9;
+          if (nextOn <= done) { const m = this.arpQ.shift(); this.on('arp', m.n, m.v); this.arpOff.push({ n: m.n, at: m.at + m.dur }); continue; }
+          if (nextOff <= done) { const k = this.arpOff.findIndex(o => Math.round((o.at - currentTime) * sampleRate) <= done); const o = this.arpOff.splice(k, 1)[0];
+            if (!this.arpOff.some(q => q.n === o.n) && !this.arpQ.some(q => q.n === o.n && q.at <= tNow)) this.off('arp', o.n); continue; }
+          end = Math.min(n, nextOn, nextOff);
+        }
+        this.use(i); x.ds_process(end - done);
+        const l = new Float32Array(x.memory.buffer, x.ds_left(), end - done), r = new Float32Array(x.memory.buffer, x.ds_right(), end - done);
+        for (let j = 0; j < end - done; j++) { oL[done + j] += l[j] * gain; oR[done + j] += r[j] * gain; }
+        done = end;
+      }
+    }
     // Drums on their own outputs: dry, and the sends (reverb left, echo right) that the page turns into rooms
     const D = outputs[1], F = outputs[2];
     if (D && D[0]) { D[0].fill(0); D[1].fill(0); F[0].fill(0); F[1].fill(0); }
@@ -485,11 +608,19 @@ class DriftSonata extends AudioWorkletProcessor {
     }
     if (this.playing) this.ppq += step;
     if (++this.tick % 6 === 0) {
-      const c = x.ds_disp_count(), notes = [];
-      for (let i = 0; i < c; i++) notes.push(x.ds_disp_note(i));
-      const src = [];
-      for (let k = 0, n = x.ds_sources(); k < n; k++) src.push([x.ds_disp_pos(k, 0), x.ds_disp_pos(k, 1), x.ds_disp_pos(k, 2), x.ds_disp_level(k)]);
-      this.port.postMessage({ t: 'disp', root: x.ds_disp_root(), q: x.ds_disp_quality(), notes, sub: x.ds_disp_sub(), src, lifePos: x.ds_life_pos(), lifeSteps: x.ds_life_steps(), ppq: ppq0, time: currentTime, playing: this.playing });
+      const show = i => {
+        this.use(i);
+        const src = [], lanes = [];
+        for (let k = 0, m = x.ds_sources(); k < m; k++) src.push([x.ds_disp_pos(k, 0), x.ds_disp_pos(k, 1), x.ds_disp_pos(k, 2), x.ds_disp_level(k)]);
+        for (let l = 0; l < 6; l++) lanes.push(x.ds_life_lane_pos(l));
+        return { src, lanes, lifeSteps: x.ds_life_steps() };
+      };
+      const c = show(this.cur.chord), a = this.eng[this.cur.arp].live ? show(this.cur.arp) : null;
+      this.use(this.cur.chord);
+      const cnt = x.ds_disp_count(), notes = [];
+      for (let i = 0; i < cnt; i++) notes.push(x.ds_disp_note(i));
+      this.port.postMessage({ t: 'disp', root: x.ds_disp_root(), q: x.ds_disp_quality(), notes, sub: x.ds_disp_sub(), src: c.src, lifeLanes: c.lanes, lifeSteps: c.lifeSteps,
+        arp: a, ppq: ppq0, time: currentTime, playing: this.playing });
     }
     return true;
   }
@@ -504,6 +635,9 @@ const SAMPLES = "@@SAMPLES@@";
 
 const P = DATA.params, idx = {}; P.forEach((p, i) => idx[p.id] = i);
 const values = P.map(p => p.def);
+// The arp's own six-oscillator engine has its own copy of every parameter
+const arpVals = P.map(p => p.def);
+const T = { chord: { vals: values, ctl: {} }, arp: { vals: arpVals, ctl: {} } };
 const NAMES = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
 const PLAIN = ['C', 'C#', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'Ab', 'A', 'Bb', 'B'];
 const $ = id => document.getElementById(id);
@@ -525,8 +659,8 @@ async function startAudio() {
     try { await ctx.audioWorklet.addModule(URL.createObjectURL(new Blob([code], { type: 'application/javascript' }))); }
     catch (e) { await ctx.audioWorklet.addModule('data:application/javascript;base64,' + btoa(unescape(encodeURIComponent(code)))); }
     const wasm = b64ToBytes(WASM_B64).buffer;
-    // Three outputs: the strings, the drums dry, and the drums' sends to their room and echo
-    node = new AudioWorkletNode(ctx, 'drift-sonata', { numberOfInputs: 0, numberOfOutputs: 3, outputChannelCount: [2, 2, 2], processorOptions: { wasm, seed: (Math.random() * 1e9) | 0 } });
+    // Four outputs: the strings, the drums dry, the drums' sends to their room and echo, and the arp's six oscillators
+    node = new AudioWorkletNode(ctx, 'drift-sonata', { numberOfInputs: 0, numberOfOutputs: 4, outputChannelCount: [2, 2, 2, 2], processorOptions: { wasm, seed: (Math.random() * 1e9) | 0 } });
     analyser = ctx.createAnalyser(); analyser.fftSize = 2048;
     // The engine stops at -1 dBFS by itself; this catches the drums and the arp on top of it
     const safety = ctx.createDynamicsCompressor(); safety.threshold.value = -1; safety.knee.value = 0; safety.ratio.value = 20; safety.attack.value = .002; safety.release.value = .12;
@@ -535,12 +669,16 @@ async function startAudio() {
     drumAudio(); drumFx.bus.connect(master); drumTempo();
     mixApply(true); meterOn(chordBus, 'chordLevelMeter'); meterOn(drumFx.bus, 'drumLevelMeter'); meterOn(master, 'masterMeter');
     node.port.onmessage = e => onWorklet(e.data);
-    values.forEach((v, i) => node.port.postMessage({ t: 'p', i, v }));
+    node.port.postMessage({ t: 'fade', s: fadeTime() });
+    sendSound('chord', .01); sentGroove = -1;
+    if (HAS_ARP && arpSound().six) sendSound('arp', .01);
     node.port.postMessage({ t: 'bpm', bpm: tempo() });
     sendLine();
     sendDrums(); sendKit();
     loadSamples();
     if (ctx.state !== 'running') await ctx.resume();
+    if (HAS_ARP && arpPrefs.on) arpAudio();
+    if (HAS_VOX && voxPrefs.on) voxAudio();
   })().catch(e => { starting = null; setStatus('The sound engine could not start in this browser: ' + e.message); throw e; });
   return starting;
 }
@@ -561,7 +699,10 @@ async function loadSamples() {
   }
   node.port.postMessage({ t: 'bank', zones, tables }, [...zones.map(z => z.data.buffer), ...tables.map(t => t.data.buffer)]);
 }
-function send(i) { if (node) node.port.postMessage({ t: 'p', i, v: values[i] }); }
+function send(i, ch = 'chord') { if (node && !loadingSound) node.port.postMessage({ t: 'p', i, v: T[ch].vals[i], ch }); }
+// A whole new sound: it starts in the channel's other engine and the two cross over the fade time
+const fadeTime = () => +($('fadeSel') ? $('fadeSel').value : 4);
+function sendSound(ch, fade) { if (node) node.port.postMessage({ t: 'sound', ch, values: Float32Array.from(T[ch].vals), fade: fade ?? fadeTime() }); }
 
 /* ---------- Chord display ---------- */
 let display = { root: -1, notes: [], sub: 0 }, held = new Set(), lineHeld = new Set();
@@ -595,7 +736,9 @@ function onWorklet(m) {
   else if (m.t === 'anchor') arpAnchorFrom(m);
   else if (m.t === 'slot') markSlot(m.s);
   else if (m.t === 'disp') {
-    display = m; orbitSrc = m.src || orbitSrc; arpAnchorFrom(m); if (m.lifeSteps) { lifePos = m.lifePos; lifeSteps = m.lifeSteps; }
+    display = m; orbitSrc = m.src || orbitSrc; arpAnchorFrom(m);
+    if (m.lifeLanes) { lifeLanes = m.lifeLanes; lifeSteps = m.lifeSteps; }
+    if (m.arp) { arpSrc = m.arp.src; arpLifeLanes = m.arp.lanes; arpLifeSteps = m.arp.lifeSteps; } else arpLifeLanes = null;
     $('chordName').textContent = chordName(m.root, m.q, m.notes);
     const playedNow = new Set([...held, ...lineHeld]);
     $('voicing').innerHTML = m.notes.length ? m.notes.map(n => `<span class="pill ${playedNow.has(n) ? 'played' : 'added'}">${PLAIN[n % 12]}${Math.floor(n / 12) - 1}</span>`).join('') : '<span class="pill">Silence</span>';
@@ -632,72 +775,81 @@ function drawTrace() {
 }
 requestAnimationFrame(drawTrace);
 
-/* ---------- 3D orbit view: the sources seen from above, you in the middle facing up ---------- */
-const ORBIT_NAMES = ['Osc 1', 'Osc 2', 'Osc 3', 'Osc 4', 'Osc 5', 'Osc 6', 'Choir', 'Cello', 'Strings', 'Brass', 'Texture', 'Robot', 'Arp'];
-const ORBIT_COLORS = ['#e486ab', '#ecd08f', '#e486ab', '#ecd08f', '#e486ab', '#ecd08f', '#7fd3d3', '#3aa3aa', '#b9e3e0', '#c39539', '#f6eee8', '#ffffff', '#ffd76a'];
-let orbitSrc = [];
-function drawOrbit() {
-  const c = document.getElementById('orbit');
-  if (c) {
-    const g = c.getContext('2d'), w = c.width = c.clientWidth * devicePixelRatio, h = c.height = c.clientHeight * devicePixelRatio, cx = w / 2, cy = h / 2, R = w * .44;
-    g.clearRect(0, 0, w, h);
-    g.strokeStyle = 'rgba(236,208,143,.18)'; g.lineWidth = devicePixelRatio;
-    for (const r of [.33, .66, 1]) { g.beginPath(); g.arc(cx, cy, R * r, 0, Math.PI * 2); g.stroke(); }
-    // the listener: a head with a nose pointing forward (up)
-    g.fillStyle = '#f6eee8'; g.beginPath(); g.arc(cx, cy, w * .035, 0, Math.PI * 2); g.fill();
-    g.beginPath(); g.moveTo(cx - w * .012, cy - w * .03); g.lineTo(cx, cy - w * .055); g.lineTo(cx + w * .012, cy - w * .03); g.fill();
-    const srcs = orbitSrc.slice(); if (arpPos && arpPrefs.on && arpMode) srcs[12] = [...arpPos, .05];
-    srcs.forEach(([az, el, d, lv], k) => {
-      if (lv < .0005) return;
-      const r = Math.min(1, d / 3.4) * R * Math.cos(el * .7), x = cx + Math.sin(az) * r, y = cy - Math.cos(az) * r;
-      const size = (2.5 + 4 * Math.max(0, Math.min(1, (el + .6) / 1.4))) * devicePixelRatio;
-      g.globalAlpha = Math.min(1, .35 + lv * 40); g.fillStyle = ORBIT_COLORS[k];
-      g.beginPath(); g.arc(x, y, size, 0, Math.PI * 2); g.fill(); g.globalAlpha = 1;
-      if (k === 12) { g.strokeStyle = ORBIT_COLORS[k]; g.lineWidth = 1.5 * devicePixelRatio; g.beginPath(); g.arc(x, y, size * 2, 0, Math.PI * 2); g.stroke(); }  // the arp, ringed
-    });
-  }
-  requestAnimationFrame(drawOrbit);
+/* ---------- 3D orbit views: the sources seen from above, you in the middle facing up (chord, arp and vox each have one) ---------- */
+const ORBIT_NAMES = ['Osc 1', 'Osc 2', 'Osc 3', 'Osc 4', 'Osc 5', 'Osc 6', 'Choir', 'Cello', 'Strings', 'Brass', 'Texture', 'Robot'];
+const ORBIT_COLORS = ['#e486ab', '#ecd08f', '#e486ab', '#ecd08f', '#e486ab', '#ecd08f', '#7fd3d3', '#3aa3aa', '#b9e3e0', '#c39539', '#f6eee8', '#ffffff'];
+let orbitSrc = [], arpSrc = [], voxSrc = [];
+const ORBITS = [['orbit', () => orbitSrc, ORBIT_COLORS], ['arpOrbit', () => arpOrbitSources(), ORBIT_COLORS], ['voxOrbit', () => voxSrc, null]];
+function drawOrbitOn(c, srcs, colors) {
+  const g = c.getContext('2d'), w = c.width = c.clientWidth * devicePixelRatio, h = c.height = c.clientHeight * devicePixelRatio, cx = w / 2, cy = h / 2, R = w * .44;
+  g.clearRect(0, 0, w, h);
+  g.strokeStyle = 'rgba(236,208,143,.18)'; g.lineWidth = devicePixelRatio;
+  for (const r of [.33, .66, 1]) { g.beginPath(); g.arc(cx, cy, R * r, 0, Math.PI * 2); g.stroke(); }
+  // the listener: a head with a nose pointing forward (up)
+  g.fillStyle = '#f6eee8'; g.beginPath(); g.arc(cx, cy, w * .035, 0, Math.PI * 2); g.fill();
+  g.beginPath(); g.moveTo(cx - w * .012, cy - w * .03); g.lineTo(cx, cy - w * .055); g.lineTo(cx + w * .012, cy - w * .03); g.fill();
+  srcs.forEach(([az, el, d, lv, col], k) => {
+    if (lv < .0005) return;
+    const r = Math.min(1, d / 3.4) * R * Math.cos(el * .7), x = cx + Math.sin(az) * r, y = cy - Math.cos(az) * r;
+    const size = (2.5 + 4 * Math.max(0, Math.min(1, (el + .6) / 1.4))) * devicePixelRatio;
+    g.globalAlpha = Math.min(1, .35 + lv * 40); g.fillStyle = col || (colors ? colors[k % colors.length] : '#ffd76a');
+    g.beginPath(); g.arc(x, y, size, 0, Math.PI * 2); g.fill(); g.globalAlpha = 1;
+  });
 }
-requestAnimationFrame(drawOrbit);
+function drawOrbits() {
+  for (const [id, src, colors] of ORBITS) { const c = $(id); if (c && c.offsetParent) drawOrbitOn(c, src(), colors); }
+  requestAnimationFrame(drawOrbits);
+}
+requestAnimationFrame(drawOrbits);
 
-/* ---------- Life sequencer view: the six lanes' patterns, made by the same code as the engine ---------- */
-let lifePos = 0, lifeSteps = 32, lifeX = null, lifeXLoading = false;
+/* ---------- Life sequencer views: the six lanes' patterns (made by the same code as the engine), each lane with its
+   own playhead, which with Playheads up runs at its own speed and in its own direction ---------- */
+let lifeLanes = [0, 0, 0, 0, 0, 0], lifeSteps = 32, arpLifeLanes = null, arpLifeSteps = 32, lifeX = null, lifeXLoading = false;
 const LIFE_COLORS = { pitch: '#f2a5c3', shape: '#ecd08f', place: '#7fd3d3' };
-function drawLife() {
-  const c = document.getElementById('lifeView');
-  if (c && !lifeX && !lifeXLoading) { lifeXLoading = true; harmony().then(x => { lifeX = x; }); }
-  if (c && lifeX) {
-    const g = c.getContext('2d'), w = c.width = c.clientWidth * devicePixelRatio, h = c.height = c.clientHeight * devicePixelRatio;
-    const seed = Math.round(values[idx.lifeseq] > 0 ? values[idx.lifeseed] : values[idx.lifeseed]), rows = 6, rh = h / rows, steps = [16, 32, 64, 128][Math.round(values[idx.liferate])] || 32;
-    g.clearRect(0, 0, w, h);
-    g.font = `${10 * devicePixelRatio}px IBM Plex Mono, monospace`;
-    for (let l = 0; l < rows; l++) {
-      const y0 = l * rh, mid = y0 + rh / 2, depth = values[idx['lane' + (l + 1)]] * Math.max(.15, values[idx.lifeseq]);
-      g.fillStyle = l % 2 ? 'rgba(255,255,255,.025)' : 'rgba(255,255,255,0)'; g.fillRect(0, y0, w, rh);
-      // level: the lane fades where the oscillator dips
-      for (let k = 0; k < steps; k++) {
-        const lv = lifeX.ds_life_value(seed, l, 4, k);
-        if (lv < 0) { g.fillStyle = `rgba(0,0,0,${-lv * .45 * depth})`; g.fillRect(k / steps * w, y0, w / steps + 1, rh); }
-        if (lifeX.ds_life_value(seed, l, 7, k) !== 0 && values[idx.loctave] * depth > .06) { g.fillStyle = 'rgba(255,255,255,.6)'; g.fillRect(k / steps * w + 1, y0 + 2, 2 * devicePixelRatio, rh - 4); }
-      }
-      for (const [t, col] of [[0, LIFE_COLORS.pitch], [1, LIFE_COLORS.shape], [2, LIFE_COLORS.place]]) {
-        g.strokeStyle = col; g.lineWidth = 1.4 * devicePixelRatio; g.globalAlpha = .9; g.beginPath();
-        for (let k = 0; k <= steps; k++) { const v = lifeX.ds_life_value(seed, l, t, Math.min(k, steps - 1)), x = k / steps * w, y = mid - v * rh * .38; k ? g.lineTo(x, y) : g.moveTo(x, y); }
-        g.stroke(); g.globalAlpha = 1;
-      }
-      g.fillStyle = 'rgba(246,238,232,.75)'; g.fillText('OSC ' + (l + 1), 6 * devicePixelRatio, y0 + 13 * devicePixelRatio);
+function drawLifeOn(c, vals, lanes, live) {
+  const g = c.getContext('2d'), w = c.width = c.clientWidth * devicePixelRatio, h = c.height = c.clientHeight * devicePixelRatio;
+  const seed = Math.round(vals[idx.lifeseed]), rows = 6, rh = h / rows, steps = [16, 32, 64, 128][Math.round(vals[idx.liferate])] || 32;
+  g.clearRect(0, 0, w, h);
+  g.font = `${10 * devicePixelRatio}px IBM Plex Mono, monospace`;
+  for (let l = 0; l < rows; l++) {
+    const y0 = l * rh, mid = y0 + rh / 2, depth = vals[idx['lane' + (l + 1)]] * Math.max(.15, vals[idx.lifeseq]);
+    g.fillStyle = l % 2 ? 'rgba(255,255,255,.025)' : 'rgba(255,255,255,0)'; g.fillRect(0, y0, w, rh);
+    // level: the lane fades where the oscillator dips
+    for (let k = 0; k < steps; k++) {
+      const lv = lifeX.ds_life_value(seed, l, 4, k);
+      if (lv < 0) { g.fillStyle = `rgba(0,0,0,${-lv * .45 * depth})`; g.fillRect(k / steps * w, y0, w / steps + 1, rh); }
+      if (lifeX.ds_life_value(seed, l, 7, k) !== 0 && vals[idx.loctave] * depth > .06) { g.fillStyle = 'rgba(255,255,255,.6)'; g.fillRect(k / steps * w + 1, y0 + 2, 2 * devicePixelRatio, rh - 4); }
     }
-    // bar lines every 4 bars, and where the sequencer is
-    g.strokeStyle = 'rgba(236,208,143,.18)'; g.lineWidth = devicePixelRatio;
-    for (let b = 4; b < 32; b += 4) { const x = b / 32 * w; g.beginPath(); g.moveTo(x, 0); g.lineTo(x, h); g.stroke(); }
-    if (node) { const x = (lifePos / lifeSteps) * w; g.strokeStyle = '#ffffff'; g.lineWidth = 2 * devicePixelRatio; g.beginPath(); g.moveTo(x, 0); g.lineTo(x, h); g.stroke(); }
+    for (const [t, col] of [[0, LIFE_COLORS.pitch], [1, LIFE_COLORS.shape], [2, LIFE_COLORS.place]]) {
+      g.strokeStyle = col; g.lineWidth = 1.4 * devicePixelRatio; g.globalAlpha = .9; g.beginPath();
+      for (let k = 0; k <= steps; k++) { const v = lifeX.ds_life_value(seed, l, t, Math.min(k, steps - 1)), x = k / steps * w, y = mid - v * rh * .38; k ? g.lineTo(x, y) : g.moveTo(x, y); }
+      g.stroke(); g.globalAlpha = 1;
+    }
+    g.fillStyle = 'rgba(246,238,232,.75)'; g.fillText('OSC ' + (l + 1), 6 * devicePixelRatio, y0 + 13 * devicePixelRatio);
+    // this lane's playhead, with a glow trail behind it showing which way it runs
+    if (live && lanes) {
+      const x = (lanes[l] % steps) / steps * w, prev = c['_p' + l] ?? x, dir = Math.abs(x - prev) > w / 2 ? 0 : Math.sign(x - prev);
+      c['_p' + l] = x; if (dir) c['_d' + l] = dir;
+      const d = c['_d' + l] || 1, grad = g.createLinearGradient(x - d * 40 * devicePixelRatio, 0, x, 0);
+      grad.addColorStop(0, 'rgba(255,255,255,0)'); grad.addColorStop(1, 'rgba(255,255,255,.35)');
+      g.fillStyle = grad; g.fillRect(Math.min(x, x - d * 40 * devicePixelRatio), y0 + 1, 40 * devicePixelRatio, rh - 2);
+      g.strokeStyle = '#ffffff'; g.lineWidth = 2 * devicePixelRatio; g.beginPath(); g.moveTo(x, y0 + 2); g.lineTo(x, y0 + rh - 2); g.stroke();
+    }
   }
-  requestAnimationFrame(drawLife);
+  // bar lines every 4 bars
+  g.strokeStyle = 'rgba(236,208,143,.18)'; g.lineWidth = devicePixelRatio;
+  for (let b = 4; b < 32; b += 4) { const x = b / 32 * w; g.beginPath(); g.moveTo(x, 0); g.lineTo(x, h); g.stroke(); }
 }
-requestAnimationFrame(drawLife);
+function drawLifes() {
+  const views = [['lifeView', values, lifeLanes, !!node], ['arpLifeView', arpVals, arpLifeLanes, !!arpLifeLanes]];
+  if (!lifeX && !lifeXLoading) { lifeXLoading = true; harmony().then(x => { lifeX = x; }); }
+  if (lifeX) for (const [id, vals, lanes, live] of views) { const c = $(id); if (c && c.offsetParent) drawLifeOn(c, vals, lanes, live); }
+  requestAnimationFrame(drawLifes);
+}
+requestAnimationFrame(drawLifes);
 
 /* ---------- Controls ---------- */
-const controls = {};  // id -> update function
+const controls = T.chord.ctl;  // id -> update functions
 function skewExp(p) { return p.skew > 0 ? Math.log(.5) / Math.log((p.skew - p.min) / (p.max - p.min)) : 1; }
 function toPos(p, v) { return Math.pow((v - p.min) / (p.max - p.min), skewExp(p)); }
 function fromPos(p, t) { return p.min + (p.max - p.min) * Math.pow(t, 1 / skewExp(p)); }
@@ -711,41 +863,41 @@ function fmt(p, v) {
   if (p.min < 0) return v === 0 ? 'C' : (Math.abs(v) * 100).toFixed(0) + (v < 0 ? ' L' : ' R');
   return Math.round(v * 100) + '%';
 }
-function setValue(id, v, from) {
-  const i = idx[id]; values[i] = v; send(i);
-  if (!loadingSound && id !== 'level' && typeof markSoundDirty === 'function') markSoundDirty();
-  if (controls[id]) controls[id].forEach(f => f !== from && f(v));
+function setValue(id, v, from, ch = 'chord') {
+  const t = T[ch], i = idx[id]; t.vals[i] = v; send(i, ch);
+  if (!loadingSound && ch === 'chord' && id !== 'level' && typeof markSoundDirty === 'function') markSoundDirty();
+  (t.ctl[id] || []).forEach(f => f !== from && f(v));
 }
-function onCtl(id, f) { (controls[id] = controls[id] || []).push(f); }
+function onCtl(id, f, ch = 'chord') { (T[ch].ctl[id] = T[ch].ctl[id] || []).push(f); }
 
 function slider(id, opts = {}) {
-  const p = P[idx[id]], wrap = document.createElement('div'); wrap.className = 'ctl';
+  const ch = opts.ch || 'chord', p = P[idx[id]], wrap = document.createElement('div'); wrap.className = 'ctl';
   const label = opts.label ?? p.name, rid = 'c-' + id + '-' + Math.random().toString(36).slice(2, 6);
   wrap.innerHTML = `<label for="${rid}">${label} <output></output></label><input type="range" id="${rid}" min="0" max="1" step="0.001" class="${opts.rose ? 'rose' : opts.teal ? 'teal' : ''}">`;
   const input = wrap.querySelector('input'), out = wrap.querySelector('output');
   const show = v => { const t = toPos(p, v); input.value = t; input.style.setProperty('--pct', (t * 100) + '%'); out.textContent = fmt(p, v); };
-  input.addEventListener('input', () => { let v = fromPos(p, +input.value); if (p.kind === 'int') v = Math.round(v); setValue(id, v, show); show(v); });
-  onCtl(id, show); show(values[idx[id]]);
+  input.addEventListener('input', () => { let v = fromPos(p, +input.value); if (p.kind === 'int') v = Math.round(v); setValue(id, v, show, ch); show(v); });
+  onCtl(id, show, ch); show(T[ch].vals[idx[id]]);
   return wrap;
 }
 function choice(id, opts = {}) {
-  const p = P[idx[id]], wrap = document.createElement('div'); wrap.className = 'ctl';
+  const ch = opts.ch || 'chord', p = P[idx[id]], wrap = document.createElement('div'); wrap.className = 'ctl';
   const rid = 'c-' + id + '-' + Math.random().toString(36).slice(2, 6);
   const items = p.kind === 'int' ? Array.from({ length: p.max - p.min + 1 }, (_, k) => p.min + k) : p.choices.map((_, k) => k);
   wrap.innerHTML = `<label for="${rid}">${opts.label ?? p.name}</label><select id="${rid}">${items.map(v => `<option value="${v}">${p.kind === 'int' ? fmt(p, v) : p.choices[v]}</option>`).join('')}</select>`;
   const sel = wrap.querySelector('select');
   const show = v => { sel.value = String(Math.round(v)); };
-  sel.addEventListener('change', () => setValue(id, +sel.value, show));
-  onCtl(id, show); show(values[idx[id]]);
+  sel.addEventListener('change', () => setValue(id, +sel.value, show, ch));
+  onCtl(id, show, ch); show(T[ch].vals[idx[id]]);
   return wrap;
 }
 function toggle(id, opts = {}) {
-  const p = P[idx[id]], lab = document.createElement('label'); lab.className = 'toggle';
+  const ch = opts.ch || 'chord', p = P[idx[id]], lab = document.createElement('label'); lab.className = 'toggle';
   lab.innerHTML = `<input type="checkbox"> ${opts.label ?? p.name}`;
   const box = lab.querySelector('input');
   const show = v => { box.checked = v > .5; };
-  box.addEventListener('change', () => setValue(id, box.checked ? 1 : 0, show));
-  onCtl(id, show); show(values[idx[id]]);
+  box.addEventListener('change', () => setValue(id, box.checked ? 1 : 0, show, ch));
+  onCtl(id, show, ch); show(T[ch].vals[idx[id]]);
   return lab;
 }
 
@@ -828,17 +980,36 @@ section('Tone & movement', g => ['cutoff', 'resonance', 'filtermotion', 'attack'
 section('Harmony', g => { g.append(choice('expand'), choice('color', { label: 'Colour' }), choice('key'), slider('unfold'), slider('glide'), toggle('keyminor'), toggle('keepbass')); });
 section('Sub-Drop', g => { g.append(slider('subdrop'), choice('subrhythm'), slider('fundfade'), choice('fundroot'), toggle('fundfollow')); });
 section('Room & echoes', g => { g.append(slider('ensemble'), slider('width'), slider('shimmer'), slider('size'), slider('delay'), choice('delaytime'), slider('pocket'), slider('motion'), choice('motionbars'), slider('vowel'), toggle('freeze')); });
-// Life sequencer controls
-{
-  const c = $('lifeControls');
-  c.append(slider('lifeseq', { label: 'Still ↔ Alive', rose: true }), choice('liferate'), slider('lifesmooth', { label: 'Jumps ↔ Glides' }));
+// Life sequencer controls, for the chords' engine here and for the arp's further down
+function lifeControls(c, ch) {
+  const o = { ch };
+  c.append(slider('lifeseq', { ...o, label: 'Still ↔ Alive', rose: true }), choice('liferate', o), slider('lifesmooth', { ...o, label: 'Jumps ↔ Glides' }),
+    slider('lifeheads', { ...o, label: 'Playheads · Together ↔ Free', rose: true }));
   const dice = document.createElement('div'); dice.className = 'ctl';
-  dice.innerHTML = '<label>Patterns <output id="lifeSeedOut"></output></label><button class="btn" type="button" id="lifeDice">New patterns</button>';
+  dice.innerHTML = '<label>Patterns <output></output></label><button class="btn" type="button">New patterns</button>';
   c.append(dice);
-  for (const id of ['lpitch', 'lshape', 'lspace', 'llevel', 'lfilter', 'lcross', 'loctave']) c.append(slider(id, { teal: true }));
-  for (let l = 1; l <= 6; l++) c.append(slider('lane' + l));
-  const showSeed = v => { $('lifeSeedOut').textContent = '#' + Math.round(v); }; onCtl('lifeseed', showSeed); showSeed(values[idx.lifeseed]);
-  $('lifeDice').addEventListener('click', () => { setValue('lifeseed', Math.floor(Math.random() * 9999)); setStatus('New Life patterns for all six oscillators.'); });
+  for (const id of ['lpitch', 'lshape', 'lspace', 'llevel', 'lfilter', 'lcross', 'loctave']) c.append(slider(id, { ...o, teal: true }));
+  for (let l = 1; l <= 6; l++) c.append(slider('lane' + l, o));
+  const out = dice.querySelector('output'), showSeed = v => { out.textContent = '#' + Math.round(v); }; onCtl('lifeseed', showSeed, ch); showSeed(T[ch].vals[idx.lifeseed]);
+  dice.querySelector('button').addEventListener('click', () => { setValue('lifeseed', Math.floor(Math.random() * 9999), null, ch); setStatus('New Life patterns for all six oscillators.'); });
+}
+lifeControls($('lifeControls'), 'chord');
+// The arp's six oscillators: their room, their Life lanes and the oscillators themselves
+{
+  const o = { ch: 'arp', teal: true };
+  $('arpOrbitControls').append(slider('orbit', { ...o, label: 'Still ↔ Orbiting' }), slider('orbitspeed', o), slider('distance', o), slider('overhead', o), slider('space3d', { ...o, label: 'Binaural' }));
+  lifeControls($('arpLifeControls'), 'arp');
+  for (let k = 1; k <= 6; k++) {
+    const card = document.createElement('div'); card.className = 'card osc';
+    card.innerHTML = `<div class="head"><h3>OSC ${k}</h3></div>`;
+    card.querySelector('.head').appendChild(toggle('o' + k + 'on', { ch: 'arp', label: 'On' }));
+    onCtl('o' + k + 'on', v => card.classList.toggle('off', v < .5), 'arp');
+    const r1 = document.createElement('div'); r1.className = 'row';
+    r1.append(choice('o' + k + 'wave', { ch: 'arp', label: 'Wave' }), choice('o' + k + 'oct', { ch: 'arp', label: 'Octave' }));
+    const r2 = document.createElement('div'); r2.className = 'row';
+    r2.append(slider('o' + k + 'level', { ch: 'arp', label: 'Level', rose: k % 2 === 1 }), slider('o' + k + 'pan', { ch: 'arp', label: 'Pan' }));
+    card.append(r1, r2); $('arpOscs').appendChild(card);
+  }
 }
 try { if (store.get('ds-room', false)) $('room').open = true; } catch (e) {}
 document.querySelectorAll('details.fold').forEach(d => {
@@ -852,8 +1023,9 @@ const DEFAULTS = P.map(p => p.def);
 const rng32 = seed => () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let x = Math.imul(seed ^ seed >>> 15, 1 | seed); x = x + Math.imul(x ^ x >>> 7, 61 | x) ^ x; return ((x ^ x >>> 14) >>> 0) / 4294967296; };
 const esc = t => String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
 function presetValuesOf(pr) { const v = DEFAULTS.slice(); for (const k in pr.set) if (k in idx) v[idx[k]] = pr.set[k]; return v; }
-let loadingSound = false;
-function applyValues(v) { loadingSound = true; v.forEach((x, i) => setValue(P[i].id, x)); loadingSound = false; }
+var loadingSound = false;
+// A sound loads into the controls at once, then into the engine as one crossfade
+function applyValues(v, ch = 'chord', fade) { loadingSound = true; v.forEach((x, i) => setValue(P[i].id, x, null, ch)); loadingSound = false; sendSound(ch, fade); }
 // The bank comes from the engine (dsp/Bank.h): 533 sounds, every other one clean electronic, each with its level trim.
 const soundBank = DATA.bank;
 function soundValues(s) { return presetValuesOf(s); }
@@ -899,13 +1071,14 @@ $('soundDice').addEventListener('click', () => {
   for (let o = 1; o <= 6; o++) set['o' + o + 'wave'] = pick([0, 0, 1, 2, 3, 4, 4, 5, 6, 7, 8, 9]);
   Object.assign(set, { orbit: r(.1, .9), orbitspeed: r(.1, .7), overhead: r(0, .7), stringlayer: r(0, .5), brass: r(0, .3), texture: r(0, .5), robot: pick([0, 0, 0, r(.2, .7)]), robotvoice: pick([0, 1]) });
   set.o6oct = pick([-1, 0, 1, 1]); set.o5oct = pick([0, 0, 1]);
-  set.lifeseq = r(.15, .8); set.lifeseed = Math.floor(Math.random() * 9999);
-  for (const k in set) setValue(k, set[k]);
+  set.lifeseq = r(.15, .8); set.lifeseed = Math.floor(Math.random() * 9999); set.lifeheads = r(0, 1);
+  loadingSound = true; for (const k in set) setValue(k, set[k]); loadingSound = false;
+  sendSound('chord'); markSoundDirty();
   setStatus('Randomized. Save it if you like it.');
 });
 // « ‹ › » step through a bank by one or ten
 document.querySelectorAll('[data-bank]').forEach(b => b.addEventListener('click', () => {
-  const sel = $({ sound: 'soundSel', line: 'lineSel', arp: 'arpSel', arps: 'arpSoundSel', kit: 'kitSel', groove: 'drumSel' }[b.dataset.bank]), opts = [...sel.options].filter(o => o.value !== 'x');
+  const sel = $({ sound: 'soundSel', line: 'lineSel', arp: 'arpSel', arps: 'arpSoundSel', kit: 'kitSel', groove: 'drumSel', voxstyle: 'voxStyleSel', voxspace: 'voxSpaceSel' }[b.dataset.bank]), opts = [...sel.options].filter(o => o.value !== 'x');
   let i = opts.findIndex(o => o.value === sel.value);
   if (i < 0) i = opts.findIndex(o => o.value === (b.dataset.bank === 'sound' ? soundChoice : String(lineChoice)));
   i = ((Math.max(0, i) + +b.dataset.d) % opts.length + opts.length) % opts.length;
@@ -1329,10 +1502,15 @@ async function sendKit() {
   node.port.postMessage({ t: 'kit', kit: out }, transfer);
   if (drumFx) drumFx.verb.buffer = drumRoom(kit.room);
 }
+let sentGroove = -1;
 function sendDrums() {
   const d = DRUMS[+$('drumSel').value] || DRUMS[0];
   drumPrefs.i = d.i; store.set('ds-drums', drumPrefs);
-  if (node) node.port.postMessage({ t: 'drums', drums: { on: drumPrefs.on, lanes: d.lanes, swing: d.swing } });
+  if (!node) return;
+  // a new groove is sent as such, so the engine fades it in over the old one
+  const m = { t: 'drums', on: drumPrefs.on };
+  if (d.i !== sentGroove) { m.lanes = d.lanes; m.swing = d.swing; sentGroove = d.i; }
+  node.port.postMessage(m);
 }
 function fillDrums() {
   const groups = list => [...new Set(list.map(x => x.group))];
@@ -1369,7 +1547,7 @@ $('vocalFile').addEventListener('change', async () => {
 function sessionNow(name) {
   const vals = {}; P.forEach((p, i) => vals[p.id] = values[i]);
   return { app: 'DRIFT SONATA', version: 1, name, values: vals, sound: soundChoice, line, lineChoice, lineDirty, lineKey,
-    bars: $('lineBars').value, notes: $('lineAs').value, register: $('lineReg').value, surprise: $('lineSurprise').value, tempo: tempo(), drums: { ...drumPrefs }, mix: { ...mixPrefs }, arp: arpSession() };
+    bars: $('lineBars').value, notes: $('lineAs').value, register: $('lineReg').value, surprise: $('lineSurprise').value, tempo: tempo(), drums: { ...drumPrefs }, mix: { ...mixPrefs }, arp: arpSession(), vox: { ...voxPrefs }, arpValues: arpValuesNow() };
 }
 function openSession(se) {
   if (!se || se.app !== 'DRIFT SONATA' || !se.values) { setStatus('That is not a DRIFT SONATA session.'); return; }
@@ -1389,6 +1567,8 @@ function openSession(se) {
   if (se.mix) Object.assign(mixPrefs, se.mix);
   mixApply();
   if (se.arp) arpOpenSession(se.arp);
+  if (se.arpValues) applyValues(P.map((p, i) => p.id in se.arpValues ? se.arpValues[p.id] : DEFAULTS[i]), 'arp');
+  if (se.vox && HAS_VOX) { Object.assign(voxPrefs, se.vox); saveVox(); voxControlsShow(); $('voxStyleSel').value = String(voxPrefs.style); $('voxSpaceSel').value = String(voxPrefs.space); voxSpaceApply(); setVoxOn(!!voxPrefs.on, true); }
   fillLines(); lineChanged();
   setStatus(`Opened the session “${se.name || 'session'}”.`);
 }
@@ -1512,6 +1692,8 @@ $('midiExport').addEventListener('click', async () => {
 
 /* ---------- Transport ---------- */
 const tempo = () => Math.max(40, Math.min(200, +$('tempo').value || 84));
+$('fadeSel').value = String(store.get('ds-fade', 8));
+$('fadeSel').addEventListener('change', () => { store.set('ds-fade', fadeTime()); if (node) node.port.postMessage({ t: 'fade', s: fadeTime() }); setStatus(`New sounds, kits, grooves and arps now fade in over ${fadeTime()} s.`); });
 $('tempo').addEventListener('change', () => { $('tempo').value = tempo(); drumTempo(); store.set('ds-tempo', tempo()); if (node) node.port.postMessage({ t: 'bpm', bpm: tempo() }); });
 $('tempo').value = store.get('ds-tempo', 84);
 function setStatus(t) { $('status').textContent = t; }
@@ -1563,57 +1745,61 @@ function meterOn(src, id) { const a = ctx.createAnalyser(); a.fftSize = 512; src
 })();
 
 /* ---------- Every slider: grab the round head to move it freely. Press anywhere else on it (on the line or above it)
-   and a glowing mark shows where it is going, and the head glides there, slowly and surely: a fade you barely hear ---------- */
+   and a glowing mark shows where it is going, and the head glides there, slowly and surely: a fade you barely hear.
+   Several sliders can glide at once, each towards its own mark. ---------- */
 (() => {
-  let glide = null, running = false;
-  const mark = document.createElement('div'); mark.className = 'glide-mark'; mark.hidden = true; document.body.appendChild(mark);
+  const glides = new Map();
+  let running = false;
   const thumbW = el => el.closest('.card.big') ? 26 : 16;
   const geo = el => { const r = el.getBoundingClientRect(), tw = thumbW(el); return { r, tw, usable: Math.max(1, r.width - tw) }; };
   const frac = el => (el.value - el.min) / (el.max - el.min);
-  const place = () => { const { r, tw, usable } = geo(glide.el); mark.style.left = (r.left + tw / 2 + glide.to * usable) + 'px'; mark.style.top = (r.top + r.height / 2) + 'px'; };
-  const stop = () => { glide = null; mark.hidden = true; mark.classList.remove('on'); };
+  const place = g => { const { r, tw, usable } = geo(g.el); g.mark.style.left = (r.left + tw / 2 + g.to * usable) + 'px'; g.mark.style.top = (r.top + r.height / 2) + 'px'; };
+  const stop = el => { const g = glides.get(el); if (!g) return; glides.delete(el); g.mark.classList.remove('on'); setTimeout(() => g.mark.remove(), 260); };
   const onRange = e => e.target instanceof HTMLInputElement && e.target.type === 'range' && !e.target.disabled ? e.target : null;
   function press(e, x) {
     const el = onRange(e); if (!el) return;
     const { r, tw, usable } = geo(el), head = r.left + tw / 2 + frac(el) * usable;
-    if (Math.abs(x - head) <= tw / 2 + 3) { if (glide && glide.el === el) stop(); return; }  // the head itself: free to drag
+    if (Math.abs(x - head) <= tw / 2 + 3) { stop(el); return; }  // the head itself: free to drag
     e.preventDefault(); e.stopPropagation();
     const to = Math.min(1, Math.max(0, (x - r.left - tw / 2) / usable)), from = frac(el), dist = Math.abs(to - from);
-    glide = { el, from, to, cur: +el.value, t0: performance.now(), dur: 1750 + 7000 * Math.sqrt(dist), own: false };
-    mark.hidden = false; place(); requestAnimationFrame(() => mark.classList.add('on'));
-    if (!running) step();
+    let g = glides.get(el);
+    if (!g) { g = { el, mark: document.createElement('div') }; g.mark.className = 'glide-mark'; document.body.appendChild(g.mark); glides.set(el, g); requestAnimationFrame(() => g.mark.classList.add('on')); }
+    Object.assign(g, { from, to, cur: +el.value, t0: performance.now(), dur: 3500 + 14000 * Math.sqrt(dist), own: false });
+    place(g);
+    if (!running) { running = true; requestAnimationFrame(step); }
   }
   function step() {
-    if (!glide) { running = false; return; }
-    running = true;
-    const g = glide, p = Math.min(1, (performance.now() - g.t0) / g.dur), ease = .5 - .5 * Math.cos(Math.PI * p);
-    const f = g.from + (g.to - g.from) * ease, min = +g.el.min, max = +g.el.max;
-    g.el.value = min + f * (max - min); g.cur = g.el.value;
-    g.own = true; g.el.dispatchEvent(new Event('input', { bubbles: true })); g.own = false;
-    place();
-    if (p < 1) requestAnimationFrame(step); else { running = false; g.el.dispatchEvent(new Event('change', { bubbles: true })); mark.classList.remove('on'); setTimeout(() => { if (glide === g) stop(); }, 260); }
+    for (const g of [...glides.values()]) {
+      const p = Math.min(1, (performance.now() - g.t0) / g.dur), ease = .5 - .5 * Math.cos(Math.PI * p);
+      const f = g.from + (g.to - g.from) * ease, min = +g.el.min, max = +g.el.max;
+      g.el.value = min + f * (max - min); g.cur = g.el.value;
+      g.own = true; g.el.dispatchEvent(new Event('input', { bubbles: true })); g.own = false;
+      place(g);
+      if (p >= 1) { g.el.dispatchEvent(new Event('change', { bubbles: true })); stop(g.el); }
+    }
+    if (glides.size) requestAnimationFrame(step); else running = false;
   }
   document.addEventListener('pointerdown', e => press(e, e.clientX), true);
-  document.addEventListener('mousedown', e => { if (onRange(e) && glide && glide.el === e.target) e.preventDefault(); }, true);
-  document.addEventListener('touchstart', e => { if (onRange(e) && glide && glide.el === e.target && e.cancelable) e.preventDefault(); }, { capture: true, passive: false });
+  document.addEventListener('mousedown', e => { if (onRange(e) && glides.has(e.target)) e.preventDefault(); }, true);
+  document.addEventListener('touchstart', e => { if (onRange(e) && glides.has(e.target) && e.cancelable) e.preventDefault(); }, { capture: true, passive: false });
   // a browser that moves the head on the press anyway is put back on course
-  document.addEventListener('input', e => { if (glide && e.target === glide.el && !glide.own) { e.stopImmediatePropagation(); glide.el.value = glide.cur; } }, true);
-  window.addEventListener('scroll', () => { if (glide) place(); }, { passive: true });
+  document.addEventListener('input', e => { const g = glides.get(e.target); if (g && !g.own) { e.stopImmediatePropagation(); g.el.value = g.cur; } }, true);
+  window.addEventListener('scroll', () => glides.forEach(place), { passive: true });
 })();
 
 /* ---------- AVANTGARDIAN ARP: its patterns and voices, folded onto the chords the strings play ---------- */
 // The ARP's scripts and its 2,281 patterns are put into the page when it is built (web/build.py --arp).
-// Its notes are scheduled here on the same audio clock as the engine, a third of a second ahead.
+// Its notes are scheduled here on the same audio clock as the engine, a third of a second ahead. They play either the
+// arp's own six-oscillator engine (every sound of the bank, turned into an arp sound) or one of the ARP's 777 voices.
 var HAS_ARP = typeof NoteEngine !== 'undefined' && typeof ARP_META !== 'undefined' && typeof NBVoice !== 'undefined';
 var arpDirty = 1;
 if (!HAS_ARP) document.body.classList.add('no-arp');
-const ARP_DEFAULTS = { on: false, pattern: '', sound: '', level: -4, density: 100, variation: 15, swing: 0, gate: 78, octave: 0, direction: 'original', style: 'faithful', phrase: 16, delay: -1, reverb: -1, tone: 6500, seed: 1,
-  orbit: .5, orbitBars: 4, scatter: .15, dist: 1.6, height: .15 };
+const ARP_DEFAULTS = { on: false, pattern: '', sound: '', level: -4, density: 100, variation: 15, swing: 0, gate: 78, octave: 0, direction: 'original', style: 'faithful', phrase: 16, delay: -1, reverb: -1, tone: 6500, seed: 1 };
 const arpPrefs = Object.assign({}, ARP_DEFAULTS, store.get('ds-arp', {}));
 const ARP_PARTS = Array.from({ length: 8 }, () => ({ moves: 0, space: 0, length: 0, spunk: 0, rhythmic: 0, spastic: 0, dust: 0, slide: 0, slup: 0, spsl: 0, fxd: 0, reverse: 0, snote: 0, spasMode: '3 over 4' }));
 const ARP_ENGINES = { an: 'Analogue', mod: 'Modular', wc: 'Wavefold', fm: 'FM', wt: 'Wavetable', vec: 'Vector', add: 'Modal' };
 let arpBin = null, arpDV = null, arpOffsets = [], arpLib = null, arpPatterns = [], arpSounds = [], arpMade = store.get('ds-arp-made', []), arpMadeSounds = store.get('ds-arp-sounds', []);
-let arpG = null, arpStarting = null, arpPv = null, arpMatchGen = 0, arpEvents = [], arpCycle = 64, arpKey = '', arpMode = '', arpNext = 0, arpLastPitch = null;
+let arpG = null, arpStarting = null, arpPv = null, arpMatchGen = 0, arpEvents = [], arpCycle = 64, arpKey = '', arpMode = '', arpNext = 0, arpLastPitch = null, arpPatId = '', arpIn = null;
 let lineAnchor = null, lineStart = 0, freeAnchor = null, arpBeatNow = -1;
 const saveArp = () => store.set('ds-arp', arpPrefs);
 
@@ -1623,6 +1809,18 @@ function arpPatternAt(k) {
   for (let i = 0; i < n; i++, o += 6) notes.push([arpDV.getUint16(o, true) / 480, arpDV.getUint16(o + 2, true) / 480, arpBin[o + 4], arpBin[o + 5]]);
   return { id: m[0], name: m[1], root: m[2], mode: m[3], count: m[4], low: m[5], high: m[6], living: !!m[7], phraseBars: m[8], phraseGrid: m[9], phraseSeed: m[10], source: m[11], beats: 64, arpReady: true, notes };
 }
+// A pad sound made into an arp sound: quick to speak, a short tail, no sub, no folding out, no beds or robot
+function arpify(v) {
+  v = v.slice(); const set = (id, x) => { const p = P[idx[id]]; v[idx[id]] = Math.max(p.min, Math.min(p.max, x)); }, get = id => v[idx[id]];
+  set('attack', Math.min(get('attack'), .012)); set('release', Math.min(1.4, Math.max(.3, get('release') * .22)));
+  for (const id of ['subdrop', 'tension', 'unfold', 'glide', 'texture', 'robot', 'freeze']) set(id, 0);
+  set('expand', 1);  // as played: the arp's notes stay single notes
+  for (const id of ['choir', 'cello', 'stringlayer', 'brass']) set(id, get(id) * .5);
+  return v;
+}
+function arpSixSounds() { return soundBank.map((s, i) => ({ id: 'six-' + i, name: s.name, group: 'six', six: true, i, clean: s.clean })); }
+function arpSoundList() { return [...arpSixSounds(), ...NB46Bank.factory.map(e => ({ ...e, made: false })), ...arpMadeSounds.map(e => ({ ...e, made: true }))]; }
+const arpSixValues = e => e.values ? P.map((p, i) => p.id in e.values ? e.values[p.id] : DEFAULTS[i]) : arpify(soundValues(soundBank[e.i] || soundBank[0]));
 function arpInit() {
   if (!HAS_ARP) return;
   arpBin = b64ToBytes(ARP_BIN); arpDV = new DataView(arpBin.buffer);
@@ -1632,72 +1830,109 @@ function arpInit() {
     ...ARP_META.map((m, k) => ({ id: m[0], name: m[1], group: 'Art by Accident', n: k + 1, get: () => arpPatternAt(k) })),
     ...arpMade.map(p => ({ id: p.id, name: p.name, group: 'Made here', get: () => p })),
   ];
-  arpSounds = [...NB46Bank.factory.map(e => ({ ...e, made: false })), ...arpMadeSounds.map(e => ({ ...e, made: true }))];
+  arpSounds = arpSoundList();
   if (!arpPatterns.some(p => p.id === arpPrefs.pattern)) arpPrefs.pattern = arpPatterns[NoteEngine.SIMPLE_PATTERNS.length].id;
-  if (!arpSounds.some(e => e.id === arpPrefs.sound)) arpPrefs.sound = (NB46Bank.factory.find(e => e.group === 'soft') || NB46Bank.factory[0]).id;
+  if (!arpSounds.some(e => e.id === arpPrefs.sound)) arpPrefs.sound = (arpSounds.find(e => e.six && e.clean) || arpSounds[0]).id;
   fillArp();
-  arpUseSound();
+  arpUseSound(.01);
   setArpOn(!!arpPrefs.on, true);
 }
 function fillArp() {
   const groups = (list, label) => [...new Set(list.map(label))];
   $('arpSel').innerHTML = groups(arpPatterns, p => p.group).map(g => `<optgroup label="${g}">${arpPatterns.map((p, i) => [p, i]).filter(([p]) => p.group === g)
     .map(([p, i]) => `<option value="${i}">${p.n ? String(p.n).padStart(4, '0') + ' / ' : g === 'Made here' ? '✧ ' : ''}${esc(p.name)}</option>`).join('')}</optgroup>`).join('');
-  const gname = e => e.made ? 'Made here' : { soft: 'Soft', modular: 'Modular', wide: 'Wide' }[e.group] || 'Other';
-  $('arpSoundSel').innerHTML = ['Soft', 'Wide', 'Modular', 'Made here'].map(g => { const items = arpSounds.map((e, i) => [e, i]).filter(([e]) => gname(e) === g);
-    return items.length ? `<optgroup label="${g}">${items.map(([e, i]) => `<option value="${i}">${e.made ? '✧ ' : ''}${esc(e.name)}${e.name.includes('·') ? '' : ' · ' + (ARP_ENGINES[e.engine || e.patch.eng] || '')}</option>`).join('')}</optgroup>` : ''; }).join('');
+  const gname = e => e.made ? 'Made here' : e.six ? 'Six oscillators' : { soft: 'Avantgardian · soft', modular: 'Avantgardian · modular', wide: 'Avantgardian · wide' }[e.group] || 'Other';
+  $('arpSoundSel').innerHTML = ['Six oscillators', 'Avantgardian · soft', 'Avantgardian · wide', 'Avantgardian · modular', 'Made here'].map(g => { const items = arpSounds.map((e, i) => [e, i]).filter(([e]) => gname(e) === g);
+    return items.length ? `<optgroup label="${g}">${items.map(([e, i]) => `<option value="${i}">${e.made ? '✧ ' : e.six ? String(e.i + 1).padStart(3, '0') + ' / ' : ''}${esc(e.name)}${e.six || e.name.includes('·') ? '' : ' · ' + (ARP_ENGINES[e.engine || e.patch.eng] || '')}</option>`).join('')}</optgroup>` : ''; }).join('');
   $('arpSel').value = String(arpPatterns.findIndex(p => p.id === arpPrefs.pattern));
   $('arpSoundSel').value = String(arpSounds.findIndex(e => e.id === arpPrefs.sound));
   $('arpCount').textContent = arpPatterns.length.toLocaleString('en-GB');
-  $('arpSoundCount').textContent = arpSounds.length;
-  $('arpInfo').textContent = `${arpPatterns.length.toLocaleString('en-GB')} patterns · ${arpSounds.length} sounds`;
+  $('arpSoundCount').textContent = arpSounds.length.toLocaleString('en-GB');
+  $('arpInfo').textContent = `${arpPatterns.length.toLocaleString('en-GB')} patterns · ${arpSounds.length.toLocaleString('en-GB')} sounds`;
 }
 const arpPattern = () => (arpPatterns.find(p => p.id === arpPrefs.pattern) || arpPatterns[0]).get();
 const arpSound = () => arpSounds.find(e => e.id === arpPrefs.sound) || arpSounds[0];
 
-// The ARP's own voice chain, then a high-pass and a soft top so it sits above the pads and the sub
+// Keeps a channel even: a gentle compressor, then a slow hand on the gain that brings every sound to the same loudness
+// (it only listens while something plays, and moves at most 12 dB), then a limiter
+function leveler(target) {
+  const comp = ctx.createDynamicsCompressor(); comp.threshold.value = -26; comp.knee.value = 12; comp.ratio.value = 3; comp.attack.value = .01; comp.release.value = .3;
+  const agc = ctx.createGain(), lim = ctx.createDynamicsCompressor(), an = ctx.createAnalyser(); an.fftSize = 2048;
+  lim.threshold.value = -6; lim.knee.value = 0; lim.ratio.value = 20; lim.attack.value = .002; lim.release.value = .1;
+  comp.connect(agc); agc.connect(lim); comp.connect(an);
+  const buf = new Float32Array(2048); let db = 0;
+  setInterval(() => {
+    an.getFloatTimeDomainData(buf); let s = 0; for (const x of buf) s += x * x;
+    const rms = 10 * Math.log10(s / buf.length + 1e-12);
+    if (rms > -55) { db += (Math.max(-12, Math.min(12, target - rms)) - db) * .06; agc.gain.setTargetAtTime(Math.pow(10, db / 20), ctx.currentTime, .4); }
+  }, 100);
+  return { in: comp, out: lim };
+}
+// The arp's channel: its six-oscillator engine and the ARP voices meet, get a high-pass and a soft top so they sit above
+// the pads and the sub, are kept even, and go to the fader
 async function arpAudio() {
   if (arpG) return arpG;
   if (arpStarting) return arpStarting;
   arpStarting = (async () => {
     await startAudio();
-    const hp = ctx.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 150; hp.Q.value = .5;
-    const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.Q.value = .4; lp.frequency.value = arpPrefs.tone;
-    const out = ctx.createGain(); out.gain.value = Math.pow(10, arpPrefs.level / 20);
-    const trim = ctx.createGain(), fx = new StudioFX(ctx, hp);
-    hp.connect(lp); lp.connect(out); out.connect(master);
-    // the arp's own place in the 3D room, before its echoes (which place themselves)
-    const pan = ctx.createPanner(); pan.panningModel = 'HRTF'; pan.distanceModel = 'inverse'; pan.refDistance = 1; pan.rolloffFactor = .5; pan.positionZ.value = -1.5;
-    // the room's placement costs a few dB (distance, the head's shadow): made up here so the fader means the same
-    const makeup = ctx.createGain(); makeup.gain.value = 1.6;
-    trim.connect(pan); pan.connect(makeup); makeup.connect(fx.input);
-    const vo = new VoiceOutput(ctx, trim);
+    const sum = ctx.createGain(), hp = ctx.createBiquadFilter(), lp = ctx.createBiquadFilter(), out = ctx.createGain(), lev = leveler(-24);
+    hp.type = 'highpass'; hp.frequency.value = 150; hp.Q.value = .5; lp.type = 'lowpass'; lp.Q.value = .4; lp.frequency.value = arpPrefs.tone;
+    out.gain.value = dbGain(arpPrefs.level);
+    node.connect(sum, 3); sum.connect(hp); hp.connect(lp); lp.connect(lev.in); lev.out.connect(out); out.connect(master);
     await NBVoice.prepare(ctx);
-    arpG = { hp, lp, out, trim, fx, vo, pan };
-    arpUseSound(); meterOn(out, 'arpLevelMeter');
+    arpG = { sum, hp, lp, out, chain: null };
+    meterOn(out, 'arpLevelMeter');
+    arpUseSound(.01);
     return arpG;
   })();
   return arpStarting;
 }
-function arpUseSound() {
-  const e = arpSound();
+// One ARP voice chain (its own echoes and place in the room); a new sound gets a new chain and the two cross
+function arpChain() {
+  const gain = ctx.createGain(), trim = ctx.createGain(), fx = new StudioFX(ctx, gain);
+  const pan = ctx.createPanner(); pan.panningModel = 'HRTF'; pan.distanceModel = 'inverse'; pan.refDistance = 1; pan.rolloffFactor = .5; pan.positionZ.value = -1.5;
+  const makeup = ctx.createGain(); makeup.gain.value = 1.6;  // the placement costs a few dB (distance, the head's shadow)
+  trim.connect(pan); pan.connect(makeup); makeup.connect(fx.input); gain.connect(arpG.sum);
+  return { gain, trim, fx, pan, vo: new VoiceOutput(ctx, trim) };
+}
+function chainOut(c, fade) {
+  if (!c) return;
+  const t = ctx.currentTime; c.gain.gain.cancelScheduledValues(t); c.gain.gain.setValueAtTime(c.gain.gain.value, t); c.gain.gain.linearRampToValueAtTime(0, t + fade);
+  setTimeout(() => { try { c.vo.reset(); c.fx.reset && c.fx.reset(); c.gain.disconnect(); } catch (e) {} }, (fade + 6) * 1000);
+}
+function arpUseSound(fade) {
+  const e = arpSound(); fade = fade ?? fadeTime();
+  $('arpSix').classList.toggle('dim', !e.six);
+  if (e.six) {
+    applyValues(arpSixValues(e), 'arp', fade);
+    if (arpG && arpG.chain) { chainOut(arpG.chain, fade); arpG.chain = null; }
+    return;
+  }
   arpPv = { ...NB46Bank.knobs(e.patch), ...AmpEnvelope.migrate(e.knobs), envelopeVersion: 2, legato: false, patch: e.patch };
   if (!arpG) return;
+  if (node) node.port.postMessage({ t: 'sound', ch: 'arp', values: null, fade });  // the six oscillators fade away
+  chainOut(arpG.chain, fade);
+  const c = arpG.chain = arpChain(), t = ctx.currentTime;
+  c.gain.gain.setValueAtTime(0, t); c.gain.gain.linearRampToValueAtTime(1, t + fade);
   arpApplyFx();
-  // Every sound measured with the same four notes and brought to the same level (as in the ARP)
+  // Every sound measured with the same four notes and brought to the same level (as in the ARP); the leveler does the rest
   const gen = ++arpMatchGen;
   SoundMatch.measure(arpPv, e.id, ctx.sampleRate)
-    .then(r => { if (gen === arpMatchGen) arpG.trim.gain.setTargetAtTime(r.gain, ctx.currentTime, .06); })
-    .catch(() => { if (gen === arpMatchGen) arpG.trim.gain.setTargetAtTime(1, ctx.currentTime, .06); });
+    .then(r => { if (gen === arpMatchGen) c.trim.gain.setTargetAtTime(r.gain, ctx.currentTime, .06); })
+    .catch(() => { if (gen === arpMatchGen) c.trim.gain.setTargetAtTime(1, ctx.currentTime, .06); });
 }
 function arpApplyFx() {
-  if (!arpG) return;
+  if (!arpG || !arpG.chain) return;
   const fx = { ...(arpSound().fx || NB46Bank.factory[0].fx) };
   if (arpPrefs.delay >= 0) Object.assign(fx, FXRecipes.delays[arpPrefs.delay].values);
   if (arpPrefs.reverb >= 0) Object.assign(fx, FXRecipes.reverbs[arpPrefs.reverb].values);
-  arpG.fx.apply(fx, tempo());
+  arpG.chain.fx.apply(fx, tempo());
 }
-function arpSilence(at) { if (arpG && ctx) arpG.vo.cancelFrom(Math.max(at || 0, ctx.currentTime + .005)); arpLastPitch = null; }
+function arpSilence(at) {
+  if (arpG && arpG.chain && ctx) arpG.chain.vo.cancelFrom(Math.max(at || 0, ctx.currentTime + .005));
+  if (node) node.port.postMessage({ t: 'arpstop' });
+  arpLastPitch = null;
+}
 
 // The chords: the chord line when it plays (with sevenths when the line or Tension has them), otherwise the chord you hold
 const ARP_Q = { '': 'maj', m: 'min', '5': 'sus2', sus2: 'sus2', sus4: 'sus4', dim: 'dim', aug: 'aug', '7': '7', maj7: 'maj7', m7: 'm7' };
@@ -1714,18 +1949,23 @@ function liveChord() {
   if (iv.has(10) || iv.has(11)) q = q === 'maj' ? (iv.has(11) ? 'maj7' : '7') : q === 'min' ? 'm7' : q === 'dim' ? 'm7b5' : q;
   return { root: r, q };
 }
-// Notes for one loop, in beats: at least 32 bars before it repeats, always whole chord lines
-function arpCompute(mode) {
+// The chord segments the line plays (or the one chord held), in beats
+function chordSegments(mode) {
   let segs = [], beats = 0;
   if (mode === 'line') {
     const sev = arpSevenths();
     for (const c of line) { const len = slotBars(c) * 4; segs.push({ start: beats, end: beats + len, root: c.root, bass: c.root, quality: arpQuality(c.q, c.root, sev) }); beats += len; }
   } else {
-    const ch = liveChord(); if (!ch) return { events: [], cycle: 64 };
+    const ch = liveChord(); if (!ch) return null;
     beats = 64; segs = [{ start: 0, end: 64, root: ch.root, bass: ch.root, quality: ch.q }];
   }
-  const reps = Math.max(1, Math.ceil(128 / beats)), cycle = beats * reps, all = [];
-  for (let r = 0; r < reps; r++) for (const sg of segs) all.push({ ...sg, start: sg.start + r * beats, end: sg.end + r * beats });
+  return { segs, beats };
+}
+// Notes for one loop, in beats: at least 32 bars before it repeats, always whole chord lines
+function arpCompute(mode) {
+  const sg = chordSegments(mode); if (!sg) return { events: [], cycle: 64 };
+  const { segs, beats } = sg, reps = Math.max(1, Math.ceil(128 / beats)), cycle = beats * reps, all = [];
+  for (let r = 0; r < reps; r++) for (const s of segs) all.push({ ...s, start: s.start + r * beats, end: s.end + r * beats });
   const bpm = tempo(), p = arpPrefs;
   const ev = NoteEngine.generate(arpPattern(), all, { bpm, offset: 0, duration: cycle * 60 / bpm, seed: p.seed, variation: p.variation, density: p.density, swing: p.swing,
     transpose: p.octave * 12, follow: 'chord', style: p.style, parts: ARP_PARTS, partCount: 8, grid: 16, phraseBars: p.phrase, direction: p.direction, gate: p.gate, voicing: 'simple' });
@@ -1734,11 +1974,30 @@ function arpCompute(mode) {
 function arpTransport(on, at) {
   arpSilence();
   lineAnchor = on ? { ppq: 0, time: at, bpm: tempo() } : null; lineStart = at;
-  arpMode = ''; arpNext = 0;
+  arpMode = ''; arpNext = 0; arpIn = null;
+  if (typeof voxTransport === 'function') voxTransport(on, at);
 }
 function arpAnchorFrom(m) {
-  // the engine's beat at the start of an audio block: the clock the arp follows while the chord line plays
+  // the engine's beat at the start of an audio block: the clock the arp (and the vox) follow while the chord line plays
   if (playing && m.playing && m.time >= lineStart - 1e-4) lineAnchor = { ppq: m.ppq, time: m.time, bpm: tempo() };
+}
+// Where the music is in beats right now, on the chord line's clock while it plays, otherwise on the clock of the held chord
+function beatClock(mode, now) {
+  const bpm = tempo();
+  let a = mode === 'line' ? lineAnchor : freeAnchor;
+  if (!a) return null;
+  if (a.bpm !== bpm) { a = { ppq: a.ppq + (now - a.time) * a.bpm / 60, time: now, bpm }; if (mode === 'line') lineAnchor = a; else freeAnchor = a; }
+  return a;
+}
+// Every event of a looped list between two beats, each with its audio time
+function eventsBetween(events, cycle, from, to, a, bpm, fn) {
+  let b = from;
+  while (b < to && events.length) {
+    const c = Math.floor(b / cycle), lo0 = b - c * cycle, hi0 = Math.min(to - c * cycle, cycle);
+    let lo = 0, hi = events.length; while (lo < hi) { const mid = (lo + hi) >> 1; if (events[mid].beat < lo0) lo = mid + 1; else hi = mid; }
+    for (let i = lo; i < events.length && events[i].beat < hi0; i++) fn(events[i], a.time + (c * cycle + events[i].beat - a.ppq) * 60 / bpm);
+    b = (c + 1) * cycle;
+  }
 }
 function arpTick() {
   if (!HAS_ARP || !arpPrefs.on || !arpG || !ctx) return;
@@ -1746,52 +2005,59 @@ function arpTick() {
   const want = playing ? (lineAnchor ? 'line' : '') : liveChord() ? 'free' : '';
   if (want !== arpMode) {
     if (arpMode === 'free' || !want) arpSilence();
-    arpMode = want; arpKey = '';
+    arpMode = want; arpKey = ''; arpIn = null;
     if (want === 'free') { freeAnchor = { ppq: 0, time: now + .03, bpm }; arpNext = 0; }
   }
   arpPlace(now);
   if (!arpMode) { arpBeatNow = -1; return; }
-  let a = arpMode === 'line' ? lineAnchor : freeAnchor;
-  if (a.bpm !== bpm) { a = { ppq: a.ppq + (now - a.time) * a.bpm / 60, time: now, bpm }; if (arpMode === 'line') lineAnchor = a; else freeAnchor = a; }
+  const a = beatClock(arpMode, now);
   const ch = arpMode === 'free' ? liveChord() : null;
   const key = [arpMode, arpDirty, arpSevenths(), ch ? ch.root + ch.q : ''].join('|');
-  if (key !== arpKey) { const r = arpCompute(arpMode); arpEvents = r.events; arpCycle = r.cycle; arpKey = key; }
+  if (key !== arpKey) {
+    // a new pattern fades in over the old one: the old one's notes get softer while the new one's get louder
+    if (arpKey && arpPrefs.pattern !== arpPatId && arpEvents.length) arpIn = { old: { events: arpEvents, cycle: arpCycle }, t0: now + .3, dur: fadeTime() };
+    const r = arpCompute(arpMode); arpEvents = r.events; arpCycle = r.cycle; arpKey = key; arpPatId = arpPrefs.pattern;
+  }
   const beatNow = a.ppq + (now - a.time) * bpm / 60, horizon = beatNow + .3 * bpm / 60;
   arpBeatNow = beatNow;
   if (arpNext < beatNow - .02) arpNext = beatNow;  // after a stall (a hidden tab), skip ahead rather than play a burst
-  let b = arpNext;
-  while (b < horizon && arpEvents.length) {
-    const c = Math.floor(b / arpCycle), from = b - c * arpCycle, to = Math.min(horizon - c * arpCycle, arpCycle);
-    let lo = 0, hi = arpEvents.length; while (lo < hi) { const mid = (lo + hi) >> 1; if (arpEvents[mid].beat < from) lo = mid + 1; else hi = mid; }
-    for (let i = lo; i < arpEvents.length && arpEvents[i].beat < to; i++) {
-      const e = arpEvents[i]; arpPlay(e, a.time + (c * arpCycle + e.beat - a.ppq) * 60 / bpm, e.len * 60 / bpm);
-    }
-    b = (c + 1) * arpCycle;
+  const k = w => arpIn ? Math.max(0, Math.min(1, (w - arpIn.t0) / arpIn.dur)) : 1;
+  eventsBetween(arpEvents, arpCycle, arpNext, horizon, a, bpm, (e, w) => arpPlay(e, w, e.len * 60 / bpm, k(w)));
+  if (arpIn) {
+    eventsBetween(arpIn.old.events, arpIn.old.cycle, arpNext, horizon, a, bpm, (e, w) => arpPlay(e, w, e.len * 60 / bpm, 1 - k(w)));
+    if (now > arpIn.t0 + arpIn.dur + .5) arpIn = null;
   }
   arpNext = horizon;
 }
-function arpPlay(e, when, dur) {
+function arpPlay(e, when, dur, scale = 1) {
+  if (scale < .04) return;
   const t = Math.max(when, ctx.currentTime + .004);
   // velocities pulled together: the arp breathes with the pads instead of poking out of them
-  const note = { pitch: e.pitch, velocity: Math.round(Math.max(36, Math.min(108, 56 + (e.vel - 56) * .6))), duration: Math.max(.03, dur) };
-  const entry = arpG.vo.create({ ...note, releaseSeconds: AmpEnvelope.seconds(arpPv).release }, t, true);
-  arpG.vo.attach(entry, NBVoice.play(ctx, entry.output, note, arpPv, arpSound().id, t, arpLastPitch), true);
+  const vel = Math.max(20, Math.min(108, (56 + (e.vel - 56) * .6) * Math.sqrt(scale)));
+  if (arpSound().six) { node.port.postMessage({ t: 'arpnote', n: e.pitch, v: vel / 127, at: t, dur: Math.max(.03, dur) }); arpLastPitch = e.pitch; return; }
+  if (!arpG.chain) return;
+  const note = { pitch: e.pitch, velocity: Math.round(vel), duration: Math.max(.03, dur) };
+  const entry = arpG.chain.vo.create({ ...note, releaseSeconds: AmpEnvelope.seconds(arpPv).release }, t, true);
+  arpG.chain.vo.attach(entry, NBVoice.play(ctx, entry.output, note, arpPv, arpSound().id, t, arpLastPitch), true);
   arpLastPitch = e.pitch;
-  if (arpPrefs.scatter > 0) arpScatter.push([t, (Math.random() * 2 - 1) * Math.PI * arpPrefs.scatter]);
 }
-// The arp in the 3D room: between straight ahead and a circle round your head (Orbit), one turn every few bars,
-// each note thrown a little to one side or the other (Scatter), near or far, low or high
-var arpScatter = [], arpPos = null;
+// An ARP voice in the 3D room, moved by the same orbit controls as the six oscillators: between straight ahead and a
+// circle round your head, one turn every 1 to 32 bars, near or far, low or high
+var arpPos = null;
 function arpPlace(now) {
-  if (!arpG) return;
-  const p = arpPrefs, t = now + .12, turn = 240 / tempo() * p.orbitBars, az0 = 2 * Math.PI * ((t / turn) % 1);
-  while (arpScatter.length > 1 && arpScatter[1][0] <= t) arpScatter.shift();
-  const off = arpScatter.length && arpScatter[0][0] <= t ? arpScatter[0][1] : 0;
-  let x = Math.sin(az0) * p.orbit, z = -(1 - p.orbit) - Math.cos(az0) * p.orbit;
-  const az = Math.atan2(x, -z) + off, d = p.dist, el = p.height * .9;
+  if (!arpG || !arpG.chain || arpSound().six) return;
+  const g = id => arpVals[idx[id]], t = now + .12, turnBars = Math.pow(2, 5 * (1 - g('orbitspeed'))), turn = 240 / tempo() * turnBars;
+  const o = g('orbit'), az0 = 2 * Math.PI * ((t / turn) % 1);
+  let x = Math.sin(az0) * o, z = -(1 - o) - Math.cos(az0) * o;
+  const az = Math.atan2(x, -z), d = 1 + 3 * g('distance'), el = g('overhead') * .9, pan = arpG.chain.pan;
   x = Math.sin(az) * Math.cos(el) * d; z = -Math.cos(az) * Math.cos(el) * d; const y = Math.sin(el) * d;
-  arpG.pan.positionX.linearRampToValueAtTime(x, t); arpG.pan.positionY.linearRampToValueAtTime(y, t); arpG.pan.positionZ.linearRampToValueAtTime(z, t);
+  pan.positionX.linearRampToValueAtTime(x, t); pan.positionY.linearRampToValueAtTime(y, t); pan.positionZ.linearRampToValueAtTime(z, t);
   arpPos = [az, el, d];
+}
+function arpOrbitSources() {
+  if (!arpPrefs.on) return [];
+  if (arpSound().six) return arpSrc;
+  return arpPos && arpMode ? [[...arpPos, .05, '#ffd76a']] : [];
 }
 setInterval(arpTick, 40);
 
@@ -1823,12 +2089,24 @@ function arpMakePattern() {
   arpPrefs.pattern = p.id; fillArp(); pickArp($('arpSel').value, 'Made a new arp: rhythm and contour blended from four patterns');
 }
 function arpMakeSound() {
-  const e = NB46Bank.randomize((Date.now() ^ Math.floor(Math.random() * 0xffffffff)) >>> 0, Math.random() < .75 ? 'soft' : 'wide');
-  const keep = { id: 'made-' + e.seed, name: e.name, group: e.group, engine: e.engine, patch: e.patch, fx: e.fx, knobs: e.knobs };
+  const seed = (Date.now() ^ Math.floor(Math.random() * 0xffffffff)) >>> 0;
+  let keep;
+  if (Math.random() < .6) {
+    // six oscillators: a sound from the bank, its waves, octaves, place and life thrown again
+    const R = rng32(seed), base = arpify(soundValues(soundBank[Math.floor(R() * soundBank.length)])), vals = {};
+    P.forEach((p, i) => vals[p.id] = base[i]);
+    for (let o = 1; o <= 6; o++) { vals['o' + o + 'wave'] = [0, 1, 2, 3, 4, 4, 5, 6, 7, 8, 9][Math.floor(R() * 11)]; vals['o' + o + 'pan'] = R() * 2 - 1; }
+    Object.assign(vals, { lifeseed: Math.floor(R() * 9999), lifeheads: R(), lifeseq: .2 + .6 * R(), orbit: R(), orbitspeed: .1 + .7 * R(), cross: .3 * R(), shimmer: .6 * R() });
+    keep = { id: 'made6-' + seed, name: NoteEngine.artName(seed) + ' · six', six: true, values: vals };
+  } else {
+    const e = NB46Bank.randomize(seed, Math.random() < .75 ? 'soft' : 'wide');
+    keep = { id: 'made-' + e.seed, name: e.name, group: e.group, engine: e.engine, patch: e.patch, fx: e.fx, knobs: e.knobs };
+  }
   arpMadeSounds = [...arpMadeSounds, keep].slice(-40); store.set('ds-arp-sounds', arpMadeSounds);
-  arpSounds = [...NB46Bank.factory.map(x => ({ ...x, made: false })), ...arpMadeSounds.map(x => ({ ...x, made: true }))];
+  arpSounds = arpSoundList();
   arpPrefs.sound = keep.id; fillArp(); pickArpSound($('arpSoundSel').value, 'Made a new arp sound');
 }
+function arpValuesNow() { const o = {}; P.forEach((p, i) => o[p.id] = arpVals[i]); return o; }
 function arpSession() {
   if (!HAS_ARP) return null;
   const madeP = arpMade.find(p => p.id === arpPrefs.pattern), madeS = arpMadeSounds.find(e => e.id === arpPrefs.sound);
@@ -1841,7 +2119,7 @@ function arpOpenSession(a) {
   const { madePattern, madeSound, ...prefs } = a;
   Object.assign(arpPrefs, ARP_DEFAULTS, prefs);
   arpPatterns = arpPatterns.filter(x => x.group !== 'Made here').concat(arpMade.map(q => ({ id: q.id, name: q.name, group: 'Made here', get: () => q })));
-  arpSounds = [...NB46Bank.factory.map(x => ({ ...x, made: false })), ...arpMadeSounds.map(x => ({ ...x, made: true }))];
+  arpSounds = arpSoundList();
   fillArp(); arpDirty++; arpUseSound(); arpControlsShow(); setArpOn(!!arpPrefs.on, true);
 }
 // The arp for one pass of the chord line, as MIDI on channel 3
@@ -1877,7 +2155,7 @@ let arpControlsShow = () => {};
     shows.push(show); show(); return w;
   };
   const regen = () => { arpDirty++; }, pct = v => Math.round(v) + '%', pct100 = v => Math.round(v * 100) + '%';
-  const levelNow = () => { if (arpG) arpG.out.gain.setTargetAtTime(Math.pow(10, arpPrefs.level / 20), ctx.currentTime, .03); faderShow('arpLevel', arpPrefs.level); };
+  const levelNow = () => { if (arpG) arpG.out.gain.setTargetAtTime(dbGain(arpPrefs.level), ctx.currentTime, .03); faderShow('arpLevel', arpPrefs.level); };
   if (HAS_ARP) {
     $('arpControls').append(
       range('level', 'Level', -30, 6, .5, v => (v > 0 ? '+' : '') + v.toFixed(1) + ' dB', levelNow, 'rose'),
@@ -1892,11 +2170,6 @@ let arpControlsShow = () => {};
       pick('phrase', 'Phrase', [[16, '16 bars'], [32, '32 bars'], [64, '64 bars']], regen),
       pick('delay', 'Echo', [[-1, 'The sound’s own'], ...FXRecipes.delays.map((d, i) => [i, d.name])], arpApplyFx),
       pick('reverb', 'Room', [[-1, 'The sound’s own'], ...FXRecipes.reverbs.map((d, i) => [i, d.name])], arpApplyFx),
-      range('orbit', '3D · Still ↔ Orbiting', 0, 1, .01, pct100, () => {}, 'teal'),
-      pick('orbitBars', 'One turn every', [[1, '1 bar'], [2, '2 bars'], [4, '4 bars'], [8, '8 bars'], [16, '16 bars']], () => {}),
-      range('scatter', 'Scatter notes', 0, 1, .01, pct100, () => {}, 'teal'),
-      range('dist', 'Distance', 1, 4, .01, v => v.toFixed(1) + ' m', () => {}, 'teal'),
-      range('height', 'Height', -.6, 1, .01, v => Math.round(v * 90) + '°', () => {}, 'teal'),
     );
     const seed = document.createElement('div'); seed.className = 'ctl';
     seed.innerHTML = '<label>Variation seed <output id="arpSeedOut"></output></label><button class="btn" type="button" id="arpSeed">New variation</button>';
@@ -1910,8 +2183,8 @@ let arpControlsShow = () => {};
     $('arpSoundSel').addEventListener('change', () => pickArpSound($('arpSoundSel').value));
     $('arpDice').addEventListener('click', () => pickArp(NoteEngine.SIMPLE_PATTERNS.length + Math.floor(Math.random() * ARP_META.length), 'A random arp'));
     $('arpSoundDice').addEventListener('click', () => {
-      // mostly the soft sounds, sometimes a wide one: all of them sit well with the pads
-      const g = Math.random() < .75 ? 'soft' : 'wide', list = arpSounds.map((e, i) => [e, i]).filter(([e]) => !e.made && e.group === g);
+      // mostly six oscillators, sometimes a soft or wide ARP voice: all of them sit well with the pads
+      const u = Math.random(), g = u < .7 ? 'six' : u < .9 ? 'soft' : 'wide', list = arpSounds.map((e, i) => [e, i]).filter(([e]) => !e.made && e.group === g);
       pickArpSound(list[Math.floor(Math.random() * list.length)][1], 'A random arp sound');
     });
     $('arpMake').addEventListener('click', () => { try { arpMakePattern(); } catch (e) { setStatus(e.message); } });
@@ -1950,6 +2223,280 @@ function drawArp() {
 }
 let arpViewCache = { events: [], cycle: 64 }, arpViewKey = '';
 requestAnimationFrame(drawArp);
+
+/* ---------- VOX: a new voice made of several singers, without words ----------
+   Pieces cut by tools/chop_vox.py (hums, held vowels, bits of syllables, breaths, sung chords) are thrown into the
+   music: tuned to the chord, layered across singers into clouds, stuttered, turned round, each on its own path through
+   the 3D room, now and then thrown into long echoes or a big room. Two banks: the Style (what it sings and how often)
+   and the Space (where it is and what it sounds like there). */
+const VOX = "@@VOX@@";
+const voxPieces = Array.isArray(VOX) ? VOX : [];
+var HAS_VOX = voxPieces.length > 0;
+if (!HAS_VOX) document.body.classList.add('no-vox');
+const VOX_TYPES = { maj: [0, 4, 7], min: [0, 3, 7], sus2: [0, 2, 7], sus4: [0, 5, 7], dim: [0, 3, 6], aug: [0, 4, 8], '6': [0, 4, 7, 9], m6: [0, 3, 7, 9], m7b5: [0, 3, 6, 10], '7': [0, 4, 7, 10], m7: [0, 3, 7, 10], maj7: [0, 4, 7, 11] };
+const VOX_SINGERS = [...new Set(voxPieces.map(p => p.singer))];
+const VOX_KINDS = { tone: '#f2a5c3', frag: '#ecd08f', breath: '#b9e3e0', chord: '#7fd3d3', cloud: '#ffffff' };
+// What it sings: how often, which kinds of piece, how they are bent
+const VOX_STYLE_KEYS = ['density', 'tone', 'frag', 'breath', 'chord', 'cloud', 'stutter', 'reverse', 'octave', 'size', 'tune', 'long'];
+const VOX_SPACE_KEYS = ['spread', 'height', 'distance', 'fly', 'orbit', 'delay', 'delayTime', 'feedback', 'reverb', 'room', 'throws'];
+const VOX_STYLE_KINDS = [
+  ['Ghost syllables', { density: .25, tone: .2, frag: 1, breath: .3, chord: 0, cloud: .1, stutter: .1, reverse: .3, octave: .1, size: 0, tune: .8, long: .4 }],
+  ['Hum pad', { density: .18, tone: .8, frag: 0, breath: .1, chord: .3, cloud: 1, stutter: 0, reverse: .1, octave: .1, size: 0, tune: 1, long: 1 }],
+  ['Stutter robot', { density: .55, tone: .2, frag: 1, breath: 0, chord: 0, cloud: 0, stutter: .8, reverse: .4, octave: .3, size: .3, tune: 1, long: .1 }],
+  ['Breath and air', { density: .2, tone: .25, frag: .1, breath: 1, chord: 0, cloud: .2, stutter: 0, reverse: .3, octave: 0, size: 0, tune: .7, long: .7 }],
+  ['Sung halo', { density: .16, tone: .3, frag: 0, breath: .1, chord: 1, cloud: .6, stutter: 0, reverse: .2, octave: .2, size: 0, tune: 1, long: 1 }],
+  ['Choir swarm', { density: .35, tone: .6, frag: .2, breath: .1, chord: .4, cloud: 1, stutter: .1, reverse: .2, octave: .3, size: 0, tune: 1, long: .8 }],
+  ['Tape chant', { density: .3, tone: 1, frag: .3, breath: 0, chord: .1, cloud: .1, stutter: .3, reverse: .1, octave: .5, size: 0, tune: 1, long: .5 }],
+  ['Whisper rain', { density: .5, tone: .1, frag: .6, breath: .8, chord: 0, cloud: 0, stutter: .2, reverse: .5, octave: 0, size: .2, tune: .5, long: .2 }],
+  ['Giant voice', { density: .15, tone: 1, frag: .2, breath: .2, chord: .3, cloud: .4, stutter: 0, reverse: .1, octave: 0, size: -.9, tune: 1, long: 1 }],
+  ['Little people', { density: .4, tone: .3, frag: 1, breath: 0, chord: 0, cloud: .2, stutter: .4, reverse: .2, octave: .2, size: .9, tune: 1, long: .3 }],
+  ['Call and echo', { density: .1, tone: 1, frag: .4, breath: 0, chord: .2, cloud: 0, stutter: 0, reverse: 0, octave: .2, size: 0, tune: 1, long: .7 }],
+  ['Orbiting hymn', { density: .25, tone: .5, frag: 0, breath: 0, chord: .6, cloud: 1, stutter: 0, reverse: .3, octave: .2, size: -.2, tune: 1, long: 1 }],
+];
+const VOX_SPACE_KINDS = [
+  ['Cathedral', { spread: .8, height: .5, distance: .7, fly: .2, orbit: .1, delay: .15, delayTime: .75, feedback: .35, reverb: .7, room: .9, throws: .2 }],
+  ['Dub tunnel', { spread: .5, height: .1, distance: .5, fly: .4, orbit: 0, delay: .55, delayTime: .75, feedback: .6, reverb: .3, room: .5, throws: .5 }],
+  ['Close whisper', { spread: .4, height: 0, distance: .05, fly: .3, orbit: 0, delay: .1, delayTime: .5, feedback: .25, reverb: .15, room: .3, throws: .1 }],
+  ['Round your head', { spread: 1, height: .3, distance: .3, fly: .8, orbit: .6, delay: .25, delayTime: 1, feedback: .4, reverb: .4, room: .6, throws: .3 }],
+  ['Overhead rain', { spread: .9, height: 1, distance: .4, fly: .5, orbit: .2, delay: .2, delayTime: .25, feedback: .45, reverb: .5, room: .7, throws: .25 }],
+  ['Behind you', { spread: .3, height: .2, distance: .6, fly: .3, orbit: 0, delay: .3, delayTime: 1.5, feedback: .5, reverb: .55, room: .8, throws: .4, behind: 1 }],
+  ['Deep space', { spread: 1, height: .6, distance: 1, fly: .6, orbit: .3, delay: .4, delayTime: 1.5, feedback: .65, reverb: .9, room: 1, throws: .6 }],
+  ['Ping-pong chapel', { spread: .7, height: .3, distance: .4, fly: .2, orbit: .1, delay: .5, delayTime: .5, feedback: .5, reverb: .45, room: .7, throws: .35 }],
+];
+const VOX_WORDS = ['', 'Velvet', 'Moonlit', 'Hollow', 'Golden', 'Faint', 'Lucid', 'Paper', 'Silver', 'Night'];
+const VOX_STYLES = Array.from({ length: VOX_STYLE_KINDS.length * 10 }, (_, i) => {
+  const [name, base] = VOX_STYLE_KINDS[i % VOX_STYLE_KINDS.length], v = Math.floor(i / VOX_STYLE_KINDS.length), R = rng32(5101 + i * 37), set = { ...base };
+  if (v) for (const k of VOX_STYLE_KEYS) set[k] = k === 'size' ? Math.max(-1, Math.min(1, set[k] + (R() - .5) * .5)) : Math.max(0, Math.min(1, set[k] * (.6 + .8 * R()) + (R() < .15 ? .3 * R() : 0)));
+  return { name: v ? `${name} · ${VOX_WORDS[v].toLowerCase()}` : name, set, seed: 1 + i };
+});
+const VOX_SPACES = Array.from({ length: VOX_SPACE_KINDS.length * 5 }, (_, i) => {
+  const [name, base] = VOX_SPACE_KINDS[i % VOX_SPACE_KINDS.length], v = Math.floor(i / VOX_SPACE_KINDS.length), R = rng32(6101 + i * 41), set = { ...base };
+  if (v) for (const k of VOX_SPACE_KEYS) if (k !== 'delayTime') set[k] = Math.max(0, Math.min(1, set[k] * (.7 + .6 * R())));
+  if (v) set.delayTime = [.25, .5, .75, 1, 1.5][Math.floor(R() * 5)];
+  return { name: v ? `${name} · ${VOX_WORDS[v + 4].toLowerCase()}` : name, set };
+});
+const voxPrefs = Object.assign({ on: false, level: -6, style: 1, space: 0, singers: VOX_SINGERS.slice(), seed: 1 }, store.get('ds-vox', {}));
+for (const k of VOX_STYLE_KEYS) if (voxPrefs[k] == null) voxPrefs[k] = VOX_STYLES[voxPrefs.style]?.set[k] ?? 0;
+for (const k of VOX_SPACE_KEYS) if (voxPrefs[k] == null) voxPrefs[k] = VOX_SPACES[voxPrefs.space]?.set[k] ?? 0;
+const saveVox = () => store.set('ds-vox', voxPrefs);
+
+let voxG = null, voxStarting = null, voxBufs = [], voxRev = [], voxMode = '', voxNext = 0, voxFree = null, voxActive = [], voxLastFrag = null, voxIn = null;
+async function voxAudio() {
+  if (voxG) return voxG;
+  if (voxStarting) return voxStarting;
+  voxStarting = (async () => {
+    await startAudio();
+    const sum = ctx.createGain(), hp = ctx.createBiquadFilter(), lev = leveler(-26), out = ctx.createGain(), fade = ctx.createGain();
+    hp.type = 'highpass'; hp.frequency.value = 110; out.gain.value = dbGain(voxPrefs.level);
+    sum.connect(fade); fade.connect(hp); hp.connect(lev.in); lev.out.connect(out); out.connect(master);
+    // the long echo: ping-pong, darker and a little wobbly on every repeat
+    const din = ctx.createGain(), dl = ctx.createDelay(4), dr = ctx.createDelay(4), fl = ctx.createGain(), fr = ctx.createGain(), tl = ctx.createBiquadFilter(), tr = ctx.createBiquadFilter(), merge = ctx.createChannelMerger(2);
+    tl.type = tr.type = 'lowpass'; tl.frequency.value = tr.frequency.value = 2400;
+    din.connect(dl); dl.connect(tl); tl.connect(fr); fr.connect(dr); dr.connect(tr); tr.connect(fl); fl.connect(dl);
+    dl.connect(merge, 0, 0); dr.connect(merge, 0, 1); merge.connect(sum);
+    const wob = ctx.createOscillator(), wobG = ctx.createGain(); wob.frequency.value = .23; wobG.gain.value = .0025; wob.connect(wobG); wobG.connect(dl.delayTime); wobG.connect(dr.delayTime); wob.start();
+    // the big room
+    const rin = ctx.createGain(), verb = ctx.createConvolver(), rout = ctx.createGain(); rout.gain.value = 1.2;
+    rin.connect(verb); verb.connect(rout); rout.connect(sum);
+    voxG = { sum, out, fade, din, dl, dr, fl, fr, rin, verb };
+    voxSpaceApply(); meterOn(out, 'voxLevelMeter');
+    // the pieces, decoded; each starts on its attack whatever the codec put before it
+    for (let i = 0; i < voxPieces.length; i++) {
+      try {
+        const b = await ctx.decodeAudioData(b64ToBytes(voxPieces[i].b64).buffer), d = b.getChannelData(0);
+        let peak = 0; for (const x of d) peak = Math.max(peak, Math.abs(x));
+        let s = 0; while (s < d.length && Math.abs(d[s]) < peak * .01) s++;
+        const nb = ctx.createBuffer(1, d.length - s, b.sampleRate); nb.copyToChannel(d.subarray(s), 0); voxBufs[i] = nb;
+      } catch (e) { voxBufs[i] = null; }
+    }
+    return voxG;
+  })();
+  return voxStarting;
+}
+function voxRoomIR(size) {
+  const sr = ctx.sampleRate, len = 1.2 + 6 * size, n = Math.floor(sr * len), b = ctx.createBuffer(2, n, sr);
+  for (let c = 0; c < 2; c++) { const a = b.getChannelData(c), R = rng32(911 + c * 13 + Math.round(size * 20)); let lp = 0;
+    for (let i = 0; i < n; i++) { const t = i / sr; lp = lp * (.35 + .5 * Math.min(1, t / len)) + (R() * 2 - 1) * .5; a[i] = t < .03 ? 0 : lp * Math.exp(-5 * t / len) * Math.min(1, (t - .03) / .05); } }
+  return b;
+}
+let voxRoomSize = -1;
+function voxSpaceApply() {
+  if (!voxG) return;
+  const t = ctx.currentTime, d = voxPrefs.delayTime * 60 / tempo();
+  voxG.dl.delayTime.setTargetAtTime(d, t, .1); voxG.dr.delayTime.setTargetAtTime(d, t, .1);
+  voxG.fl.gain.setTargetAtTime(.2 + .55 * voxPrefs.feedback, t, .1); voxG.fr.gain.setTargetAtTime(.2 + .55 * voxPrefs.feedback, t, .1);
+  const rs = Math.round(voxPrefs.room * 10) / 10; if (rs !== voxRoomSize) { voxRoomSize = rs; voxG.verb.buffer = voxRoomIR(rs); }
+}
+function voxReversed(i) { if (voxRev[i]) return voxRev[i]; const b = voxBufs[i], r = ctx.createBuffer(1, b.length, b.sampleRate), d = b.getChannelData(0), o = r.getChannelData(0); for (let k = 0; k < d.length; k++) o[k] = d[d.length - 1 - k]; return voxRev[i] = r; }
+
+// Where a piece sits in the room, and where it goes while it sounds
+function voxSpot(R, kind) {
+  const p = voxPrefs, behind = VOX_SPACES[p.space]?.set.behind ? Math.PI : 0;
+  const az = behind + (R() * 2 - 1) * Math.PI * (.15 + .85 * p.spread) + (playing || voxMode ? 2 * Math.PI * ((ctx.currentTime / (8 + 40 * (1 - p.orbit))) % 1) * p.orbit : 0);
+  const el = (R() * 2 - .6) * .9 * p.height, d = .6 + 3 * p.distance * (.4 + .6 * R()) + (kind === 'breath' ? -.3 : 0);
+  return [az, Math.max(-1, Math.min(1.2, el)), Math.max(.3, d)];
+}
+const xyz = ([az, el, d]) => [Math.sin(az) * Math.cos(el) * d, Math.sin(el) * d, -Math.cos(az) * Math.cos(el) * d];
+// One piece: tuned, maybe turned round, placed and flown, with its sends
+function voxPlay(i, when, opts) {
+  const b = opts.reverse ? voxReversed(i) : voxBufs[i]; if (!b) return;
+  const t = Math.max(when, ctx.currentTime + .005), rate = Math.pow(2, opts.semi / 12), offset = opts.offset || 0, len = Math.min(opts.len || 99, (b.duration - offset) / rate);
+  if (len < .02) return;
+  const src = ctx.createBufferSource(); src.buffer = b; src.playbackRate.value = rate;
+  const env = ctx.createGain(), pan = ctx.createPanner(), fadeIn = opts.fadeIn ?? .006, fadeOut = Math.min(len * .45, opts.fadeOut ?? .03);
+  pan.panningModel = 'HRTF'; pan.distanceModel = 'inverse'; pan.refDistance = 1; pan.rolloffFactor = .6;
+  env.gain.setValueAtTime(0, t); env.gain.linearRampToValueAtTime(opts.gain, t + fadeIn); env.gain.setValueAtTime(opts.gain, t + len - fadeOut); env.gain.linearRampToValueAtTime(0, t + len);
+  const [x0, y0, z0] = xyz(opts.from), [x1, y1, z1] = xyz(opts.to);
+  pan.positionX.setValueAtTime(x0, t); pan.positionY.setValueAtTime(y0, t); pan.positionZ.setValueAtTime(z0, t);
+  pan.positionX.linearRampToValueAtTime(x1, t + len); pan.positionY.linearRampToValueAtTime(y1, t + len); pan.positionZ.linearRampToValueAtTime(z1, t + len);
+  src.connect(env); env.connect(pan);
+  const dry = ctx.createGain(), ds = ctx.createGain(), rs = ctx.createGain();
+  dry.gain.value = opts.dry; ds.gain.value = opts.delay; rs.gain.value = opts.reverb;
+  pan.connect(dry); dry.connect(voxG.sum); pan.connect(ds); ds.connect(voxG.din); pan.connect(rs); rs.connect(voxG.rin);
+  src.start(t, offset, len * rate + .01);
+  src.onended = () => { try { src.disconnect(); env.disconnect(); pan.disconnect(); dry.disconnect(); ds.disconnect(); rs.disconnect(); } catch (e) {} };
+  voxActive.push({ t0: t, t1: t + len, from: opts.from, to: opts.to, color: VOX_KINDS[opts.kind] || '#fff', lv: opts.gain });
+}
+// The chord at a beat (from the chord line, or the one held), as pitch classes, its root first
+function voxChordAt(beat) {
+  const sg = chordSegments(voxMode); if (!sg) return null;
+  const b = ((beat % sg.beats) + sg.beats) % sg.beats, s = sg.segs.find(x => b >= x.start && b < x.end) || sg.segs[0];
+  return { root: s.root, minor: /^m(?!aj)|dim/.test(s.quality), pcs: (VOX_TYPES[s.quality] || VOX_TYPES.min).map(iv => (s.root + iv) % 12) };
+}
+// The nearest pitch to a piece's own that belongs to the chord, pushed by Size towards small or giant
+function voxTarget(midi, chord, R, wantPc) {
+  const p = voxPrefs, aim = midi + p.size * 12 + (R() < p.octave * .5 ? (R() < .5 ? 12 : -12) : 0);
+  if (!chord || p.tune < R()) return aim - midi;
+  const pcs = wantPc != null ? [wantPc] : chord.pcs;
+  let best = 0, bd = 99;
+  for (let d = -9; d <= 9; d++) { const m = Math.round(aim) + d; if (pcs.includes(((m % 12) + 12) % 12) && Math.abs(m - aim) < bd) { bd = Math.abs(m - aim); best = m - midi; } }
+  return Math.max(-19, Math.min(19, best));
+}
+const voxPool = kind => voxPieces.map((p, i) => [p, i]).filter(([p, i]) => p.kind === kind && voxBufs[i] && voxPrefs.singers.includes(p.singer)).map(([, i]) => i);
+// What happens on one sixteenth (seeded by bar and step, so a style plays the same way each time round)
+function voxStep(k, when, beat) {
+  const p = voxPrefs, R = rng32(p.seed * 7919 + k * 104729 + p.style * 31), s16 = ((k % 16) + 16) % 16, bar = Math.floor(k / 16);
+  const accent = s16 === 0 ? 1.6 : s16 % 4 === 0 ? 1.15 : s16 % 2 ? .55 : .8, phraseEnd = bar % 4 === 3 && s16 >= 12;
+  if (R() > p.density * .45 * accent) return;
+  const kinds = [['tone', p.tone], ['frag', p.frag], ['breath', p.breath * (phraseEnd ? 2.5 : .6)], ['chord', p.chord * (s16 % 8 === 0 ? 1.5 : .3)], ['cloud', p.cloud * (s16 % 8 === 0 ? 1.4 : .2)]];
+  let tot = kinds.reduce((a, x) => a + x[1], 0); if (tot <= 0) return;
+  let u = R() * tot, kind = kinds[0][0]; for (const [kk, w] of kinds) { u -= w; if (u <= 0) { kind = kk; break; } }
+  const chord = voxChordAt(beat), sp = 60 / tempo(), throwIt = R() < p.throws * .35, toRoom = R() < .5;
+  const sends = g => ({ dry: throwIt ? g * .35 : g, delay: (throwIt && !toRoom ? 1 : p.delay * .5) * g, reverb: (throwIt && toRoom ? 1 : p.reverb * .5) * g });
+  const fly = (from, R) => { const to = voxSpot(R, kind); return [from[0] + (to[0] - from[0]) * p.fly, from[1] + (to[1] - from[1]) * p.fly, from[2] + (to[2] - from[2]) * p.fly]; };
+  if (kind === 'cloud') {
+    // many small grains of held vowels and sung chords from all the singers, each on a chord note: a voice nobody has
+    const pool = [...voxPool('tone'), ...voxPool('chord')]; if (!pool.length) return;
+    const n = 5 + Math.floor(R() * 9), span = (1 + 3 * p.long) * 4 * sp * (.5 + R());
+    for (let g = 0; g < n; g++) {
+      const i = pool[Math.floor(R() * pool.length)], pc = voxPieces[i], b = voxBufs[i], from = voxSpot(R, kind);
+      const semi = pc.kind === 'chord' ? voxChordShift(pc, chord, R) : voxTarget(pc.midi || 60, chord, R, chord ? chord.pcs[g % chord.pcs.length] : null);
+      const glen = .12 + .35 * R() * (.5 + p.long), off = R() * Math.max(0, b.duration - glen * Math.pow(2, semi / 12));
+      voxPlay(i, when + R() * span, { semi, offset: off, len: glen, fadeIn: glen * .4, fadeOut: glen * .45, gain: .22 + .12 * R(), from, to: fly(from, R), kind, reverse: R() < p.reverse * .3, ...sends(.3) });
+    }
+    return;
+  }
+  const pool = voxPool(kind); if (!pool.length) return;
+  let i = pool[Math.floor(R() * pool.length)];
+  // never two bits of a word next to each other: the piece cut right after the last one is skipped
+  if (kind === 'frag' && voxLastFrag != null && Math.abs(i - voxLastFrag) <= 1) i = pool[(pool.indexOf(i) + 2 + Math.floor(R() * (pool.length - 3))) % pool.length];
+  const pc = voxPieces[i], semi = kind === 'breath' ? (R() - .5) * 4 + p.size * 5 : kind === 'chord' ? voxChordShift(pc, chord, R) : voxTarget(pc.midi || 60, chord, R);
+  const from = voxSpot(R, kind), gain = kind === 'breath' ? .5 : kind === 'frag' ? .55 : .5, reverse = R() < p.reverse * (kind === 'frag' ? .6 : .35);
+  const len = kind === 'tone' || kind === 'chord' ? Math.max(.15, voxBufs[i].duration * (.3 + .7 * p.long)) : undefined;
+  if (kind === 'frag') voxLastFrag = i;
+  const reps = kind === 'frag' && R() < p.stutter ? 2 + Math.floor(R() * 3) : 1, gap = (R() < .5 ? .125 : .25) * sp;
+  for (let r = 0; r < reps; r++) voxPlay(i, when + r * gap, { semi, reverse, len: reps > 1 ? Math.min(gap * .9, voxBufs[i].duration) : len, gain: gain * (1 - r * .12), from, to: fly(from, R), kind, fadeOut: kind === 'frag' ? .02 : .12, ...sends(1) });
+}
+// A sung chord moved by the distance from its key's root to the chord's root (its own colour stays)
+function voxChordShift(pc, chord, R) {
+  if (!chord) return voxPrefs.size * 5;
+  let d = ((chord.root - (pc.midi % 12)) % 12 + 12) % 12; if (d > 6) d -= 12;
+  return d + (R() < voxPrefs.octave * .3 ? (R() < .5 ? 12 : -12) : 0) + Math.round(voxPrefs.size * 1.2) * 12 * (Math.abs(voxPrefs.size) > .6 ? 1 : 0);
+}
+function voxTick() {
+  if (!HAS_VOX || !voxPrefs.on || !voxG || !ctx || !voxBufs.length) return;
+  const now = ctx.currentTime, bpm = tempo();
+  const want = playing ? (lineAnchor ? 'line' : '') : liveChord() ? 'free' : '';
+  if (want !== voxMode) { voxMode = want; if (want === 'free') { voxFree = { ppq: 0, time: now + .05, bpm }; voxNext = 0; } }
+  voxActive = voxActive.filter(a => a.t1 > now);
+  if (!voxMode) return;
+  let a = voxMode === 'line' ? lineAnchor : voxFree;
+  if (a.bpm !== bpm) { a = { ppq: a.ppq + (now - a.time) * a.bpm / 60, time: now, bpm }; if (voxMode === 'line') lineAnchor = a; else voxFree = a; }
+  const beatNow = a.ppq + (now - a.time) * bpm / 60, horizon = beatNow + .35 * bpm / 60;
+  if (voxNext < beatNow - .05) voxNext = beatNow;
+  for (let k = Math.ceil(voxNext * 4 - 1e-9); k / 4 < horizon; k++) {
+    const beat = k / 4; if (beat < voxNext) continue;
+    voxStep(k, a.time + (beat - a.ppq) * 60 / bpm, beat);
+  }
+  voxNext = horizon;
+}
+setInterval(voxTick, 50);
+function voxTransport() { voxMode = ''; voxNext = 0; voxLastFrag = null; }
+// The vox in the orbit view: every piece sounding now, where it is on its path
+(function voxDots() {
+  if (ctx) { const now = ctx.currentTime; voxSrc = voxActive.filter(v => v.t0 <= now && v.t1 > now).map(v => { const f = (now - v.t0) / (v.t1 - v.t0); return [v.from[0] + (v.to[0] - v.from[0]) * f, v.from[1] + (v.to[1] - v.from[1]) * f, v.from[2] + (v.to[2] - v.from[2]) * f, v.lv * .1, v.color]; }); }
+  requestAnimationFrame(voxDots);
+})();
+
+// A new Style or Space fades in: the vox dips and comes back with the new one over the fade time
+function voxCross(apply) {
+  if (voxG) { const t = ctx.currentTime, f = fadeTime() / 2; voxG.fade.gain.cancelScheduledValues(t); voxG.fade.gain.setValueAtTime(voxG.fade.gain.value, t); voxG.fade.gain.linearRampToValueAtTime(.15, t + f); voxG.fade.gain.linearRampToValueAtTime(1, t + 2 * f); setTimeout(apply, f * 1000); }
+  else apply();
+}
+function pickVoxStyle(i, why) { i = +i; voxPrefs.style = i; $('voxStyleSel').value = String(i); voxCross(() => { Object.assign(voxPrefs, VOX_STYLES[i].set); voxPrefs.seed = VOX_STYLES[i].seed; saveVox(); voxControlsShow(); }); if (why) setStatus(why + ' · ' + VOX_STYLES[i].name); }
+function pickVoxSpace(i, why) { i = +i; voxPrefs.space = i; $('voxSpaceSel').value = String(i); voxCross(() => { const { behind, ...set } = VOX_SPACES[i].set; Object.assign(voxPrefs, set); saveVox(); voxSpaceApply(); voxControlsShow(); }); if (why) setStatus(why + ' · ' + VOX_SPACES[i].name); }
+async function setVoxOn(on, quiet) {
+  voxPrefs.on = on; saveVox(); $('voxOn').setAttribute('aria-pressed', on);
+  if (!on) { voxMode = ''; return; }
+  if (quiet && !node) return;
+  try { await voxAudio(); } catch (e) { setStatus('The vox could not start: ' + e.message); return; }
+  if (!quiet) setStatus(playing ? 'The vox sings along with the chord line.' : 'The vox is on: press ▶, or hold a chord.');
+}
+let voxControlsShow = () => {};
+if (HAS_VOX) {
+  const shows = [], grid = $('voxControls');
+  const range = (key, label, min, max, step, fmt, change, cls) => {
+    const w = document.createElement('div'); w.className = 'ctl'; const id = 'vox-' + key;
+    w.innerHTML = `<label for="${id}">${label} <output></output></label><input type="range" id="${id}" min="${min}" max="${max}" step="${step}" class="${cls || ''}">`;
+    const inp = w.querySelector('input'), out = w.querySelector('output');
+    const show = () => { inp.value = voxPrefs[key]; out.textContent = fmt(voxPrefs[key]); inp.style.setProperty('--pct', (voxPrefs[key] - min) / (max - min) * 100 + '%'); };
+    inp.addEventListener('input', () => { voxPrefs[key] = +inp.value; saveVox(); show(); change && change(); });
+    shows.push(show); show(); return w;
+  };
+  const pct = v => Math.round(v * 100) + '%';
+  grid.append(
+    range('density', 'How often', 0, 1, .01, pct, null, 'rose'), range('tone', 'Hums & vowels', 0, 1, .01, pct), range('frag', 'Bits of words', 0, 1, .01, pct), range('breath', 'Breath', 0, 1, .01, pct),
+    range('chord', 'Sung chords', 0, 1, .01, pct), range('cloud', 'Clouds (a new voice)', 0, 1, .01, pct, null, 'rose'), range('stutter', 'Stutter', 0, 1, .01, pct), range('reverse', 'Backwards', 0, 1, .01, pct),
+    range('octave', 'Octave jumps', 0, 1, .01, pct), range('size', 'Size · Giant ↔ Little', -1, 1, .01, v => v < -.05 ? 'Giant ' + pct(-v) : v > .05 ? 'Little ' + pct(v) : 'Natural'), range('tune', 'Tuned to the chord', 0, 1, .01, pct), range('long', 'Short ↔ Long', 0, 1, .01, pct),
+  );
+  $('voxSpaceControls').append(
+    range('spread', 'Spread round you', 0, 1, .01, pct, null, 'teal'), range('height', 'Height', 0, 1, .01, pct, null, 'teal'), range('distance', 'Distance', 0, 1, .01, pct, null, 'teal'),
+    range('fly', 'Flight while singing', 0, 1, .01, pct, null, 'teal'), range('orbit', 'Orbit', 0, 1, .01, pct, null, 'teal'), range('throws', 'Throws into echo & room', 0, 1, .01, pct, null, 'rose'),
+    range('delay', 'Echo', 0, 1, .01, pct, voxSpaceApply), range('feedback', 'Echo repeats', 0, 1, .01, pct, voxSpaceApply), range('reverb', 'Room', 0, 1, .01, pct, voxSpaceApply), range('room', 'Room size', 0, 1, .01, pct, voxSpaceApply),
+  );
+  const dt = document.createElement('div'); dt.className = 'ctl';
+  dt.innerHTML = '<label for="vox-delayTime">Echo time</label><select id="vox-delayTime"><option value="0.25">1/16</option><option value="0.5">1/8</option><option value="0.75">Dotted 1/8</option><option value="1">1/4</option><option value="1.5">Dotted 1/4</option></select>';
+  $('voxSpaceControls').append(dt);
+  const dsel = dt.querySelector('select'); dsel.addEventListener('change', () => { voxPrefs.delayTime = +dsel.value; saveVox(); voxSpaceApply(); }); shows.push(() => { dsel.value = String(voxPrefs.delayTime); });
+  // the singers: any of them can be left out
+  $('voxSingers').innerHTML = VOX_SINGERS.map(n => `<label class="toggle"><input type="checkbox" value="${esc(n)}"> ${esc(n)}</label>`).join('');
+  $('voxSingers').querySelectorAll('input').forEach(b => b.addEventListener('change', () => { voxPrefs.singers = [...$('voxSingers').querySelectorAll('input:checked')].map(x => x.value); saveVox(); }));
+  shows.push(() => $('voxSingers').querySelectorAll('input').forEach(b => { b.checked = voxPrefs.singers.includes(b.value); }));
+  $('voxSeed').addEventListener('click', () => { voxPrefs.seed = 1 + Math.floor(Math.random() * 99999); saveVox(); setStatus('The vox sings it another way.'); });
+  voxControlsShow = () => { shows.forEach(f => f()); faderShow('voxLevel', voxPrefs.level); };
+  $('voxStyleSel').innerHTML = VOX_STYLES.map((s, i) => `<option value="${i}">${String(i + 1).padStart(3, '0')} / ${esc(s.name)}</option>`).join('');
+  $('voxSpaceSel').innerHTML = VOX_SPACES.map((s, i) => `<option value="${i}">${String(i + 1).padStart(2, '0')} / ${esc(s.name)}</option>`).join('');
+  $('voxStyleSel').value = String(voxPrefs.style); $('voxSpaceSel').value = String(voxPrefs.space);
+  $('voxStyleCount').textContent = VOX_STYLES.length; $('voxSpaceCount').textContent = VOX_SPACES.length;
+  $('voxInfo').textContent = `${voxPieces.length} pieces from ${VOX_SINGERS.length} singers`;
+  $('voxStyleSel').addEventListener('change', () => pickVoxStyle($('voxStyleSel').value));
+  $('voxSpaceSel').addEventListener('change', () => pickVoxSpace($('voxSpaceSel').value));
+  $('voxStyleDice').addEventListener('click', () => pickVoxStyle(Math.floor(Math.random() * VOX_STYLES.length), 'A random vox style'));
+  $('voxSpaceDice').addEventListener('click', () => pickVoxSpace(Math.floor(Math.random() * VOX_SPACES.length), 'A random vox space'));
+  $('voxOn').addEventListener('click', () => setVoxOn(!voxPrefs.on));
+  $('voxLevel').addEventListener('input', () => { voxPrefs.level = +$('voxLevel').value; saveVox(); faderShow('voxLevel', voxPrefs.level); if (voxG) voxG.out.gain.setTargetAtTime(dbGain(voxPrefs.level), ctx.currentTime, .03); });
+  voxControlsShow();
+}
 
 /* ---------- Keyboard, computer keys and MIDI ---------- */
 const LOW = 36, HIGH = 84, keyEls = {};
@@ -2014,7 +2561,7 @@ function arrowize(sel) {
   new MutationObserver(sync).observe(sel, { childList: true, subtree: true, attributes: true });
   sel._sync = sync;
 }
-document.querySelectorAll('select').forEach(sel => { if (!['soundSel', 'lineSel', 'soundFilter', 'arpSel', 'arpSoundSel', 'kitSel', 'drumSel'].includes(sel.id)) arrowize(sel); });
+document.querySelectorAll('select').forEach(sel => { if (!['soundSel', 'lineSel', 'soundFilter', 'arpSel', 'arpSoundSel', 'kitSel', 'drumSel', 'voxStyleSel', 'voxSpaceSel'].includes(sel.id)) arrowize(sel); });
 // keep the arrows right when a menu is set from code (a sound loads, a chord is picked)
 setInterval(() => document.querySelectorAll('.stepper select').forEach(sel => sel._sync && sel._sync()), 400);
 fillSessions(); fillLines(); drawSlots(); drawPads(); lastNotes = voiceLine();
@@ -2022,4 +2569,5 @@ if (soundChoice !== '0') loadSound(soundChoice); else fillSounds();
 fillDrums(); setDrumsOn(!!drumPrefs.on); mixApply();
 $('soundCount').textContent = soundBank.length; $('lineCount').textContent = lineBank.length;
 arpInit();
+setVoxOn(!!voxPrefs.on, true);
 </script>
