@@ -290,16 +290,43 @@ void Engine::controlUpdate() {
             lifeFold[l] = std::fabs(n[LifeSeq::Shape]);
             lifeAz[l] = n[LifeSeq::Azimuth] * kPi;
             lifeEl[l] = n[LifeSeq::Height] * .9f;
-            lifeCut[l] = n[LifeSeq::Filter] * 1.6f;
-            lifeFm[l] = std::max(0.f, n[LifeSeq::Cross]) * .12f;
+            lifeCut[l] = n[LifeSeq::Filter] * 2.4f;
+            lifeFm[l] = std::max(0.f, n[LifeSeq::Cross]) * .3f;
         }
+    }
+
+    // Twist: every oscillator turns inside itself, each at its own pace and phase, locked to the bars when the song
+    // plays. Its wave shape and pulse width sweep, its own filter opens and closes (with a resonant edge at the top),
+    // harmonics fold in, cross-modulation comes in bursts, and the oscillators swell past each other, so the sound
+    // keeps changing from the inside rather than only moving round your head.
+    {
+        static const float rateBars[5] = {8, 4, 2, 1, .5f}, kSpeed[kOsc] = {1, .75f, 1.5f, .5f, 1.25f, 2.f / 3};
+        const float T = p[Twist], rb = rateBars[std::min(4, std::max(0, (int)std::lround(p[TwistRate])))];
+        double tq;
+        if (playing) tq = ppq / (barQuarters * rb); else { twistClock += dt * bpm / 60.0 / (barQuarters * rb); tq = twistClock; }
+        for (int i = 0; i < kOsc; i++) {
+            const float ph = (float)(std::fmod(tq * kSpeed[i], 1.0) * kTwoPi);
+            const float a = std::sin(ph + i * 1.1f), b = std::sin(2.3f * ph + i * 2.7f), c = std::sin(.5f * ph + i * .4f), d = std::sin(.5f * ph + i * 1.9f + 1.3f);
+            const float w = clampf(twWalk[i].step(rng, dt, 2.5f, .55f), -1, 1);
+            twMorph[i] = T * (.9f * a + .4f * w);
+            twPw[i] = T * .45f * b;
+            twCut[i] = T * (2.4f * c + 1.f * w);
+            twFold[i] = T * .95f * std::max(0.f, .7f * b + .5f * w);
+            twFm[i] = T * .45f * std::max(0.f, a * b + .3f * w);
+            twLevel[i] = clampf(1 + T * .8f * d, .15f, 1.8f);
+            twRes[i] = T * 2.6f * std::max(0.f, a);
+        }
+        // the whole voice filter breathes too, and the recorded layers swell in and out past each other
+        const float ph0 = (float)(std::fmod(tq * .5, 1.0) * kTwoPi);
+        twSweep = T * (std::sin(ph0) * .8f + .25f * twWalk[0].x);
+        for (int f = 0; f < kFamilies; f++) twSwell[f] = clampf(1 + T * .6f * std::sin(ph0 * (1 + .25f * f) + f * 1.7f), .3f, 1.6f);
     }
 
     float sumSq = 0;
     for (int i = 0; i < kOsc; i++) {
         const bool on = p[oscParam(i, 0)] > .5f;
         const bool upper = p[oscParam(i, 2)] > .5f || p[oscParam(i, 3)] >= 12;
-        oscLevel[i] = on ? p[oscParam(i, 5)] * (upper ? wUpper : 1.f) * clampf(1 + lifeLanes.now[i][LifeSeq::Level], 0, 1.5f) : 0.f;
+        oscLevel[i] = on ? p[oscParam(i, 5)] * (upper ? wUpper : 1.f) * clampf(1 + lifeLanes.now[i][LifeSeq::Level], 0, 1.5f) * twLevel[i] : 0.f;
         sumSq += oscLevel[i] * oscLevel[i];
     }
     oscNorm = .42f / std::sqrt(sumSq + .05f);
@@ -321,7 +348,7 @@ void Engine::controlUpdate() {
     lx += dx * ldt; ly += dy * ldt; lz += dz * ldt;
     chaosX = clampf(lx / 20, -1, 1); chaosZ = clampf((lz - 25) / 12, -1, 1);
 
-    cutoffHz = 60 * std::pow(2.f, p[Cutoff] * 8.4f + mot * .8f * motionVals[0] + chaos * .45f * chaosZ);
+    cutoffHz = 60 * std::pow(2.f, p[Cutoff] * 8.4f + mot * .8f * motionVals[0] + chaos * .45f * chaosZ + twSweep);
     resQ = .6f + p[Resonance] * 5.f;
     fmIndex = p[Cross] * p[Cross] * .22f * (1 + .6f * chaos * chaosX);
     pwmDepth = p[Pwm];
@@ -331,6 +358,7 @@ void Engine::controlUpdate() {
     layerLevel[kStrings] = p[StringLayer] * wLayer * (1 + .3f * mot * motionVals[0]);
     layerLevel[kBrass] = p[BrassLayer] * wLayer;
     layerLevel[kTexture] = p[TextureLayer] * wLayer * (1 + .3f * mot * motionVals[1]);
+    for (int f = 0; f < kFamilies; f++) layerLevel[f] *= twSwell[f];
     robotAmt = p[Robot];
     voxMix = p[Vox] * wLayer;
     vowelPos = clampf(p[Vowel] + .3f * mot * motionVals[1], 0, 1);
@@ -413,11 +441,11 @@ void Engine::controlUpdate() {
             o.inc = mtof(m) / (float)sr;
             o.pwPh += kTwoPi * o.pwRate * dt * (1 + chaos * chaosX * .5f);
             if (o.pwPh > kTwoPi) o.pwPh -= kTwoPi;
-            o.pw = clampf(.5f + .42f * pwmDepth * std::sin(o.pwPh) + .35f * lifeShape[i], .06f, .94f);
+            o.pw = clampf(.5f + .42f * pwmDepth * std::sin(o.pwPh) + .35f * lifeShape[i] + twPw[i], .06f, .94f);
             // Morph glides the wave through sine, triangle, saw and pulse, each oscillator at its own pace
             o.morphPh += kTwoPi * o.morphRate * (.4f + life + mot) * dt * (1 + chaos * chaosX * .5f);
             if (o.morphPh > kTwoPi) o.morphPh -= kTwoPi;
-            o.morph = clampf(1.5f + 1.5f * std::sin(o.morphPh) + 1.5f * lifeShape[i], 0, 3);
+            o.morph = clampf(1.5f + 1.5f * std::sin(o.morphPh) + 1.5f * lifeShape[i] + 1.6f * twMorph[i], 0, 3);
             // which octave copy of a wavetable this pitch may use: no harmonic above half the sample rate
             o.level = std::min(Wavetable::kLevels - 1, std::max(0, (int)std::ceil(std::log2(1024.f / std::max(1.f, std::floor(.5f / std::max(o.inc, 1e-6f)))))));
         }
@@ -426,9 +454,9 @@ void Engine::controlUpdate() {
         Svf a, b2; a.set(hz, resQ, (float)sr); b2.set(hz, .6f, (float)sr);
         auto coef = [](Svf& dst, const Svf& src) { dst.a1 = src.a1; dst.a2 = src.a2; dst.a3 = src.a3; dst.k = src.k; };
         for (int i = 0; i < kOsc; i++) {
-            if (std::fabs(lifeCut[i]) > .02f) {  // this oscillator's lane moves its own filter
-                const float h2 = hz * std::pow(2.f, lifeCut[i]);
-                v.of[i][0].set(h2, resQ, (float)sr); v.of[i][1].set(h2, .6f, (float)sr);
+            if (std::fabs(lifeCut[i] + twCut[i]) > .02f || twRes[i] > .02f) {  // its Life lane and its Twist move its own filter
+                const float h2 = std::min((float)sr * .45f, hz * std::pow(2.f, lifeCut[i] + twCut[i]));
+                v.of[i][0].set(h2, resQ + twRes[i], (float)sr); v.of[i][1].set(h2, .6f, (float)sr);
             } else { coef(v.of[i][0], a); coef(v.of[i][1], b2); }
         }
         for (int f = 0; f < kFamilies; f++) coef(v.lf[f], b2);
@@ -541,7 +569,7 @@ void Engine::process(float* outL, float* outR, int n) {
             for (int i = 0; i < kOsc; i++) {
                 if (oscLevel[i] <= 0) continue;
                 Osc& o = v.osc[i];
-                const float inc = std::max(1e-6f, o.inc * (1 + (fmIndex + lifeFm[i]) * prev));
+                const float inc = std::max(1e-6f, o.inc * (1 + (fmIndex + lifeFm[i] + twFm[i]) * prev));
                 o.ph += inc; if (o.ph >= 1) o.ph -= 1;
                 auto shape = [&](int w) {
                     switch (w) {
@@ -569,7 +597,8 @@ void Engine::process(float* outL, float* outR, int n) {
                     y = shape(order[m]) * (1 - f) + shape(order[m + 1]) * f;
                 } else y = shape(waves[i]);
                 // the lane's shape also folds the plain waves: more harmonics as it leans away from the middle
-                if (lifeFold[i] > .02f && waves[i] != 1) { const float f = lifeFold[i]; y = y * (1 - f) + std::sin(y * (1 + 3 * f) * kPi * .5f) * f; }
+                const float fold = std::min(.9f, lifeFold[i] + twFold[i]);
+                if (fold > .02f && waves[i] != 1) { const float f = fold; y = y * (1 - f) + std::sin(y * (1 + 3 * f) * kPi * .5f) * f; }
                 o.last = y; prev = y;
                 bus[i] += v.of[i][1].low(v.of[i][0].low(y)) * a;
             }
@@ -659,7 +688,8 @@ void Engine::process(float* outL, float* outR, int n) {
             for (int k = 0; k < airCount; k++) { al += airL[k].band(nl) * airL[k].k * airGain[k]; ar += airR[k].band(nr) * airR[k].k * airGain[k]; }
             const float bl = breathLpL.low(breathHpL.high(nl)), br = breathLpR.low(breathHpR.high(nr));
             const float g = airLevel * airFollow;
-            L += (al * 3.f + bl * .4f * breathAmt) * g; R += (ar * 3.f + br * .4f * breathAmt) * g;
+            // (kept well under the music: at full it is a halo, not a wash of noise)
+            L += (al * 3.f + bl * .4f * breathAmt) * g * .3f; R += (ar * 3.f + br * .4f * breathAmt) * g * .3f;
         }
 
         // Dub delay: ping-pong with the echoes getting darker and thinner each time round

@@ -160,6 +160,9 @@ private:
     Voice texVoice; float texEnv = 0;
     // Life sequencer state, per oscillator: what the lanes do to it right now
     LifeSeq lifeLanes; double lifeClock = 0; float lifeStep = 0, lifeLaneStep[kOsc] = {};
+    // Twist, per oscillator: how its shape, pulse width, filter (octaves), folding, cross-modulation, level and resonance move now
+    float twMorph[kOsc] = {}, twPw[kOsc] = {}, twCut[kOsc] = {}, twFold[kOsc] = {}, twFm[kOsc] = {}, twLevel[kOsc] = {1, 1, 1, 1, 1, 1}, twRes[kOsc] = {};
+    Wander twWalk[kOsc]; double twistClock = 0; float twSweep = 0, twSwell[kFamilies] = {};
     float lifeCents[kOsc] = {}, lifeSemis[kOsc] = {}, lifeShape[kOsc] = {}, lifeFold[kOsc] = {}, lifeAz[kOsc] = {}, lifeEl[kOsc] = {}, lifeCut[kOsc] = {}, lifeFm[kOsc] = {};
 public:
     // For the screen: the lanes' patterns and where the sequencer is

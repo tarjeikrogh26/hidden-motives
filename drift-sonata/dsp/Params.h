@@ -35,6 +35,8 @@ enum P {
     SubRhythm,
     // Life sequencer playheads: all together, or each lane at its own speed and direction
     LifeHeads,
+    // Twist: each oscillator turning inside itself (shape, filter, harmonics, cross-modulation, level), and how fast
+    Twist, TwistRate,
     COUNT
 };
 
@@ -70,7 +72,7 @@ inline const std::vector<ParamInfo>& params() {
         f(Space, "space", "Space", 0, 1, .5f);
         f(Intensity, "intensity", "Intensity", 0, 1, 1);
         f(Tape, "tape", "Analog", 0, 1, .3f);
-        f(Air, "air", "Air", 0, 1, .35f);
+        f(Air, "air", "Air", 0, 1, .2f);
 
         static const char* oscIds[6][7] = {
             {"o1on", "o1wave", "o1oct", "o1semi", "o1fine", "o1level", "o1pan"}, {"o2on", "o2wave", "o2oct", "o2semi", "o2fine", "o2level", "o2pan"},
@@ -151,7 +153,7 @@ inline const std::vector<ParamInfo>& params() {
         c(RobotRate, "robotrate", "Words", {"1/2", "1/4", "1/8", "1/16"}, 2);
         f(Trim, "trim", "Sound trim", -12, 12, 0, 0, "dB");
         c(QualityMode, "quality", "Quality", {"High", "Eco"}, 0);
-        f(LifeAmt, "lifeseq", "Life sequencer", 0, 1, .35f);
+        f(LifeAmt, "lifeseq", "Life sequencer", 0, 1, .55f);
         c(LifeRate, "liferate", "Step", {"2 bars", "1 bar", "1/2 bar", "1/4 bar"}, 1);
         f(LifeSmooth, "lifesmooth", "Glide", 0, 1, .7f);
         i(LifeSeed, "lifeseed", "Pattern", 0, 9999, 1);
@@ -167,6 +169,8 @@ inline const std::vector<ParamInfo>& params() {
         f(LOctave, "loctave", "Octave jumps", 0, 1, .15f);
         c(SubRhythm, "subrhythm", "Sub rhythm", {"Bar one", "One and three", "Every beat", "Dotted", "Heartbeat", "Push", "Random"}, 0);
         f(LifeHeads, "lifeheads", "Playheads", 0, 1, .5f);
+        f(Twist, "twist", "Twist", 0, 1, .6f);
+        c(TwistRate, "twistrate", "Twist speed", {"8 bars", "4 bars", "2 bars", "1 bar", "1/2 bar"}, 2);
         return v;
     }();
     return t;

@@ -928,6 +928,9 @@ function colourCard(title, text, lo, hi, build, wide) {
   card.innerHTML = `<div class="head"><h3>${title}</h3></div>${text ? `<p>${text}</p>` : ''}`;
   build(card); $('colours').appendChild(card);
 }
+colourCard('Movement', 'Each of the six oscillators turns inside itself: its shape, its own filter, its harmonics and cross-modulation sweep, and they swell past each other.', '', '', c => {
+  c.appendChild(slider('twist', { label: 'Still ↔ Twisting', rose: true })); c.appendChild(choice('twistrate')); c.appendChild(slider('lifeseq', { label: 'Life sequencer' }));
+});
 colourCard('Intensity', 'Verse to chorus: takes away or brings in the octave, the voices, shimmer and air.', 'Verse', 'Chorus', c => c.appendChild(slider('intensity', { label: 'Verse ↔ Chorus' })));
 colourCard('Analog', 'Tape wow, flutter, saturation and hiss.', 'Clean', 'Worn', c => c.appendChild(slider('tape', { label: 'Clean ↔ Worn tape', rose: true })));
 colourCard('Air', 'Breath and noise tuned to the chord.', 'Dry', 'Breath', c => c.appendChild(slider('air', { label: 'Dry ↔ Breath', teal: true })));
@@ -997,7 +1000,8 @@ lifeControls($('lifeControls'), 'chord');
 // The arp's six oscillators: their room, their Life lanes and the oscillators themselves
 {
   const o = { ch: 'arp', teal: true };
-  $('arpOrbitControls').append(slider('orbit', { ...o, label: 'Still ↔ Orbiting' }), slider('orbitspeed', o), slider('distance', o), slider('overhead', o), slider('space3d', { ...o, label: 'Binaural' }));
+  $('arpOrbitControls').append(slider('twist', { ch: 'arp', rose: true, label: 'Twist · Still ↔ Twisting' }), choice('twistrate', { ch: 'arp' }),
+    slider('orbit', { ...o, label: 'Still ↔ Orbiting' }), slider('orbitspeed', o), slider('distance', o), slider('overhead', o), slider('space3d', { ...o, label: 'Binaural' }));
   lifeControls($('arpLifeControls'), 'arp');
   for (let k = 1; k <= 6; k++) {
     const card = document.createElement('div'); card.className = 'card osc';
@@ -2273,12 +2277,17 @@ const VOX_SPACES = Array.from({ length: VOX_SPACE_KINDS.length * 5 }, (_, i) => 
   const [name, base] = VOX_SPACE_KINDS[i % VOX_SPACE_KINDS.length], v = Math.floor(i / VOX_SPACE_KINDS.length), R = rng32(6101 + i * 41), set = { ...base };
   if (v) for (const k of VOX_SPACE_KEYS) if (k !== 'delayTime') set[k] = Math.max(0, Math.min(1, set[k] * (.7 + .6 * R())));
   if (v) set.delayTime = [.25, .5, .75, 1, 1.5][Math.floor(R() * 5)];
+  set.reverb = Math.min(1, set.reverb + .2); set.room = Math.min(1, set.room + .1);  // every space a little more room: the vox lives in it
   return { name: v ? `${name} · ${VOX_WORDS[v + 4].toLowerCase()}` : name, set };
 });
 const voxPrefs = Object.assign({ on: false, level: -6, style: 1, space: 0, singers: VOX_SINGERS.slice(), seed: 1 }, store.get('ds-vox', {}));
 for (const k of VOX_STYLE_KEYS) if (voxPrefs[k] == null) voxPrefs[k] = VOX_STYLES[voxPrefs.style]?.set[k] ?? 0;
 for (const k of VOX_SPACE_KEYS) if (voxPrefs[k] == null) voxPrefs[k] = VOX_SPACES[voxPrefs.space]?.set[k] ?? 0;
 const saveVox = () => store.set('ds-vox', voxPrefs);
+if (voxPrefs.v !== 2) {  // the softer, roomier vox: bring a saved one up to it
+  const st = VOX_STYLES[voxPrefs.style] || VOX_STYLES[1], sp = VOX_SPACES[voxPrefs.space] || VOX_SPACES[0], { behind, ...spaceSet } = sp.set;
+  Object.assign(voxPrefs, st.set, spaceSet, { v: 2 }); saveVox();
+}
 
 let voxG = null, voxStarting = null, voxBufs = [], voxRev = [], voxMode = '', voxNext = 0, voxFree = null, voxActive = [], voxLastFrag = null, voxIn = null;
 async function voxAudio() {
@@ -2286,9 +2295,9 @@ async function voxAudio() {
   if (voxStarting) return voxStarting;
   voxStarting = (async () => {
     await startAudio();
-    const sum = ctx.createGain(), hp = ctx.createBiquadFilter(), lev = leveler(-26), out = ctx.createGain(), fade = ctx.createGain();
-    hp.type = 'highpass'; hp.frequency.value = 110; out.gain.value = dbGain(voxPrefs.level);
-    sum.connect(fade); fade.connect(hp); hp.connect(lev.in); lev.out.connect(out); out.connect(master);
+    const sum = ctx.createGain(), hp = ctx.createBiquadFilter(), soft = ctx.createBiquadFilter(), lev = leveler(-26), out = ctx.createGain(), fade = ctx.createGain();
+    hp.type = 'highpass'; hp.frequency.value = 110; soft.type = 'lowpass'; soft.frequency.value = 6500; soft.Q.value = .5; out.gain.value = dbGain(voxPrefs.level);
+    sum.connect(fade); fade.connect(hp); hp.connect(soft); soft.connect(lev.in); lev.out.connect(out); out.connect(master);
     // the long echo: ping-pong, darker and a little wobbly on every repeat
     const din = ctx.createGain(), dl = ctx.createDelay(4), dr = ctx.createDelay(4), fl = ctx.createGain(), fr = ctx.createGain(), tl = ctx.createBiquadFilter(), tr = ctx.createBiquadFilter(), merge = ctx.createChannelMerger(2);
     tl.type = tr.type = 'lowpass'; tl.frequency.value = tr.frequency.value = 2400;
@@ -2314,9 +2323,11 @@ async function voxAudio() {
   return voxStarting;
 }
 function voxRoomIR(size) {
-  const sr = ctx.sampleRate, len = 1.2 + 6 * size, n = Math.floor(sr * len), b = ctx.createBuffer(2, n, sr);
-  for (let c = 0; c < 2; c++) { const a = b.getChannelData(c), R = rng32(911 + c * 13 + Math.round(size * 20)); let lp = 0;
-    for (let i = 0; i < n; i++) { const t = i / sr; lp = lp * (.35 + .5 * Math.min(1, t / len)) + (R() * 2 - 1) * .5; a[i] = t < .03 ? 0 : lp * Math.exp(-5 * t / len) * Math.min(1, (t - .03) / .05); } }
+  // a soft, dark, long room: it swells in after a short gap and darkens as it dies, so the voices bloom rather than bounce
+  const sr = ctx.sampleRate, len = 2 + 7 * size, n = Math.floor(sr * len), b = ctx.createBuffer(2, n, sr);
+  for (let c = 0; c < 2; c++) { const a = b.getChannelData(c), R = rng32(911 + c * 13 + Math.round(size * 20)); let lp = 0, lp2 = 0;
+    for (let i = 0; i < n; i++) { const t = i / sr, k = .55 + .4 * Math.min(1, t / len); lp = lp * k + (R() * 2 - 1) * (1 - k); lp2 = lp2 * .5 + lp * .5;
+      a[i] = t < .04 ? 0 : lp2 * 3 * Math.exp(-4.5 * t / len) * Math.min(1, (t - .04) / .25); } }
   return b;
 }
 let voxRoomSize = -1;
@@ -2377,12 +2388,13 @@ const voxPool = kind => voxPieces.map((p, i) => [p, i]).filter(([p, i]) => p.kin
 function voxStep(k, when, beat) {
   const p = voxPrefs, R = rng32(p.seed * 7919 + k * 104729 + p.style * 31), s16 = ((k % 16) + 16) % 16, bar = Math.floor(k / 16);
   const accent = s16 === 0 ? 1.6 : s16 % 4 === 0 ? 1.15 : s16 % 2 ? .55 : .8, phraseEnd = bar % 4 === 3 && s16 >= 12;
-  if (R() > p.density * .45 * accent) return;
+  if (R() > p.density * .3 * accent) return;
   const kinds = [['tone', p.tone], ['frag', p.frag], ['breath', p.breath * (phraseEnd ? 2.5 : .6)], ['chord', p.chord * (s16 % 8 === 0 ? 1.5 : .3)], ['cloud', p.cloud * (s16 % 8 === 0 ? 1.4 : .2)]];
   let tot = kinds.reduce((a, x) => a + x[1], 0); if (tot <= 0) return;
   let u = R() * tot, kind = kinds[0][0]; for (const [kk, w] of kinds) { u -= w; if (u <= 0) { kind = kk; break; } }
   const chord = voxChordAt(beat), sp = 60 / tempo(), throwIt = R() < p.throws * .35, toRoom = R() < .5;
-  const sends = g => ({ dry: throwIt ? g * .35 : g, delay: (throwIt && !toRoom ? 1 : p.delay * .5) * g, reverb: (throwIt && toRoom ? 1 : p.reverb * .5) * g });
+  // mostly heard through the room: the dry part steps back as the room grows, so the voices melt into the music
+  const sends = g => ({ dry: (throwIt ? .25 : 1 - .5 * p.reverb) * g, delay: (throwIt && !toRoom ? 1 : p.delay * .6) * g, reverb: (throwIt && toRoom ? 1.1 : .25 + p.reverb * .85) * g });
   const fly = (from, R) => { const to = voxSpot(R, kind); return [from[0] + (to[0] - from[0]) * p.fly, from[1] + (to[1] - from[1]) * p.fly, from[2] + (to[2] - from[2]) * p.fly]; };
   if (kind === 'cloud') {
     // many small grains of held vowels and sung chords from all the singers, each on a chord note: a voice nobody has
@@ -2392,7 +2404,7 @@ function voxStep(k, when, beat) {
       const i = pool[Math.floor(R() * pool.length)], pc = voxPieces[i], b = voxBufs[i], from = voxSpot(R, kind);
       const semi = pc.kind === 'chord' ? voxChordShift(pc, chord, R) : voxTarget(pc.midi || 60, chord, R, chord ? chord.pcs[g % chord.pcs.length] : null);
       const glen = .12 + .35 * R() * (.5 + p.long), off = R() * Math.max(0, b.duration - glen * Math.pow(2, semi / 12));
-      voxPlay(i, when + R() * span, { semi, offset: off, len: glen, fadeIn: glen * .4, fadeOut: glen * .45, gain: .22 + .12 * R(), from, to: fly(from, R), kind, reverse: R() < p.reverse * .3, ...sends(.3) });
+      voxPlay(i, when + R() * span, { semi, offset: off, len: glen * 1.4, fadeIn: glen * .6, fadeOut: glen * .7, gain: .18 + .1 * R(), from, to: fly(from, R), kind, reverse: R() < p.reverse * .3, ...sends(.3) });
     }
     return;
   }
@@ -2401,11 +2413,13 @@ function voxStep(k, when, beat) {
   // never two bits of a word next to each other: the piece cut right after the last one is skipped
   if (kind === 'frag' && voxLastFrag != null && Math.abs(i - voxLastFrag) <= 1) i = pool[(pool.indexOf(i) + 2 + Math.floor(R() * (pool.length - 3))) % pool.length];
   const pc = voxPieces[i], semi = kind === 'breath' ? (R() - .5) * 4 + p.size * 5 : kind === 'chord' ? voxChordShift(pc, chord, R) : voxTarget(pc.midi || 60, chord, R);
-  const from = voxSpot(R, kind), gain = kind === 'breath' ? .5 : kind === 'frag' ? .55 : .5, reverse = R() < p.reverse * (kind === 'frag' ? .6 : .35);
+  const from = voxSpot(R, kind), gain = kind === 'breath' ? .38 : kind === 'frag' ? .36 : .42, reverse = R() < p.reverse * (kind === 'frag' ? .6 : .35);
   const len = kind === 'tone' || kind === 'chord' ? Math.max(.15, voxBufs[i].duration * (.3 + .7 * p.long)) : undefined;
   if (kind === 'frag') voxLastFrag = i;
-  const reps = kind === 'frag' && R() < p.stutter ? 2 + Math.floor(R() * 3) : 1, gap = (R() < .5 ? .125 : .25) * sp;
-  for (let r = 0; r < reps; r++) voxPlay(i, when + r * gap, { semi, reverse, len: reps > 1 ? Math.min(gap * .9, voxBufs[i].duration) : len, gain: gain * (1 - r * .12), from, to: fly(from, R), kind, fadeOut: kind === 'frag' ? .02 : .12, ...sends(1) });
+  // stutters are soft repeats, each quieter and further into the room
+  const reps = kind === 'frag' && R() < p.stutter * .7 ? 2 + Math.floor(R() * 2) : 1, gap = (R() < .6 ? .25 : .5) * sp;
+  const soft = { frag: [.03, .08], breath: [.08, .18], tone: [.16, .32], chord: [.25, .45] }[kind];
+  for (let r = 0; r < reps; r++) voxPlay(i, when + r * gap, { semi, reverse, len: reps > 1 ? Math.min(gap * .95, voxBufs[i].duration) : len, gain: gain * Math.pow(.72, r), from, to: fly(from, R), kind, fadeIn: soft[0], fadeOut: soft[1], ...sends(1) });
 }
 // A sung chord moved by the distance from its key's root to the chord's root (its own colour stays)
 function voxChordShift(pc, chord, R) {
@@ -2440,7 +2454,7 @@ function voxTransport() { voxMode = ''; voxNext = 0; voxLastFrag = null; }
 
 // A new Style or Space fades in: the vox dips and comes back with the new one over the fade time
 function voxCross(apply) {
-  if (voxG) { const t = ctx.currentTime, f = fadeTime() / 2; voxG.fade.gain.cancelScheduledValues(t); voxG.fade.gain.setValueAtTime(voxG.fade.gain.value, t); voxG.fade.gain.linearRampToValueAtTime(.15, t + f); voxG.fade.gain.linearRampToValueAtTime(1, t + 2 * f); setTimeout(apply, f * 1000); }
+  if (voxG) { const t = ctx.currentTime, f = fadeTime() / 2; voxG.fade.gain.cancelScheduledValues(t); voxG.fade.gain.setValueAtTime(voxG.fade.gain.value, t); voxG.fade.gain.linearRampToValueAtTime(.55, t + f); voxG.fade.gain.linearRampToValueAtTime(1, t + 2 * f); setTimeout(apply, f * 1000); }
   else apply();
 }
 function pickVoxStyle(i, why) { i = +i; voxPrefs.style = i; $('voxStyleSel').value = String(i); voxCross(() => { Object.assign(voxPrefs, VOX_STYLES[i].set); voxPrefs.seed = VOX_STYLES[i].seed; saveVox(); voxControlsShow(); }); if (why) setStatus(why + ' · ' + VOX_STYLES[i].name); }
