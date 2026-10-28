@@ -9,6 +9,7 @@
 #include "Params.h"
 #include "Space3D.h"
 #include "Vocoder.h"
+#include "LifeSeq.h"
 
 namespace ds {
 
@@ -111,7 +112,9 @@ private:
     Voice* allocVoice();
     void controlUpdate();
     float renderGrains(Voice& v, int fam, const SampleBank& bank);
-    void triggerSub();
+    void triggerSub(double untilNextQuarters = 1e9);
+    bool subOnStep(int step16, int stepsPerBar);
+    double subGapQuarters(int step16, int stepsPerBar);
     float temperFor(int note) const;
     float temperature() const;
     int expandLevel() const;
@@ -127,7 +130,7 @@ private:
     std::vector<int> held; float heldVel = .8f; int pendingRecompute = -1;
     Voicing voicing; std::vector<int> prevVoicing;
     int lastExpand = -1, lastColor = -1, lastKey = -1, lastKeyMinor = -1, lastKeepBass = -1;
-    bool subWaiting = false;
+    bool subWaiting = false; long long last16 = -1;
 
     // Transport
     bool playing = false; double ppq = 0, bpm = 120, ppqPerSample = 0; int beatsPerBar = 4; double barQuarters = 4; long long lastBar = -1;
@@ -155,6 +158,15 @@ private:
     Vocoder vocoder; MachineWords words; float robotAmt = 0;
     std::vector<float> extMod; long long extPos = 0;
     Voice texVoice; float texEnv = 0;
+    // Life sequencer state, per oscillator: what the lanes do to it right now
+    LifeSeq lifeLanes; double lifeClock = 0; float lifeStep = 0;
+    float lifeCents[kOsc] = {}, lifeSemis[kOsc] = {}, lifeShape[kOsc] = {}, lifeFold[kOsc] = {}, lifeAz[kOsc] = {}, lifeEl[kOsc] = {}, lifeCut[kOsc] = {}, lifeFm[kOsc] = {};
+public:
+    // For the screen: the lanes' patterns and where the sequencer is
+    const LifeSeq& lifeSeq() const { return lifeLanes; }
+    float lifePosition() const { return lifeStep; }
+    int lifeSteps() const;
+private:
     DelayLine dubL, dubR; Biquad dubLp, dubHp; float dubTime = .375f;
     // Reverb: 8-line feedback delay network with a shimmer (octave up) in the loop
     DelayLine fdn[8]; float fdnLen[8] = {}, fdnLp[8] = {}, fdnGk[8] = {}, revDamp = .3f; float fdnModPh = 0;

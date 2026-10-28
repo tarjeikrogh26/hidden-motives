@@ -139,6 +139,8 @@ inline Values generated(int gen, uint32_t seed) {
     for (const Range& w : arch.lean) s.set(w.id, r(w.a, w.b));
     s.set("color", pick({0, 0, 1, 1, 2, 3, 4})); s.set("delaytime", std::floor(R() * 5)); s.set("motionbars", std::floor(R() * 4));
     for (const char* id : {"air", "choir", "cello", "stringlayer", "brass", "texture", "robot"}) s.set(id, 0);
+    // some get a sub rhythm instead of bar one only (drawn last, so the rest of the sound stays as it was)
+    s.set("subrhythm", pick({0, 0, 0, 0, 1, 2, 3, 4, 5, 6}));
     return vals;
 }
 
@@ -183,6 +185,8 @@ inline const std::vector<BankSound>& soundBank() {
             else if (c < clean.size()) out.push_back(clean[c++]);
             else out.push_back(varied[a++]);
         }
+        // each sound its own Life patterns
+        for (size_t i = 0; i < out.size(); i++) out[i].values[LifeSeed] = (float)(i + 1);
         // level trims, measured
         for (size_t i = 0; i < out.size() && i < sizeof kBankTrim / sizeof *kBankTrim; i++) out[i].values[Trim] = kBankTrim[i];
         return out;

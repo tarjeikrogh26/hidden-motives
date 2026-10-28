@@ -68,3 +68,12 @@ EXPORT(ds_expand) int dsExpand(int count, int prevCount, int level, int color, i
     harmonyBuf[64] = v.chord.root;
     return n;
 }
+
+// Life sequencer for the screen: the patterns (made the same way as in the engine) and where the engine is now.
+namespace { LifeSeq lifeView; }
+EXPORT(ds_life_value) float dsLifeValue(int seed, int lane, int target, int step) {
+    lifeView.generate((uint32_t)seed);
+    return lifeView.pattern[(unsigned)lane % LifeSeq::kLanes][(unsigned)target % LifeSeq::kTargets][(unsigned)step % LifeSeq::kMaxSteps];
+}
+EXPORT(ds_life_pos) float dsLifePos() { return engine ? engine->lifePosition() : 0.f; }
+EXPORT(ds_life_steps) int dsLifeSteps() { return engine ? engine->lifeSteps() : 32; }

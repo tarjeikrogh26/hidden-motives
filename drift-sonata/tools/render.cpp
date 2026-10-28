@@ -88,6 +88,7 @@ static double tuningOnce(float drift, uint32_t seed) {
     Engine e; e.prepare(sr, 512); e.setSeed(seed);
     Values v = defaults();
     v[Drift] = drift; v[Life] = 1; v[Tension] = .1f; v[Expand] = 1; v[SubDrop] = 0; v[Space] = 0; v[Tape] = 0; v[Air] = 0;
+    v[LifeAmt] = 0;  // the Life sequencer pulls out of tune on purpose: measure the drift alone
     v[Choir] = 0; v[Cello] = 0; v[Vox] = 0; v[Ensemble] = 0; v[Cross] = 0; v[Chaos] = 0; v[Cutoff] = 1; v[Attack] = .01f; v[Delay] = 0;
     for (int o = 0; o < 6; o++) { v[oscParam(o, 1)] = 3; v[oscParam(o, 2)] = 0; }  // sines, same octave
     e.setParams(v);

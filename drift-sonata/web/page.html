@@ -185,6 +185,11 @@ details.room .eyebrow { color: #9fc3c4; }
 .room-body .stepper button { background: #183c44; border-color: #3c6a71; color: var(--cream); }
 .card.files { gap: 10px; }
 .txt { background: var(--pearl); border: 1px solid var(--line); border-radius: 6px; padding: 7px 8px; min-width: 0; }
+.card.life h2 { font-family: var(--display); font-size: 30px; font-weight: 600; font-style: italic; }
+canvas#lifeView { width: 100%; height: 240px; display: block; border-radius: 6px; background: var(--night); }
+.life-controls { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px 22px; align-items: end; }
+@media (max-width: 980px) { .life-controls { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 560px) { .life-controls { grid-template-columns: 1fr; } }
 .pad.down { background: var(--rose); color: #fff; border-color: var(--rose-deep); }
 
 @media (max-width: 980px) {
@@ -233,6 +238,13 @@ details.room .eyebrow { color: #9fc3c4; }
 
   <section class="macros" id="macros" aria-label="Main controls"></section>
   <section class="colours" id="colours" aria-label="Colour"></section>
+
+  <section class="card life" id="lifeCard" aria-label="Life sequencer">
+    <div class="head"><h2>Life sequencer</h2><span class="eyebrow">six lanes · one per oscillator · 32 bars</span></div>
+    <p>Each oscillator gets its own random patterns over 32 bars for everything it has: a little out of tune, its shape, its place in the 3D room, its level, its filter, cross-modulation and the odd octave jump. They follow the bars when the chord line plays.</p>
+    <canvas id="lifeView" width="1100" height="240" aria-label="The six lanes over 32 bars: pitch in rose, shape in gold, place in teal, faded where the level dips"></canvas>
+    <div class="life-controls" id="lifeControls"></div>
+  </section>
 
   <section class="lineup" aria-label="Chord line">
     <div class="bar">
@@ -411,7 +423,7 @@ class DriftSonata extends AudioWorkletProcessor {
       for (let i = 0; i < c; i++) notes.push(x.ds_disp_note(i));
       const src = [];
       for (let k = 0, n = x.ds_sources(); k < n; k++) src.push([x.ds_disp_pos(k, 0), x.ds_disp_pos(k, 1), x.ds_disp_pos(k, 2), x.ds_disp_level(k)]);
-      this.port.postMessage({ t: 'disp', root: x.ds_disp_root(), q: x.ds_disp_quality(), notes, sub: x.ds_disp_sub(), src });
+      this.port.postMessage({ t: 'disp', root: x.ds_disp_root(), q: x.ds_disp_quality(), notes, sub: x.ds_disp_sub(), src, lifePos: x.ds_life_pos(), lifeSteps: x.ds_life_steps() });
     }
     return true;
   }
@@ -510,7 +522,7 @@ function onWorklet(m) {
   if (m.t === 'ready') setStatus(playing ? 'Playing the chord line.' : 'Ready. Play the keyboard, or press ▶.');
   else if (m.t === 'slot') markSlot(m.s);
   else if (m.t === 'disp') {
-    display = m; orbitSrc = m.src || orbitSrc;
+    display = m; orbitSrc = m.src || orbitSrc; if (m.lifeSteps) { lifePos = m.lifePos; lifeSteps = m.lifeSteps; }
     $('chordName').textContent = chordName(m.root, m.q, m.notes);
     const playedNow = new Set([...held, ...lineHeld]);
     $('voicing').innerHTML = m.notes.length ? m.notes.map(n => `<span class="pill ${playedNow.has(n) ? 'played' : 'added'}">${PLAIN[n % 12]}${Math.floor(n / 12) - 1}</span>`).join('') : '<span class="pill">Silence</span>';
@@ -572,6 +584,42 @@ function drawOrbit() {
   requestAnimationFrame(drawOrbit);
 }
 requestAnimationFrame(drawOrbit);
+
+/* ---------- Life sequencer view: the six lanes' patterns, made by the same code as the engine ---------- */
+let lifePos = 0, lifeSteps = 32, lifeX = null, lifeXLoading = false;
+const LIFE_COLORS = { pitch: '#f2a5c3', shape: '#ecd08f', place: '#7fd3d3' };
+function drawLife() {
+  const c = document.getElementById('lifeView');
+  if (c && !lifeX && !lifeXLoading) { lifeXLoading = true; harmony().then(x => { lifeX = x; }); }
+  if (c && lifeX) {
+    const g = c.getContext('2d'), w = c.width = c.clientWidth * devicePixelRatio, h = c.height = c.clientHeight * devicePixelRatio;
+    const seed = Math.round(values[idx.lifeseq] > 0 ? values[idx.lifeseed] : values[idx.lifeseed]), rows = 6, rh = h / rows, steps = [16, 32, 64, 128][Math.round(values[idx.liferate])] || 32;
+    g.clearRect(0, 0, w, h);
+    g.font = `${10 * devicePixelRatio}px IBM Plex Mono, monospace`;
+    for (let l = 0; l < rows; l++) {
+      const y0 = l * rh, mid = y0 + rh / 2, depth = values[idx['lane' + (l + 1)]] * Math.max(.15, values[idx.lifeseq]);
+      g.fillStyle = l % 2 ? 'rgba(255,255,255,.025)' : 'rgba(255,255,255,0)'; g.fillRect(0, y0, w, rh);
+      // level: the lane fades where the oscillator dips
+      for (let k = 0; k < steps; k++) {
+        const lv = lifeX.ds_life_value(seed, l, 4, k);
+        if (lv < 0) { g.fillStyle = `rgba(0,0,0,${-lv * .45 * depth})`; g.fillRect(k / steps * w, y0, w / steps + 1, rh); }
+        if (lifeX.ds_life_value(seed, l, 7, k) !== 0 && values[idx.loctave] * depth > .06) { g.fillStyle = 'rgba(255,255,255,.6)'; g.fillRect(k / steps * w + 1, y0 + 2, 2 * devicePixelRatio, rh - 4); }
+      }
+      for (const [t, col] of [[0, LIFE_COLORS.pitch], [1, LIFE_COLORS.shape], [2, LIFE_COLORS.place]]) {
+        g.strokeStyle = col; g.lineWidth = 1.4 * devicePixelRatio; g.globalAlpha = .9; g.beginPath();
+        for (let k = 0; k <= steps; k++) { const v = lifeX.ds_life_value(seed, l, t, Math.min(k, steps - 1)), x = k / steps * w, y = mid - v * rh * .38; k ? g.lineTo(x, y) : g.moveTo(x, y); }
+        g.stroke(); g.globalAlpha = 1;
+      }
+      g.fillStyle = 'rgba(246,238,232,.75)'; g.fillText('OSC ' + (l + 1), 6 * devicePixelRatio, y0 + 13 * devicePixelRatio);
+    }
+    // bar lines every 4 bars, and where the sequencer is
+    g.strokeStyle = 'rgba(236,208,143,.18)'; g.lineWidth = devicePixelRatio;
+    for (let b = 4; b < 32; b += 4) { const x = b / 32 * w; g.beginPath(); g.moveTo(x, 0); g.lineTo(x, h); g.stroke(); }
+    if (node) { const x = (lifePos / lifeSteps) * w; g.strokeStyle = '#ffffff'; g.lineWidth = 2 * devicePixelRatio; g.beginPath(); g.moveTo(x, 0); g.lineTo(x, h); g.stroke(); }
+  }
+  requestAnimationFrame(drawLife);
+}
+requestAnimationFrame(drawLife);
 
 /* ---------- Controls ---------- */
 const controls = {};  // id -> update function
@@ -643,6 +691,7 @@ for (const [id, title, lo, hi, text, tone] of MAIN) {
   const show = v => { input.value = v; input.style.setProperty('--pct', (v * 100) + '%'); val.textContent = Math.round(v * 100) + '%'; };
   input.addEventListener('input', () => { setValue(id, +input.value, show); show(+input.value); });
   onCtl(id, show); show(values[idx[id]]);
+  if (id === 'subdrop') card.appendChild(choice('subrhythm', { label: 'Sub rhythm' }));
   $('macros').appendChild(card);
 }
 
@@ -702,8 +751,20 @@ function section(title, build) {
 }
 section('Tone & movement', g => ['cutoff', 'resonance', 'filtermotion', 'attack', 'release', 'pwm', 'cross', 'chaos', 'life', 'drive'].forEach(id => g.appendChild(slider(id))));
 section('Harmony', g => { g.append(choice('expand'), choice('color', { label: 'Colour' }), choice('key'), slider('unfold'), slider('glide'), toggle('keyminor'), toggle('keepbass')); });
-section('Sub-Drop', g => { g.append(slider('subdrop'), slider('fundfade'), choice('fundroot'), toggle('fundfollow')); });
+section('Sub-Drop', g => { g.append(slider('subdrop'), choice('subrhythm'), slider('fundfade'), choice('fundroot'), toggle('fundfollow')); });
 section('Room & echoes', g => { g.append(slider('ensemble'), slider('width'), slider('shimmer'), slider('size'), slider('delay'), choice('delaytime'), slider('pocket'), slider('motion'), choice('motionbars'), slider('vowel'), toggle('freeze')); });
+// Life sequencer controls
+{
+  const c = $('lifeControls');
+  c.append(slider('lifeseq', { label: 'Still ↔ Alive', rose: true }), choice('liferate'), slider('lifesmooth', { label: 'Jumps ↔ Glides' }));
+  const dice = document.createElement('div'); dice.className = 'ctl';
+  dice.innerHTML = '<label>Patterns <output id="lifeSeedOut"></output></label><button class="btn" type="button" id="lifeDice">New patterns</button>';
+  c.append(dice);
+  for (const id of ['lpitch', 'lshape', 'lspace', 'llevel', 'lfilter', 'lcross', 'loctave']) c.append(slider(id, { teal: true }));
+  for (let l = 1; l <= 6; l++) c.append(slider('lane' + l));
+  const showSeed = v => { $('lifeSeedOut').textContent = '#' + Math.round(v); }; onCtl('lifeseed', showSeed); showSeed(values[idx.lifeseed]);
+  $('lifeDice').addEventListener('click', () => { setValue('lifeseed', Math.floor(Math.random() * 9999)); setStatus('New Life patterns for all six oscillators.'); });
+}
 try { if (store.get('ds-room', false)) $('room').open = true; } catch (e) {}
 $('room').addEventListener('toggle', () => store.set('ds-room', $('room').open));
 // Output level lives in the bottom bar
@@ -763,6 +824,7 @@ $('soundDice').addEventListener('click', () => {
   for (let o = 1; o <= 6; o++) set['o' + o + 'wave'] = pick([0, 0, 1, 2, 3, 4, 4, 5, 6, 7, 8, 9]);
   Object.assign(set, { orbit: r(.1, .9), orbitspeed: r(.1, .7), overhead: r(0, .7), stringlayer: r(0, .5), brass: r(0, .3), texture: r(0, .5), robot: pick([0, 0, 0, r(.2, .7)]), robotvoice: pick([0, 1]) });
   set.o6oct = pick([-1, 0, 1, 1]); set.o5oct = pick([0, 0, 1]);
+  set.lifeseq = r(.15, .8); set.lifeseed = Math.floor(Math.random() * 9999);
   for (const k in set) setValue(k, set[k]);
   setStatus('Randomized. Save it if you like it.');
 });

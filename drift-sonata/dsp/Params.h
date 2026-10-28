@@ -29,6 +29,10 @@ enum P {
     Orbit, OrbitSpeed, Distance, Overhead, Space3D, Robot, RobotVoice, RobotRate,
     // Per-sound level trim (set by the sound bank, not shown as a control) and the quality mode
     Trim, QualityMode,
+    // Life sequencer: amount, step length, glide, pattern seed, depth per oscillator lane, weight per target
+    LifeAmt, LifeRate, LifeSmooth, LifeSeed, Lane1, Lane2, Lane3, Lane4, Lane5, Lane6,
+    LPitch, LShape, LSpace, LLevel, LFilter, LCross, LOctave,
+    SubRhythm,
     COUNT
 };
 
@@ -145,6 +149,21 @@ inline const std::vector<ParamInfo>& params() {
         c(RobotRate, "robotrate", "Words", {"1/2", "1/4", "1/8", "1/16"}, 2);
         f(Trim, "trim", "Sound trim", -12, 12, 0, 0, "dB");
         c(QualityMode, "quality", "Quality", {"High", "Eco"}, 0);
+        f(LifeAmt, "lifeseq", "Life sequencer", 0, 1, .35f);
+        c(LifeRate, "liferate", "Step", {"2 bars", "1 bar", "1/2 bar", "1/4 bar"}, 1);
+        f(LifeSmooth, "lifesmooth", "Glide", 0, 1, .7f);
+        i(LifeSeed, "lifeseed", "Pattern", 0, 9999, 1);
+        static const char* laneIds[6] = {"lane1", "lane2", "lane3", "lane4", "lane5", "lane6"};
+        static const char* laneNames[6] = {"Osc 1 life", "Osc 2 life", "Osc 3 life", "Osc 4 life", "Osc 5 life", "Osc 6 life"};
+        for (int l = 0; l < 6; l++) f((P)(Lane1 + l), laneIds[l], laneNames[l], 0, 1, 1);
+        f(LPitch, "lpitch", "Out of tune", 0, 1, .45f);
+        f(LShape, "lshape", "Shape", 0, 1, .6f);
+        f(LSpace, "lspace", "Place in 3D", 0, 1, .6f);
+        f(LLevel, "llevel", "Level", 0, 1, .4f);
+        f(LFilter, "lfilter", "Filter", 0, 1, .45f);
+        f(LCross, "lcross", "Cross-mod", 0, 1, .25f);
+        f(LOctave, "loctave", "Octave jumps", 0, 1, .15f);
+        c(SubRhythm, "subrhythm", "Sub rhythm", {"Bar one", "One and three", "Every beat", "Dotted", "Heartbeat", "Push", "Random"}, 0);
         return v;
     }();
     return t;

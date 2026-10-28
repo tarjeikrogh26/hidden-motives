@@ -92,6 +92,11 @@ void Engine::allNotesOff() {
 }
 
 // Tension below the middle pulls the chord's intervals towards pure tuning; above it pushes them apart.
+int Engine::lifeSteps() const {
+    static const float stepBars[4] = {2, 1, .5f, .25f};
+    return (int)(32 / stepBars[std::min(3, std::max(0, (int)std::lround(p[LifeRate])))]);
+}
+
 float Engine::temperature() const { return clampf((p[Tension] - .5f) * 1.4f, -.7f, .7f); }
 
 // Expand on Auto follows Tension: plain chord at the bottom, eleven and thirteen at the top.
@@ -194,7 +199,29 @@ void Engine::recompute() {
     subWaiting = false;
 }
 
-void Engine::triggerSub() {
+// Sub rhythm: which sixteenths of the bar the sub lands on (bar one always, if anything)
+namespace {
+const std::vector<std::vector<int>> kSubRhythms = {{0}, {0, 8}, {0, 4, 8, 12}, {0, 6, 12}, {0, 3}, {0, 14}, {}};
+}
+
+bool Engine::subOnStep(int step, int stepsPerBar) {
+    const int r = std::min((int)kSubRhythms.size() - 1, std::max(0, (int)std::lround(p[SubRhythm])));
+    if (r == (int)kSubRhythms.size() - 1) {
+        // Random: the same choices every time round a bar, changing each bar of a 4-bar cycle
+        if (step == 0) return true;
+        Rng h(7919u * (uint32_t)(lastBar & 3) + 104729u * (uint32_t)step + 1);
+        return step % 2 == 0 && h.uni() < .22f;
+    }
+    for (int s : kSubRhythms[r]) if (s == step && s < stepsPerBar) return true;
+    return false;
+}
+
+double Engine::subGapQuarters(int step, int stepsPerBar) {
+    for (int k = step + 1; k < stepsPerBar; k++) if (subOnStep(k, stepsPerBar)) return (k - step) / 4.0;
+    return (stepsPerBar - step) / 4.0;
+}
+
+void Engine::triggerSub(double untilNextQuarters) {
     if (p[SubDrop] < .001f || voicing.notes.empty()) return;
     int root = voicing.chord.root;
     if (p[FundRoot] > .5f) root = pcOf(*std::min_element(held.begin(), held.end()));
@@ -203,7 +230,8 @@ void Engine::triggerSub() {
     sub.freq = mtof((float)midi);
     sub.attacking = true; sub.attackLen = std::max(1, (int)(0.012 * sr));
     const double barSec = barQuarters * 60.0 / bpm;
-    const double fade = std::min((double)p[FundFade] * 60.0 / bpm, barSec * 0.97);
+    // fades out before the next hit: the bar line, or the next step of the sub rhythm
+    const double fade = std::min({(double)p[FundFade] * 60.0 / bpm, barSec * 0.97, untilNextQuarters * 60.0 / bpm * 0.97});
     sub.decay = (float)std::exp(std::log(0.001) / (std::max(0.05, fade) * sr));
 }
 
@@ -221,11 +249,42 @@ void Engine::controlUpdate() {
     driftTau = 3.5f - 2.5f * life;
     const float wUpper = smoothstep(.15f, .45f, I), wLayer = smoothstep(.4f, .7f, I), wTop = smoothstep(.65f, .95f, I);
 
+    // Life sequencer: find the step, glide each lane towards it, and turn it into what each oscillator does
+    {
+        lifeLanes.generate((uint32_t)std::lround(p[LifeSeed]));
+        static const float stepBars[4] = {2, 1, .5f, .25f};
+        const float sb = stepBars[std::min(3, std::max(0, (int)std::lround(p[LifeRate])))], stepQ = sb * (float)barQuarters;
+        const int steps = lifeSteps();
+        double pos;
+        if (playing) pos = ppq / stepQ; else { lifeClock += dt * bpm / 60.0 / stepQ; pos = lifeClock; }
+        lifeStep = (float)std::fmod(pos, (double)steps);
+        const int k = (int)lifeStep;
+        const float stepSec = stepQ * 60.f / (float)bpm, glide = std::max(.005f, p[LifeSmooth] * stepSec), g = std::min(1.f, dt / glide);
+        const float amt = p[LifeAmt];
+        const float weight[LifeSeq::kTargets] = {p[LPitch], p[LShape], p[LSpace], p[LSpace], p[LLevel], p[LFilter], p[LCross], p[LOctave]};
+        for (int l = 0; l < kOsc; l++) {
+            const float depth = amt * p[Lane1 + l];
+            for (int t = 0; t < LifeSeq::kTargets; t++) {
+                const float target = lifeLanes.pattern[l][t][k] * depth * weight[t];
+                lifeLanes.now[l][t] += (target - lifeLanes.now[l][t]) * (t == LifeSeq::Octave ? 1.f : g);
+            }
+            const float* n = lifeLanes.now[l];
+            lifeCents[l] = n[LifeSeq::Pitch] * 45;
+            lifeSemis[l] = depth * weight[LifeSeq::Octave] > .06f ? 12.f * lifeLanes.pattern[l][LifeSeq::Octave][k] : 0.f;
+            lifeShape[l] = n[LifeSeq::Shape];
+            lifeFold[l] = std::fabs(n[LifeSeq::Shape]);
+            lifeAz[l] = n[LifeSeq::Azimuth] * kPi;
+            lifeEl[l] = n[LifeSeq::Height] * .9f;
+            lifeCut[l] = n[LifeSeq::Filter] * 1.6f;
+            lifeFm[l] = std::max(0.f, n[LifeSeq::Cross]) * .12f;
+        }
+    }
+
     float sumSq = 0;
     for (int i = 0; i < kOsc; i++) {
         const bool on = p[oscParam(i, 0)] > .5f;
         const bool upper = p[oscParam(i, 2)] > .5f || p[oscParam(i, 3)] >= 12;
-        oscLevel[i] = on ? p[oscParam(i, 5)] * (upper ? wUpper : 1.f) : 0.f;
+        oscLevel[i] = on ? p[oscParam(i, 5)] * (upper ? wUpper : 1.f) * clampf(1 + lifeLanes.now[i][LifeSeq::Level], 0, 1.5f) : 0.f;
         sumSq += oscLevel[i] * oscLevel[i];
     }
     oscNorm = .42f / std::sqrt(sumSq + .05f);
@@ -303,8 +362,9 @@ void Engine::controlUpdate() {
             const float base = k < kOsc ? p[oscParam(k, 6)] * kPi / 2 * widthPan
                              : k == kRobotSrc ? 0.f : (k - kOsc - (kFamilies - 1) / 2.f) * .5f * widthPan;  // the recorded layers spread left to right
             const float ph = srcPh[k], phase = (float)k;
-            const float az = base * (1 - .5f * orbit) + orbit * (kPi * .85f * std::sin(ph) + .55f * kPi * std::sin(.37f * ph + phase));
-            const float el = over * (.15f + .85f * orbit) * .9f * std::sin(.53f * ph + 1.3f * phase);
+            float az = base * (1 - .5f * orbit) + orbit * (kPi * .85f * std::sin(ph) + .55f * kPi * std::sin(.37f * ph + phase));
+            float el = over * (.15f + .85f * orbit) * .9f * std::sin(.53f * ph + 1.3f * phase);
+            if (k < kOsc) { az += lifeAz[k]; el = clampf(el + lifeEl[k], -1.2f, 1.2f); }
             const float d = dist * (1 + .35f * orbit * std::sin(.29f * ph + 2 * phase));
             space[k].place(az, el, d, amt);
             disp.pos[k][0] = az; disp.pos[k][1] = el; disp.pos[k][2] = d;
@@ -334,15 +394,15 @@ void Engine::controlUpdate() {
         mean = wsum > 0 ? mean / wsum : 0;  // the (loudness-weighted) average stays in tune; the beating lives around it
         for (int i = 0; i < kOsc; i++) {
             Osc& o = v.osc[i];
-            const float m = v.pitch + 12 * p[oscParam(i, 2)] + p[oscParam(i, 3)] + (cents[i] - mean + p[oscParam(i, 4)] + v.temper + vd) / 100;
+            const float m = v.pitch + 12 * p[oscParam(i, 2)] + p[oscParam(i, 3)] + lifeSemis[i] + (cents[i] - mean + p[oscParam(i, 4)] + v.temper + vd + lifeCents[i]) / 100;
             o.inc = mtof(m) / (float)sr;
             o.pwPh += kTwoPi * o.pwRate * dt * (1 + chaos * chaosX * .5f);
             if (o.pwPh > kTwoPi) o.pwPh -= kTwoPi;
-            o.pw = clampf(.5f + .42f * pwmDepth * std::sin(o.pwPh), .06f, .94f);
+            o.pw = clampf(.5f + .42f * pwmDepth * std::sin(o.pwPh) + .35f * lifeShape[i], .06f, .94f);
             // Morph glides the wave through sine, triangle, saw and pulse, each oscillator at its own pace
             o.morphPh += kTwoPi * o.morphRate * (.4f + life + mot) * dt * (1 + chaos * chaosX * .5f);
             if (o.morphPh > kTwoPi) o.morphPh -= kTwoPi;
-            o.morph = 1.5f + 1.5f * std::sin(o.morphPh);
+            o.morph = clampf(1.5f + 1.5f * std::sin(o.morphPh) + 1.5f * lifeShape[i], 0, 3);
             // which octave copy of a wavetable this pitch may use: no harmonic above half the sample rate
             o.level = std::min(Wavetable::kLevels - 1, std::max(0, (int)std::ceil(std::log2(1024.f / std::max(1.f, std::floor(.5f / std::max(o.inc, 1e-6f)))))));
         }
@@ -350,7 +410,12 @@ void Engine::controlUpdate() {
         const float hz = cutoffHz * std::pow(2.f, (v.pitch - 60) / 24 + cutMove) * (.55f + .45f * std::min(1.f, v.env * 1.2f));
         Svf a, b2; a.set(hz, resQ, (float)sr); b2.set(hz, .6f, (float)sr);
         auto coef = [](Svf& dst, const Svf& src) { dst.a1 = src.a1; dst.a2 = src.a2; dst.a3 = src.a3; dst.k = src.k; };
-        for (int i = 0; i < kOsc; i++) { coef(v.of[i][0], a); coef(v.of[i][1], b2); }
+        for (int i = 0; i < kOsc; i++) {
+            if (std::fabs(lifeCut[i]) > .02f) {  // this oscillator's lane moves its own filter
+                const float h2 = hz * std::pow(2.f, lifeCut[i]);
+                v.of[i][0].set(h2, resQ, (float)sr); v.of[i][1].set(h2, .6f, (float)sr);
+            } else { coef(v.of[i][0], a); coef(v.of[i][1], b2); }
+        }
         for (int f = 0; f < kFamilies; f++) coef(v.lf[f], b2);
         for (Layer& l : v.layer) l.drift.step(r, dt, 3, 3 + 18 * sour);
     }
@@ -433,7 +498,14 @@ void Engine::process(float* outL, float* outR, int n) {
             if (bar != lastBar) {
                 lastBar = bar;
                 if (pendingRecompute > 0) subWaiting = true;  // the chord lands on the downbeat: sound it once it is folded out
-                else if (!held.empty()) triggerSub();
+                else if (!held.empty()) triggerSub(subGapQuarters(0, (int)std::lround(barQuarters * 4)));
+            }
+            // The sub rhythm's other hits inside the bar
+            const long long s16 = (long long)std::floor((ppq + 1e-7) * 4);
+            if (s16 != last16) {
+                last16 = s16;
+                const int perBar = (int)std::lround(barQuarters * 4), step = (int)(((s16 % perBar) + perBar) % perBar);
+                if (step != 0 && !held.empty() && pendingRecompute <= 0 && subOnStep(step, perBar)) triggerSub(subGapQuarters(step, perBar));
             }
             ppq += ppqPerSample;
         }
@@ -454,7 +526,7 @@ void Engine::process(float* outL, float* outR, int n) {
             for (int i = 0; i < kOsc; i++) {
                 if (oscLevel[i] <= 0) continue;
                 Osc& o = v.osc[i];
-                const float inc = std::max(1e-6f, o.inc * (1 + fmIndex * prev));
+                const float inc = std::max(1e-6f, o.inc * (1 + (fmIndex + lifeFm[i]) * prev));
                 o.ph += inc; if (o.ph >= 1) o.ph -= 1;
                 auto shape = [&](int w) {
                     switch (w) {
@@ -481,6 +553,8 @@ void Engine::process(float* outL, float* outR, int n) {
                     const int m = std::min(2, (int)o.morph); const float f = o.morph - m;
                     y = shape(order[m]) * (1 - f) + shape(order[m + 1]) * f;
                 } else y = shape(waves[i]);
+                // the lane's shape also folds the plain waves: more harmonics as it leans away from the middle
+                if (lifeFold[i] > .02f && waves[i] != 1) { const float f = lifeFold[i]; y = y * (1 - f) + std::sin(y * (1 + 3 * f) * kPi * .5f) * f; }
                 o.last = y; prev = y;
                 bus[i] += v.of[i][1].low(v.of[i][0].low(y)) * a;
             }
