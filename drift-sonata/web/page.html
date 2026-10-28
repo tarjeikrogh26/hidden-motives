@@ -183,6 +183,8 @@ details.room .eyebrow { color: #9fc3c4; }
 .stepper button:hover { border-color: var(--gold); }
 .stepper button:disabled { opacity: .35; cursor: default; }
 .room-body .stepper button { background: #183c44; border-color: #3c6a71; color: var(--cream); }
+.card.files { gap: 10px; }
+.txt { background: var(--pearl); border: 1px solid var(--line); border-radius: 6px; padding: 7px 8px; min-width: 0; }
 .pad.down { background: var(--rose); color: #fff; border-color: var(--rose-deep); }
 
 @media (max-width: 980px) {
@@ -249,6 +251,22 @@ details.room .eyebrow { color: #9fc3c4; }
       <div class="ctl"><label for="editQ">Chord</label><select id="editQ"></select></div>
       <div class="ctl"><label for="editBars">Bars</label><select id="editBars"><option>1</option><option>2</option><option>4</option><option>8</option><option>16</option><option>32</option></select></div>
       <button class="btn" id="editDone" type="button">Done</button>
+    </div>
+    <div class="card files" id="files">
+      <div class="head"><h3>Sessions &amp; MIDI</h3><span class="eyebrow">the sound, the chord line, drums and tempo together</span></div>
+      <div class="row">
+        <div class="ctl"><label for="sessName">Session name</label><input type="text" id="sessName" value="My session" class="txt"></div>
+        <button class="btn" id="sessSave" type="button">Save session</button>
+        <div class="ctl" style="flex:1 1 200px"><label for="sessList">Your sessions</label><select id="sessList"></select></div>
+        <button class="btn" id="sessOpen" type="button">Open</button>
+        <button class="btn" id="sessDelete" type="button">Delete</button>
+      </div>
+      <div class="row">
+        <button class="btn" id="midiExport" type="button">Export chord line as MIDI</button>
+        <button class="btn" id="sessDownload" type="button">Download session file</button>
+        <label class="btn" for="sessFile" style="cursor:pointer">Open session file</label><input type="file" id="sessFile" accept=".json,application/json" hidden>
+      </div>
+      <p class="keys-note">The MIDI file has the chords as DRIFT SONATA plays them (folded out by Tension) and the Sub-Drop on its own track. Sessions are kept in this browser. Downloads work when you open DRIFT SONATA as a file on your computer; inside Claude the browser blocks them.</p>
     </div>
   </section>
 
@@ -953,6 +971,114 @@ $('vocalFile').addEventListener('change', async () => {
   } catch (e) { setStatus('That file could not be read as audio. Try a WAV, MP3 or M4A.'); }
 });
 
+/* ---------- Sessions: everything at once, kept in this browser or in a file ---------- */
+function sessionNow(name) {
+  const vals = {}; P.forEach((p, i) => vals[p.id] = values[i]);
+  return { app: 'DRIFT SONATA', version: 1, name, values: vals, sound: soundChoice, line, lineChoice, lineDirty, lineKey,
+    bars: $('lineBars').value, notes: $('lineAs').value, register: $('lineReg').value, surprise: $('lineSurprise').value, tempo: tempo(), drums: store.get('ds-drums', drumPrefs) };
+}
+function openSession(se) {
+  if (!se || se.app !== 'DRIFT SONATA' || !se.values) { setStatus('That is not a DRIFT SONATA session.'); return; }
+  applyValues(P.map((p, i) => p.id in se.values ? se.values[p.id] : DEFAULTS[i]));
+  soundChoice = String(se.sound ?? '0'); soundDirty = true; fillSounds();
+  const setSel = (id, v) => { if (v == null) return; $(id).value = String(v); if ($(id)._sync) $(id)._sync(); };
+  setSel('lineBars', se.bars); setSel('lineAs', se.notes); setSel('lineReg', se.register);
+  lineKey = se.lineKey ?? lineKey; setSel('lineKey', lineKey);
+  if (Array.isArray(se.line) && se.line.length) line = se.line;
+  lineChoice = se.lineChoice ?? lineChoice; lineDirty = !!se.lineDirty;
+  if (se.surprise != null) { $('lineSurprise').value = se.surprise; $('lineSurprise').dispatchEvent(new Event('input')); }
+  if (se.tempo) { $('tempo').value = se.tempo; $('tempo').dispatchEvent(new Event('change')); }
+  if (se.drums) { setSel('drumSel', se.drums.i); $('drumLevel').value = se.drums.level; setDrumsOn(!!se.drums.on); }
+  fillLines(); lineChanged();
+  setStatus(`Opened the session “${se.name || 'session'}”.`);
+}
+const sessions = () => store.get('ds-sessions', []);
+function fillSessions(pick) {
+  const list = sessions();
+  $('sessList').innerHTML = list.length ? list.map((x, k) => `<option value="${k}">${esc(x.name)}</option>`).join('') : '<option value="">No saved sessions yet</option>';
+  if (pick != null) $('sessList').value = String(pick);
+  if ($('sessList')._sync) $('sessList')._sync();
+}
+$('sessSave').addEventListener('click', () => {
+  const name = ($('sessName').value || 'My session').trim(), list = sessions().filter(x => x.name !== name);
+  list.push(sessionNow(name)); store.set('ds-sessions', list); fillSessions(list.length - 1);
+  setStatus(`Saved the session “${name}” in this browser.`);
+});
+$('sessOpen').addEventListener('click', () => { const se = sessions()[+$('sessList').value]; if (se) openSession(se); });
+$('sessDelete').addEventListener('click', () => {
+  const k = +$('sessList').value, list = sessions(); if (!list[k]) return;
+  const name = list[k].name; list.splice(k, 1); store.set('ds-sessions', list); fillSessions(); setStatus(`Deleted the session “${name}”.`);
+});
+function download(filename, blob) {
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = filename;
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+}
+const fileName = t => String(t).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'drift-sonata';
+$('sessDownload').addEventListener('click', () => {
+  const name = ($('sessName').value || 'My session').trim();
+  download(fileName(name) + '.drift-sonata.json', new Blob([JSON.stringify(sessionNow(name), null, 1)], { type: 'application/json' }));
+  setStatus('Downloading the session file. (Inside Claude the browser blocks downloads; open DRIFT SONATA as a file for this.)');
+});
+$('sessFile').addEventListener('change', async () => {
+  const f = $('sessFile').files[0]; if (!f) return;
+  try { openSession(JSON.parse(await f.text())); } catch (e) { setStatus('That file could not be read as a session.'); }
+  $('sessFile').value = '';
+});
+
+/* ---------- MIDI: the chord line as DRIFT SONATA plays it, and the Sub-Drop on its own track ---------- */
+let harmonyX = null;
+async function harmony() {
+  if (harmonyX) return harmonyX;
+  const stub = { fd_close: () => 0, fd_seek: () => 0, fd_write: () => 0 };
+  const { instance } = await WebAssembly.instantiate(b64ToBytes(WASM_B64), { wasi_snapshot_preview1: stub });
+  instance.exports._initialize();
+  return harmonyX = instance.exports;
+}
+function expandLevelNow() {
+  const e = Math.round(values[idx.expand]); if (e > 0) return e - 1;
+  const t = values[idx.tension]; return t < .08 ? 0 : t < .25 ? 1 : t < .45 ? 2 : t < .75 ? 3 : 4;
+}
+function midiFile(tracks) {
+  const bytes = [], push = (...b) => bytes.push(...b), u32 = n => [n >>> 24 & 255, n >>> 16 & 255, n >>> 8 & 255, n & 255];
+  const vlq = n => { const out = [n & 127]; while ((n >>= 7)) out.unshift((n & 127) | 128); return out; };
+  push(...[77, 84, 104, 100], ...u32(6), 0, 1, 0, tracks.length, 480 >> 8, 480 & 255);
+  for (const tr of tracks) {
+    const body = []; let last = 0;
+    // note-offs before note-ons at the same moment
+    tr.sort((a, b) => a[0] - b[0] || ((a[1] & 0xf0) === 0x80 ? -1 : 0) - ((b[1] & 0xf0) === 0x80 ? -1 : 0));
+    for (const ev of tr) { body.push(...vlq(ev[0] - last), ...ev.slice(1)); last = ev[0]; }
+    body.push(0, 0xff, 0x2f, 0);
+    push(...[77, 84, 114, 107], ...u32(body.length), ...body);
+  }
+  return new Uint8Array(bytes);
+}
+const metaText = (t, type) => { const b = [...new TextEncoder().encode(t)]; return [0, 0xff, type, b.length, ...b]; };
+$('midiExport').addEventListener('click', async () => {
+  const x = await harmony(), buf = new Int32Array(x.memory.buffer, x.ds_harmony_buf(), 80), PPQ = 480;
+  const played = voiceLine(), chords = [], sub = [];
+  let t = 0, prev = [];
+  played.forEach((notes, k) => {
+    buf.fill(0); buf.set(notes.slice(0, 16)); buf.set(prev.slice(0, 16), 16);
+    const n = x.ds_expand(notes.length, prev.length, expandLevelNow(), Math.round(values[idx.color]), values[idx.key] >= .5 ? Math.round(values[idx.key]) - 1 : -1,
+      values[idx.keyminor] > .5 ? 1 : 0, values[idx.keepbass] > .5 ? 1 : 0);
+    const voiced = [...buf.slice(32, 32 + n)], root = buf[64], bars = slotBars(line[k]), len = bars * 4 * PPQ;
+    prev = voiced;
+    for (const m of voiced) chords.push([t, 0x90, m, notes.includes(m) ? 96 : 76], [t + len - 1, 0x80, m, 0]);
+    if (values[idx.subdrop] > .001 && root >= 0) {
+      const note = 28 + ((root - 28) % 12 + 12) % 12, fade = Math.round(Math.min(values[idx.fundfade], 4) * PPQ);
+      for (let b = 0; b < bars; b++) sub.push([t + b * 4 * PPQ, 0x91, note, 110], [t + b * 4 * PPQ + fade - 1, 0x81, note, 0]);
+    }
+    t += len;
+  });
+  const us = Math.round(60e6 / tempo());
+  const head = [[0, 0xff, 0x51, 3, us >> 16 & 255, us >> 8 & 255, us & 255], [0, 0xff, 0x58, 4, 4, 2, 24, 8], metaText('DRIFT SONATA', 3)];
+  const tracks = [head, [metaText('DRIFT SONATA chords', 3), ...chords]];
+  if (sub.length) tracks.push([metaText('Sub-Drop', 3), ...sub]);
+  const lineName = lineDirty ? 'my-line' : fileName(lineBank[lineChoice].name);
+  download(`drift-sonata-${lineName}.mid`, new Blob([midiFile(tracks)], { type: 'audio/midi' }));
+  setStatus(`Exported ${played.length} chords (${t / PPQ / 4} bars) as MIDI. (Inside Claude the browser blocks downloads; open DRIFT SONATA as a file for this.)`);
+});
+
 /* ---------- Transport ---------- */
 const tempo = () => Math.max(40, Math.min(200, +$('tempo').value || 84));
 $('tempo').addEventListener('change', () => { $('tempo').value = tempo(); store.set('ds-tempo', tempo()); if (node) node.port.postMessage({ t: 'bpm', bpm: tempo() }); });
@@ -1037,7 +1163,7 @@ function arrowize(sel) {
 document.querySelectorAll('select').forEach(sel => { if (!['soundSel', 'lineSel', 'soundFilter'].includes(sel.id)) arrowize(sel); });
 // keep the arrows right when a menu is set from code (a sound loads, a chord is picked)
 setInterval(() => document.querySelectorAll('.stepper select').forEach(sel => sel._sync && sel._sync()), 400);
-fillLines(); drawSlots(); drawPads(); lastNotes = voiceLine();
+fillSessions(); fillLines(); drawSlots(); drawPads(); lastNotes = voiceLine();
 if (soundChoice !== '0') loadSound(soundChoice); else fillSounds();
 setDrumsOn(!!drumPrefs.on);
 </script>
