@@ -1,9 +1,10 @@
 // Prints the parameter table and the factory presets as JSON, so the browser page builds its controls from the
 // same source as the engine.
+#include <cmath>
 #include <cstdio>
 #include <string>
 
-#include "../dsp/Presets.h"
+#include "../dsp/Bank.h"
 
 using namespace ds;
 
@@ -29,6 +30,20 @@ int main() {
         std::printf("%s{\"name\":\"%s\",\"group\":\"%s\",\"set\":{", first ? "" : ",", esc(pr.name).c_str(), pr.group);
         first = false;
         for (size_t i = 0; i < pr.set.size(); i++) std::printf("%s\"%s\":%g", i ? "," : "", params()[pr.set[i].first].id, pr.set[i].second);
+        std::printf("}}");
+    }
+    // The sound bank: each sound as its differences from the defaults
+    std::printf("],\"bank\":[");
+    const Values def = defaults();
+    for (size_t i = 0; i < soundBank().size(); i++) {
+        const BankSound& b = soundBank()[i];
+        std::printf("%s{\"name\":\"%s\",\"clean\":%s,\"set\":{", i ? "," : "", esc(b.name.c_str()).c_str(), b.clean ? "true" : "false");
+        bool first = true;
+        for (int k = 0; k < COUNT; k++) {
+            if (std::fabs(b.values[k] - def[k]) < 1e-6f) continue;
+            std::printf("%s\"%s\":%.4g", first ? "" : ",", params()[k].id, b.values[k]);
+            first = false;
+        }
         std::printf("}}");
     }
     std::printf("]}\n");

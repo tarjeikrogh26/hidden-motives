@@ -416,7 +416,7 @@ void Engine::process(float* outL, float* outR, int n) {
         bankLock.clear(std::memory_order_release);
     }
     const SampleBank* b = bank.get();
-    const float level = dbToGain(p[Level]), fund = p[SubDrop], tape = p[Tape], dsend = p[Delay] * (.4f + .6f * p[Space]), rev = .85f * p[Space];
+    const float level = dbToGain(p[Level] + p[Trim]), fund = p[SubDrop], tape = p[Tape], dsend = p[Delay] * (.4f + .6f * p[Space]), rev = .85f * p[Space];
     const float subDrive = 1 + 2 * p[Drive], subNorm = 1 / std::tanh(subDrive);
     const float ceiling = .89f, relCoef = 1 - std::exp(-1.f / (0.12f * (float)sr));
     int waves[kOsc];

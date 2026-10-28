@@ -27,6 +27,8 @@ enum P {
     Ensemble, Width, Shimmer, Size, Freeze, Delay, DelayTime, Pocket, Motion, MotionBars, Level,
     // 3D orbit and the vocoder
     Orbit, OrbitSpeed, Distance, Overhead, Space3D, Robot, RobotVoice, RobotRate,
+    // Per-sound level trim (set by the sound bank, not shown as a control) and the quality mode
+    Trim, QualityMode,
     COUNT
 };
 
@@ -141,6 +143,8 @@ inline const std::vector<ParamInfo>& params() {
         f(Robot, "robot", "Robot", 0, 1, 0);
         c(RobotVoice, "robotvoice", "Robot voice", {"Choir", "Machine words", "Your vocal"}, 0);
         c(RobotRate, "robotrate", "Words", {"1/2", "1/4", "1/8", "1/16"}, 2);
+        f(Trim, "trim", "Sound trim", -12, 12, 0, 0, "dB");
+        c(QualityMode, "quality", "Quality", {"High", "Eco"}, 0);
         return v;
     }();
     return t;
