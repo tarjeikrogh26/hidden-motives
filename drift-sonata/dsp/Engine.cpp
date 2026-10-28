@@ -503,7 +503,14 @@ void Engine::process(float* outL, float* outR, int n) {
         if (robotAmt > .001f) {
             float car = 0;
             for (int i = 0; i < kOsc; i++) car += bus[i] * oscLevel[i];
-            const float mod = robotChoir ? bus[kOsc + kChoir] * 3 : words.sample(playing ? ppq : -1, kWordLen[std::min(3, std::max(0, (int)std::lround(p[RobotRate])))], bpm) * .5f;
+            const int rv = (int)std::lround(p[RobotVoice]);
+            float mod;
+            if (rv == 2 && !extMod.empty()) {
+                // Your own vocal, looped; while the song plays it follows the song position so a loop cut to bars stays in time
+                const long long len = (long long)extMod.size();
+                if (playing) extPos = (long long)(ppq * 60.0 / bpm * sr) % len; else if (++extPos >= len) extPos = 0;
+                mod = extMod[(size_t)extPos] * 2;
+            } else mod = robotChoir ? bus[kOsc + kChoir] * 3 : words.sample(playing ? ppq : -1, kWordLen[std::min(3, std::max(0, (int)std::lround(p[RobotRate])))], bpm) * .5f;
             robot = vocoder.process(mod, car) * oscNorm;
         }
         // The sources, each placed in the room
@@ -550,7 +557,8 @@ void Engine::process(float* outL, float* outR, int n) {
             L = tapeL.at(d); R = tapeR.at(d + tape * .00004f * (float)sr);
             const float k = 1 + 2.5f * tape;
             L = std::tanh(L * k) / k; R = std::tanh(R * k) / k;
-            const float hiss = hissF.low(rng.bi()) * tape * .004f;
+            // hiss only when the tape is pushed: below about a third Analog gives warmth and wow without noise
+            const float hiss = hissF.low(rng.bi()) * std::max(0.f, tape - .35f) * .006f;
             L += hiss; R += hiss * .9f;
         }
         L = pocketL.run(L); R = pocketR.run(R);

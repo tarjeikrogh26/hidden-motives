@@ -40,6 +40,7 @@ EXPORT(ds_bank_add_table) float* dsBankAddTable(int table, int frames) {
     Wavetable& t = building->tables[table]; t.frames = frames; t.raw.assign((size_t)frames * Wavetable::N, 0.f);
     return t.raw.data();
 }
+EXPORT(ds_vocal) float* dsVocal(int length) { return engine->vocalBuffer(length); }
 EXPORT(ds_bank_commit) void dsBankCommit() { building->finish(); engine->setSamples(building); building.reset(); }
 
 // What the chord is right now (for the screen).

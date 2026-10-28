@@ -139,7 +139,7 @@ inline const std::vector<ParamInfo>& params() {
         f(Overhead, "overhead", "Overhead", 0, 1, .3f);
         f(Space3D, "space3d", "Binaural", 0, 1, .85f);
         f(Robot, "robot", "Robot", 0, 1, 0);
-        c(RobotVoice, "robotvoice", "Robot voice", {"Choir", "Machine words"}, 0);
+        c(RobotVoice, "robotvoice", "Robot voice", {"Choir", "Machine words", "Your vocal"}, 0);
         c(RobotRate, "robotrate", "Words", {"1/2", "1/4", "1/8", "1/16"}, 2);
         return v;
     }();

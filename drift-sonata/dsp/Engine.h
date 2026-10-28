@@ -73,6 +73,9 @@ public:
     // Transport at the start of the next block. Not playing: every new chord counts as bar one.
     void setTransport(bool playing, double ppq, double bpm, int num, int den);
 
+    // A vocal for the robot to speak with (mono, at the engine's sample rate). Call between blocks.
+    float* vocalBuffer(int length) { extMod.assign(std::max(0, length), 0.f); extPos = 0; return extMod.data(); }
+
     void noteOn(int note, float velocity);
     void noteOff(int note);
     void allNotesOff();
@@ -150,6 +153,7 @@ private:
     // 3D room and robot
     Binaural space[kSources]; float srcPh[kSources] = {}, srcRate[kSources] = {}, srcDir[kSources] = {}, bus[kSources] = {}, srcMeter[kSources] = {};
     Vocoder vocoder; MachineWords words; float robotAmt = 0;
+    std::vector<float> extMod; long long extPos = 0;
     Voice texVoice; float texEnv = 0;
     DelayLine dubL, dubR; Biquad dubLp, dubHp; float dubTime = .375f;
     // Reverb: 8-line feedback delay network with a shimmer (octave up) in the loop
