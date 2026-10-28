@@ -25,10 +25,15 @@ Motoren er ren C++ (`dsp/`) uten plugin-kode. Den samme koden kjører i dag i ne
 
 ```sh
 python3 web/build.py --wasi-sdk /sti/til/wasi-sdk --out dist/DriftSonata.html \
-    --samples /sti/til/enkelttoner --header assets/header.webp
+    --samples /sti/til/enkelttoner --header assets/header.webp --arp /sti/til/AVANTGARDIAN-ARP/dist
 ```
 
 Opptakene kommer fra samplepakker og ligger derfor ikke i repoet. Uten `--samples` spiller synthen alene.
+
+`--arp` legger AVANTGARDIAN ARP inn i sida: skriptene, lydbanken (777 lyder) og de 2 281 mønstrene, pakket med
+seks byte per note. Arpen følger akkordlinja på motorens taktklokke (sida starter avspillingen på et avtalt
+lydtidspunkt, og motoren melder hvor slaget er), eller akkorden du holder når transporten står. Uten `--arp`
+er arp-menyene skjult.
 
 ## Teste motoren
 

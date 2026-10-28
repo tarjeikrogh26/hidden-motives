@@ -33,7 +33,7 @@
 body { background: var(--cream); color: var(--ink); font-family: var(--body); font-size: 14px; line-height: 1.45;
   background-image: radial-gradient(60% 40% at 8% 0%, rgba(58,163,170,.18), transparent 70%), radial-gradient(50% 40% at 95% 10%, rgba(228,134,171,.20), transparent 70%), radial-gradient(70% 50% at 50% 100%, rgba(236,208,143,.25), transparent 70%);
   background-attachment: fixed; }
-.wrap { max-width: 1180px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 18px calc(var(--dock-h, 260px) + 22px); display: flex; flex-direction: column; gap: 22px; }
+.wrap { max-width: 1180px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 16px calc(var(--dock-h, 200px) + 18px); display: flex; flex-direction: column; gap: 16px; }
 h1, h2, h3 { margin: 0; font-weight: 500; text-wrap: balance; }
 .eyebrow { font-family: var(--mono); font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
 button, select, input { font: inherit; color: inherit; }
@@ -63,15 +63,17 @@ button { cursor: pointer; }
 canvas#trace { width: 100%; height: 104px; display: block; border-radius: 6px; background: #12303a; min-width: 0; }
 
 /* Cards: pearl with a gilt hairline */
-.macros { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
-.colours { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; align-items: start; }
+.macros { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.colours { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; align-items: start; }
 .card.wide { grid-column: span 2; }
 .orbit-wrap { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; align-items: center; }
 canvas#orbit { width: 100%; aspect-ratio: 1; max-width: 260px; justify-self: center; display: block; border-radius: 50%; background: radial-gradient(circle, #21474f 0%, #17363e 70%); }
 .orbit-legend { display: flex; flex-wrap: wrap; gap: 4px 10px; font-family: var(--mono); font-size: 10.5px; color: var(--muted); }
 .orbit-legend i { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 4px; vertical-align: middle; }
-.card { background: rgba(255,250,246,.86); border: 1px solid var(--line); border-radius: 10px; padding: 18px; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
-.card.big { padding: 20px 20px 22px; box-shadow: 0 1px 0 #fff inset, 0 10px 30px -18px rgba(29,62,70,.35); }
+.card { background: rgba(255,250,246,.86); border: 1px solid var(--line); border-radius: 10px; padding: 16px; display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+details.card[open] { display: flex; }
+details.card > summary + * { margin-top: 0; }
+.card.big { padding: 16px 18px 18px; box-shadow: 0 1px 0 #fff inset, 0 10px 30px -18px rgba(29,62,70,.35); }
 .card h2 { font-family: var(--display); font-size: 31px; font-weight: 600; line-height: 1.05; font-style: italic; }
 .card h3 { font-family: var(--display); font-size: 21px; font-weight: 600; font-style: italic; }
 .card p { margin: 0; color: var(--muted); font-size: 13px; }
@@ -150,32 +152,55 @@ details.room .eyebrow { color: #9fc3c4; }
 .osc:nth-child(even) .head h3 { color: var(--gold-hi) !important; }
 .osc.off { opacity: .5; }
 
-/* Fixed bottom bar, laid out like STAB LAB: two banks, the transport, the drums, twelve chord pads */
+/* Fixed bottom bar, laid out like STAB LAB, kept tight: four banks in two rows (sound, chord line, arp, arp sound),
+   one transport row with the drums and the arp, and twelve thin chord pads */
 .dock { position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; background: rgba(255,250,246,.95); border-top: 1px solid var(--gold-hi); backdrop-filter: blur(10px);
-  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-top: 10px; padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px)); }
-.dock-in { max-width: 1180px; margin: 0 auto; display: flex; flex-direction: column; gap: 9px; }
-.banks { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 18px; }
-.bankrow { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
-.bankrow > label { font-family: var(--mono); font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--teal); }
-.bankrow + .bankrow > label { color: var(--rose-deep); }
-.nav { display: flex; gap: 5px; align-items: stretch; min-width: 0; }
-.nav button { flex: none; min-width: 34px; padding: 6px 8px; background: var(--pearl); border: 1px solid var(--line); border-radius: 6px; font-size: 16px; line-height: 1; }
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-top: 7px; padding-bottom: calc(7px + env(safe-area-inset-bottom, 0px)); }
+.dock-in { max-width: 1180px; margin: 0 auto; display: flex; flex-direction: column; gap: 6px; }
+.banks { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 5px 16px; }
+.bankrow { display: grid; grid-template-columns: 74px minmax(0, 1fr); align-items: center; gap: 6px; min-width: 0; }
+.tag { font-family: var(--mono); font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--teal); line-height: 1.15; display: flex; flex-direction: column; }
+.tag b { font-weight: 500; color: var(--muted); letter-spacing: .04em; }
+.bankrow.line .tag { color: var(--rose-deep); }
+.bankrow.arp .tag { color: var(--gold); }
+.bankrow.arps .tag { color: #7a8fbd; }
+.nav { display: flex; gap: 3px; align-items: stretch; min-width: 0; }
+.nav button { flex: none; min-width: 27px; padding: 3px 5px; background: var(--pearl); border: 1px solid var(--line); border-radius: 6px; font-size: 15px; line-height: 1; }
 .nav button:hover { border-color: var(--gold); }
-.nav select { flex: 1 1 auto; min-width: 0; font-family: var(--display); font-style: italic; font-weight: 600; font-size: 17px; padding: 5px 8px; }
-.nav .dice { color: var(--gold); font-size: 19px; }
-.transport, .drumrow { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: end; }
-.field { display: flex; flex-direction: column; gap: 2px; font-family: var(--mono); font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
-.field select, .field input { font-family: var(--body); letter-spacing: 0; text-transform: none; font-size: 14px; color: var(--ink); }
-.dock input[type=number], .dock input[type=text] { background: var(--pearl); border: 1px solid var(--line); border-radius: 6px; padding: 7px 8px; width: 70px; font-family: var(--mono); }
-.dock input[type=text] { width: 130px; font-family: var(--body); }
-.play { width: 48px; height: 48px; border-radius: 50%; border: none; background: radial-gradient(circle at 35% 30%, #f6b9d0, var(--rose) 55%, var(--rose-deep)); color: #fff; display: grid; place-items: center; flex: none; box-shadow: 0 4px 14px -4px rgba(201,97,139,.6); }
-.play svg { width: 18px; height: 18px; fill: currentColor; }
-.drumrow .btn[aria-pressed=true] { background: var(--gold-hi); border-color: var(--gold); }
-.dock .lvl { width: 120px; }
-.status { font-size: 12px; color: var(--muted); align-self: center; min-width: 0; }
-.pads { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 6px; }
-.pad { padding: 8px 0; border-radius: 6px; border: 1px solid var(--line); background: var(--pearl); font-family: var(--display); font-style: italic; font-weight: 600; font-size: 16px; touch-action: none; user-select: none; color: var(--ink); }
+.nav select { flex: 1 1 auto; min-width: 0; font-family: var(--display); font-style: italic; font-weight: 600; font-size: 15.5px; padding: 3px 7px; }
+.nav select.mini { flex: none; width: 62px; font-family: var(--mono); font-style: normal; font-weight: 400; font-size: 10.5px; padding: 2px 3px; }
+.nav .dice { color: var(--gold); font-size: 17px; }
+.transport { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: end; }
+.group { display: inline-flex; gap: 6px; align-items: end; padding-left: 10px; border-left: 1px solid var(--line); }
+.field { display: flex; flex-direction: column; gap: 1px; font-family: var(--mono); font-size: 9.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+.field select, .field input { font-family: var(--body); letter-spacing: 0; text-transform: none; font-size: 13.5px; color: var(--ink); }
+.dock select { padding: 4px 6px; }
+.dock input[type=number], .dock input[type=text] { background: var(--pearl); border: 1px solid var(--line); border-radius: 6px; padding: 4px 6px; width: 58px; font-family: var(--mono); }
+.dock .btn { padding: 5px 9px; }
+.play { width: 40px; height: 40px; border-radius: 50%; border: none; background: radial-gradient(circle at 35% 30%, #f6b9d0, var(--rose) 55%, var(--rose-deep)); color: #fff; display: grid; place-items: center; flex: none; box-shadow: 0 4px 14px -4px rgba(201,97,139,.6); }
+.play svg { width: 16px; height: 16px; fill: currentColor; }
+.btn.sw[aria-pressed=true] { background: var(--gold-hi); border-color: var(--gold); }
+.btn.sw::before { content: "○ "; color: var(--muted); }
+.btn.sw[aria-pressed=true]::before { content: "● "; color: var(--rose-deep); }
+.dock .lvl { width: 84px; height: 24px; }
+.dock .lvl.sm { width: 64px; }
+.dock .stepper { gap: 2px; }
+.dock .stepper button { min-width: 22px; padding: 0 4px; }
+#drumSel { max-width: 170px; }
+#lineAs { min-width: 112px; } #lineReg { min-width: 76px; }
+.status { font-size: 11.5px; color: var(--muted); align-self: center; min-width: 0; flex: 1 1 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pads { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 5px; }
+.pad { padding: 4px 0; border-radius: 6px; border: 1px solid var(--line); background: var(--pearl); font-family: var(--display); font-style: italic; font-weight: 600; font-size: 14.5px; touch-action: none; user-select: none; color: var(--ink); }
 .pad.out { background: transparent; color: var(--muted); }
+.no-arp .arp-only { display: none !important; }
+/* Folding cards: the heading is the handle */
+details.fold > summary { cursor: pointer; list-style: none; }
+details.fold > summary::-webkit-details-marker { display: none; }
+details.fold > summary h2::before, details.fold > summary h3::before { content: "+ "; font-family: var(--mono); font-style: normal; font-size: .6em; color: var(--gold); vertical-align: middle; }
+details.fold[open] > summary h2::before, details.fold[open] > summary h3::before { content: "– "; }
+details.fold:not([open]) { padding-block: 12px; }
+.card.arpcard h2 { font-family: var(--display); font-size: 30px; font-weight: 600; font-style: italic; }
+canvas#arpView { width: 100%; height: 110px; display: block; border-radius: 6px; background: var(--night); }
 .more-btn { display: none; }
 .stepper { display: flex; gap: 4px; align-items: stretch; min-width: 0; }
 .stepper select { flex: 1 1 auto; min-width: 0; }
@@ -186,7 +211,7 @@ details.room .eyebrow { color: #9fc3c4; }
 .card.files { gap: 10px; }
 .txt { background: var(--pearl); border: 1px solid var(--line); border-radius: 6px; padding: 7px 8px; min-width: 0; }
 .card.life h2 { font-family: var(--display); font-size: 30px; font-weight: 600; font-style: italic; }
-canvas#lifeView { width: 100%; height: 240px; display: block; border-radius: 6px; background: var(--night); }
+canvas#lifeView { width: 100%; height: 180px; display: block; border-radius: 6px; background: var(--night); }
 .life-controls { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px 22px; align-items: end; }
 @media (max-width: 980px) { .life-controls { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 560px) { .life-controls { grid-template-columns: 1fr; } }
@@ -199,16 +224,18 @@ canvas#lifeView { width: 100%; height: 240px; display: block; border-radius: 6px
   .orbit-wrap { grid-template-columns: 1fr; }
   .oscs { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .slots { grid-template-columns: repeat(4, minmax(0, 1fr)); }
-  .banks { grid-template-columns: 1fr; }
 }
+@media (max-width: 760px) { .banks { grid-template-columns: 1fr; } }
 @media (max-width: 560px) {
   .macros, .colours, .oscs { grid-template-columns: 1fr; }
   .card.wide { grid-column: auto; }
   .card h2 { font-size: 27px; }
   .dock .hide-s, .pads { display: none; }
   .more-btn { display: inline-block; margin-left: auto; }
-  .dock:not(.open) .more-s { display: none; }
+  .dock:not(.open) .more-s, .dock:not(.open) .bankrow.arps { display: none !important; }
   .nav button[data-d="-10"], .nav button[data-d="10"] { display: none; }
+  .status { display: none; }
+  .bankrow { grid-template-columns: 58px minmax(0, 1fr); }
   .banner { aspect-ratio: 2 / 1; }
 }
 @media (prefers-reduced-motion: reduce) { .sub-meter i b { transition: none; } }
@@ -239,12 +266,19 @@ canvas#lifeView { width: 100%; height: 240px; display: block; border-radius: 6px
   <section class="macros" id="macros" aria-label="Main controls"></section>
   <section class="colours" id="colours" aria-label="Colour"></section>
 
-  <section class="card life" id="lifeCard" aria-label="Life sequencer">
-    <div class="head"><h2>Life sequencer</h2><span class="eyebrow">six lanes · one per oscillator · 32 bars</span></div>
+  <details class="card fold life" id="lifeCard" data-fold="life" open>
+    <summary class="head"><h2>Life sequencer</h2><span class="eyebrow">six lanes · one per oscillator · 32 bars</span></summary>
     <p>Each oscillator gets its own random patterns over 32 bars for everything it has: a little out of tune, its shape, its place in the 3D room, its level, its filter, cross-modulation and the odd octave jump. They follow the bars when the chord line plays.</p>
     <canvas id="lifeView" width="1100" height="240" aria-label="The six lanes over 32 bars: pitch in rose, shape in gold, place in teal, faded where the level dips"></canvas>
     <div class="life-controls" id="lifeControls"></div>
-  </section>
+  </details>
+
+  <details class="card fold arpcard arp-only" id="arpCard" data-fold="arp" open>
+    <summary class="head"><h2>Avantgardian arp</h2><span class="eyebrow"><span id="arpInfo">2,281 patterns · 777 sounds</span> · follows the chord line</span></summary>
+    <p>Patterns from AVANTGARDIAN ARP, played by its own voices and folded onto the chords the strings play. Choose them in the bar below; ⚄ picks one, ✧ makes a new one. Without ▶ it plays over the chord you hold.</p>
+    <canvas id="arpView" width="1100" height="110" aria-label="The arp over the chord line: each note as a dash, higher notes higher up"></canvas>
+    <div class="life-controls" id="arpControls"></div>
+  </details>
 
   <section class="lineup" aria-label="Chord line">
     <div class="bar">
@@ -253,6 +287,8 @@ canvas#lifeView { width: 100%; height: 240px; display: block; border-radius: 6px
         <h2>Chord line</h2>
       </div>
       <div class="row">
+        <div class="ctl" title="How many notes each chord in the chord line plays. Tension can add more on top."><label for="lineAs">Chord notes</label><select id="lineAs"><option value="1">1 · root</option><option value="2">2</option><option value="3" selected>3 · triad</option><option value="4">4 · seventh</option></select></div>
+        <div class="ctl"><label for="lineReg">Register</label><select id="lineReg"><option value="-12">Low</option><option value="0" selected>Mid</option><option value="12">High</option></select></div>
         <div class="ctl" style="flex:1 1 160px"><label for="lineSurprise">Surprise <output id="lineSurpriseOut">25%</output></label><input type="range" id="lineSurprise" min="0" max="1" step="0.01" value="0.25" class="rose"></div>
         <button class="btn" id="lineNew" type="button">Write a new line</button>
       </div>
@@ -264,8 +300,12 @@ canvas#lifeView { width: 100%; height: 240px; display: block; border-radius: 6px
       <div class="ctl"><label for="editBars">Bars</label><select id="editBars"><option>1</option><option>2</option><option>4</option><option>8</option><option>16</option><option>32</option></select></div>
       <button class="btn" id="editDone" type="button">Done</button>
     </div>
-    <div class="card files" id="files">
-      <div class="head"><h3>Sessions &amp; MIDI</h3><span class="eyebrow">the sound, the chord line, drums and tempo together</span></div>
+    <details class="card fold files" id="files" data-fold="files">
+      <summary class="head"><h3>Save, sessions &amp; MIDI</h3><span class="eyebrow">your sounds · the sound, chord line, arp, drums and tempo together</span></summary>
+      <div class="row">
+        <div class="ctl"><label for="saveName">Sound name</label><input type="text" id="saveName" value="My sound" class="txt"></div>
+        <button class="btn" id="save" type="button">Save sound</button>
+      </div>
       <div class="row">
         <div class="ctl"><label for="sessName">Session name</label><input type="text" id="sessName" value="My session" class="txt"></div>
         <button class="btn" id="sessSave" type="button">Save session</button>
@@ -278,8 +318,8 @@ canvas#lifeView { width: 100%; height: 240px; display: block; border-radius: 6px
         <button class="btn" id="sessDownload" type="button">Download session file</button>
         <label class="btn" for="sessFile" style="cursor:pointer">Open session file</label><input type="file" id="sessFile" accept=".json,application/json" hidden>
       </div>
-      <p class="keys-note">The MIDI file has the chords as DRIFT SONATA plays them (folded out by Tension) and the Sub-Drop on its own track. Sessions are kept in this browser. Downloads work when you open DRIFT SONATA as a file on your computer; inside Claude the browser blocks them.</p>
-    </div>
+      <p class="keys-note">The MIDI file has the chords as DRIFT SONATA plays them (folded out by Tension), the Sub-Drop and, when it is on, the arp, each on its own track. Sessions are kept in this browser. Inside Claude you are asked before a file is saved, and the MIDI comes in a zip.</p>
+    </details>
   </section>
 
   <section aria-label="Keyboard">
@@ -296,33 +336,47 @@ canvas#lifeView { width: 100%; height: 240px; display: block; border-radius: 6px
 <div class="dock" id="dock">
   <div class="dock-in">
     <div class="banks">
-      <div class="bankrow"><label for="soundSel">Sound · <span id="soundCount">533</span> <select id="soundFilter" aria-label="Which sounds to show" style="font-size:11px;padding:1px 4px;margin-left:6px;letter-spacing:.06em"><option value="all">All</option><option value="clean">Clean electronic</option><option value="warm">With recordings & air</option></select></label>
-        <div class="nav"><button type="button" data-bank="sound" data-d="-10" aria-label="Back 10 sounds">«</button><button type="button" data-bank="sound" data-d="-1" aria-label="Previous sound">‹</button><select id="soundSel" aria-label="Sound"></select><button type="button" data-bank="sound" data-d="1" aria-label="Next sound">›</button><button type="button" data-bank="sound" data-d="10" aria-label="Forward 10 sounds">»</button><button type="button" class="dice" id="soundDice" title="Randomize sound" aria-label="Randomize sound">⚄</button></div></div>
-      <div class="bankrow"><label for="lineSel">Chord line · <span id="lineCount">111</span></label>
-        <div class="nav"><button type="button" data-bank="line" data-d="-10" aria-label="Back 10 chord lines">«</button><button type="button" data-bank="line" data-d="-1" aria-label="Previous chord line">‹</button><select id="lineSel" aria-label="Chord line"></select><button type="button" data-bank="line" data-d="1" aria-label="Next chord line">›</button><button type="button" data-bank="line" data-d="10" aria-label="Forward 10 chord lines">»</button><button type="button" class="dice" id="lineDice" title="Random chord line" aria-label="Random chord line">⚄</button></div></div>
+      <div class="bankrow"><label class="tag" for="soundSel">Sound<b id="soundCount">533</b></label>
+        <div class="nav"><button type="button" data-bank="sound" data-d="-10" aria-label="Back 10 sounds">«</button><button type="button" data-bank="sound" data-d="-1" aria-label="Previous sounds">‹</button><select id="soundSel" aria-label="Sound"></select><button type="button" data-bank="sound" data-d="1" aria-label="Next sounds">›</button><button type="button" data-bank="sound" data-d="10" aria-label="Forward 10 sounds">»</button><button type="button" class="dice" id="soundDice" title="Randomize the sound" aria-label="Randomize the sound">⚄</button><select id="soundFilter" class="mini" aria-label="Which sounds to show" title="Which sounds to show"><option value="all">All</option><option value="clean">Clean</option><option value="warm">Warm</option></select></div></div>
+      <div class="bankrow line"><label class="tag" for="lineSel">Chord line<b id="lineCount">111</b></label>
+        <div class="nav"><button type="button" data-bank="line" data-d="-10" aria-label="Back 10 chord lines">«</button><button type="button" data-bank="line" data-d="-1" aria-label="Previous chord lines">‹</button><select id="lineSel" aria-label="Chord line"></select><button type="button" data-bank="line" data-d="1" aria-label="Next chord lines">›</button><button type="button" data-bank="line" data-d="10" aria-label="Forward 10 chord lines">»</button><button type="button" class="dice" id="lineDice" title="Random chord line" aria-label="Random chord line">⚄</button></div></div>
+      <div class="bankrow arp arp-only"><label class="tag" for="arpSel">Arp<b id="arpCount">0</b></label>
+        <div class="nav"><button type="button" data-bank="arp" data-d="-10" aria-label="Back 10 arps">«</button><button type="button" data-bank="arp" data-d="-1" aria-label="Previous arps">‹</button><select id="arpSel" aria-label="Arp pattern"></select><button type="button" data-bank="arp" data-d="1" aria-label="Next arps">›</button><button type="button" data-bank="arp" data-d="10" aria-label="Forward 10 arps">»</button><button type="button" class="dice" id="arpDice" title="Random arp" aria-label="Random arp">⚄</button><button type="button" class="dice" id="arpMake" title="Make a new arp: rhythm and contour blended from four patterns" aria-label="Make a new arp">✧</button></div></div>
+      <div class="bankrow arps arp-only"><label class="tag" for="arpSoundSel">Arp sound<b id="arpSoundCount">0</b></label>
+        <div class="nav"><button type="button" data-bank="arps" data-d="-10" aria-label="Back 10 arp sounds">«</button><button type="button" data-bank="arps" data-d="-1" aria-label="Previous arp sounds">‹</button><select id="arpSoundSel" aria-label="Arp sound"></select><button type="button" data-bank="arps" data-d="1" aria-label="Next arp sounds">›</button><button type="button" data-bank="arps" data-d="10" aria-label="Forward 10 arp sounds">»</button><button type="button" class="dice" id="arpSoundDice" title="Random soft arp sound" aria-label="Random arp sound">⚄</button><button type="button" class="dice" id="arpSoundMake" title="Make a new arp sound" aria-label="Make a new arp sound">✧</button></div></div>
     </div>
     <div class="transport">
       <button class="play" id="play" type="button" aria-label="Play the chord line"><svg viewBox="0 0 20 20" id="playIcon"><path d="M5 3l12 7-12 7z"/></svg></button>
       <label class="field">BPM<input type="number" id="tempo" min="40" max="200" value="84"></label>
       <label class="field">Key<select id="lineKey"></select></label>
-      <label class="field more-s" title="How many notes each chord in the chord line plays. Tension can add more on top.">Chord notes<select id="lineAs"><option value="1">1 · root</option><option value="2">2</option><option value="3" selected>3 · triad</option><option value="4">4 · seventh</option></select></label>
-      <label class="field more-s">Register<select id="lineReg"><option value="-12">Low</option><option value="0" selected>Mid</option><option value="12">High</option></select></label>
-      <label class="field more-s" title="How many bars each chord lasts">Bars per chord<select id="lineBars"><option value="1">1</option><option value="2" selected>2</option><option value="4">4</option><option value="8">8</option><option value="16">16</option><option value="32">32</option></select></label>
-      <label class="field hide-s">Name<input type="text" id="saveName" value="My sound"></label>
-      <button class="btn more-s" id="save" type="button">Save sound</button>
-      <button class="btn more-btn" id="dockMore" type="button" aria-expanded="false">More</button>
+      <label class="field more-s" title="How many bars each chord lasts">Bars<select id="lineBars"><option value="1">1</option><option value="2" selected>2</option><option value="4">4</option><option value="8">8</option><option value="16">16</option><option value="32">32</option></select></label>
+      <span class="group more-s">
+        <button class="btn sw" id="drumOn" type="button" aria-pressed="false">Drums</button>
+        <label class="field">Groove<select id="drumSel"></select></label>
+        <input type="range" id="drumLevel" class="lvl sm hide-s" min="0" max="1" step="0.01" value="0.5" aria-label="Drum level" title="Drum level">
+        <button class="btn hide-s" id="matchBpm" type="button" title="Set the tempo to the groove's">BPM</button>
+      </span>
+      <span class="group arp-only">
+        <button class="btn sw" id="arpOn" type="button" aria-pressed="false">Arp</button>
+        <input type="range" id="arpLevel" class="lvl" min="-30" max="6" step="0.5" value="-4" aria-label="Arp level" title="Arp level">
+      </span>
       <label class="field hide-s">Level<input type="range" id="level" class="lvl" min="-24" max="6" step="0.5" value="0"></label>
-    </div>
-    <div class="drumrow more-s">
-      <button class="btn" id="drumOn" type="button" aria-pressed="false">Drums off</button>
-      <label class="field">Groove<select id="drumSel"></select></label>
-      <label class="field hide-s">Drum level<input type="range" id="drumLevel" class="lvl" min="0" max="1" step="0.01" value="0.5"></label>
-      <button class="btn" id="matchBpm" type="button">Match BPM</button>
+      <button class="btn more-btn" id="dockMore" type="button" aria-expanded="false">More</button>
       <span class="status" id="status">Paused. Press ▶ to hear the chord line, hold a chord pad, or play the keyboard.</span>
     </div>
     <div class="pads" id="pads" role="group" aria-label="Chord pads: hold one to play its chord"></div>
   </div>
 </div>
+
+<script>
+// AVANTGARDIAN ARP's ladder filter is a worklet too: loaded from the page itself, like the engine
+window.__arpLadder = async c => {
+  const code = window.__ARP_LADDER;
+  try { await c.audioWorklet.addModule(URL.createObjectURL(new Blob([code], { type: 'application/javascript' }))); }
+  catch (e) { await c.audioWorklet.addModule('data:application/javascript;base64,' + btoa(unescape(encodeURIComponent(code)))); }
+};
+</script>
+<!--@@ARP@@-->
 
 <script type="text/plain" id="workletSrc">
 const rng32 = seed => () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let x = Math.imul(seed ^ seed >>> 15, 1 | seed); x = x + Math.imul(x ^ x >>> 7, 61 | x) ^ x; return ((x ^ x >>> 14) >>> 0) / 4294967296; };
@@ -373,8 +427,8 @@ class DriftSonata extends AudioWorkletProcessor {
       case 'drums': this.drums = m.drums; break;
       case 'vocal': { const ptr = x.ds_vocal(m.data.length); new Float32Array(x.memory.buffer, ptr, m.data.length).set(m.data); break; }
       case 'bpm': this.bpm = m.bpm; break;
-      case 'play': this.playing = true; this.ppq = 0; this.slot = -1; break;
-      case 'stop': this.playing = false; this.release(); this.slot = -1; this.hits = []; this.port.postMessage({ t: 'slot', s: -1 }); break;
+      case 'play': this.startAt = m.at || 0; break;
+      case 'stop': this.playing = false; this.startAt = null; this.release(); this.slot = -1; this.hits = []; this.port.postMessage({ t: 'slot', s: -1 }); break;
     }
   }
   release() { for (const n of this.sounding) this.x.ds_note_off(n); this.sounding = []; }
@@ -382,6 +436,12 @@ class DriftSonata extends AudioWorkletProcessor {
     const out = outputs[0], L = out[0], R = out[1] || out[0], n = L.length;
     if (!this.ready) return true;
     const x = this.x, step = n * this.bpm / 60 / sampleRate;
+    // Play starts on the block at the audio time the page asked for, so the arp in the page lands with it
+    if (this.startAt != null && currentTime + n / sampleRate > this.startAt) {
+      this.playing = true; this.ppq = 0; this.slot = -1; this.startAt = null;
+      this.port.postMessage({ t: 'anchor', ppq: 0, time: currentTime, playing: true });
+    }
+    const ppq0 = this.ppq;
     if (this.playing && this.line.length) {
       // The chord for the end of this block: a change lands just before the bar line, so the sub on bar one hears it.
       const total = this.line.reduce((a, c) => a + c.bars, 0) * 4;
@@ -423,7 +483,7 @@ class DriftSonata extends AudioWorkletProcessor {
       for (let i = 0; i < c; i++) notes.push(x.ds_disp_note(i));
       const src = [];
       for (let k = 0, n = x.ds_sources(); k < n; k++) src.push([x.ds_disp_pos(k, 0), x.ds_disp_pos(k, 1), x.ds_disp_pos(k, 2), x.ds_disp_level(k)]);
-      this.port.postMessage({ t: 'disp', root: x.ds_disp_root(), q: x.ds_disp_quality(), notes, sub: x.ds_disp_sub(), src, lifePos: x.ds_life_pos(), lifeSteps: x.ds_life_steps() });
+      this.port.postMessage({ t: 'disp', root: x.ds_disp_root(), q: x.ds_disp_quality(), notes, sub: x.ds_disp_sub(), src, lifePos: x.ds_life_pos(), lifeSteps: x.ds_life_steps(), ppq: ppq0, time: currentTime, playing: this.playing });
     }
     return true;
   }
@@ -461,7 +521,9 @@ async function startAudio() {
     const wasm = b64ToBytes(WASM_B64).buffer;
     node = new AudioWorkletNode(ctx, 'drift-sonata', { numberOfInputs: 0, outputChannelCount: [2], processorOptions: { wasm, seed: (Math.random() * 1e9) | 0 } });
     analyser = ctx.createAnalyser(); analyser.fftSize = 2048;
-    node.connect(analyser); analyser.connect(ctx.destination);
+    // The engine stops at -1 dBFS by itself; this catches the arp on top of it
+    const safety = ctx.createDynamicsCompressor(); safety.threshold.value = -1; safety.knee.value = 0; safety.ratio.value = 20; safety.attack.value = .002; safety.release.value = .12;
+    node.connect(analyser); analyser.connect(safety); safety.connect(ctx.destination);
     node.port.onmessage = e => onWorklet(e.data);
     values.forEach((v, i) => node.port.postMessage({ t: 'p', i, v }));
     node.port.postMessage({ t: 'bpm', bpm: tempo() });
@@ -520,9 +582,10 @@ function chordName(root, q, notes) {
 }
 function onWorklet(m) {
   if (m.t === 'ready') setStatus(playing ? 'Playing the chord line.' : 'Ready. Play the keyboard, or press ▶.');
+  else if (m.t === 'anchor') arpAnchorFrom(m);
   else if (m.t === 'slot') markSlot(m.s);
   else if (m.t === 'disp') {
-    display = m; orbitSrc = m.src || orbitSrc; if (m.lifeSteps) { lifePos = m.lifePos; lifeSteps = m.lifeSteps; }
+    display = m; orbitSrc = m.src || orbitSrc; arpAnchorFrom(m); if (m.lifeSteps) { lifePos = m.lifePos; lifeSteps = m.lifeSteps; }
     $('chordName').textContent = chordName(m.root, m.q, m.notes);
     const playedNow = new Set([...held, ...lineHeld]);
     $('voicing').innerHTML = m.notes.length ? m.notes.map(n => `<span class="pill ${playedNow.has(n) ? 'played' : 'added'}">${PLAIN[n % 12]}${Math.floor(n / 12) - 1}</span>`).join('') : '<span class="pill">Silence</span>';
@@ -766,6 +829,10 @@ section('Room & echoes', g => { g.append(slider('ensemble'), slider('width'), sl
   $('lifeDice').addEventListener('click', () => { setValue('lifeseed', Math.floor(Math.random() * 9999)); setStatus('New Life patterns for all six oscillators.'); });
 }
 try { if (store.get('ds-room', false)) $('room').open = true; } catch (e) {}
+document.querySelectorAll('details.fold').forEach(d => {
+  const k = 'ds-fold-' + d.dataset.fold, v = store.get(k, null); if (v != null) d.open = v;
+  d.addEventListener('toggle', () => store.set(k, d.open));
+});
 $('room').addEventListener('toggle', () => store.set('ds-room', $('room').open));
 // Output level lives in the bottom bar
 $('level').addEventListener('input', () => { setValue('level', +$('level').value); });
@@ -830,7 +897,7 @@ $('soundDice').addEventListener('click', () => {
 });
 // « ‹ › » step through a bank by one or ten
 document.querySelectorAll('[data-bank]').forEach(b => b.addEventListener('click', () => {
-  const sel = b.dataset.bank === 'sound' ? $('soundSel') : $('lineSel'), opts = [...sel.options].filter(o => o.value !== 'x');
+  const sel = $({ sound: 'soundSel', line: 'lineSel', arp: 'arpSel', arps: 'arpSoundSel' }[b.dataset.bank]), opts = [...sel.options].filter(o => o.value !== 'x');
   let i = opts.findIndex(o => o.value === sel.value);
   if (i < 0) i = opts.findIndex(o => o.value === (b.dataset.bank === 'sound' ? soundChoice : String(lineChoice)));
   i = ((Math.max(0, i) + +b.dataset.d) % opts.length + opts.length) % opts.length;
@@ -933,7 +1000,7 @@ function drawSlots() {
 let currentSlot = -1;
 function markSlot(s) { currentSlot = s; $('slots').querySelectorAll('.slot').forEach((b, k) => b.classList.toggle('playing', k === s)); lineHeld = new Set(s >= 0 && lastNotes && lastNotes[s] ? lastNotes[s] : []); }
 function sendLine() {
-  lastNotes = voiceLine();
+  lastNotes = voiceLine(); arpDirty++;
   if (node) node.port.postMessage({ t: 'line', line: lastNotes.map((notes, k) => ({ notes, bars: slotBars(line[k]) })) });
   store.set('ds-line2', { choice: lineChoice, dirty: lineDirty, key: lineKey, line });
 }
@@ -1012,7 +1079,7 @@ function sendDrums() {
   store.set('ds-drums', { on, i: d.i, level });
   if (node) node.port.postMessage({ t: 'drums', drums: { on, pattern: d.pattern, level, slow: d.bpm < 92 } });
 }
-function setDrumsOn(on) { $('drumOn').setAttribute('aria-pressed', on); $('drumOn').textContent = on ? 'Drums on' : 'Drums off'; sendDrums(); }
+function setDrumsOn(on) { $('drumOn').setAttribute('aria-pressed', on); sendDrums(); }
 $('drumOn').addEventListener('click', () => setDrumsOn($('drumOn').getAttribute('aria-pressed') !== 'true'));
 $('drumSel').addEventListener('change', sendDrums);
 $('drumLevel').addEventListener('input', sendDrums);
@@ -1037,7 +1104,7 @@ $('vocalFile').addEventListener('change', async () => {
 function sessionNow(name) {
   const vals = {}; P.forEach((p, i) => vals[p.id] = values[i]);
   return { app: 'DRIFT SONATA', version: 1, name, values: vals, sound: soundChoice, line, lineChoice, lineDirty, lineKey,
-    bars: $('lineBars').value, notes: $('lineAs').value, register: $('lineReg').value, surprise: $('lineSurprise').value, tempo: tempo(), drums: store.get('ds-drums', drumPrefs) };
+    bars: $('lineBars').value, notes: $('lineAs').value, register: $('lineReg').value, surprise: $('lineSurprise').value, tempo: tempo(), drums: store.get('ds-drums', drumPrefs), arp: arpSession() };
 }
 function openSession(se) {
   if (!se || se.app !== 'DRIFT SONATA' || !se.values) { setStatus('That is not a DRIFT SONATA session.'); return; }
@@ -1051,6 +1118,7 @@ function openSession(se) {
   if (se.surprise != null) { $('lineSurprise').value = se.surprise; $('lineSurprise').dispatchEvent(new Event('input')); }
   if (se.tempo) { $('tempo').value = se.tempo; $('tempo').dispatchEvent(new Event('change')); }
   if (se.drums) { setSel('drumSel', se.drums.i); $('drumLevel').value = se.drums.level; setDrumsOn(!!se.drums.on); }
+  if (se.arp) arpOpenSession(se.arp);
   fillLines(); lineChanged();
   setStatus(`Opened the session “${se.name || 'session'}”.`);
 }
@@ -1071,7 +1139,28 @@ $('sessDelete').addEventListener('click', () => {
   const k = +$('sessList').value, list = sessions(); if (!list[k]) return;
   const name = list[k].name; list.splice(k, 1); store.set('ds-sessions', list); fillSessions(); setStatus(`Deleted the session “${name}”.`);
 });
-function download(filename, blob) {
+// Inside Claude the page asks the viewer to save (a .mid goes in a zip there: Claude saves zip but not mid);
+// opened as a file, it is an ordinary download.
+let claudeDownloads;
+if (window.claude && window.claude.use) claudeDownloads = window.claude.use('downloads').catch(() => null);
+function zipOne(name, bytes) {
+  // one stored (uncompressed) file: local header, data, central directory (with 14 bytes of comment length, disk,
+  // attributes and offset 0), end record
+  let crc = -1; for (const b of bytes) { crc ^= b; for (let k = 0; k < 8; k++) crc = crc >>> 1 ^ (0xEDB88320 & -(crc & 1)); } crc = ~crc >>> 0;
+  const nm = new TextEncoder().encode(name), u16 = n => [n & 255, n >> 8 & 255], u32 = n => [n & 255, n >> 8 & 255, n >> 16 & 255, n >>> 24];
+  const common = [...u16(20), 0, 0, 0, 0, 0, 0, 0x21, 0, ...u32(crc), ...u32(bytes.length), ...u32(bytes.length), ...u16(nm.length), 0, 0];
+  const local = [0x50, 0x4b, 3, 4, ...common, ...nm], central = [0x50, 0x4b, 1, 2, ...u16(20), ...common, ...new Array(14).fill(0), ...nm];
+  const end = [0x50, 0x4b, 5, 6, 0, 0, 0, 0, 1, 0, 1, 0, ...u32(central.length), ...u32(local.length + bytes.length), 0, 0];
+  return new Blob([new Uint8Array(local), bytes, new Uint8Array(central), new Uint8Array(end)]);
+}
+async function download(filename, blob) {
+  const dl = claudeDownloads && await claudeDownloads;
+  if (dl) {
+    if (filename.endsWith('.mid')) { blob = zipOne(filename, new Uint8Array(await blob.arrayBuffer())); filename = filename.replace(/\.mid$/, '-midi.zip'); }
+    try { await dl.save({ filename, data: blob }); setStatus(`Saved ${filename}.`); }
+    catch (e) { setStatus(e && e.code === 'declined' ? 'Not saved.' : 'Saving is not available here: ' + (e && e.message || 'unknown')); }
+    return;
+  }
   const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = filename;
   document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
 }
@@ -1079,7 +1168,7 @@ const fileName = t => String(t).toLowerCase().replace(/[^a-z0-9]+/g, '-').replac
 $('sessDownload').addEventListener('click', () => {
   const name = ($('sessName').value || 'My session').trim();
   download(fileName(name) + '.drift-sonata.json', new Blob([JSON.stringify(sessionNow(name), null, 1)], { type: 'application/json' }));
-  setStatus('Downloading the session file. (Inside Claude the browser blocks downloads; open DRIFT SONATA as a file for this.)');
+  setStatus('Saving the session file.');
 });
 $('sessFile').addEventListener('change', async () => {
   const f = $('sessFile').files[0]; if (!f) return;
@@ -1136,9 +1225,11 @@ $('midiExport').addEventListener('click', async () => {
   const head = [[0, 0xff, 0x51, 3, us >> 16 & 255, us >> 8 & 255, us & 255], [0, 0xff, 0x58, 4, 4, 2, 24, 8], metaText('DRIFT SONATA', 3)];
   const tracks = [head, [metaText('DRIFT SONATA chords', 3), ...chords]];
   if (sub.length) tracks.push([metaText('Sub-Drop', 3), ...sub]);
+  const arpNotes = arpMidi(PPQ, t);
+  if (arpNotes.length) tracks.push([metaText('AVANTGARDIAN ARP', 3), ...arpNotes]);
   const lineName = lineDirty ? 'my-line' : fileName(lineBank[lineChoice].name);
   download(`drift-sonata-${lineName}.mid`, new Blob([midiFile(tracks)], { type: 'audio/midi' }));
-  setStatus(`Exported ${played.length} chords (${t / PPQ / 4} bars) as MIDI. (Inside Claude the browser blocks downloads; open DRIFT SONATA as a file for this.)`);
+  setStatus(`Exported ${played.length} chords (${t / PPQ / 4} bars) as MIDI.`);
 });
 
 /* ---------- Transport ---------- */
@@ -1149,7 +1240,10 @@ function setStatus(t) { $('status').textContent = t; }
 $('play').addEventListener('click', async () => {
   await startAudio();
   playing = !playing;
-  node.port.postMessage({ t: playing ? 'play' : 'stop' });
+  // Start a little ahead, on an audio time both the engine and the arp know
+  const at = ctx.currentTime + .12;
+  node.port.postMessage(playing ? { t: 'play', at } : { t: 'stop' });
+  arpTransport(playing, at);
   $('playIcon').innerHTML = playing ? '<path d="M5 3h4v14H5zM11 3h4v14h-4z"/>' : '<path d="M5 3l12 7-12 7z"/>';
   $('play').setAttribute('aria-label', playing ? 'Stop' : 'Play the chord line');
   setStatus(playing ? 'Playing the chord line. Chords change on bar one, where the Sub-Drop lands.' : 'Stopped.');
@@ -1158,6 +1252,329 @@ document.addEventListener('keydown', e => { if (e.code === 'Space' && !/INPUT|SE
 // Keep the page clear of the bar at the bottom, whatever its height
 $('dockMore').addEventListener('click', () => { const open = $('dock').classList.toggle('open'); $('dockMore').setAttribute('aria-expanded', open); $('dockMore').textContent = open ? 'Less' : 'More'; });
 new ResizeObserver(() => document.documentElement.style.setProperty('--dock-h', $('dock').offsetHeight + 'px')).observe($('dock'));
+
+/* ---------- AVANTGARDIAN ARP: its patterns and voices, folded onto the chords the strings play ---------- */
+// The ARP's scripts and its 2,281 patterns are put into the page when it is built (web/build.py --arp).
+// Its notes are scheduled here on the same audio clock as the engine, a third of a second ahead.
+var HAS_ARP = typeof NoteEngine !== 'undefined' && typeof ARP_META !== 'undefined' && typeof NBVoice !== 'undefined';
+var arpDirty = 1;
+if (!HAS_ARP) document.body.classList.add('no-arp');
+const ARP_DEFAULTS = { on: false, pattern: '', sound: '', level: -4, density: 100, variation: 15, swing: 0, gate: 78, octave: 0, direction: 'original', style: 'faithful', phrase: 16, delay: -1, reverb: -1, tone: 6500, seed: 1 };
+const arpPrefs = Object.assign({}, ARP_DEFAULTS, store.get('ds-arp', {}));
+const ARP_PARTS = Array.from({ length: 8 }, () => ({ moves: 0, space: 0, length: 0, spunk: 0, rhythmic: 0, spastic: 0, dust: 0, slide: 0, slup: 0, spsl: 0, fxd: 0, reverse: 0, snote: 0, spasMode: '3 over 4' }));
+const ARP_ENGINES = { an: 'Analogue', mod: 'Modular', wc: 'Wavefold', fm: 'FM', wt: 'Wavetable', vec: 'Vector', add: 'Modal' };
+let arpBin = null, arpDV = null, arpOffsets = [], arpLib = null, arpPatterns = [], arpSounds = [], arpMade = store.get('ds-arp-made', []), arpMadeSounds = store.get('ds-arp-sounds', []);
+let arpG = null, arpStarting = null, arpPv = null, arpMatchGen = 0, arpEvents = [], arpCycle = 64, arpKey = '', arpMode = '', arpNext = 0, arpLastPitch = null;
+let lineAnchor = null, lineStart = 0, freeAnchor = null, arpBeatNow = -1;
+const saveArp = () => store.set('ds-arp', arpPrefs);
+
+function arpPatternAt(k) {
+  // one packed pattern: a note count, then per note start and length in 1/480 beats, pitch and velocity
+  const m = ARP_META[k]; let o = arpOffsets[k]; const n = arpDV.getUint16(o, true), notes = []; o += 2;
+  for (let i = 0; i < n; i++, o += 6) notes.push([arpDV.getUint16(o, true) / 480, arpDV.getUint16(o + 2, true) / 480, arpBin[o + 4], arpBin[o + 5]]);
+  return { id: m[0], name: m[1], root: m[2], mode: m[3], count: m[4], low: m[5], high: m[6], living: !!m[7], phraseBars: m[8], phraseGrid: m[9], phraseSeed: m[10], source: m[11], beats: 64, arpReady: true, notes };
+}
+function arpInit() {
+  if (!HAS_ARP) return;
+  arpBin = b64ToBytes(ARP_BIN); arpDV = new DataView(arpBin.buffer);
+  for (let k = 0, o = 0; k < ARP_META.length; k++) { arpOffsets.push(o); o += 2 + arpDV.getUint16(o, true) * 6; }
+  arpPatterns = [
+    ...NoteEngine.SIMPLE_PATTERNS.map(p => ({ id: p.id, name: p.name, group: 'Simple', get: () => p })),
+    ...ARP_META.map((m, k) => ({ id: m[0], name: m[1], group: 'Art by Accident', n: k + 1, get: () => arpPatternAt(k) })),
+    ...arpMade.map(p => ({ id: p.id, name: p.name, group: 'Made here', get: () => p })),
+  ];
+  arpSounds = [...NB46Bank.factory.map(e => ({ ...e, made: false })), ...arpMadeSounds.map(e => ({ ...e, made: true }))];
+  if (!arpPatterns.some(p => p.id === arpPrefs.pattern)) arpPrefs.pattern = arpPatterns[NoteEngine.SIMPLE_PATTERNS.length].id;
+  if (!arpSounds.some(e => e.id === arpPrefs.sound)) arpPrefs.sound = (NB46Bank.factory.find(e => e.group === 'soft') || NB46Bank.factory[0]).id;
+  fillArp();
+  arpUseSound();
+  setArpOn(!!arpPrefs.on, true);
+}
+function fillArp() {
+  const groups = (list, label) => [...new Set(list.map(label))];
+  $('arpSel').innerHTML = groups(arpPatterns, p => p.group).map(g => `<optgroup label="${g}">${arpPatterns.map((p, i) => [p, i]).filter(([p]) => p.group === g)
+    .map(([p, i]) => `<option value="${i}">${p.n ? String(p.n).padStart(4, '0') + ' / ' : g === 'Made here' ? '✧ ' : ''}${esc(p.name)}</option>`).join('')}</optgroup>`).join('');
+  const gname = e => e.made ? 'Made here' : { soft: 'Soft', modular: 'Modular', wide: 'Wide' }[e.group] || 'Other';
+  $('arpSoundSel').innerHTML = ['Soft', 'Wide', 'Modular', 'Made here'].map(g => { const items = arpSounds.map((e, i) => [e, i]).filter(([e]) => gname(e) === g);
+    return items.length ? `<optgroup label="${g}">${items.map(([e, i]) => `<option value="${i}">${e.made ? '✧ ' : ''}${esc(e.name)}${e.name.includes('·') ? '' : ' · ' + (ARP_ENGINES[e.engine || e.patch.eng] || '')}</option>`).join('')}</optgroup>` : ''; }).join('');
+  $('arpSel').value = String(arpPatterns.findIndex(p => p.id === arpPrefs.pattern));
+  $('arpSoundSel').value = String(arpSounds.findIndex(e => e.id === arpPrefs.sound));
+  $('arpCount').textContent = arpPatterns.length.toLocaleString('en-GB');
+  $('arpSoundCount').textContent = arpSounds.length;
+  $('arpInfo').textContent = `${arpPatterns.length.toLocaleString('en-GB')} patterns · ${arpSounds.length} sounds`;
+}
+const arpPattern = () => (arpPatterns.find(p => p.id === arpPrefs.pattern) || arpPatterns[0]).get();
+const arpSound = () => arpSounds.find(e => e.id === arpPrefs.sound) || arpSounds[0];
+
+// The ARP's own voice chain, then a high-pass and a soft top so it sits above the pads and the sub
+async function arpAudio() {
+  if (arpG) return arpG;
+  if (arpStarting) return arpStarting;
+  arpStarting = (async () => {
+    await startAudio();
+    const hp = ctx.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 150; hp.Q.value = .5;
+    const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.Q.value = .4; lp.frequency.value = arpPrefs.tone;
+    const out = ctx.createGain(); out.gain.value = Math.pow(10, arpPrefs.level / 20);
+    const trim = ctx.createGain(), fx = new StudioFX(ctx, hp);
+    hp.connect(lp); lp.connect(out); out.connect(analyser); trim.connect(fx.input);
+    const vo = new VoiceOutput(ctx, trim);
+    await NBVoice.prepare(ctx);
+    arpG = { hp, lp, out, trim, fx, vo };
+    arpUseSound();
+    return arpG;
+  })();
+  return arpStarting;
+}
+function arpUseSound() {
+  const e = arpSound();
+  arpPv = { ...NB46Bank.knobs(e.patch), ...AmpEnvelope.migrate(e.knobs), envelopeVersion: 2, legato: false, patch: e.patch };
+  if (!arpG) return;
+  arpApplyFx();
+  // Every sound measured with the same four notes and brought to the same level (as in the ARP)
+  const gen = ++arpMatchGen;
+  SoundMatch.measure(arpPv, e.id, ctx.sampleRate)
+    .then(r => { if (gen === arpMatchGen) arpG.trim.gain.setTargetAtTime(r.gain, ctx.currentTime, .06); })
+    .catch(() => { if (gen === arpMatchGen) arpG.trim.gain.setTargetAtTime(1, ctx.currentTime, .06); });
+}
+function arpApplyFx() {
+  if (!arpG) return;
+  const fx = { ...(arpSound().fx || NB46Bank.factory[0].fx) };
+  if (arpPrefs.delay >= 0) Object.assign(fx, FXRecipes.delays[arpPrefs.delay].values);
+  if (arpPrefs.reverb >= 0) Object.assign(fx, FXRecipes.reverbs[arpPrefs.reverb].values);
+  arpG.fx.apply(fx, tempo());
+}
+function arpSilence(at) { if (arpG && ctx) arpG.vo.cancelFrom(Math.max(at || 0, ctx.currentTime + .005)); arpLastPitch = null; }
+
+// The chords: the chord line when it plays (with sevenths when the line or Tension has them), otherwise the chord you hold
+const ARP_Q = { '': 'maj', m: 'min', '5': 'sus2', sus2: 'sus2', sus4: 'sus4', dim: 'dim', aug: 'aug', '7': '7', maj7: 'maj7', m7: 'm7' };
+const arpSevenths = () => +$('lineAs').value >= 4 || expandLevelNow() >= 2;
+function arpQuality(q, root, sev) {
+  const base = ARP_Q[q] || 'min', deg = (root - lineKey + 12) % 12;
+  if (!sev) return base;
+  return base === 'maj' ? (deg === 7 || deg === 10 ? '7' : 'maj7') : base === 'min' ? 'm7' : base === 'dim' ? 'm7b5' : base;
+}
+function liveChord() {
+  const r = display.root; if (r < 0 || !display.notes.length) return null;
+  const iv = new Set(display.notes.map(n => ((n - r) % 12 + 12) % 12));
+  let q = display.q === 2 ? 'dim' : display.q === 3 ? 'aug' : iv.has(4) ? 'maj' : iv.has(3) ? 'min' : iv.has(5) ? 'sus4' : iv.has(2) ? 'sus2' : 'min';
+  if (iv.has(10) || iv.has(11)) q = q === 'maj' ? (iv.has(11) ? 'maj7' : '7') : q === 'min' ? 'm7' : q === 'dim' ? 'm7b5' : q;
+  return { root: r, q };
+}
+// Notes for one loop, in beats: at least 32 bars before it repeats, always whole chord lines
+function arpCompute(mode) {
+  let segs = [], beats = 0;
+  if (mode === 'line') {
+    const sev = arpSevenths();
+    for (const c of line) { const len = slotBars(c) * 4; segs.push({ start: beats, end: beats + len, root: c.root, bass: c.root, quality: arpQuality(c.q, c.root, sev) }); beats += len; }
+  } else {
+    const ch = liveChord(); if (!ch) return { events: [], cycle: 64 };
+    beats = 64; segs = [{ start: 0, end: 64, root: ch.root, bass: ch.root, quality: ch.q }];
+  }
+  const reps = Math.max(1, Math.ceil(128 / beats)), cycle = beats * reps, all = [];
+  for (let r = 0; r < reps; r++) for (const sg of segs) all.push({ ...sg, start: sg.start + r * beats, end: sg.end + r * beats });
+  const bpm = tempo(), p = arpPrefs;
+  const ev = NoteEngine.generate(arpPattern(), all, { bpm, offset: 0, duration: cycle * 60 / bpm, seed: p.seed, variation: p.variation, density: p.density, swing: p.swing,
+    transpose: p.octave * 12, follow: 'chord', style: p.style, parts: ARP_PARTS, partCount: 8, grid: 16, phraseBars: p.phrase, direction: p.direction, gate: p.gate, voicing: 'simple' });
+  return { events: ev.map(e => ({ beat: e.time * bpm / 60, len: e.duration * bpm / 60, pitch: e.pitch, vel: e.velocity })).sort((a, b) => a.beat - b.beat), cycle, lineBeats: beats };
+}
+function arpTransport(on, at) {
+  arpSilence();
+  lineAnchor = on ? { ppq: 0, time: at, bpm: tempo() } : null; lineStart = at;
+  arpMode = ''; arpNext = 0;
+}
+function arpAnchorFrom(m) {
+  // the engine's beat at the start of an audio block: the clock the arp follows while the chord line plays
+  if (playing && m.playing && m.time >= lineStart - 1e-4) lineAnchor = { ppq: m.ppq, time: m.time, bpm: tempo() };
+}
+function arpTick() {
+  if (!HAS_ARP || !arpPrefs.on || !arpG || !ctx) return;
+  const now = ctx.currentTime, bpm = tempo();
+  const want = playing ? (lineAnchor ? 'line' : '') : liveChord() ? 'free' : '';
+  if (want !== arpMode) {
+    if (arpMode === 'free' || !want) arpSilence();
+    arpMode = want; arpKey = '';
+    if (want === 'free') { freeAnchor = { ppq: 0, time: now + .03, bpm }; arpNext = 0; }
+  }
+  if (!arpMode) { arpBeatNow = -1; return; }
+  let a = arpMode === 'line' ? lineAnchor : freeAnchor;
+  if (a.bpm !== bpm) { a = { ppq: a.ppq + (now - a.time) * a.bpm / 60, time: now, bpm }; if (arpMode === 'line') lineAnchor = a; else freeAnchor = a; }
+  const ch = arpMode === 'free' ? liveChord() : null;
+  const key = [arpMode, arpDirty, arpSevenths(), ch ? ch.root + ch.q : ''].join('|');
+  if (key !== arpKey) { const r = arpCompute(arpMode); arpEvents = r.events; arpCycle = r.cycle; arpKey = key; }
+  const beatNow = a.ppq + (now - a.time) * bpm / 60, horizon = beatNow + .3 * bpm / 60;
+  arpBeatNow = beatNow;
+  if (arpNext < beatNow - .02) arpNext = beatNow;  // after a stall (a hidden tab), skip ahead rather than play a burst
+  let b = arpNext;
+  while (b < horizon && arpEvents.length) {
+    const c = Math.floor(b / arpCycle), from = b - c * arpCycle, to = Math.min(horizon - c * arpCycle, arpCycle);
+    let lo = 0, hi = arpEvents.length; while (lo < hi) { const mid = (lo + hi) >> 1; if (arpEvents[mid].beat < from) lo = mid + 1; else hi = mid; }
+    for (let i = lo; i < arpEvents.length && arpEvents[i].beat < to; i++) {
+      const e = arpEvents[i]; arpPlay(e, a.time + (c * arpCycle + e.beat - a.ppq) * 60 / bpm, e.len * 60 / bpm);
+    }
+    b = (c + 1) * arpCycle;
+  }
+  arpNext = horizon;
+}
+function arpPlay(e, when, dur) {
+  const t = Math.max(when, ctx.currentTime + .004);
+  // velocities pulled together: the arp breathes with the pads instead of poking out of them
+  const note = { pitch: e.pitch, velocity: Math.round(Math.max(36, Math.min(108, 56 + (e.vel - 56) * .6))), duration: Math.max(.03, dur) };
+  const entry = arpG.vo.create({ ...note, releaseSeconds: AmpEnvelope.seconds(arpPv).release }, t, true);
+  arpG.vo.attach(entry, NBVoice.play(ctx, entry.output, note, arpPv, arpSound().id, t, arpLastPitch), true);
+  arpLastPitch = e.pitch;
+}
+setInterval(arpTick, 40);
+
+async function setArpOn(on, quiet) {
+  arpPrefs.on = on; saveArp();
+  $('arpOn').setAttribute('aria-pressed', on);
+  if (!on) { arpSilence(); arpMode = ''; return; }
+  if (quiet && !node) return;  // turned on from last time: wait for the first press before starting audio
+  try { await arpAudio(); } catch (e) { setStatus('The arp could not start: ' + e.message); return; }
+  if (!quiet) setStatus(playing ? 'The arp follows the chord line.' : 'The arp is on: press ▶, or hold a chord.');
+}
+function pickArp(i, why) {
+  const p = arpPatterns[+i]; if (!p) return;
+  arpPrefs.pattern = p.id; saveArp(); arpDirty++; $('arpSel').value = String(i);
+  if (why) setStatus(why + ' · ' + p.name);
+}
+function pickArpSound(i, why) {
+  const e = arpSounds[+i]; if (!e) return;
+  arpPrefs.sound = e.id; saveArp(); $('arpSoundSel').value = String(i); arpUseSound();
+  if (why) setStatus(why + ' · ' + e.name);
+}
+function arpMakePattern() {
+  if (!arpLib) arpLib = ARP_META.map((_, k) => arpPatternAt(k));
+  const seed = (Date.now() ^ Math.floor(Math.random() * 0xffffffff)) >>> 0;
+  const p = NoteEngine.extendPhrase(NoteEngine.hybrid(arpLib, seed, 16), arpPrefs.phrase, seed, 16);
+  p.name = NoteEngine.artName(seed); p.id = 'made-' + seed; delete p.recipe;
+  arpMade = [...arpMade, p].slice(-40); store.set('ds-arp-made', arpMade);
+  arpPatterns = arpPatterns.filter(x => x.group !== 'Made here').concat(arpMade.map(q => ({ id: q.id, name: q.name, group: 'Made here', get: () => q })));
+  arpPrefs.pattern = p.id; fillArp(); pickArp($('arpSel').value, 'Made a new arp: rhythm and contour blended from four patterns');
+}
+function arpMakeSound() {
+  const e = NB46Bank.randomize((Date.now() ^ Math.floor(Math.random() * 0xffffffff)) >>> 0, Math.random() < .75 ? 'soft' : 'wide');
+  const keep = { id: 'made-' + e.seed, name: e.name, group: e.group, engine: e.engine, patch: e.patch, fx: e.fx, knobs: e.knobs };
+  arpMadeSounds = [...arpMadeSounds, keep].slice(-40); store.set('ds-arp-sounds', arpMadeSounds);
+  arpSounds = [...NB46Bank.factory.map(x => ({ ...x, made: false })), ...arpMadeSounds.map(x => ({ ...x, made: true }))];
+  arpPrefs.sound = keep.id; fillArp(); pickArpSound($('arpSoundSel').value, 'Made a new arp sound');
+}
+function arpSession() {
+  if (!HAS_ARP) return null;
+  const madeP = arpMade.find(p => p.id === arpPrefs.pattern), madeS = arpMadeSounds.find(e => e.id === arpPrefs.sound);
+  return { ...arpPrefs, madePattern: madeP || null, madeSound: madeS || null };
+}
+function arpOpenSession(a) {
+  if (!HAS_ARP || !a) return;
+  if (a.madePattern && !arpMade.some(p => p.id === a.madePattern.id)) { arpMade = [...arpMade, a.madePattern].slice(-40); store.set('ds-arp-made', arpMade); }
+  if (a.madeSound && !arpMadeSounds.some(e => e.id === a.madeSound.id)) { arpMadeSounds = [...arpMadeSounds, a.madeSound].slice(-40); store.set('ds-arp-sounds', arpMadeSounds); }
+  const { madePattern, madeSound, ...prefs } = a;
+  Object.assign(arpPrefs, ARP_DEFAULTS, prefs);
+  arpPatterns = arpPatterns.filter(x => x.group !== 'Made here').concat(arpMade.map(q => ({ id: q.id, name: q.name, group: 'Made here', get: () => q })));
+  arpSounds = [...NB46Bank.factory.map(x => ({ ...x, made: false })), ...arpMadeSounds.map(x => ({ ...x, made: true }))];
+  fillArp(); arpDirty++; arpUseSound(); arpControlsShow(); setArpOn(!!arpPrefs.on, true);
+}
+// The arp for one pass of the chord line, as MIDI on channel 3
+function arpMidi(PPQ, totalTicks) {
+  if (!HAS_ARP || !arpPrefs.on) return [];
+  const r = arpCompute('line'), out = [];
+  for (const e of r.events) {
+    if (e.beat >= r.lineBeats) break;
+    const at = Math.round(e.beat * PPQ), end = Math.min(totalTicks, at + Math.max(1, Math.round(e.len * PPQ)));
+    out.push([at, 0x92, e.pitch, Math.round(Math.max(36, Math.min(108, 56 + (e.vel - 56) * .6)))], [end - 1, 0x82, e.pitch, 0]);
+  }
+  return out;
+}
+
+// Controls: the bar at the bottom has the banks, the switch and the level; the card has the rest
+let arpControlsShow = () => {};
+{
+  const shows = [];
+  const range = (key, label, min, max, step, fmt, change, cls) => {
+    const w = document.createElement('div'); w.className = 'ctl'; const id = 'arp-' + key;
+    w.innerHTML = `<label for="${id}">${label} <output></output></label><input type="range" id="${id}" min="${min}" max="${max}" step="${step}" class="${cls || ''}">`;
+    const inp = w.querySelector('input'), out = w.querySelector('output');
+    const show = () => { inp.value = arpPrefs[key]; out.textContent = fmt(arpPrefs[key]); inp.style.setProperty('--pct', (arpPrefs[key] - min) / (max - min) * 100 + '%'); };
+    inp.addEventListener('input', () => { arpPrefs[key] = +inp.value; saveArp(); show(); change(); });
+    shows.push(show); show(); return w;
+  };
+  const pick = (key, label, opts, change) => {
+    const w = document.createElement('div'); w.className = 'ctl'; const id = 'arp-' + key;
+    w.innerHTML = `<label for="${id}">${label}</label><select id="${id}">${opts.map(([v, t]) => `<option value="${v}">${t}</option>`).join('')}</select>`;
+    const sel = w.querySelector('select'), num = typeof ARP_DEFAULTS[key] === 'number';
+    const show = () => { sel.value = String(arpPrefs[key]); };
+    sel.addEventListener('change', () => { arpPrefs[key] = num ? +sel.value : sel.value; saveArp(); change(); });
+    shows.push(show); show(); return w;
+  };
+  const regen = () => { arpDirty++; }, pct = v => Math.round(v) + '%';
+  const levelNow = () => { if (arpG) arpG.out.gain.setTargetAtTime(Math.pow(10, arpPrefs.level / 20), ctx.currentTime, .03); $('arpLevel').value = arpPrefs.level; $('arpLevel').style.setProperty('--pct', (arpPrefs.level + 30) / 36 * 100 + '%'); };
+  if (HAS_ARP) {
+    $('arpControls').append(
+      range('level', 'Level', -30, 6, .5, v => (v > 0 ? '+' : '') + v.toFixed(1) + ' dB', levelNow, 'rose'),
+      range('density', 'Density', 20, 100, 1, pct, regen),
+      range('variation', 'Variation', 0, 100, 1, pct, regen),
+      range('swing', 'Swing', 0, 100, 1, pct, regen),
+      range('gate', 'Note length', 20, 150, 1, pct, regen),
+      range('tone', 'Tone', 800, 16000, 10, v => v >= 1000 ? (v / 1000).toFixed(1) + ' kHz' : Math.round(v) + ' Hz', () => { if (arpG) arpG.lp.frequency.setTargetAtTime(arpPrefs.tone, ctx.currentTime, .03); }, 'teal'),
+      pick('octave', 'Octave', [[-1, '−1'], [0, '0'], [1, '+1'], [2, '+2']], regen),
+      pick('direction', 'Direction', [['original', 'As written'], ['up', 'Up'], ['down', 'Down'], ['updown', 'Up and down']], regen),
+      pick('style', 'Style', [['faithful', 'Faithful'], ['progressive', 'Progressive'], ['evolve', 'Evolving']], regen),
+      pick('phrase', 'Phrase', [[16, '16 bars'], [32, '32 bars'], [64, '64 bars']], regen),
+      pick('delay', 'Echo', [[-1, 'The sound’s own'], ...FXRecipes.delays.map((d, i) => [i, d.name])], arpApplyFx),
+      pick('reverb', 'Room', [[-1, 'The sound’s own'], ...FXRecipes.reverbs.map((d, i) => [i, d.name])], arpApplyFx),
+    );
+    const seed = document.createElement('div'); seed.className = 'ctl';
+    seed.innerHTML = '<label>Variation seed <output id="arpSeedOut"></output></label><button class="btn" type="button" id="arpSeed">New variation</button>';
+    $('arpControls').append(seed);
+    const showSeed = () => { $('arpSeedOut').textContent = '#' + arpPrefs.seed; }; shows.push(showSeed); showSeed();
+    $('arpSeed').addEventListener('click', () => { arpPrefs.seed = 1 + Math.floor(Math.random() * 99999); saveArp(); regen(); showSeed(); setStatus('A new variation of the same arp.'); });
+    arpControlsShow = () => { shows.forEach(f => f()); levelNow(); if (arpG) { arpG.lp.frequency.setTargetAtTime(arpPrefs.tone, ctx.currentTime, .03); arpApplyFx(); } };
+    $('arpLevel').addEventListener('input', () => { arpPrefs.level = +$('arpLevel').value; saveArp(); arpControlsShow(); });
+    $('arpOn').addEventListener('click', () => setArpOn(!arpPrefs.on));
+    $('arpSel').addEventListener('change', () => pickArp($('arpSel').value));
+    $('arpSoundSel').addEventListener('change', () => pickArpSound($('arpSoundSel').value));
+    $('arpDice').addEventListener('click', () => pickArp(NoteEngine.SIMPLE_PATTERNS.length + Math.floor(Math.random() * ARP_META.length), 'A random arp'));
+    $('arpSoundDice').addEventListener('click', () => {
+      // mostly the soft sounds, sometimes a wide one: all of them sit well with the pads
+      const g = Math.random() < .75 ? 'soft' : 'wide', list = arpSounds.map((e, i) => [e, i]).filter(([e]) => !e.made && e.group === g);
+      pickArpSound(list[Math.floor(Math.random() * list.length)][1], 'A random arp sound');
+    });
+    $('arpMake').addEventListener('click', () => { try { arpMakePattern(); } catch (e) { setStatus(e.message); } });
+    $('arpSoundMake').addEventListener('click', arpMakeSound);
+    levelNow();
+  }
+}
+
+/* The arp view: one loop of notes, the chords' pitch range top to bottom, and where it is now */
+function drawArp() {
+  const c = $('arpView');
+  if (HAS_ARP && c && c.offsetParent) {
+    const g = c.getContext('2d'), w = c.width = c.clientWidth * devicePixelRatio, h = c.height = c.clientHeight * devicePixelRatio;
+    g.clearRect(0, 0, w, h);
+    let ev = arpEvents, cycle = arpCycle;
+    if (!ev.length || !arpMode) {
+      // not playing: show what the chord line would get
+      const k = arpDirty + '|' + arpSevenths(); if (arpViewKey !== k) { arpViewCache = arpCompute('line'); arpViewKey = k; }
+      ev = arpViewCache.events; cycle = arpViewCache.cycle;
+    }
+    if (ev.length) {
+      let lo = 127, hi = 0; for (const e of ev) { lo = Math.min(lo, e.pitch); hi = Math.max(hi, e.pitch); }
+      lo -= 2; hi += 2;
+      g.strokeStyle = 'rgba(236,208,143,.16)'; g.lineWidth = devicePixelRatio;
+      for (let b = 16; b < cycle; b += 16) { const x = b / cycle * w; g.beginPath(); g.moveTo(x, 0); g.lineTo(x, h); g.stroke(); }
+      const now = arpBeatNow >= 0 ? arpBeatNow % cycle : -1;
+      for (const e of ev) {
+        const x = e.beat / cycle * w, y = h - (e.pitch - lo) / (hi - lo) * h, len = Math.max(2 * devicePixelRatio, e.len / cycle * w);
+        const lit = now >= e.beat && now < e.beat + Math.max(e.len, .25);
+        g.fillStyle = lit ? '#ffffff' : `rgba(242,165,195,${.35 + e.vel / 127 * .6})`; g.fillRect(x, y - 1.5 * devicePixelRatio, len, 3 * devicePixelRatio);
+      }
+      if (now >= 0) { g.strokeStyle = '#ecd08f'; g.lineWidth = 2 * devicePixelRatio; const x = now / cycle * w; g.beginPath(); g.moveTo(x, 0); g.lineTo(x, h); g.stroke(); }
+    }
+  }
+  requestAnimationFrame(drawArp);
+}
+let arpViewCache = { events: [], cycle: 64 }, arpViewKey = '';
+requestAnimationFrame(drawArp);
 
 /* ---------- Keyboard, computer keys and MIDI ---------- */
 const LOW = 36, HIGH = 84, keyEls = {};
@@ -1222,10 +1639,11 @@ function arrowize(sel) {
   new MutationObserver(sync).observe(sel, { childList: true, subtree: true, attributes: true });
   sel._sync = sync;
 }
-document.querySelectorAll('select').forEach(sel => { if (!['soundSel', 'lineSel', 'soundFilter'].includes(sel.id)) arrowize(sel); });
+document.querySelectorAll('select').forEach(sel => { if (!['soundSel', 'lineSel', 'soundFilter', 'arpSel', 'arpSoundSel'].includes(sel.id)) arrowize(sel); });
 // keep the arrows right when a menu is set from code (a sound loads, a chord is picked)
 setInterval(() => document.querySelectorAll('.stepper select').forEach(sel => sel._sync && sel._sync()), 400);
 fillSessions(); fillLines(); drawSlots(); drawPads(); lastNotes = voiceLine();
 if (soundChoice !== '0') loadSound(soundChoice); else fillSounds();
 setDrumsOn(!!drumPrefs.on);
+arpInit();
 </script>

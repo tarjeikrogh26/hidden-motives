@@ -3,10 +3,11 @@
 and optionally the choir/cello recordings and the header art.
 
   python3 web/build.py --wasi-sdk /path/to/wasi-sdk --out dist/DriftSonata.html \
-      [--samples folder-with-choir_*.wav-and-cello_*.wav] [--header header.jpg]
+      [--samples folder-with-choir_*.wav-and-cello_*.wav] [--header header.jpg] [--arp AVANTGARDIAN-ARP/dist]
 
 The recordings come from sample packs, so they stay out of this (public) repository: point --samples at a
-local folder. Without it the page plays the synth alone.
+local folder. Without it the page plays the synth alone. --arp points at an AVANTGARDIAN ARP dist folder: its engine,
+sound bank and voices go into the page, and its 2,281 patterns are packed (six bytes a note).
 """
 import argparse, base64, json, os, re, subprocess, sys, tempfile
 
@@ -18,12 +19,41 @@ def run(cmd):
     subprocess.run(cmd, check=True)
 
 
+ARP_FILES = ['performance.js', 'transport-clock.js', 'voice-output.js', 'engine.js', 'nb46-presets.js', 'nb46-bank.js',
+             'studio-fx.js', 'nb-voice.js', 'sound-match.js', 'note-fx.js']
+
+
+def arp_scripts(folder):
+    """AVANTGARDIAN ARP inside the page: its scripts as they are (the ladder worklet loaded from the page itself),
+    and its patterns packed: per pattern a meta row, per note start and length in 1/480 beats, pitch and velocity."""
+    import struct
+    safe = lambda code: code.replace('</script', '<\\/script')
+    parts = ['<script>window.__ARP_LADDER = ' + json.dumps(open(os.path.join(folder, 'nb-ladder.js')).read()) + ';</script>']
+    for f in ARP_FILES:
+        code = open(os.path.join(folder, f)).read()
+        if f == 'nb-voice.js':
+            code = code.replace("c.audioWorklet.addModule('nb-ladder.js?v=09')", 'window.__arpLadder(c)')
+        parts.append(f'<script>/* AVANTGARDIAN ARP · {f} */\n{safe(code)}\n</script>')
+    pats = json.load(open(os.path.join(folder, 'assets', 'patterns.json')))['patterns']
+    meta, blob = [], bytearray()
+    for p in pats:
+        meta.append([p['id'], p['name'], p.get('root', 0), p.get('mode', 'minor'), p.get('count', len(p['notes'])), p.get('low', 48), p.get('high', 72),
+                     1 if p.get('living') else 0, p.get('phraseBars', 16), p.get('phraseGrid', 16), p.get('phraseSeed', 1), p.get('source', '')])
+        blob += struct.pack('<H', len(p['notes']))
+        for st, du, pi, ve in p['notes']:
+            blob += struct.pack('<HHBB', min(65535, round(st * 480)), min(65535, max(1, round(du * 480))), int(pi) & 127, int(ve) & 127)
+    parts.append('<script>const ARP_META = ' + json.dumps(meta, separators=(',', ':')) + ';\nconst ARP_BIN = "' + base64.b64encode(bytes(blob)).decode() + '";</script>')
+    print(f'ARP: {len(pats)} patterns, {len(blob) / 1e6:.2f} MB packed')
+    return '\n'.join(parts)
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--wasi-sdk', required=True)
     ap.add_argument('--out', required=True)
     ap.add_argument('--samples')
     ap.add_argument('--header')
+    ap.add_argument('--arp')
     a = ap.parse_args()
 
     with tempfile.TemporaryDirectory() as tmp:
@@ -60,6 +90,7 @@ def main():
 
     page = open(os.path.join(HERE, 'page.html')).read()
     page = page.replace('"@@DATA@@"', data).replace('"@@WASM@@"', json.dumps(wasm_b64)).replace('"@@SAMPLES@@"', json.dumps(samples))
+    page = page.replace('<!--@@ARP@@-->', arp_scripts(a.arp) if a.arp else '')
     if a.header:
         ext = os.path.splitext(a.header)[1].lower().lstrip('.')
         mime = {'jpg': 'jpeg', 'jpeg': 'jpeg', 'png': 'png', 'webp': 'webp'}.get(ext, 'jpeg')
