@@ -523,9 +523,11 @@ function autoChain(ctx,dest,p,k,opt){
 async function mixOffline(result,project,only=null){
  const sr=result.stems.sampleRate,len=Math.max(result.stems.length,...(result.audio||[]).map(b=>b.length)),ctx=new OfflineAudioContext(2,len,sr),opt=result.song?{bar:timeline(project,true).bar,from:result.t0||0,t0:0}:null;
  const bus=busOf(project),g=only?Object.fromEntries(MIXER.map(k=>[k,faderGain(bus[k])])):busGains(project),tg=only?(project.audio?.tracks||[]).map(t=>t.gain??1):trackGains(project);
+ // The whole mix (not single stems) goes through the master chain, PUMP FICTION, when it is on.
+ const master=ctx.createGain();if(!only&&project.pf?.on&&root.PumpFiction)root.PumpFiction.chain(ctx,master,ctx.destination,project,{from:result.t0||0,t0:0,len:len/sr});else master.connect(ctx.destination);
  const src=ctx.createBufferSource(),split=ctx.createChannelSplitter(CH);src.buffer=result.stems;src.connect(split);
- STEMS.forEach((k,i)=>{if(only&&only!==k)return;const m=ctx.createChannelMerger(2),gn=ctx.createGain();gn.gain.value=g[k];split.connect(m,2*i,0);split.connect(m,2*i+1,1);m.connect(autoChain(ctx,gn,project,k,opt));gn.connect(ctx.destination);});
- const ag=ctx.createGain();ag.gain.value=g.audio;ag.connect(ctx.destination);const aIn=autoChain(ctx,ag,project,'audio',opt);
+ STEMS.forEach((k,i)=>{if(only&&only!==k)return;const m=ctx.createChannelMerger(2),gn=ctx.createGain();gn.gain.value=g[k];split.connect(m,2*i,0);split.connect(m,2*i+1,1);m.connect(autoChain(ctx,gn,project,k,opt));gn.connect(master);});
+ const ag=ctx.createGain();ag.gain.value=g.audio;ag.connect(master);const aIn=autoChain(ctx,ag,project,'audio',opt);
  (result.audio||[]).forEach((b,i)=>{if(only&&only!=='track:'+i)return;const s=ctx.createBufferSource(),t=ctx.createGain();s.buffer=b;t.gain.value=tg[i]??1;s.connect(t).connect(aIn);s.start();});
  src.start();return ctx.startRendering();
 }
@@ -558,7 +560,11 @@ async function renderAudio(project,samples,sr,t0=0){
    let o=0,pos=c.loop?((c.phase||0)*bar)%W.duration:(c.phase||0)*bar;
    while(o<len-1e-3){const d=Math.min(W.duration-pos,len-o);if(d<=1e-3)break;const s=ctx.createBufferSource();s.buffer=W;s.connect(v);const when=at+o;if(when+d>0)s.start(Math.max(0,when),pos+Math.max(0,-when),d-Math.max(0,-when));o+=d;pos=0;if(!c.loop)break;}
   }
-  return ctx.startRendering();
+  const dryTrack=await ctx.startRendering(),mine=project.audio.clips.filter(c=>c.track===ti&&samples[c.sample]);
+  // VOXY MUSIC on the track, when it has a preset: over the clips' extent, in the song's tempo and key.
+  if(!t.voxy||!root.VoxyFX||!mine.length)return dryTrack;
+  const from=Math.max(0,Math.min(...mine.map(c=>c.start))*bar-t0),to=Math.max(...mine.map(c=>c.start+c.len))*bar-t0;
+  return root.VoxyFX.apply(dryTrack,t.voxy,{bpm:project.bpm,key:project.key,scale:project.scale,sig:JSON.stringify([mine,sr,t0,project.bpm])},from,to);
  }));
 }
 // opts.song: the song view's arrangement instead of the drop view. opts.progress(0..1) is called as bars render.

@@ -6,7 +6,7 @@
 <style>/*INLINE:style.css*/</style>
 </head><body>
 <div id="app">
-<header class="hero"><img id="logo" src="/*INLINE-IMG:../assets/dropfather-logo.webp*/" alt="DROPFATHER"><p class="tagline">Build-up · Pre-drop · Drop — by Tarjei Krogh · v0.14</p></header>
+<header class="hero"><img id="logo" src="/*INLINE-IMG:../assets/dropfather-logo.webp*/" alt="DROPFATHER"><p class="tagline">Build-up · Pre-drop · Drop — by Tarjei Krogh · v0.15</p></header>
 
 <section class="panel" id="startPanel">
  <div class="choices">
@@ -81,6 +81,7 @@
  <section class="panel machine red"><h2>DROP</h2><p class="hint">Impact on the one, everything but kick and clap pumps.</p><div id="mDropCtl"></div></section>
 </div>
 <section class="panel hidden maker-only" id="makerSounds"><h2>SOUNDS &amp; MIX</h2><p class="hint">Bass: Bass Invaders (2000 factory sounds). Lead: AVANTGARDIAN ARP (777 sounds through its own voice, level match and FX) or Bass Invaders. The lead line can come straight from ARP's pattern library or a fresh ARP blend.</p><div id="mSoundCtl" class="soundgrid"></div></section>
+<section class="panel machine hidden maker-only pfpanel" id="pfPanel"><h2>PUMP FICTION <small>master</small></h2><p class="hint">Tarjei Krogh’s mastering and pump on the whole mix: analyse it for CLEAN, FAT or WILD, or one click. Played live and in every mix export; stems stay dry.</p><div id="pfCtl"></div></section>
 <footer class="dock hidden maker-only" id="makerDock">
  <div class="dockmain">
   <div class="transport"><div class="seg viewseg" id="mView" role="group" aria-label="View"><button type="button" data-view="drop" class="on">Drop</button><button type="button" data-view="song">Song</button></div><span class="undobtns"><button id="mUndo" title="Undo (Ctrl/Cmd+Z)" aria-label="Undo" disabled>↶</button><button id="mRedo" title="Redo (Shift+Ctrl/Cmd+Z)" aria-label="Redo" disabled>↷</button></span><button id="mRandom" title="Randomize everything: style, key, scale, chords, sounds and DELAYSY preset">🎲 Randomize all</button><button id="mPlayAll" class="primary">▶ Play all</button><button id="mLoop">▶ Loop section</button><button id="mStop">■ Stop</button><span class="seekbtns"><button id="mHome" title="To the start (Home)" aria-label="To the start">⏮</button><button id="mBack" title="Back 4 bars" aria-label="Back 4 bars">⏪</button><button id="mFwd" title="Forward 4 bars" aria-label="Forward 4 bars">⏩</button></span><div class="progress hidden" id="mProgress" role="progressbar" aria-label="Render progress"><i></i><span></span></div><label class="vol">Vol <input id="mVolume" type="range" min="0" max="1" step="0.01" value="0.8"></label></div>
@@ -110,6 +111,11 @@
 <script type="text/plain" id="driftWorklet">/*INLINE:drift-worklet.js*/</script>
 <script>/*INLINE:vendor/drift-data.js*/</script>
 <script>/*INLINE:drift.js*/</script>
+<script>/*INLINE:vendor/pumpfiction-engine.js*/</script>
+<script>/*INLINE:pumpfiction.js*/</script>
+<script type="text/plain" id="voxyWorklet">/*INLINE:vendor/voxy-worklet.js*/</script>
+<script>/*INLINE:vendor/voxy.js*/</script>
+<script>/*INLINE:voxyfx.js*/</script>
 <script>/*INLINE:grid.js*/</script>
 <script>/*INLINE:maker.js*/</script>
 </body></html>

@@ -102,7 +102,7 @@ function renderAll(){
  const p=M.project;if(M.section!=='pre'&&!p[M.section]?.grid)M.section='drop';
  $('mBpm').value=p.bpm;$('mKey').value=p.key;$('mScale').value=p.scale;$('mDesc').textContent=p.desc||'';
  document.querySelectorAll('#mStyles button[data-style]').forEach(b=>b.classList.toggle('on',b.dataset.style===p.style));
- renderStrip();renderSecbar();renderGrid();for(const r of rows)r.sync();syncMixer();if(M.view==='song')renderSong();
+ renderStrip();renderSecbar();renderGrid();for(const r of rows)r.sync();syncMixer();renderPF();if(M.view==='song')renderSong();
  const another=$('mAnother');if(another)another.textContent=`🎲 Another ${G.STYLES[p.style]?.name||'random'} drop`;
 }
 // Grid edits are heard at once while looping (the scheduler reads the grid). Other changes rebuild the loop;
@@ -114,9 +114,18 @@ const STEM_NAMES={drums:'Drums',bass:'Bass',lead:'Lead',fx:'FX',audio:'Audio'};
 function mixer(){
  if(M.mixer)return M.mixer;const c=ctx(),master=c.createDynamicsCompressor();
  master.threshold.value=-1.5;master.knee.value=0;master.ratio.value=20;master.attack.value=.002;master.release.value=.12;master.connect(out());
- const g=G.busGains(M.project),nodes={};for(const k of G.MIXER){const n=c.createGain();n.gain.value=g[k];n.connect(master);nodes[k]=n;}
- return M.mixer=nodes;
+ // Every channel → the PUMP FICTION master chain (when on) → the safety limiter.
+ M.master=master;M.pfIn=c.createGain();
+ const g=G.busGains(M.project),nodes={};for(const k of G.MIXER){const n=c.createGain();n.gain.value=g[k];n.connect(M.pfIn);nodes[k]=n;}
+ M.mixer=nodes;pfRoute(null);return nodes;
 }
+// Route the master: through PUMP FICTION (with the pump drawn from song time `opt.from`) or straight.
+function pfRoute(opt){
+ if(!M.pfIn)return;try{M.pfIn.disconnect();}catch(e){}if(M.pfNodes){try{M.pfNodes.an.disconnect();}catch(e){}M.pfNodes=null;}
+ if(M.project.pf?.on&&window.PumpFiction)M.pfNodes=PumpFiction.chain(ctx(),M.pfIn,M.master,M.project,opt);else M.pfIn.connect(M.master);
+}
+// The pump's place right now, when Play all runs.
+function pfNow(){if(!M.src||!M.full)return null;const c=ctx(),t=c.currentTime+.02,song=t-M.srcStart+(M.full.t0||0);return {from:song,t0:t,len:Math.max(.1,(M.full.stems.duration+(M.full.t0||0))-song)};}
 // Apply faders, mute and solo (mixer) and the audio tracks' own gain, mute and solo, without re-rendering.
 function applyMix(){
  if(M.mixer){const g=G.busGains(M.project),t=ctx().currentTime;for(const k of G.MIXER)M.mixer[k].gain.setTargetAtTime(g[k],t,.015);}
@@ -155,6 +164,7 @@ async function playAll(resume){
  const from=Math.min(at,r.buffer.duration-.1),t0=c.currentTime+.05,auto=r.song?{bar:r.tl.bar,from:from+r.t0,t0}:null;
  G.STEMS.forEach((k,i)=>{const m=c.createChannelMerger(2);split.connect(m,2*i,0);split.connect(m,2*i+1,1);m.connect(G.autoChain(c,mx[k],M.project,k,auto));});const audioIn=G.autoChain(c,mx.audio,M.project,'audio',auto);if(from<r.stems.duration)s.start(t0,from);M.src=s;M.srcStart=t0-from;
  // Audio tracks: one source each, through its own gain (mute, solo, volume) into the mixer's audio channel.
+pfRoute({from:from+r.t0,t0,len:Math.max(.1,r.buffer.duration-from)});
  const tg=G.trackGains(M.project);M.trackNodes=(r.audio||[]).map((b,i)=>{const n=c.createGain();n.gain.value=tg[i]??1;n.connect(audioIn);if(from<b.duration){const a=c.createBufferSource();a.buffer=b;a.connect(n);a.start(t0,from);M.extra.push(a);}return n;});
  s.onended=()=>{if(M.src===s){M.src=null;setStripHead(null);markNow(-1);playLabel();}};playLabel();status(resume?'Updated · playing on from the same spot':back?'Playing on from where you paused':'Playing '+r.parts.map(x=>G.labelOf(M.project,x.name).toLowerCase()).join(' → '));tick();
 }
@@ -260,7 +270,7 @@ function renderSong(){
  const lanes=document.createElement('div');lanes.className='lanes';
  lanes.innerHTML='<span class="rl">bar</span><span class="pl"></span>'+G.STEMS.slice(0,4).map(k=>`<span>${STEM_NAMES[k]}</span>`).join('')+'<span class="sp"></span>'+p.audio.tracks.map(t=>`<span class="al"></span>`).join('')+'<span class="au"></span><span class="al add">+ Audio</span>';
  lanes.style.gridTemplateRows=`22px 41px repeat(4,24px) 1px ${p.audio.tracks.length?`repeat(${p.audio.tracks.length},45px)`:''} 79px 45px`;
- lanes.querySelectorAll('.al:not(.add)').forEach((s2,i)=>{const t=p.audio.tracks[i];s2.innerHTML='<i class="sw" title="Track colour (click to change)"></i><em title="Double-click to rename"></em><button type="button" class="m" title="Mute">M</button><button type="button" class="s" title="Solo">S</button>';
+ lanes.querySelectorAll('.al:not(.add)').forEach((s2,i)=>{const t=p.audio.tracks[i];s2.innerHTML='<i class="sw" title="Track colour (click to change)"></i><em title="Double-click to rename"></em>'+(t.voxy?'<b class="vx" title="VOXY MUSIC on this track">V</b>':'')+'<button type="button" class="m" title="Mute">M</button><button type="button" class="s" title="Solo">S</button>';
   s2.querySelector('em').textContent=t.name;s2.querySelector('.sw').style.background=trackColor(i);s2.querySelector('.m').classList.toggle('on',!!t.mute);s2.querySelector('.s').classList.toggle('on',!!t.solo);
   s2.querySelector('.m').onclick=()=>{t.mute=!t.mute;renderSong();applyMix();};s2.querySelector('.s').onclick=()=>{t.solo=!t.solo;renderSong();applyMix();};
   s2.querySelector('.sw').onclick=()=>{const cur=TRACK_COLORS.indexOf(trackColor(i));t.color=TRACK_COLORS[(cur+1)%TRACK_COLORS.length];renderSong();};
@@ -447,6 +457,28 @@ function stabRow(box,keyOf,onSound,after){
  button(row,'🎲 Stab sound',()=>{const all=StabLab.sounds(),s2=all[Math.floor(Math.random()*all.length)];onSound('dl:stab'+s2.i);after(`Sound: Stab Lab · ${s2.name}`);}).title='A random STAB LAB chord sound';
  box.append(row);
 }
+/* ---------- PUMP FICTION panel: the master chain ---------- */
+function pfChanged(msg){remember();if(M.mixer)pfRoute(pfNow());renderPF();if(msg)status(msg);}
+function pfSet(cfg,label){const p=M.project;p.pf={...(p.pf||{}),on:true,cfg,label};pfChanged(`PUMP FICTION: ${label}`);}
+function renderPF(){
+ const box=$('pfCtl');if(!box||!window.PumpFiction)return;box.replaceChildren();const p=M.project,on=!!p.pf?.on,cfg=PumpFiction.settings(p);
+ const top=document.createElement('div');top.className='rowbtns pfrow';box.append(top);
+ const tog=button(top,on?'● ON':'○ OFF',()=>{p.pf={...(p.pf||{}),on:!on};pfChanged(on?'PUMP FICTION off (A/B: original mix)':'PUMP FICTION on');});tog.className=on?'pfon':'';tog.title='A/B: the master chain on or off';
+ const lab=document.createElement('span');lab.className='hint';lab.textContent=on?(p.pf.label||'Default'):'The mix goes out as it is';top.append(lab);
+ const smartRow=document.createElement('div');smartRow.className='rowbtns pfrow';box.append(smartRow);
+ button(smartRow,'✦ Analyze my mix',async()=>{const r=await renderAllParts();status('PUMP FICTION is listening to the mix …');const raw=await G.mixOffline(r,{...p,pf:{on:false}});M.pfSmart=PumpFiction.analyse(p,raw);const a=M.pfSmart.stats;status(`PUMP FICTION: ${a.kind} · RMS ${a.rmsDb.toFixed(1)} dBFS · crest ${a.crest.toFixed(1)} dB. Pick CLEAN, FAT or WILD.`);renderPF();}).title='Analyse the whole mix and set up three masters for it';
+ for(const k of ['clean','fat','wild']){const b=button(smartRow,k.toUpperCase(),()=>pfSet(PumpFiction.smart(cfg,M.pfSmart.variants[k]),'Smart '+k.toUpperCase()));b.disabled=!M.pfSmart;b.title=M.pfSmart?.variants[k]?.desc||'Analyze first';if(p.pf?.label==='Smart '+k.toUpperCase()&&on)b.classList.add('on');}
+ const macroRow=document.createElement('div');macroRow.className='rowbtns pfrow';box.append(macroRow);
+ for(const k of PumpFiction.MACROS){const b=button(macroRow,k.toUpperCase(),()=>pfSet(PumpFiction.macro(cfg,k),k.toUpperCase()));if(p.pf?.label===k.toUpperCase()&&on)b.classList.add('on');}
+ const sel=document.createElement('div');sel.className='rowbtns pfrow';box.append(sel);
+ const ps=document.createElement('label');ps.className='sellen';ps.innerHTML='<span>Preset</span><select aria-label="PUMP FICTION preset"></select>';const pss=ps.querySelector('select');pss.add(new Option('—',''));PumpFiction.presets().forEach((n,i)=>pss.add(new Option(n,i)));pss.value=PumpFiction.presets().indexOf(p.pf?.label)>=0?PumpFiction.presets().indexOf(p.pf.label):'';pss.onchange=()=>{if(pss.value==='')return;const pr=PumpFiction.preset(+pss.value);pfSet(pr.cfg,pr.label);};sel.append(ps);
+ const pt=document.createElement('label');pt.className='sellen';pt.innerHTML='<span>Pump pattern</span><select aria-label="Pump pattern"></select>';const pts=pt.querySelector('select');pts.add(new Option('Off','-1'));PumpFiction.patterns().forEach((pat,i)=>pts.add(new Option(`${i+1} · ${Object.keys(pat).map(Number).sort((a,b)=>a-b).join(' ')}`,i)));pts.value=cfg.depth>0&&(cfg.steps||[]).some(x=>x)?(cfg.pattern??0):'-1';
+ pts.onchange=()=>{const c={...cfg};if(+pts.value<0)c.depth=0;else{Object.assign(c,{pattern:+pts.value,count:16,steps:PumpFiction.patternSteps(+pts.value),enabled:true});if(!c.depth)c.depth=60;}pfSet(c,p.pf?.label||'Custom');};sel.append(pt);
+ const knobs=document.createElement('div');knobs.className='pfknobs';box.append(knobs);
+ for(const [k,n,lo,hi] of [['drive','Saturation',0,100],['body','Body',-50,100],['glue','Glue',0,100],['bite','Bite / air',-50,100],['punch','Punch',0,100],['depth','Pump depth',0,100],['output','Output dB',-12,6]]){
+  const row=document.createElement('label');row.className='knob';row.innerHTML=`<span>${n}</span><input type="range" min="${lo}" max="${hi}" step="1"><output></output>`;const r=row.querySelector('input'),o=row.querySelector('output');r.value=cfg[k]??0;o.textContent=r.value;
+  r.oninput=()=>{o.textContent=r.value;};r.onchange=()=>{const c={...cfg,[k]:+r.value};if(k==='depth'&&+r.value>0&&!(c.steps||[]).some(x=>x))Object.assign(c,{pattern:0,count:16,steps:PumpFiction.patternSteps(0),enabled:true});pfSet(c,p.pf?.label||'Custom');};knobs.append(row);}
+}
 function renderClipSel(c,tl,sel){
  const p=M.project,info=document.createElement('span');info.className='selinfo';info.textContent=`${c.name} · bar ${+(c.start+1).toFixed(2)}`;sel.append(info);
  const upd=()=>{clipChanged();};
@@ -459,6 +491,8 @@ function renderClipSel(c,tl,sel){
  const ll=document.createElement('label');ll.className='sellen';ll.innerHTML='<span>Length</span><select aria-label="Clip length"></select>';const lsel=ll.querySelector('select');for(const n of [...new Set([1,2,4,8,16,32,64,c.len])].sort((a,b)=>a-b))lsel.add(new Option(n+(n===1?' bar':' bars'),n));lsel.value=c.len;lsel.onchange=()=>{c.len=+lsel.value;upd();};sel.append(ll);
  const lp=document.createElement('label');lp.className='sellen';lp.innerHTML='<input type="checkbox"> <span>Loop</span>';const lc=lp.querySelector('input');lc.checked=!!c.loop;lc.onchange=()=>{c.loop=lc.checked;upd();};sel.append(lp);
  for(const [field,label] of [['fadeIn','Fade in'],['fadeOut','Fade out']]){const fl=document.createElement('label');fl.className='sellen';fl.innerHTML=`<span>${label}</span><select aria-label="${label}"></select>`;const fs=fl.querySelector('select');for(const [v,n] of [[0,'none'],[.25,'1/16'],[.5,'1/8'],[1,'1 beat'],[2,'2 beats'],[4,'1 bar'],[8,'2 bars']])fs.add(new Option(n,v));fs.value=c[field]||0;fs.onchange=()=>{c[field]=+fs.value;upd();};sel.append(fl);}
+ if(window.VoxyFX){const vl=document.createElement('label');vl.className='sellen voxysel';vl.innerHTML='<span>Track vocal FX (VOXY)</span><select aria-label="VOXY MUSIC preset for this track"></select>';const vs=vl.querySelector('select'),trk=p.audio.tracks[c.track];vs.add(new Option('Off',''));let grp=null;for(const v of VoxyFX.list()){if(v.group!==grp){grp=v.group;const og=document.createElement('optgroup');og.label=grp;vs.append(og);}vs.lastChild.append(new Option(v.name,v.id));}vs.value=trk?.voxy||'';vs.title=VoxyFX.list().find(v=>v.id===vs.value)?.description||'VOXY MUSIC on the whole track';
+  vs.onchange=()=>{if(!trk)return;if(vs.value)trk.voxy=vs.value;else delete trk.voxy;status(vs.value?`VOXY MUSIC “${VoxyFX.list().find(v=>v.id===vs.value).name}” on ${trk.name}: rendering the vocal …`:`VOXY off on ${trk.name}`);clipChanged();};sel.append(vl);}
  button(sel,'✂ Split',()=>splitClip(c)).title='Split at the playhead or start point (Ctrl/Cmd+E); in the middle if that is outside the clip';
  button(sel,'⧉ Duplicate',()=>duplicateClip(c)).title='A copy right after it (Ctrl/Cmd+D)';
  button(sel,'✕ Delete',()=>deleteClip(c)).classList.add('danger');
@@ -576,7 +610,7 @@ async function exportAbleton(){
 function setProject(p,note){M.hist=[];M.hpos=-1;if(M.view==='song')G.ensureSongParts(p);M.project=p;M.full=null;buildControls();renderAll();changed();status(note||p.desc);}
 // Before anything is chosen, the whole engine lies under the start screen in black and white. Make a drop
 // brings it to life in red.
-function show(){for(const id of ['makerPanel','songPanel','makerMachines','makerSounds','makerDock'])$(id).classList.remove('hidden');}
+function show(){for(const id of ['makerPanel','songPanel','makerMachines','makerSounds','pfPanel','makerDock'])$(id).classList.remove('hidden');}
 function preview(){M.project=G.generate('house',seed());buildControls();renderAll();show();}
 function open(){
  const first=!document.body.dataset.mode;document.body.dataset.mode='maker';window.Dropfather.stop();show();if(!M.project)setProject(G.generate('house',seed()));else renderAll();

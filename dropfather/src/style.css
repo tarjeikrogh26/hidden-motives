@@ -238,3 +238,12 @@ body[data-mode="maker"] .choice.songmode{border-color:var(--white);background:#2
 .stabrow{align-items:center;padding:6px 8px;border:1px solid #6b5520;border-radius:8px;background:linear-gradient(90deg,#1a1408,#120f0a)}
 .stabrow .stabtitle{font-family:'Bowlby One','Arial Black',Impact,sans-serif;font-weight:400;color:#e2c26b;letter-spacing:.05em;margin-right:4px}
 .stabrow select{max-width:260px}
+
+/* PUMP FICTION panel. */
+.pfpanel{border-color:#2f6aa0;background:linear-gradient(180deg,#0a1626,#0c0f16)}.pfpanel h2{color:#7fc4ff}.pfpanel h2 small{font-size:12px;color:#ffa637;letter-spacing:.1em}
+.pfrow{align-items:center}.pfrow button.on,.pfrow button.pfon{background:#ffa637;border-color:#ffa637;color:#000}
+.pfknobs{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:4px 16px;margin-top:6px}
+.pfknobs .knob{display:grid;grid-template-columns:90px minmax(0,1fr) 36px;align-items:center;gap:8px;font-size:12px;color:var(--muted)}
+
+.song .lanes .al .vx{font-style:normal;font-size:9px;background:#e8d44d;color:#000;border-radius:3px;padding:0 3px;flex:0 0 auto}
+.voxysel select{max-width:200px}

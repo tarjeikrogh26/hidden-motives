@@ -1,4 +1,4 @@
-# DROPFATHER — by Tarjei Krogh · v0.14
+# DROPFATHER — by Tarjei Krogh · v0.15
 
 To veier inn fra startskjermen:
 
@@ -156,6 +156,28 @@ drop-vinduet gjør det samme.
 - Hver del rendres én gang, også når den gjentas.
 - Eksport: hele låta som WAV, stems (fra takt 1) eller MIDI.
 
+### PUMP FICTION og VOXY MUSIC (v0.15)
+
+- **PUMP FICTION v0.5 som master** (eget panel under Sounds & Mix):
+  - **✦ Analyze my mix** lytter til hele miksen. Deretter gir **CLEAN**, **FAT** eller **WILD** et oppsett for
+    akkurat den miksen.
+  - Ett klikk: **FATTER, PUNCHIER, WARMER, TIGHTER, LOUDER**. Det finnes også 20 presets, 24 pumpemønstre
+    (på låtas klokke, fra takt 1) og knapper for metning, body, glue, bite, punch, pumpedybde og output.
+  - **ON/OFF** er A/B.
+  - Kjeden er PUMP FICTIONs egen: flerbånds metning, smart EQ, glue-kompressor, punch, clipper, limiter og
+    pumpe.
+  - Den høres i avspillingen og er med i alle miks-eksporter. Stems og Ableton-pakken er tørre.
+  - Hentes ut med `node tools/extract-pumpfiction.mjs pump_fiction_v05.html`. Funksjonene kopieres uendret.
+- **VOXY MUSIC v0.7 på lydspor:** velg et klipp. Da velger **Track vocal FX (VOXY)** en av de 32 presetene
+  for hele sporet: Stereo Vocals, Vocoders (også 201 Machine), Second Voice og Space & Echo.
+  - Sporet går gjennom VOXYs egen graf: worklet, HRTF-dobler, Second Voice, effektrom, EQ, rom og limiter. Den
+    kjøres i låtas tempo og toneart, og nivået matches mot det tørre sporet.
+  - **V** i spor-headeren viser at VOXY er på.
+  - Hentes ut med `node tools/extract-voxy.mjs VOXY-MUSIC-v0.7/dist`. Modulene settes sammen uendret. Eneste
+    endring: workleten tar også innstillingene ved oppstart, så offline-rendering starter i tide.
+- **STAB LAB v0.6.1:** lydene og linjene er de samme som i v0.4, så Dropfather er oppdatert. Det nye i 0.5/0.6
+  (scener, makroer, mutering, rom, binaurale bevegelser) blir i STAB LAB.
+
 ### DRIFT SONATA inne i Dropfather (v0.14)
 
 DriftSonatas motor for strings, kor og pads er bygget inn, i versjonen jeg har fått.
@@ -284,6 +306,8 @@ Delayzy-bankene, legacy-lydene og opptakeren.
   i Norwegian Beats' brukerbank (ukjent opphav), Mouth-settet, og trommene fra Bass Invaders (uavklart lisens, se
   Bass Invaders `SOURCE-NOTES`).
 - **Risere, impact og synth-trommene** (sangmodus og «Dropfather synth»): syntetisert i `src/dsp.js`. Ingen samples.
+- **PUMP FICTION** og **VOXY MUSIC** (Tarjei Krogh): motorene i `src/vendor/pumpfiction-engine.js`,
+  `src/vendor/voxy-worklet.js` og `src/vendor/voxy.js`. VOXYs 777 DELAYSY-effekter tilhører DELAYSY-banken.
 - **DRIFT SONATA** (Tarjei Krogh): WASM-motoren, kor- og cello-opptakene og 111 lyder (`src/vendor/drift-data.js`,
   `src/drift-worklet.js`, `src/drift.js`).
 - **STAB LAB** (Tarjei Krogh): stab-lydene og akkordlinjene fra STAB LAB v0.4 (`src/vendor/stablab-data.js`,
