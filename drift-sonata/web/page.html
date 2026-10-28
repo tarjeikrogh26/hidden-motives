@@ -236,6 +236,17 @@ details.room .eyebrow { color: #9fc3c4; }
   .master { flex: 1 1 auto; min-width: 0; } .masterrow .meter { display: none; } .master .lvl { flex: 1 1 auto; width: auto; min-width: 60px; }
 }
 .no-arp .arp-only, .no-vox .vox-only { display: none !important; }
+.songcard h2 { font-family: var(--display); font-size: 30px; font-weight: 600; font-style: italic; }
+.songbar { align-items: center; }
+.songbank { flex: 1 1 320px; grid-template-columns: 44px minmax(0, 1fr); }
+.songline { position: relative; }
+.sblocks { display: flex; gap: 4px; min-height: 58px; }
+.sblock { min-width: 0; text-align: left; border: 1px solid var(--line); border-top: 4px solid var(--c); border-radius: 8px; background: var(--pearl); padding: 6px 8px; display: flex; flex-direction: column; gap: 2px; overflow: hidden; }
+.sblock b { font-family: var(--display); font-style: italic; font-size: 17px; font-weight: 600; white-space: nowrap; }
+.sblock span { font-family: var(--mono); font-size: 10px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sblock.playing { background: color-mix(in srgb, var(--c) 22%, var(--pearl)); border-color: var(--c); }
+.sblock.editing { outline: 2px solid var(--gold); }
+.shead { position: absolute; top: -3px; bottom: -3px; width: 2px; background: var(--ink); border-radius: 1px; left: -10px; pointer-events: none; transition: left .12s linear; }
 .strip.vox { --strip: #8e7cc3; }
 .voxcard h2 { font-family: var(--display); font-size: 30px; font-weight: 600; font-style: italic; }
 .vox-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr); gap: 16px; align-items: start; }
@@ -353,6 +364,27 @@ canvas#lifeView { width: 100%; height: 180px; display: block; border-radius: 6px
     <div class="row"><span class="eyebrow" style="align-self:center">Singers</span><div class="singers" id="voxSingers"></div><button class="btn" type="button" id="voxSeed">Sing it another way</button></div>
   </details>
 
+  <details class="card fold songcard" id="songCard" data-fold="song" open>
+    <summary class="head"><h2>Song line</h2><span class="eyebrow">intro · verse · chorus · bridge · breakdown · outro</span></summary>
+    <p>A whole song: a mood and a row of sections, each with its own chord line and length and its own feel. The chorus opens up, the breakdown lets the drums go, the intro and outro stay far away. Switch Song on and it plays from its first bar; click a section to change it.</p>
+    <div class="row songbar">
+      <button class="btn sw" id="songOn" type="button" aria-pressed="false">Song</button>
+      <div class="bankrow songbank"><label class="tag" for="songSel"><span class="tl">Song</span><span class="ts">Song</span><b id="songCount"></b></label>
+        <div class="nav"><button type="button" data-bank="song" data-d="-10" aria-label="Back 10 songs">«</button><button type="button" data-bank="song" data-d="-1" aria-label="Previous songs">‹</button><select id="songSel" aria-label="Song"></select><button type="button" data-bank="song" data-d="1" aria-label="Next songs">›</button><button type="button" data-bank="song" data-d="10" aria-label="Forward 10 songs">»</button><button type="button" class="dice" id="songDice" title="A random song" aria-label="A random song">⚄</button></div></div>
+      <button class="btn sw" id="songLoop" type="button" aria-pressed="true">Loop</button>
+      <button class="btn" id="songSave" type="button">Save song</button>
+    </div>
+    <div class="songline"><div class="sblocks" id="songBlocks"></div><i class="shead" id="songHead"></i></div>
+    <p class="keys-note" id="songMeta"></p>
+    <div class="slot-edit" id="songEdit" hidden>
+      <div class="ctl"><label for="secType">Section</label><select id="secType"></select></div>
+      <div class="ctl"><label for="secBars">Bars</label><select id="secBars"><option>4</option><option>8</option><option>16</option><option>32</option><option>64</option></select></div>
+      <div class="ctl" style="flex:1 1 240px"><label for="secLine">Chord line</label><select id="secLine"></select></div>
+      <button class="btn" id="secLeft" type="button" aria-label="Move the section earlier">◂ Earlier</button><button class="btn" id="secRight" type="button" aria-label="Move the section later">Later ▸</button>
+      <button class="btn" id="secAdd" type="button">Add after</button><button class="btn" id="secDel" type="button">Remove</button><button class="btn" id="secDone" type="button">Done</button>
+    </div>
+  </details>
+
   <section class="lineup" aria-label="Chord line">
     <div class="bar">
       <div>
@@ -411,7 +443,7 @@ canvas#lifeView { width: 100%; height: 180px; display: block; border-radius: 6px
   <div class="dock-in">
     <div class="transport top">
       <button class="play" id="play" type="button" aria-label="Play the chord line"><svg viewBox="0 0 20 20" id="playIcon"><path d="M5 3l12 7-12 7z"/></svg></button>
-      <span class="endless-group"><button class="btn sw endless" id="endlessOn" type="button" aria-pressed="false" title="Endless: a journey through the moods that never repeats">∞ Endless</button><button class="btn small" id="paceBtn" type="button" title="How fast the journey moves">Drifting</button></span>
+      <span class="endless-group"><button class="btn sw endless" id="songOn2" type="button" aria-pressed="false" title="Play the song in the Song line card">♪ Song</button><button class="btn sw endless" id="endlessOn" type="button" aria-pressed="false" title="Endless: a journey through the moods that never repeats">∞ Endless</button><button class="btn small" id="paceBtn" type="button" title="How fast the journey moves">Drifting</button></span>
       <div class="moodbank"><label class="tag" for="moodSel"><span class="tl">Mood</span><span class="ts">Mood</span><b id="moodCount"></b></label>
         <div class="nav"><button type="button" data-bank="mood" data-d="-10" aria-label="Back 10 moods">«</button><button type="button" data-bank="mood" data-d="-1" aria-label="Previous mood">‹</button><select id="moodSel" aria-label="Mood"></select><button type="button" data-bank="mood" data-d="1" aria-label="Next mood">›</button><button type="button" data-bank="mood" data-d="10" aria-label="Forward 10 moods">»</button><button type="button" class="dice" id="moodDice" title="A random mood" aria-label="A random mood">⚄</button></div></div>
       <span class="recgroup"><button class="btn rec" id="recBtn" type="button" aria-pressed="false" title="Record">●</button><button class="btn small" id="recWhat" type="button" data-v="mix" title="Record the mix, or the mix and each channel on its own">Mix</button><span id="recTime" class="db"></span></span>
@@ -524,7 +556,7 @@ class DriftSonata extends AudioWorkletProcessor {
         for (const t of m.tables || []) { const ptr = x.ds_bank_add_table(t.table, t.frames); if (ptr) new Float32Array(x.memory.buffer, ptr, t.data.length).set(t.data); }
         x.ds_bank_commit(); break;
       }
-      case 'line': this.line = m.line; if (this.playing) this.slot = -2; break;
+      case 'line': this.line = m.line; this.lineStart = m.start || 0; if (this.playing) this.slot = -2; break;  // start: the beat the line begins on (a song's section)
       case 'drums': this.drumsOn = m.on; if (m.lanes) this.drumLayer({ lanes: m.lanes, swing: m.swing }); break;
       case 'kit': this.drumLayer({ kit: m.kit }); break;  // per lane: the sound, its level, place and sends (made in the page)
       case 'vocal': for (const i of CH.chord) { this.use(i); const ptr = x.ds_vocal(m.data.length); new Float32Array(x.memory.buffer, ptr, m.data.length).set(m.data); } break;
@@ -555,7 +587,7 @@ class DriftSonata extends AudioWorkletProcessor {
     if (this.playing && this.line.length) {
       // The chord for the end of this block: a change lands just before the bar line, so the sub on bar one hears it.
       const total = this.line.reduce((a, c) => a + c.bars, 0) * 4;
-      let pos = (this.ppq + step) % total, s = 0;
+      let pos = (((this.ppq + step - (this.lineStart || 0)) % total) + total) % total, s = 0;
       while (s < this.line.length - 1 && pos >= this.line[s].bars * 4) { pos -= this.line[s].bars * 4; s++; }
       if (s !== this.slot) {
         this.release(); this.slot = s;
@@ -1127,7 +1159,7 @@ $('soundDice').addEventListener('click', () => {
 });
 // « ‹ › » step through a bank by one or ten
 document.querySelectorAll('[data-bank]').forEach(b => b.addEventListener('click', () => {
-  const sel = $({ sound: 'soundSel', line: 'lineSel', arp: 'arpSel', arps: 'arpSoundSel', kit: 'kitSel', groove: 'drumSel', voxstyle: 'voxStyleSel', voxspace: 'voxSpaceSel', mood: 'moodSel' }[b.dataset.bank]), opts = [...sel.options].filter(o => o.value !== 'x');
+  const sel = $({ sound: 'soundSel', line: 'lineSel', arp: 'arpSel', arps: 'arpSoundSel', kit: 'kitSel', groove: 'drumSel', voxstyle: 'voxStyleSel', voxspace: 'voxSpaceSel', mood: 'moodSel', song: 'songSel' }[b.dataset.bank]), opts = [...sel.options].filter(o => o.value !== 'x');
   let i = opts.findIndex(o => o.value === sel.value);
   if (i < 0) i = opts.findIndex(o => o.value === (b.dataset.bank === 'sound' ? soundChoice : String(lineChoice)));
   i = ((Math.max(0, i) + +b.dataset.d) % opts.length + opts.length) % opts.length;
@@ -1229,9 +1261,10 @@ function drawSlots() {
 }
 let currentSlot = -1;
 function markSlot(s) { currentSlot = s; $('slots').querySelectorAll('.slot').forEach((b, k) => b.classList.toggle('playing', k === s)); lineHeld = new Set(s >= 0 && lastNotes && lastNotes[s] ? lastNotes[s] : []); }
+var lineStartBeat = 0;  // the beat the chord line counts from (a song's section starts its line on its own first bar)
 function sendLine() {
   lastNotes = voiceLine(); arpDirty++;
-  if (node) node.port.postMessage({ t: 'line', line: lastNotes.map((notes, k) => ({ notes, bars: slotBars(line[k]) })) });
+  if (node) node.port.postMessage({ t: 'line', line: lastNotes.map((notes, k) => ({ notes, bars: slotBars(line[k]) })), start: lineStartBeat });
   store.set('ds-line2', { choice: lineChoice, dirty: lineDirty, key: lineKey, line });
 }
 function lineChanged() { drawSlots(); sendLine(); drawPads(); }
@@ -1702,16 +1735,29 @@ function midiFile(tracks) {
   }
   return new Uint8Array(bytes);
 }
+// The whole song as chords: each section's line played round until the section is full
+function songPlan(markers, PPQ) {
+  const out = []; let prev = null, at = 0;
+  for (const x of song.cur.sections) {
+    markers.push([at * 4 * PPQ, x.type]);
+    const L = lineFrom(lineBank[x.line], lineKey); let left = x.bars, k = 0;
+    while (left > 0) { const c = L[k++ % L.length], b = Math.min(slotBars(c), left); prev = voiceChord(c, prev); out.push({ notes: prev, bars: b }); left -= b; }
+    at += x.bars;
+  }
+  return out;
+}
 const metaText = (t, type) => { const b = [...new TextEncoder().encode(t)]; return [0, 0xff, type, b.length, ...b]; };
 $('midiExport').addEventListener('click', async () => {
   const x = await harmony(), buf = new Int32Array(x.memory.buffer, x.ds_harmony_buf(), 80), PPQ = 480;
-  const played = voiceLine(), chords = [], sub = [];
+  // the chord line once, or with Song on the whole song, its sections marked
+  const markers = [], plan = song.on ? songPlan(markers, PPQ) : voiceLine().map((notes, k) => ({ notes, bars: slotBars(line[k]) }));
+  const played = plan.map(x => x.notes), chords = [], sub = [];
   let t = 0, prev = [];
   played.forEach((notes, k) => {
     buf.fill(0); buf.set(notes.slice(0, 16)); buf.set(prev.slice(0, 16), 16);
     const n = x.ds_expand(notes.length, prev.length, expandLevelNow(), Math.round(values[idx.color]), values[idx.key] >= .5 ? Math.round(values[idx.key]) - 1 : -1,
       values[idx.keyminor] > .5 ? 1 : 0, values[idx.keepbass] > .5 ? 1 : 0);
-    const voiced = [...buf.slice(32, 32 + n)], root = buf[64], bars = slotBars(line[k]), len = bars * 4 * PPQ;
+    const voiced = [...buf.slice(32, 32 + n)], root = buf[64], bars = plan[k].bars, len = bars * 4 * PPQ;
     prev = voiced;
     for (const m of voiced) chords.push([t, 0x90, m, notes.includes(m) ? 96 : 76], [t + len - 1, 0x80, m, 0]);
     if (values[idx.subdrop] > .001 && root >= 0) {
@@ -1721,7 +1767,8 @@ $('midiExport').addEventListener('click', async () => {
     t += len;
   });
   const us = Math.round(60e6 / tempo());
-  const head = [[0, 0xff, 0x51, 3, us >> 16 & 255, us >> 8 & 255, us & 255], [0, 0xff, 0x58, 4, 4, 2, 24, 8], metaText('DRIFT SONATA', 3)];
+  const head = [[0, 0xff, 0x51, 3, us >> 16 & 255, us >> 8 & 255, us & 255], [0, 0xff, 0x58, 4, 4, 2, 24, 8], metaText('DRIFT SONATA', 3),
+    ...markers.map(([at, name]) => { const m = metaText(name, 6); m[0] = at; return m; })];
   const tracks = [head, [metaText('DRIFT SONATA chords', 3), ...chords]];
   if (sub.length) tracks.push([metaText('Sub-Drop', 3), ...sub]);
   if (drumPrefs.on) {
@@ -1734,7 +1781,7 @@ $('midiExport').addEventListener('click', async () => {
   }
   const arpNotes = arpMidi(PPQ, t);
   if (arpNotes.length) tracks.push([metaText('AVANTGARDIAN ARP', 3), ...arpNotes]);
-  const lineName = lineDirty ? 'my-line' : fileName(lineBank[lineChoice].name);
+  const lineName = song.on ? fileName(song.cur.name) : lineDirty ? 'my-line' : fileName(lineBank[lineChoice].name);
   download(`drift-sonata-${lineName}.mid`, new Blob([midiFile(tracks)], { type: 'audio/midi' }));
   setStatus(`Exported ${played.length} chords (${t / PPQ / 4} bars) as MIDI.`);
 });
@@ -2069,12 +2116,14 @@ function arpTick() {
     const r = arpCompute(arpMode); arpEvents = r.events; arpCycle = r.cycle; arpKey = key; arpPatId = arpPrefs.pattern;
   }
   const beatNow = a.ppq + (now - a.time) * bpm / 60, horizon = beatNow + .3 * bpm / 60;
-  arpBeatNow = beatNow;
+  arpBeatNow = beatNow - (arpMode === 'line' ? lineStartBeat : 0);
   if (arpNext < beatNow - .02) arpNext = beatNow;  // after a stall (a hidden tab), skip ahead rather than play a burst
   const k = w => arpIn ? Math.max(0, Math.min(1, (w - arpIn.t0) / arpIn.dur)) : 1;
-  eventsBetween(arpEvents, arpCycle, arpNext, horizon, a, bpm, (e, w) => arpPlay(e, w, e.len * 60 / bpm, k(w)));
+  // on the chord line the arp's loop starts where the line starts (a song's section)
+  const off = arpMode === 'line' ? lineStartBeat : 0, ao = { ppq: a.ppq - off, time: a.time };
+  eventsBetween(arpEvents, arpCycle, arpNext - off, horizon - off, ao, bpm, (e, w) => arpPlay(e, w, e.len * 60 / bpm, k(w)));
   if (arpIn) {
-    eventsBetween(arpIn.old.events, arpIn.old.cycle, arpNext, horizon, a, bpm, (e, w) => arpPlay(e, w, e.len * 60 / bpm, 1 - k(w)));
+    eventsBetween(arpIn.old.events, arpIn.old.cycle, arpNext - off, horizon - off, ao, bpm, (e, w) => arpPlay(e, w, e.len * 60 / bpm, 1 - k(w)));
     if (now > arpIn.t0 + arpIn.dur + .5) arpIn = null;
   }
   arpNext = horizon;
@@ -2438,7 +2487,7 @@ function voxStep(k, when, beat) {
   const kinds = [['tone', p.tone], ['frag', p.frag], ['breath', p.breath * (phraseEnd ? 2.5 : .6)], ['chord', p.chord * (s16 % 8 === 0 ? 1.5 : .3)], ['cloud', p.cloud * (s16 % 8 === 0 ? 1.4 : .2)]];
   let tot = kinds.reduce((a, x) => a + x[1], 0); if (tot <= 0) return;
   let u = R() * tot, kind = kinds[0][0]; for (const [kk, w] of kinds) { u -= w; if (u <= 0) { kind = kk; break; } }
-  const chord = voxChordAt(beat), sp = 60 / tempo(), throwIt = R() < p.throws * .35, toRoom = R() < .5;
+  const chord = voxChordAt(beat - (voxMode === 'line' ? lineStartBeat : 0)), sp = 60 / tempo(), throwIt = R() < p.throws * .35, toRoom = R() < .5;
   // mostly heard through the room: the dry part steps back as the room grows, so the voices melt into the music
   const sends = g => ({ dry: (throwIt ? .25 : 1 - .5 * p.reverb) * g, delay: (throwIt && !toRoom ? 1 : p.delay * .6) * g, reverb: (throwIt && toRoom ? 1.1 : .25 + p.reverb * .85) * g });
   const fly = (from, R) => { const to = voxSpot(R, kind); return [from[0] + (to[0] - from[0]) * p.fly, from[1] + (to[1] - from[1]) * p.fly, from[2] + (to[2] - from[2]) * p.fly]; };
@@ -2744,6 +2793,7 @@ function endlessBar() { if (!playing || !lineAnchor || !ctx) return -1; const a 
 function endlessPlan(bar, kind) { const [lo, hi] = PACE[endless.pace][kind === 'mood' ? 0 : 1]; return bar + lo + Math.floor(endless.R() * (hi - lo + 1)); }
 async function setEndless(on) {
   endless.on = on; $('endlessOn').setAttribute('aria-pressed', on);
+  if (on && typeof song !== 'undefined' && song.on) setSong(false);
   if (!on) { setStatus('Endless off: it stays where it is.'); return; }
   if (!playing) $('play').click();
   if (moodChoice < 0) await pickMood(Math.floor(Math.random() * MOODS.length));
@@ -2799,6 +2849,167 @@ $('endlessOn').addEventListener('click', () => setEndless(!endless.on));
 const PACE_NAMES = { calm: 'Calm', drift: 'Drifting', restless: 'Restless' };
 $('paceBtn').textContent = PACE_NAMES[endless.pace];
 $('paceBtn').addEventListener('click', () => { const k = Object.keys(PACE), i = (k.indexOf(endless.pace) + 1) % k.length; endless.pace = k[i]; store.set('ds-pace', endless.pace); $('paceBtn').textContent = PACE_NAMES[endless.pace]; endless.nextMood = endless.nextSmall = -1; setStatus('Endless moves ' + PACE_NAMES[endless.pace].toLowerCase() + '.'); });
+
+/* ---------- Song line: a whole song (intro, verse, chorus, bridge, breakdown, outro) ----------
+   A song is a mood and a row of sections, each with its own chord line and length. Each kind of section has its own
+   feel: the intro and outro thin and far, the verse with the groove, the chorus full (Intensity up, the arp busier),
+   the bridge in other chords, the breakdown without drums. Sections change on their first bar; channels fade in and
+   out, Intensity and the arp glide. Played from the start, it can loop or end. */
+const SECTION_FEEL = {
+  Intro:     { color: '#7fd3d3', intensity: .15, drums: false, arp: .45, vox: true, twist: .1, sub: .5 },
+  Verse:     { color: '#ecd08f', intensity: .4, drums: true, arp: .75, vox: null, twist: 0, sub: 1 },
+  Chorus:    { color: '#e486ab', intensity: .9, drums: true, arp: 1, vox: true, twist: .15, sub: 1, fuller: true },
+  Bridge:    { color: '#8e7cc3', intensity: .55, drums: true, arp: .6, vox: true, twist: .05, sub: .8, other: true },
+  Breakdown: { color: '#3aa3aa', intensity: .25, drums: false, arp: 0, vox: true, twist: -.1, sub: .4 },
+  Outro:     { color: '#c9b8a5', intensity: .12, drums: false, arp: .35, vox: true, twist: .1, sub: .4 },
+};
+const SONG_FORMS = {
+  'Full song': [['Intro', 8], ['Verse', 16], ['Chorus', 16], ['Verse', 16], ['Chorus', 16], ['Bridge', 8], ['Chorus', 16], ['Outro', 8]],
+  'Long drift': [['Intro', 16], ['Verse', 32], ['Breakdown', 16], ['Chorus', 32], ['Outro', 16]],
+  'Short story': [['Intro', 4], ['Verse', 8], ['Chorus', 8], ['Verse', 8], ['Chorus', 8], ['Outro', 8]],
+  'Rise and fall': [['Intro', 8], ['Verse', 16], ['Chorus', 16], ['Breakdown', 8], ['Chorus', 16], ['Outro', 16]],
+  'Ambient arc': [['Intro', 16], ['Verse', 16], ['Bridge', 16], ['Verse', 16], ['Outro', 16]],
+};
+const FORM_FOR = { 'Night bus': 'Full song', Glacier: 'Ambient arc', 'Orbital sunrise': 'Rise and fall', 'Shoegaze haze': 'Full song', 'Radio-Activity': 'Short story', 'Bristol smoke': 'Full song',
+  Darkwave: 'Rise and fall', 'Dub lull': 'Long drift', 'Berlin sequence': 'Long drift', 'Switched-on': 'Short story', Cathedral: 'Ambient arc', 'Deep sea': 'Long drift',
+  'Space station': 'Rise and fall', 'Forest rain': 'Ambient arc', 'City dusk': 'Full song', 'Desert night': 'Long drift' };
+// The chord lines a song's sections get: the verse the mood's own, the chorus brighter, the bridge stranger, the breakdown a drone
+function sectionLine(type, m, R) {
+  const baseOf = name => Math.max(0, LINE_BASES.findIndex(b => b[0] === name)), verseBase = m.line % LINE_BASES.length;
+  const pick = names => { const c = names.map(baseOf).filter(b => b !== verseBase); return c.length ? c[Math.floor(R() * c.length)] : verseBase; };
+  const at = (base, v) => base + LINE_BASES.length * v;
+  if (type === 'Verse') return m.line;
+  if (type === 'Chorus') return at(pick(['Halo', 'Nordic light', 'Low orbit', 'Cathedral']), Math.floor(R() * 3));
+  if (type === 'Bridge') return at(pick(['Witch', 'Lament', 'Radio silence', 'Clockwork march']), Math.floor(R() * 4));
+  if (type === 'Breakdown') return at(baseOf('Drone'), 1);
+  return at(verseBase, 1);  // intro and outro: the verse's chords, each held twice as long
+}
+const SONGS = MOODS.map((m, i) => {
+  const R = rng32(90001 + i * 31), form = FORM_FOR[m.kind] || 'Full song', lines = {};
+  const sections = SONG_FORMS[form].map(([type, bars]) => { if (!(type in lines)) lines[type] = sectionLine(type, m, R); return { type, bars, line: lines[type] }; });
+  return { name: `${m.name} · ${form.toLowerCase()}`, mood: i, form, sections };
+});
+const userSongs = () => store.get('ds-songs', []);
+const song = { on: false, loop: store.get('ds-song-loop', true), choice: store.get('ds-song', 0), cur: null, section: -1, startBeat: 0, editing: -1 };
+const songAt = v => String(v)[0] === 'u' ? userSongs()[+String(v).slice(1)] : SONGS[+v];
+song.cur = JSON.parse(JSON.stringify(songAt(song.choice) || SONGS[0]));
+const songBars = s => s.sections.reduce((a, x) => a + x.bars, 0);
+function fillSongs() {
+  const mine = userSongs();
+  $('songSel').innerHTML = MOOD_KINDS.map(K => `<optgroup label="${esc(K.kind)}">${SONGS.map((x, i) => [x, i]).filter(([x]) => MOODS[x.mood].kind === K.kind).map(([x, i]) => `<option value="${i}">${String(i + 1).padStart(3, '0')} / ${esc(x.name)}</option>`).join('')}</optgroup>`).join('') +
+    (mine.length ? `<optgroup label="Yours">${mine.map((x, k) => `<option value="u${k}">${esc(x.name)}</option>`).join('')}</optgroup>` : '');
+  $('songSel').value = String(song.choice); $('songCount').textContent = SONGS.length;
+}
+// The sections drawn as blocks, as wide as they are long; click one to change it
+function drawSong() {
+  const total = songBars(song.cur);
+  $('songBlocks').innerHTML = song.cur.sections.map((x, k) => `<button type="button" class="sblock${k === song.editing ? ' editing' : ''}" data-k="${k}" style="flex:${x.bars} 1 0;--c:${SECTION_FEEL[x.type].color}"><b>${x.type}</b><span>${x.bars} bars · ${esc(lineBank[x.line].name)}</span></button>`).join('');
+  $('songBlocks').querySelectorAll('.sblock').forEach(b => b.addEventListener('click', () => { song.editing = +b.dataset.k; drawSong(); songEditShow(); }));
+  const m = MOODS[song.cur.mood];
+  $('songMeta').textContent = `${song.cur.sections.length} sections · ${total} bars · about ${Math.round(total * 4 * 60 / m.bpm / 60)} min at ${m.bpm} BPM · mood: ${m.name}`;
+  $('songEdit').hidden = song.editing < 0;
+}
+function songEditShow() {
+  const x = song.cur.sections[song.editing]; if (!x) return;
+  $('secType').value = x.type; $('secBars').value = String(x.bars); $('secLine').value = String(x.line);
+  ['secType', 'secBars', 'secLine'].forEach(id => $(id)._sync && $(id)._sync());
+}
+function songOwn() { if (String(song.choice)[0] !== 'x') { song.choice = 'x'; $('songSel').value = ''; } }
+$('secType').innerHTML = Object.keys(SECTION_FEEL).map(t => `<option>${t}</option>`).join('');
+$('secLine').innerHTML = lineBank.map((l, i) => `<option value="${i}">${String(i + 1).padStart(3, '0')} / ${esc(l.name)}</option>`).join('');
+for (const id of ['secType', 'secBars', 'secLine']) $(id).addEventListener('change', () => {
+  const x = song.cur.sections[song.editing]; if (!x) return;
+  x.type = $('secType').value; x.bars = +$('secBars').value; x.line = +$('secLine').value; songOwn(); drawSong();
+});
+$('secAdd').addEventListener('click', () => { const k = Math.max(0, song.editing); song.cur.sections.splice(k + 1, 0, { ...song.cur.sections[k] }); song.editing = k + 1; songOwn(); drawSong(); songEditShow(); });
+$('secDel').addEventListener('click', () => { if (song.cur.sections.length < 2) return; song.cur.sections.splice(song.editing, 1); song.editing = Math.min(song.editing, song.cur.sections.length - 1); songOwn(); drawSong(); songEditShow(); });
+$('secLeft').addEventListener('click', () => { const k = song.editing; if (k < 1) return; const a = song.cur.sections; [a[k - 1], a[k]] = [a[k], a[k - 1]]; song.editing--; songOwn(); drawSong(); });
+$('secRight').addEventListener('click', () => { const k = song.editing, a = song.cur.sections; if (k >= a.length - 1) return; [a[k + 1], a[k]] = [a[k], a[k + 1]]; song.editing++; songOwn(); drawSong(); });
+$('secDone').addEventListener('click', () => { song.editing = -1; drawSong(); });
+$('songSave').addEventListener('click', () => {
+  const name = `${MOODS[song.cur.mood].name} · mine ${userSongs().length + 1}`, list = userSongs();
+  list.push({ ...JSON.parse(JSON.stringify(song.cur)), name }); store.set('ds-songs', list); song.choice = 'u' + (list.length - 1); fillSongs(); setStatus(`Saved the song “${name}”.`);
+});
+function pickSong(v, why) {
+  const x = songAt(v); if (!x) return;
+  song.choice = String(v); store.set('ds-song', song.choice); song.cur = JSON.parse(JSON.stringify(x)); song.editing = -1; $('songSel').value = String(v); drawSong();
+  if (song.on) songStart(); else applyMood(MOODS[song.cur.mood], { quiet: true });
+  if (why) setStatus(why + ' · ' + x.name);
+}
+$('songSel').addEventListener('change', () => pickSong($('songSel').value));
+$('songDice').addEventListener('click', () => pickSong(Math.floor(Math.random() * SONGS.length), 'A random song'));
+
+// Playing a song: it starts from its first bar and follows the bars of the chord line's clock
+const songBeat = () => { if (!playing || !lineAnchor || !ctx) return -1; const a = lineAnchor; return a.ppq + (ctx.currentTime - a.time) * tempo() / 60; };
+function sectionAt(beat) {
+  const total = songBars(song.cur) * 4; let b = beat - song.startBeat;
+  if (b >= total) { if (!song.loop) return -2; b %= total; }
+  let k = 0; while (k < song.cur.sections.length - 1 && b >= song.cur.sections[k].bars * 4) { b -= song.cur.sections[k].bars * 4; k++; }
+  return k;
+}
+function sectionStartBeat(k, beat) {
+  const total = songBars(song.cur) * 4, loops = Math.floor(Math.max(0, beat - song.startBeat) / total);
+  return song.startBeat + loops * total + song.cur.sections.slice(0, k).reduce((a, x) => a + x.bars * 4, 0);
+}
+async function songStart() {
+  await startAudio();
+  const m = MOODS[song.cur.mood];
+  moodChoice = song.cur.mood; store.set('ds-mood', moodChoice); $('moodSel').value = String(moodChoice);
+  applyMood(m, { quiet: true, fade: Math.max(fadeTime(), 4) });
+  if (!playing) $('play').click();
+  // the song begins on the next bar line
+  const b = Math.max(0, songBeat()); song.startBeat = playing && b > 0 ? Math.ceil((b + .25) / 4) * 4 : 0; song.section = -1;
+  setStatus(`Song · ${song.cur.name}`);
+}
+function applySection(k, fade) {
+  const x = song.cur.sections[k], F = SECTION_FEEL[x.type], m = MOODS[song.cur.mood];
+  // its chord line, counted from its own first bar
+  lineStartBeat = sectionStartBeat(k, Math.max(0, songBeat()));
+  lineChoice = x.line; lineDirty = false; line = lineFrom(lineBank[lineChoice], lineKey); fillLines(); lineChanged();
+  // its feel: Intensity, Twist and the sub glide; the channels come and go
+  glideParam('intensity', F.intensity, fade); glideParam('twist', Math.max(0, Math.min(1, (m.params.twist ?? .6) + F.twist)), fade); glideParam('subdrop', (m.params.subdrop ?? .5) * F.sub, fade);
+  moodWants.drums = m.drums.on && F.drums;
+  if (moodWants.drums) { const g = F.fuller ? DRUMS.filter(d => d.group === DRUMS[m.drums.groove].group) : null; $('drumSel').value = String(g && g.length > 1 ? g[(g.findIndex(d => d.i === m.drums.groove) + 1) % g.length].i : m.drums.groove); sendDrums(); }
+  channelTo('drums', moodWants.drums, fade);
+  if (HAS_ARP) {
+    moodWants.arp = m.arp.on && F.arp > 0;
+    if (moodWants.arp) { arpPrefs.density = Math.round(Math.max(20, m.arp.density * F.arp)); arpPrefs.octave = m.arp.octave + (F.fuller ? 1 : 0); arpPrefs.seed = m.arp.seed + (F.other ? 7 : 0); arpDirty++; saveArp(); arpControlsShow(); }
+    channelTo('arp', moodWants.arp, fade);
+  }
+  if (HAS_VOX) { moodWants.vox = F.vox === null ? m.vox.on : F.vox && (m.vox.on || x.type !== 'Verse'); channelTo('vox', moodWants.vox, fade); }
+  song.section = k; drawSongHead();
+  setStatus(`Song · ${x.type} · ${x.bars} bars · ${lineBank[x.line].name}`);
+}
+// One parameter of the chord sound gliding to a value
+const glides = {};
+function glideParam(id, to, secs) {
+  clearInterval(glides[id]); const from = values[idx[id]], t0 = performance.now();
+  glides[id] = setInterval(() => { const k = Math.min(1, (performance.now() - t0) / (secs * 1000)); setValue(id, from + (to - from) * (.5 - .5 * Math.cos(Math.PI * k))); if (k >= 1) clearInterval(glides[id]); }, 150);
+}
+function songTick() {
+  if (!song.on) return;
+  const beat = songBeat(); if (beat < song.startBeat - .1) return;
+  const k = sectionAt(beat);
+  if (k === -2) { setSong(false); $('play').click(); setStatus('The song has ended.'); return; }
+  if (k !== song.section) applySection(k, Math.max(4, fadeTime()));
+  drawSongHead();
+}
+setInterval(songTick, 120);
+function drawSongHead() {
+  const beat = songBeat(), total = songBars(song.cur) * 4, f = beat >= song.startBeat && song.on ? (((beat - song.startBeat) % total) + total) % total / total : -1;
+  $('songHead').style.left = f < 0 ? '-10px' : (f * 100) + '%';
+  $('songBlocks').querySelectorAll('.sblock').forEach((b, k) => b.classList.toggle('playing', song.on && k === song.section));
+}
+function setSong(on) {
+  song.on = on; $('songOn').setAttribute('aria-pressed', on); $('songOn2').setAttribute('aria-pressed', on);
+  if (on) { if (endless.on) setEndless(false); songStart(); }
+  else { lineStartBeat = 0; song.section = -1; drawSongHead(); setStatus('Song off: the chord line plays round as before.'); }
+}
+$('songOn').addEventListener('click', () => setSong(!song.on));
+$('songOn2').addEventListener('click', () => setSong(!song.on));
+$('songLoop').setAttribute('aria-pressed', song.loop);
+$('songLoop').addEventListener('click', () => { song.loop = !song.loop; store.set('ds-song-loop', song.loop); $('songLoop').setAttribute('aria-pressed', song.loop); });
+fillSongs(); drawSong();
 
 /* ---------- Recording: the mix, or the mix and each channel on its own (stems), as WAV ----------
    A small worklet takes what the master and each channel's fader send, sample for sample together, and hands it over
@@ -2935,7 +3146,7 @@ function arrowize(sel) {
   new MutationObserver(sync).observe(sel, { childList: true, subtree: true, attributes: true });
   sel._sync = sync;
 }
-document.querySelectorAll('select').forEach(sel => { if (!['soundSel', 'lineSel', 'soundFilter', 'arpSel', 'arpSoundSel', 'kitSel', 'drumSel', 'voxStyleSel', 'voxSpaceSel', 'moodSel'].includes(sel.id)) arrowize(sel); });
+document.querySelectorAll('select').forEach(sel => { if (!['soundSel', 'lineSel', 'soundFilter', 'arpSel', 'arpSoundSel', 'kitSel', 'drumSel', 'voxStyleSel', 'voxSpaceSel', 'moodSel', 'songSel'].includes(sel.id)) arrowize(sel); });
 // keep the arrows right when a menu is set from code (a sound loads, a chord is picked)
 setInterval(() => document.querySelectorAll('.stepper select').forEach(sel => sel._sync && sel._sync()), 400);
 fillSessions(); fillLines(); drawSlots(); drawPads(); lastNotes = voiceLine();

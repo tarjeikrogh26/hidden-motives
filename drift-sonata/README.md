@@ -53,6 +53,12 @@ tempoet glir dit. Endless reiser selv mellom stemningene (mest i samme familie, 
 gjør små endringer på taktstrekene innimellom: ny akkordlinje, en annen arp, et trommebrekk, vox inn eller ut, mer
 eller mindre Twist, av og til en ny toneart. Opptak tar mikset, eller mikset og hver kanal for seg, som WAV.
 
+Song line spiller en hel sang: en stemning og en rekke deler (intro, vers, refreng, bro, breakdown, outro), hver med
+egen akkordlinje og lengde og sin egen følelse (refrenget åpner seg, breakdown slipper trommene, intro og outro står
+langt unna). Hver del starter sin akkordlinje på sin egen første takt, kanalene fader inn og ut, og Intensity, Twist
+og sub glir. 192 sanger, én per stemning, i fem former; delene kan endres, flyttes, legges til og lagres, og
+MIDI-eksporten tar hele sangen med markører for delene.
+
 Lydbytter fader over: motoren har to motorer per kanal (akkord og arp), og trommesett, grooves, arp-mønstre og
 vox-stiler fader også over tiden som er valgt under Fade.
 
