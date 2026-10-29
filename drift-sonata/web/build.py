@@ -61,6 +61,7 @@ def main():
     ap.add_argument('--piano')
     ap.add_argument('--guitar')
     ap.add_argument('--asmr')
+    ap.add_argument('--world')
     a = ap.parse_args()
 
     with tempfile.TemporaryDirectory() as tmp:
@@ -91,7 +92,7 @@ def main():
                 if not m or not name.lower().endswith('.wav'):
                     continue
                 m4a = os.path.join(tmp, name + '.m4a')
-                run(['ffmpeg', '-v', 'error', '-y', '-i', os.path.join(a.samples, name), '-ac', '1', '-c:a', 'aac', '-b:a', '96k', m4a])
+                run(['ffmpeg', '-v', 'error', '-y', '-i', os.path.join(a.samples, name), '-ac', '1', '-c:a', 'aac', '-b:a', '80k', m4a])
                 samples.append({'fam': fams.index(m.group(1)), 'root': float(m.group(2).rstrip('.')),
                                 'b64': base64.b64encode(open(m4a, 'rb').read()).decode()})
 
@@ -119,15 +120,18 @@ def main():
                 run(['ffmpeg', '-v', 'error', '-y', '-i', os.path.join(a.piano, v['file']), '-ac', '1', '-c:a', 'aac', '-b:a', '160k', m4a])
                 piano.append({k: v[k] for k in ('midi', 'len', 'bright', 'parts') if k in v} | {'b64': base64.b64encode(open(m4a, 'rb').read()).decode()})
 
-        guitar = {'regions': [], 'phrases': []}
-        if a.guitar:
-            # Guitar stretches and the phrases in them, from tools/chop_guitar.py, the stretches as AAC
-            g = json.load(open(os.path.join(a.guitar, 'guitar.json')))
+        def phrases(folder, rate):
+            # Stretches and the phrases in them, from tools/chop_guitar.py, the stretches as AAC
+            out = {'regions': [], 'phrases': []}
+            if not folder: return out
+            g = json.load(open(os.path.join(folder, 'guitar.json')))
             for r in g['regions']:
                 m4a = os.path.join(tmp, r['file'] + '.m4a')
-                run(['ffmpeg', '-v', 'error', '-y', '-i', os.path.join(a.guitar, r['file']), '-ac', '1', '-c:a', 'aac', '-b:a', '80k', m4a])
-                guitar['regions'].append({'src': r['src'], 'len': r['len'], 'b64': base64.b64encode(open(m4a, 'rb').read()).decode()})
-            guitar['phrases'] = g['phrases']
+                run(['ffmpeg', '-v', 'error', '-y', '-i', os.path.join(folder, r['file']), '-ac', '1', '-c:a', 'aac', '-b:a', rate, m4a])
+                out['regions'].append({'src': r['src'], 'len': r['len'], 'b64': base64.b64encode(open(m4a, 'rb').read()).decode()})
+            out['phrases'] = g['phrases']
+            return out
+        guitar, world = phrases(a.guitar, '64k'), phrases(a.world, '48k')
 
         asmr = {'pieces': [], 'b64': ''}
         if a.asmr:
@@ -143,6 +147,7 @@ def main():
     page = page.replace('"@@PIANO@@"', json.dumps(piano, separators=(',', ':')))
     page = page.replace('"@@GUITAR@@"', json.dumps(guitar, separators=(',', ':')))
     page = page.replace('"@@ASMR@@"', json.dumps(asmr, separators=(',', ':')))
+    page = page.replace('"@@WORLD@@"', json.dumps(world, separators=(',', ':')))
     page = page.replace('<!--@@ARP@@-->', arp_scripts(a.arp) if a.arp else '')
     if a.header:
         ext = os.path.splitext(a.header)[1].lower().lstrip('.')
@@ -154,7 +159,7 @@ def main():
                             '<style>.banner .word,.banner .orb{display:none}.banner{aspect-ratio:3/1!important;border:none}</style>')
     os.makedirs(os.path.dirname(os.path.abspath(a.out)), exist_ok=True)
     open(a.out, 'w').write(page)
-    print(f'{a.out}: {len(page) / 1e6:.2f} MB, {len([x for x in samples if "fam" in x])} recordings, {len([x for x in samples if "table" in x])} wavetables, {len(hits)} drum hits, {len(vox)} vox pieces, {len(piano)} piano notes, {len(guitar["phrases"])} guitar phrases, {len(asmr["pieces"])} asmr pieces')
+    print(f'{a.out}: {len(page) / 1e6:.2f} MB, {len([x for x in samples if "fam" in x])} recordings, {len([x for x in samples if "table" in x])} wavetables, {len(hits)} drum hits, {len(vox)} vox pieces, {len(piano)} piano notes, {len(guitar["phrases"])} guitar phrases, {len(asmr["pieces"])} asmr pieces, {len(world["phrases"])} world phrases')
 
 
 if __name__ == '__main__':

@@ -2,6 +2,9 @@
 """Cuts guitar recordings into short phrases for DRIFT SONATA's Guitar channel.
 
   python3 tools/chop_guitar.py <out folder> <file> [<file> ...]
+  KEEP=4 python3 tools/chop_guitar.py ...   (keep less of each recording)
+
+The World channel's recordings (cümbüş, oud, ruan ...) are cut the same way.
 
 A guitar rings: its notes lie over each other, so it is cut into phrases rather than notes. Every phrase starts on an
 attack (spectral flux) in the liveliest stretch of the recording (8 s are kept of each, two stretches of 4 s from a
@@ -18,7 +21,7 @@ import numpy as np
 
 SR = 44100
 PER_FILE = 22
-KEEP = 8.0  # seconds of each recording kept: its liveliest stretch (two shorter ones from a long recording)
+KEEP = float(os.environ.get('KEEP', 8))  # seconds of each recording kept: its liveliest stretch (two shorter ones from a long recording)
 
 
 def read(path):

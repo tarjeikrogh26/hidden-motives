@@ -27,11 +27,12 @@ Motoren er ren C++ (`dsp/`) uten plugin-kode. Den samme koden kjører i dag i ne
 python3 web/build.py --wasi-sdk /sti/til/wasi-sdk --out dist/DriftSonata.html \
     --samples /sti/til/enkelttoner --header assets/header.webp --arp /sti/til/AVANTGARDIAN-ARP/dist \
     --drums /sti/til/trommeslag --vox /sti/til/vox-biter --piano /sti/til/pianotoner \
-    --guitar /sti/til/gitarfraser --asmr /sti/til/asmr
+    --guitar /sti/til/gitarfraser --asmr /sti/til/asmr --world /sti/til/world-fraser
 ```
 
 Sida må holde seg under 16 MB (artifact-grensen); `build.py` skriver ut størrelsen. Lydene legges inn som AAC med
-bitrater valgt for det: opptakene 96k, trommeslag 80k, vox 72k, gitar 80k, ASMR 48k.
+bitrater valgt for det: opptakene 80k, trommeslag 80k, vox 72k, gitar 64k, world og ASMR 48k. World-opptakene kuttes
+med `KEEP=2.5 python3 tools/chop_guitar.py <ut-mappe> <filer>` (2,5 s beholdes av hvert).
 
 Opptakene kommer fra samplepakker og ligger derfor ikke i repoet. Uten `--samples` spiller synthen alene.
 
@@ -67,6 +68,11 @@ stykket av hvert opptak og finner frasene i det (ett, to eller fire slag, plukk 
 velger sida frasen som passer best, flyttet noen halvtoner og i et tempo nær sangens; gitaristen kommer innom i
 passasjer. 30 måter å spille på (flamenco, nylon, strum-svell, ørkenløp, leirbål, duende) i fem rom.
 
+World er en spiller med mange instrumenter (cümbüş, oud, ruan, santoor, sarod, jaltarang, pku, zurna, irakisk fiolin,
+tumbi), spilt som gitaren fra fraser i opptakene og flyttet til akkordene. Han tenker i 32 takter: når han vandrer, tar
+han et nytt instrument og en ny måte å spille på for hver (fri taqsim, hypnotisk ostinato, spørsmål og svar, tremolo-
+blomst, duett). Han deler stripe med gitaren.
+
 ASMR har sin egen motor: `tools/chop_asmr.py <ut-mappe> <filer>` legger stemmer, hvisking og nær foley etter hverandre
 i én fil. Sida tar korn på 20-400 ms, baklengs, flyttet i oktaver og kvinter, stammende, og kaster dem helt inntil
 ørene i korte byger (flutter, crawl, cloud, crackle, glitch, swarm), over bassen og under musikken. Ingenting spilles
@@ -93,7 +99,9 @@ Overganger: reverserte svell (neste akkord slått mykt gjennom et langt rom og s
 lander på skiftet, på hvert akkordskifte eller bare inn i nye deler), en stigning før nye deler (skimmeret klatrer,
 rommet fryses siste takt, alt slippes på første takt) og pumping med sparken (sidechain på akkord og arp).
 
-692 stemninger: de 192 og 500 ensemble-stemninger der hver har et band på fire til seks instrumenter, alltid med piano
+1192 stemninger: de 192, 500 ensemble-stemninger og 500 Far and wide, så ulike som mulig (hele lydbanken, alle
+akkordlinjer, alle tonearter rundt kvintsirkelen, tempo jevnt fra 60 til 124, alle sett og grooves, sitt eget band og sin
+egen miks), med en sang til hver. Ensemble-stemningene har hver et band på fire til seks instrumenter, alltid med piano
 eller gitar. ★ ved siden av terningen lagrer det som spiller nå som din egen (under Your sessions). Et stemningsbytte
 er en oppløsning: hele mikset synker inn i et mykt lavpass og et langt rom, den nye stemningen kommer på bunnen av
 det, og alt åpner seg igjen. Telleren i baren viser spilt og igjen av sangen (♪), av stemningen til Endless eller
@@ -108,6 +116,10 @@ alene. Arpen spiller mørkere og lenger bak når en melodi synger, bytter mønst
 takt helt ut til kanten av rommet og tilbake. Stemmene skifter stil, rom, sangere eller måte å synge på omtrent hvert
 minutt. Når en stemning har spilt lenge (2,5 til 4 minutter) kommer en fet synthbass inn i 32 takter (Reese, Moog,
 Juno, growl, wobble, oktavstabel) og går så igjen.
+
+Eco (Auto, På, Av, i akkordlinjekortet): når maskinen ikke henger med, spiller sida lettere: enkelttoner og korn med
+vanlig panorering i stedet for hodets filtre, halvparten av ASMR-kornene, én kanal færre om gangen i Alive, og visningene
+tegnes sjeldnere. Visningene tegnes uansett bare når de vises, rundt 20 ganger i sekundet.
 
 Lydbytter fader over: motoren har to motorer per kanal (akkord og arp), og trommesett, grooves, arp-mønstre og
 vox-stiler fader også over tiden som er valgt under Fade.
