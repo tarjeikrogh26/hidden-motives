@@ -58,6 +58,7 @@ def main():
     ap.add_argument('--arp')
     ap.add_argument('--drums')
     ap.add_argument('--vox')
+    ap.add_argument('--piano')
     a = ap.parse_args()
 
     with tempfile.TemporaryDirectory() as tmp:
@@ -108,10 +109,19 @@ def main():
                 run(['ffmpeg', '-v', 'error', '-y', '-i', os.path.join(a.vox, v['file']), '-ac', '1', '-c:a', 'aac', '-b:a', '112k', m4a])
                 vox.append({k: v[k] for k in ('kind', 'singer', 'midi', 'len', 'bright') if k in v} | {'b64': base64.b64encode(open(m4a, 'rb').read()).decode()})
 
+        piano = []
+        if a.piano:
+            # Piano notes cut by tools/chop_piano.py, as AAC, with their key and partials
+            for v in json.load(open(os.path.join(a.piano, 'piano.json'))):
+                m4a = os.path.join(tmp, v['file'] + '.m4a')
+                run(['ffmpeg', '-v', 'error', '-y', '-i', os.path.join(a.piano, v['file']), '-ac', '1', '-c:a', 'aac', '-b:a', '160k', m4a])
+                piano.append({k: v[k] for k in ('midi', 'len', 'bright', 'parts') if k in v} | {'b64': base64.b64encode(open(m4a, 'rb').read()).decode()})
+
     page = open(os.path.join(HERE, 'page.html')).read()
     page = page.replace('"@@DATA@@"', data).replace('"@@WASM@@"', json.dumps(wasm_b64)).replace('"@@SAMPLES@@"', json.dumps(samples))
     page = page.replace('"@@DRUMHITS@@"', json.dumps(hits, separators=(',', ':')))
     page = page.replace('"@@VOX@@"', json.dumps(vox, separators=(',', ':')))
+    page = page.replace('"@@PIANO@@"', json.dumps(piano, separators=(',', ':')))
     page = page.replace('<!--@@ARP@@-->', arp_scripts(a.arp) if a.arp else '')
     if a.header:
         ext = os.path.splitext(a.header)[1].lower().lstrip('.')
@@ -123,7 +133,7 @@ def main():
                             '<style>.banner .word,.banner .orb{display:none}.banner{aspect-ratio:3/1!important;border:none}</style>')
     os.makedirs(os.path.dirname(os.path.abspath(a.out)), exist_ok=True)
     open(a.out, 'w').write(page)
-    print(f'{a.out}: {len(page) / 1e6:.2f} MB, {len([x for x in samples if "fam" in x])} recordings, {len([x for x in samples if "table" in x])} wavetables, {len(hits)} drum hits, {len(vox)} vox pieces')
+    print(f'{a.out}: {len(page) / 1e6:.2f} MB, {len([x for x in samples if "fam" in x])} recordings, {len([x for x in samples if "table" in x])} wavetables, {len(hits)} drum hits, {len(vox)} vox pieces, {len(piano)} piano notes')
 
 
 if __name__ == '__main__':

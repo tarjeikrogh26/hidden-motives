@@ -26,7 +26,7 @@ Motoren er ren C++ (`dsp/`) uten plugin-kode. Den samme koden kjører i dag i ne
 ```sh
 python3 web/build.py --wasi-sdk /sti/til/wasi-sdk --out dist/DriftSonata.html \
     --samples /sti/til/enkelttoner --header assets/header.webp --arp /sti/til/AVANTGARDIAN-ARP/dist \
-    --drums /sti/til/trommeslag --vox /sti/til/vox-biter
+    --drums /sti/til/trommeslag --vox /sti/til/vox-biter --piano /sti/til/pianotoner
 ```
 
 Opptakene kommer fra samplepakker og ligger derfor ikke i repoet. Uten `--samples` spiller synthen alene.
@@ -40,7 +40,22 @@ Trommeslagene klippes ut av trommeloops og perkusjonsopptak med `tools/chop_drum
 spektral fluks finner slagene, og hvor energien ligger sorterer dem i spark, skarp, hi-hat og perc. Skarper
 og hi-hats får lavkutt, så sparken i en break ikke blør med. `--drums` legger dem inn i sida, der de blir til
 trommesett sammen med syntetiserte lyder (343 sett: elektroniske, breaks, hybrider og perkusjon). Uten
-`--drums` finnes bare de elektroniske settene.
+`--drums` finnes bare de elektroniske settene. Hver tromme i et sett finnes i fem varianter (litt høyere eller lavere,
+lengre eller kortere, andre slag av samme slag fra samme opptak, mørkere eller lysere), og motoren tar dem på
+omgang, aldri samme to ganger, litt tidlig eller sent og litt mykere eller hardere, som en trommis. Hver groove
+varierer over 32 takter: hi-hat-spøkelser, fills hver fjerde og åttende takt, åpen hi-hat, sparken som hviler, og et
+brekk i takt 32. Enkeltslag-skarper (`snare`) går inn i settene; snaps, effekter, foley (`texture`) og
+orkesterloops (`orch`) går til Perc-kanalen.
+
+Perc er en egen kanal med fem perkusjonsspor, hvert på sin egen euklidske rytme og syklus, som glir mot hverandre;
+over 32 takter kommer sporene inn og går ut. 96 sett i smaker (hender, snaps, gnister, smuler, orkester, natt,
+blandet, laget) og 48 rytmer. Hvert slag har sin plass rundt hodet og flyr mens det ringer.
+
+Melodi-kanalen har en lead som synger et lite motiv og svarer seg selv over akkordene (akkordtoner på de sterke
+slagene), og en bass som følger grunntonene i sju mønstre. Piano-kanalen er et mykt filtpiano laget med
+`tools/chop_piano.py <ut-mappe> <filer>`: rene enkelttoner skilles ut av pianoopptak (venstre hånd filtreres bort),
+og hver tangent starter med en ekte innspilt tone og ringer videre på to strenger, laget av de målte deltonene. Det
+spiller lange, enkle linjer i passasjer, av og til, langt ute i et stort mørkt rom.
 
 Vox-sporet lages av vokalister med `tools/chop_vox.py <ut-mappe> <navn>=<fil> ...`: et tonesøk (YIN) finner nynn og
 holdte vokaler, starten på stavelser blir korte ordbiter (aldri hele ord), og pust tas med. Sungne akkorder med
@@ -62,6 +77,14 @@ MIDI-eksporten tar hele sangen med markører for delene.
 Overganger: reverserte svell (neste akkord slått mykt gjennom et langt rom og spilt baklengs, så den vokser opp og
 lander på skiftet, på hvert akkordskifte eller bare inn i nye deler), en stigning før nye deler (skimmeret klatrer,
 rommet fryses siste takt, alt slippes på første takt) og pumping med sparken (sidechain på akkord og arp).
+
+Alive (på som standard): når ingen har rørt noe på 30 sekunder, lever maskinen selv som i Endless: nye
+akkordlinjer og lyder, arpen snur, andre sett og grooves, leads og basser, pianoet, stemmene, og etter hvert nye
+stemninger. Endringene lander på frasegrenser. Et arrangement med egen klokke lar kanalene komme og gå, så det aldri
+spiller alt på én gang (færre når rolig, flere når urolig), og akkordene løftes opptil 4,5 dB når de står nesten
+alene. Arpen spiller mørkere og lenger bak når en melodi synger, bytter mønster hver 16. takt og drar én gang hver 32.
+takt helt ut til kanten av rommet og tilbake. Stemmene skifter stil, rom, sangere eller måte å synge på omtrent hvert
+minutt.
 
 Lydbytter fader over: motoren har to motorer per kanal (akkord og arp), og trommesett, grooves, arp-mønstre og
 vox-stiler fader også over tiden som er valgt under Fade.

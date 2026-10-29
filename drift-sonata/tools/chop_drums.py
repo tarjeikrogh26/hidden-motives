@@ -5,8 +5,9 @@
 
 Every file is read through ffmpeg (WAV or AIFF), its hits found by spectral flux, and each hit sorted into
 kick, snare, hat or perc by where its energy sits. A loop gives a few of each (the cleanest: a hit with room
-after it, and different from the ones already taken); a percussion file (toms, congas, cowbells ...) gives its
-hits as perc. The out folder gets one 16-bit mono WAV per hit and hits.json describing them. The recordings
+after it, and different from the ones already taken); a percussion file (toms, congas, cowbells ...), a snap, an
+effect, a foley texture or an orchestral loop gives its hits as perc (each kind in its own pool for the Perc channel);
+a one-shot snare goes to the drum kits as a snare. The out folder gets one 16-bit mono WAV per hit and hits.json describing them. The recordings
 come from sample packs, so neither they nor the hits go into the repository; build.py --drums embeds them.
 """
 import json, os, re, subprocess, sys, wave
@@ -24,7 +25,23 @@ SOURCES = [
     (r'Cowbells', 'perc', 'Cowbell'), (r'hats_stereo', 'hatloop', 'Tek hats'), (r'shaker_loop', 'shaker', 'Shaker'),
     (r'Toms', 'perc', 'Toms'), (r'06_Tom', 'perc', 'Tom'), (r'Tom_D', 'perc', 'Low tom'), (r'Bongos', 'perc', 'Bongo'),
     (r'CONGA|Conga', 'perc', 'Conga'), (r'Timbales', 'perc', 'Timbale'), (r'cuts_meat', 'perc', 'Meat cut'),
+    (r'Percussion_66', 'perc', 'Lys'), (r'Coin_Bag', 'perc', 'Coin bag'), (r'Perc_1_', 'perc', 'Perc one'), (r'Perc_5_', 'perc', 'Perc five'),
+    (r'Rims_-_Operator', 'perc', 'Operator rim'),
+    (r'snap__landscape', 'snap', 'Landscape snap'), (r'Snap_Human', 'snap', 'Human snap'), (r'snap_castanet', 'snap', 'Castanet'),
+    (r'Whoosh_rask', 'fx', 'Whoosh'), (r'IceCrackFreeze', 'fx', 'Ice crack'), (r'RatSqueak', 'fx', 'Squeak'), (r'laser_hot', 'fx', 'Laser'),
+    (r'cricket_tek', 'fx', 'Cricket'), (r'impact_smell', 'fx', 'Impact'),
+    (r'eating_chips_left', 'texture', 'Chips left'), (r'eating_chips_right_ear_var', 'texture', 'Chips var'), (r'eating_chips_right_ear\.', 'texture', 'Chips right'),
+    (r'spray_bottle', 'texture', 'Spray'), (r'aluminum_foil', 'texture', 'Foil'), (r'apple_jimmy', 'texture', 'Apple'),
+    (r'Drum_Fill_Loop_Orchestral', 'orch', 'Orchestral fill'), (r'ORCHST_LOOP_01', 'orch', 'Orchestra one'), (r'ORCHST_LOOP_03', 'orch', 'Orchestra three'),
+    (r'ORCHST_LOOP_06', 'orch', 'Orchestra sticks'), (r'ORCHST_LOOP_10', 'orch', 'Orchestra ten'),
+    (r'snare_trap', 'snare', 'Trap snare'), (r'thick_snappy_dark', 'snare', 'Dark snare'), (r'snare_48', 'snare', 'Snare 48'),
+    (r'snare_A_015', 'snare', 'Snare A'), (r'SNARE_25', 'snare', 'Snare 25'),
 ]
+# Kinds: loop (a break: kick, snare, hat and perc sorted out), perc (hand percussion), hatloop and shaker (hats), snap (snaps
+# and castanets), fx (one-shot effects: cracks, lasers, crickets, whooshes), texture (foley: chips, foil, spray, cut into
+# crumbs), orch (orchestral percussion loops, cut into hits) and snare (a one-shot snare for the drum kits)
+MAXLEN = {'loop': .7, 'perc': 1.4, 'hatloop': .35, 'shaker': .3, 'snap': .8, 'fx': 2.2, 'texture': .45, 'orch': 1.1, 'snare': 1.0}
+ROOM_CUT = ('loop', 'texture', 'orch')  # cut where the next hit starts
 TAKE = {'kick': 3, 'snare': 3, 'hat': 3, 'perc': 3}
 
 
@@ -111,16 +128,16 @@ def main():
         for k, s in enumerate(on):
             nxt = on[k + 1] if k + 1 < len(on) else len(x)
             room = (nxt - s) / SR
-            maxlen = {'loop': .7, 'perc': 1.4, 'hatloop': .35, 'shaker': .3}[kind]
-            h = x[s:s + int(SR * min(maxlen, room if kind == 'loop' else maxlen))]
+            maxlen = MAXLEN[kind]
+            h = x[s:s + int(SR * min(maxlen, room if kind in ROOM_CUT else max(room, .5) if kind == 'fx' else maxlen))]
             if len(h) < SR * .03 or np.abs(h).max() < .02: continue
             low, high, cen, flat = features(h)
-            cls = classify(low, high, cen, flat) if kind == 'loop' else 'hat' if kind in ('hatloop', 'shaker') else 'perc'
+            cls = classify(low, high, cen, flat) if kind == 'loop' else 'hat' if kind in ('hatloop', 'shaker') else 'snare' if kind == 'snare' else 'perc'
             loud = float(np.sqrt(np.mean(h[:int(SR * .05)] ** 2)))
             cands.append(dict(h=h, cls=cls, room=room, loud=loud, feat=(low, high, cen / 10000, flat)))
         # per class: the clean, strong ones first, then only ones that sound different from those taken
         taken = {}
-        limit = dict(TAKE) if kind == 'loop' else {'perc': 8 if kind == 'perc' else 3, 'hat': 3}
+        limit = dict(TAKE) if kind == 'loop' else {'perc': {'perc': 8, 'snap': 6, 'fx': 4, 'texture': 10, 'orch': 8}.get(kind, 3), 'hat': 3, 'snare': 1}
         for c in sorted(cands, key=lambda c: -(min(c['room'], .3) * 3 + c['loud'] * 4)):
             t = taken.setdefault(c['cls'], [])
             if len(t) >= limit.get(c['cls'], 0): continue
@@ -129,7 +146,7 @@ def main():
         for cls, t in taken.items():
             for c in t:
                 h = c['h']
-                if cls in ('snare', 'hat'): h = highpass(h, 160 if cls == 'snare' else 400)
+                if cls in ('snare', 'hat'): h = highpass(h, (90 if kind == 'snare' else 160) if cls == 'snare' else 400)
                 h = trim(h)
                 n = count[label, cls] = count.get((label, cls), 0) + 1  # several files can share a name (Toms, Conga)
                 fn = re.sub(r'[^a-z0-9]+', '-', label.lower()) + f'-{cls}-{n}.wav'

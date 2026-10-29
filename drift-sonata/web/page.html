@@ -184,17 +184,23 @@ details.room .eyebrow { color: #9fc3c4; }
 @media (prefers-reduced-motion: reduce) { .btn.rec[aria-pressed=true] { animation: none; } .toast { transition: none; } }
 .master { flex: none; }
 .masterrow { display: flex; align-items: center; gap: 6px; }
-.mixer { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
-.no-arp .mixer, .no-vox .mixer { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-.no-arp.no-vox .mixer { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.mixer { display: grid; grid-template-columns: repeat(var(--strips, 7), minmax(0, 1fr)); gap: 6px; }
 .tag .ts { display: none; }
 @media (min-width: 1500px) { .dock-in { max-width: 1560px; } }
-/* below that the four channels still sit side by side: the labels shorten, the jumps by ten step aside, the meters slim */
-@media (max-width: 1499px) {
-  .bankrow { grid-template-columns: 28px minmax(0, 1fr); }
+@media (min-width: 1960px) { .dock-in { max-width: 1900px; } }
+/* below that the seven channels still sit side by side: the labels shorten, the jumps by ten step aside, the meters slim */
+@media (max-width: 1959px) {
+  .mixer .bankrow { grid-template-columns: minmax(0, 1fr); gap: 0; } .mixer .bankrow .tag { display: none; }
+  .mixer .nav button { min-width: 19px; padding: 2px 2px; font-size: 13px; } .mixer .nav .dice { font-size: 14px; }
+  .strip-head { gap: 4px; } .strip-head .meter { min-width: 0; flex: 1 1 0; }
+  .btn.sw.small2 { font-size: 12px; padding: 2px 5px; }
+  .nav { gap: 2px; } .nav button { min-width: 21px; padding: 2px 3px; }
   .tag .tl, .tag b { display: none; } .tag .ts { display: block; }
   .nav button[data-d="-10"], .nav button[data-d="10"] { display: none; }
-  .strip .lvl { width: 60px; } .db { width: 42px; font-size: 10px; }
+  .mixer .strip .lvl { width: auto; flex: 1 1 30px; min-width: 30px; } .strip .db { display: none; } .db { width: 38px; font-size: 9.5px; }
+  /* the meter becomes a thin light along the top of its strip */
+  .strip { position: relative; } .strip-head .meter { position: absolute; left: 6px; right: 6px; top: 1px; height: 3px; min-width: 0; }
+  .strip-head .btn.sw { flex: none; }
   .nav select.mini { display: none; }
   .nav select { font-size: 13.5px; padding: 3px 4px; }
   .strip { padding: 6px 6px 7px; }
@@ -235,7 +241,7 @@ details.room .eyebrow { color: #9fc3c4; }
   .transport .field[title] { display: none; }
   .master { flex: 1 1 auto; min-width: 0; } .masterrow .meter { display: none; } .master .lvl { flex: 1 1 auto; width: auto; min-width: 60px; }
 }
-.no-arp .arp-only, .no-vox .vox-only { display: none !important; }
+.no-arp .arp-only, .no-vox .vox-only, .no-piano .piano-only { display: none !important; }
 .songcard h2 { font-family: var(--display); font-size: 30px; font-weight: 600; font-style: italic; }
 .songbar { align-items: center; }
 .songbank { flex: 1 1 320px; grid-template-columns: 44px minmax(0, 1fr); }
@@ -248,6 +254,13 @@ details.room .eyebrow { color: #9fc3c4; }
 .sblock.editing { outline: 2px solid var(--gold); }
 .shead { position: absolute; top: -3px; bottom: -3px; width: 2px; background: var(--ink); border-radius: 1px; left: -10px; pointer-events: none; transition: left .12s linear; }
 .strip.vox { --strip: #8e7cc3; }
+.strip.mel { --strip: #5b8fd6; }
+.strip.perc { --strip: #d98a4a; }
+.perccard h2 { font-family: var(--display); font-size: 30px; font-weight: 600; font-style: italic; }
+canvas#percOrbit { width: 100%; aspect-ratio: 1; max-width: 260px; justify-self: center; display: block; border-radius: 50%; background: radial-gradient(circle, #21474f 0%, #17363e 70%); }
+.btn.sw.small2 { font-size: 13px; padding: 3px 6px; }
+.melcard h2 { font-family: var(--display); font-size: 30px; font-weight: 600; font-style: italic; }
+canvas#melView { width: 100%; height: 100px; display: block; border-radius: 6px; background: var(--night); }
 .voxcard h2 { font-family: var(--display); font-size: 30px; font-weight: 600; font-style: italic; }
 .vox-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr); gap: 16px; align-items: start; }
 .vox-room .col { display: flex; flex-direction: column; gap: 4px; }
@@ -354,6 +367,29 @@ canvas#lifeView { width: 100%; height: 180px; display: block; border-radius: 6px
     </div>
   </details>
 
+  <details class="card fold perccard" id="percCard" data-fold="perc" open>
+    <summary class="head"><h2>Perc</h2><span class="eyebrow">five lanes · their own cycles · all round you</span></summary>
+    <p>Five lanes of percussion, each on its own rhythm and its own cycle, so they drift against each other and meet again. Over 32 bars the lanes come in and step out. Each circles you at its own height and pace, each hit flies a little while it rings.</p>
+    <div class="vox-grid">
+      <div class="orbit-wrap vox-room"><canvas id="percOrbit" width="260" height="260" aria-label="Where the percussion is now, seen from above, one colour per lane"></canvas></div>
+      <div class="life-controls" id="percControls"></div>
+    </div>
+  </details>
+
+  <details class="card fold melcard" id="melCard" data-fold="mel" open>
+    <summary class="head"><h2>Lead &amp; bass</h2><span class="eyebrow">a melody that answers itself · a bass that walks the roots</span></summary>
+    <p>The lead sings a small motif and keeps answering it over the chords: chord notes on the strong beats, steps of the key between, long notes gliding into each other, now and then a phrase of silence. The bass follows the roots in seven patterns. Switch them on in the Melody channel below.</p>
+    <canvas id="melView" width="1100" height="100" aria-label="One loop of the lead (rose) over the bass (teal)"></canvas>
+    <div class="life-controls" id="melControls"></div>
+  </details>
+
+  <details class="card fold pianocard piano-only" id="pianoCard" data-fold="piano" open>
+    <summary class="head"><h2>Piano</h2><span class="eyebrow">long, simple lines · now and then · far out in the room</span></summary>
+    <p>A soft felt piano: each key starts with a real recorded note and rings on, on two strings a hair apart. It plays in passages, a few phrases of long notes answering each other over the chords, then leaves the room to the others. Every note has its own place and drifts while it rings, into a big dark room and a slow echo.</p>
+    <canvas id="pianoView" width="1100" height="90" aria-label="One loop of the piano: its passages and silences"></canvas>
+    <div class="life-controls" id="pianoControls"></div>
+  </details>
+
   <details class="card fold voxcard vox-only" id="voxCard" data-fold="vox" open>
     <summary class="head"><h2>Vox</h2><span class="eyebrow"><span id="voxInfo"></span> · no words, a new voice</span></summary>
     <p>Hums, held vowels, bits of syllables, breaths and sung chords from all the singers, tuned to the chords and laid across each other into a voice nobody has. Each piece takes its own path through the room; now and then one is thrown into the echo or the big room. Choose a Style and a Space in the bar below.</p>
@@ -443,7 +479,7 @@ canvas#lifeView { width: 100%; height: 180px; display: block; border-radius: 6px
   <div class="dock-in">
     <div class="transport top">
       <button class="play" id="play" type="button" aria-label="Play the chord line"><svg viewBox="0 0 20 20" id="playIcon"><path d="M5 3l12 7-12 7z"/></svg></button>
-      <span class="endless-group"><button class="btn sw endless" id="songOn2" type="button" aria-pressed="false" title="Play the song in the Song line card">♪ Song</button><button class="btn sw endless" id="endlessOn" type="button" aria-pressed="false" title="Endless: a journey through the moods that never repeats">∞ Endless</button><button class="btn small" id="paceBtn" type="button" title="How fast the journey moves">Drifting</button></span>
+      <span class="endless-group"><button class="btn sw endless" id="songOn2" type="button" aria-pressed="false" title="Play the song in the Song line card">♪ Song</button><button class="btn sw endless" id="endlessOn" type="button" aria-pressed="false" title="Endless: a journey through the moods that never repeats">∞ Endless</button><button class="btn sw endless" id="aliveOn" type="button" aria-pressed="true" title="Alive: when nobody touches anything for 30 seconds, it changes by itself, channels come and go">✦ Alive</button><button class="btn small" id="paceBtn" type="button" title="How fast the journey moves">Drifting</button></span>
       <div class="moodbank"><label class="tag" for="moodSel"><span class="tl">Mood</span><span class="ts">Mood</span><b id="moodCount"></b></label>
         <div class="nav"><button type="button" data-bank="mood" data-d="-10" aria-label="Back 10 moods">«</button><button type="button" data-bank="mood" data-d="-1" aria-label="Previous mood">‹</button><select id="moodSel" aria-label="Mood"></select><button type="button" data-bank="mood" data-d="1" aria-label="Next mood">›</button><button type="button" data-bank="mood" data-d="10" aria-label="Forward 10 moods">»</button><button type="button" class="dice" id="moodDice" title="A random mood" aria-label="A random mood">⚄</button></div></div>
       <span class="recgroup"><button class="btn rec" id="recBtn" type="button" aria-pressed="false" title="Record">●</button><button class="btn small" id="recWhat" type="button" data-v="mix" title="Record the mix, or the mix and each channel on its own">Mix</button><span id="recTime" class="db"></span></span>
@@ -459,31 +495,50 @@ canvas#lifeView { width: 100%; height: 180px; display: block; border-radius: 6px
     <div class="mixer">
       <section class="strip chord" aria-label="Chord">
         <div class="strip-head"><button class="btn sw" id="chordOn" type="button" aria-pressed="true">Chord</button><span class="meter" aria-hidden="true"><b id="chordLevelMeter"></b></span><input type="range" id="chordLevel" class="lvl" min="-30" max="6" step="0.5" value="0" aria-label="Chord level"><output id="chordLevelOut" class="db">0 dB</output></div>
-        <div class="bankrow"><label class="tag" for="soundSel"><span class="tl">Sound</span><span class="ts">Snd</span><b id="soundCount"></b></label>
-          <div class="nav"><button type="button" data-bank="sound" data-d="-10" aria-label="Back 10 sounds">«</button><button type="button" data-bank="sound" data-d="-1" aria-label="Previous sounds">‹</button><select id="soundSel" aria-label="Sound"></select><button type="button" data-bank="sound" data-d="1" aria-label="Next sounds">›</button><button type="button" data-bank="sound" data-d="10" aria-label="Forward 10 sounds">»</button><button type="button" class="dice" id="soundDice" title="Randomize the sound" aria-label="Randomize the sound">⚄</button><select id="soundFilter" class="mini" aria-label="Which sounds to show" title="Which sounds to show"><option value="all">All</option><option value="clean">Clean</option><option value="warm">Warm</option></select></div></div>
-        <div class="bankrow"><label class="tag" for="lineSel"><span class="tl">Line</span><span class="ts">Line</span><b id="lineCount"></b></label>
-          <div class="nav"><button type="button" data-bank="line" data-d="-10" aria-label="Back 10 chord lines">«</button><button type="button" data-bank="line" data-d="-1" aria-label="Previous chord lines">‹</button><select id="lineSel" aria-label="Chord line"></select><button type="button" data-bank="line" data-d="1" aria-label="Next chord lines">›</button><button type="button" data-bank="line" data-d="10" aria-label="Forward 10 chord lines">»</button><button type="button" class="dice" id="lineDice" title="Random chord line" aria-label="Random chord line">⚄</button></div></div>
+        <div class="bankrow"><label class="tag" for="soundSel"><span class="tl">Sound</span><span class="ts">Sn</span><b id="soundCount"></b></label>
+          <div class="nav"><button type="button" data-bank="sound" data-d="-10" aria-label="Back 10 sounds">«</button><button type="button" data-bank="sound" data-d="-1" aria-label="Previous sounds">‹</button><select id="soundSel" title="Sound" aria-label="Sound"></select><button type="button" data-bank="sound" data-d="1" aria-label="Next sounds">›</button><button type="button" data-bank="sound" data-d="10" aria-label="Forward 10 sounds">»</button><button type="button" class="dice" id="soundDice" title="Randomize the sound" aria-label="Randomize the sound">⚄</button><select id="soundFilter" class="mini" aria-label="Which sounds to show" title="Which sounds to show"><option value="all">All</option><option value="clean">Clean</option><option value="warm">Warm</option></select></div></div>
+        <div class="bankrow"><label class="tag" for="lineSel"><span class="tl">Line</span><span class="ts">Ln</span><b id="lineCount"></b></label>
+          <div class="nav"><button type="button" data-bank="line" data-d="-10" aria-label="Back 10 chord lines">«</button><button type="button" data-bank="line" data-d="-1" aria-label="Previous chord lines">‹</button><select id="lineSel" title="Chord line" aria-label="Chord line"></select><button type="button" data-bank="line" data-d="1" aria-label="Next chord lines">›</button><button type="button" data-bank="line" data-d="10" aria-label="Forward 10 chord lines">»</button><button type="button" class="dice" id="lineDice" title="Random chord line" aria-label="Random chord line">⚄</button></div></div>
       </section>
       <section class="strip drums" aria-label="Drums">
         <div class="strip-head"><button class="btn sw" id="drumOn" type="button" aria-pressed="false">Drums</button><span class="meter" aria-hidden="true"><b id="drumLevelMeter"></b></span><input type="range" id="drumLevel" class="lvl" min="-30" max="6" step="0.5" value="-3" aria-label="Drums level"><output id="drumLevelOut" class="db">0 dB</output></div>
-        <div class="bankrow"><label class="tag" for="kitSel"><span class="tl">Kit</span><span class="ts">Kit</span><b id="kitCount"></b></label>
-          <div class="nav"><button type="button" data-bank="kit" data-d="-10" aria-label="Back 10 drum kits">«</button><button type="button" data-bank="kit" data-d="-1" aria-label="Previous drum kits">‹</button><select id="kitSel" aria-label="Drum kit"></select><button type="button" data-bank="kit" data-d="1" aria-label="Next drum kits">›</button><button type="button" data-bank="kit" data-d="10" aria-label="Forward 10 drum kits">»</button><button type="button" class="dice" id="kitDice" title="Random drum kit" aria-label="Random drum kit">⚄</button></div></div>
-        <div class="bankrow"><label class="tag" for="drumSel"><span class="tl">Groove</span><span class="ts">Grv</span><b id="grooveCount"></b></label>
-          <div class="nav"><button type="button" data-bank="groove" data-d="-10" aria-label="Back 10 grooves">«</button><button type="button" data-bank="groove" data-d="-1" aria-label="Previous grooves">‹</button><select id="drumSel" aria-label="Groove"></select><button type="button" data-bank="groove" data-d="1" aria-label="Next grooves">›</button><button type="button" data-bank="groove" data-d="10" aria-label="Forward 10 grooves">»</button><button type="button" class="dice" id="grooveDice" title="Random groove" aria-label="Random groove">⚄</button><button type="button" class="dice bpm" id="matchBpm" title="Set the tempo to the groove’s" aria-label="Set the tempo to the groove’s">♩=</button></div></div>
+        <div class="bankrow"><label class="tag" for="kitSel"><span class="tl">Kit</span><span class="ts">Kt</span><b id="kitCount"></b></label>
+          <div class="nav"><button type="button" data-bank="kit" data-d="-10" aria-label="Back 10 drum kits">«</button><button type="button" data-bank="kit" data-d="-1" aria-label="Previous drum kits">‹</button><select id="kitSel" title="Drum kit" aria-label="Drum kit"></select><button type="button" data-bank="kit" data-d="1" aria-label="Next drum kits">›</button><button type="button" data-bank="kit" data-d="10" aria-label="Forward 10 drum kits">»</button><button type="button" class="dice" id="kitDice" title="Random drum kit" aria-label="Random drum kit">⚄</button></div></div>
+        <div class="bankrow"><label class="tag" for="drumSel"><span class="tl">Groove</span><span class="ts">Gr</span><b id="grooveCount"></b></label>
+          <div class="nav"><button type="button" data-bank="groove" data-d="-10" aria-label="Back 10 grooves">«</button><button type="button" data-bank="groove" data-d="-1" aria-label="Previous grooves">‹</button><select id="drumSel" title="Groove" aria-label="Groove"></select><button type="button" data-bank="groove" data-d="1" aria-label="Next grooves">›</button><button type="button" data-bank="groove" data-d="10" aria-label="Forward 10 grooves">»</button><button type="button" class="dice" id="grooveDice" title="Random groove" aria-label="Random groove">⚄</button><button type="button" class="dice bpm" id="matchBpm" title="Set the tempo to the groove’s" aria-label="Set the tempo to the groove’s">♩=</button></div></div>
+      </section>
+      <section class="strip perc" aria-label="Perc">
+        <div class="strip-head"><button class="btn sw" id="percOn" type="button" aria-pressed="false">Perc</button><span class="meter" aria-hidden="true"><b id="percLevelMeter"></b></span><input type="range" id="percLevel" class="lvl" min="-30" max="6" step="0.5" value="-6" aria-label="Perc level"><output id="percLevelOut" class="db">0 dB</output></div>
+        <div class="bankrow"><label class="tag" for="percKitSel"><span class="tl">Kit</span><span class="ts">Kt</span><b>96</b></label>
+          <div class="nav"><button type="button" data-bank="perckit" data-d="-10" aria-label="Back 10 perc kits">«</button><button type="button" data-bank="perckit" data-d="-1" aria-label="Previous perc kits">‹</button><select id="percKitSel" title="Perc kit" aria-label="Perc kit"></select><button type="button" data-bank="perckit" data-d="1" aria-label="Next perc kits">›</button><button type="button" data-bank="perckit" data-d="10" aria-label="Forward 10 perc kits">»</button><button type="button" class="dice" id="percKitDice" title="A random perc kit" aria-label="A random perc kit">⚄</button></div></div>
+        <div class="bankrow"><label class="tag" for="percGrooveSel"><span class="tl">Rhythm</span><span class="ts">Rh</span><b>48</b></label>
+          <div class="nav"><button type="button" data-bank="percgroove" data-d="-10" aria-label="Back 10 perc rhythms">«</button><button type="button" data-bank="percgroove" data-d="-1" aria-label="Previous perc rhythms">‹</button><select id="percGrooveSel" title="Perc rhythm" aria-label="Perc rhythm"></select><button type="button" data-bank="percgroove" data-d="1" aria-label="Next perc rhythms">›</button><button type="button" data-bank="percgroove" data-d="10" aria-label="Forward 10 perc rhythms">»</button><button type="button" class="dice" id="percGrooveDice" title="A random perc rhythm" aria-label="A random perc rhythm">⚄</button></div></div>
       </section>
       <section class="strip arp arp-only" aria-label="Arp">
         <div class="strip-head"><button class="btn sw" id="arpOn" type="button" aria-pressed="false">Arp</button><span class="meter" aria-hidden="true"><b id="arpLevelMeter"></b></span><input type="range" id="arpLevel" class="lvl" min="-30" max="6" step="0.5" value="-4" aria-label="Arp level"><output id="arpLevelOut" class="db">0 dB</output></div>
-        <div class="bankrow"><label class="tag" for="arpSel"><span class="tl">Pattern</span><span class="ts">Pat</span><b id="arpCount"></b></label>
-          <div class="nav"><button type="button" data-bank="arp" data-d="-10" aria-label="Back 10 arps">«</button><button type="button" data-bank="arp" data-d="-1" aria-label="Previous arps">‹</button><select id="arpSel" aria-label="Arp pattern"></select><button type="button" data-bank="arp" data-d="1" aria-label="Next arps">›</button><button type="button" data-bank="arp" data-d="10" aria-label="Forward 10 arps">»</button><button type="button" class="dice" id="arpDice" title="Random arp" aria-label="Random arp">⚄</button><button type="button" class="dice" id="arpMake" title="Make a new arp: rhythm and contour blended from four patterns" aria-label="Make a new arp: rhythm and contour blended from four patterns">✧</button></div></div>
-        <div class="bankrow"><label class="tag" for="arpSoundSel"><span class="tl">Sound</span><span class="ts">Snd</span><b id="arpSoundCount"></b></label>
-          <div class="nav"><button type="button" data-bank="arps" data-d="-10" aria-label="Back 10 arp sounds">«</button><button type="button" data-bank="arps" data-d="-1" aria-label="Previous arp sounds">‹</button><select id="arpSoundSel" aria-label="Arp sound"></select><button type="button" data-bank="arps" data-d="1" aria-label="Next arp sounds">›</button><button type="button" data-bank="arps" data-d="10" aria-label="Forward 10 arp sounds">»</button><button type="button" class="dice" id="arpSoundDice" title="Random soft arp sound" aria-label="Random soft arp sound">⚄</button><button type="button" class="dice" id="arpSoundMake" title="Make a new arp sound" aria-label="Make a new arp sound">✧</button></div></div>
+        <div class="bankrow"><label class="tag" for="arpSel"><span class="tl">Pattern</span><span class="ts">Pt</span><b id="arpCount"></b></label>
+          <div class="nav"><button type="button" data-bank="arp" data-d="-10" aria-label="Back 10 arps">«</button><button type="button" data-bank="arp" data-d="-1" aria-label="Previous arps">‹</button><select id="arpSel" title="Arp pattern" aria-label="Arp pattern"></select><button type="button" data-bank="arp" data-d="1" aria-label="Next arps">›</button><button type="button" data-bank="arp" data-d="10" aria-label="Forward 10 arps">»</button><button type="button" class="dice" id="arpDice" title="Random arp" aria-label="Random arp">⚄</button><button type="button" class="dice" id="arpMake" title="Make a new arp: rhythm and contour blended from four patterns" aria-label="Make a new arp: rhythm and contour blended from four patterns">✧</button></div></div>
+        <div class="bankrow"><label class="tag" for="arpSoundSel"><span class="tl">Sound</span><span class="ts">Sn</span><b id="arpSoundCount"></b></label>
+          <div class="nav"><button type="button" data-bank="arps" data-d="-10" aria-label="Back 10 arp sounds">«</button><button type="button" data-bank="arps" data-d="-1" aria-label="Previous arp sounds">‹</button><select id="arpSoundSel" title="Arp sound" aria-label="Arp sound"></select><button type="button" data-bank="arps" data-d="1" aria-label="Next arp sounds">›</button><button type="button" data-bank="arps" data-d="10" aria-label="Forward 10 arp sounds">»</button><button type="button" class="dice" id="arpSoundDice" title="Random soft arp sound" aria-label="Random soft arp sound">⚄</button><button type="button" class="dice" id="arpSoundMake" title="Make a new arp sound" aria-label="Make a new arp sound">✧</button></div></div>
       </section>
       <section class="strip vox vox-only" aria-label="Vox">
         <div class="strip-head"><button class="btn sw" id="voxOn" type="button" aria-pressed="false">Vox</button><span class="meter" aria-hidden="true"><b id="voxLevelMeter"></b></span><input type="range" id="voxLevel" class="lvl" min="-30" max="6" step="0.5" value="-6" aria-label="Vox level"><output id="voxLevelOut" class="db">0 dB</output></div>
-        <div class="bankrow"><label class="tag" for="voxStyleSel"><span class="tl">Style</span><span class="ts">Sty</span><b id="voxStyleCount"></b></label>
-          <div class="nav"><button type="button" data-bank="voxstyle" data-d="-10" aria-label="Back 10 vox styles">«</button><button type="button" data-bank="voxstyle" data-d="-1" aria-label="Previous vox styles">‹</button><select id="voxStyleSel" aria-label="Vox style"></select><button type="button" data-bank="voxstyle" data-d="1" aria-label="Next vox styles">›</button><button type="button" data-bank="voxstyle" data-d="10" aria-label="Forward 10 vox styles">»</button><button type="button" class="dice" id="voxStyleDice" title="Random vox style" aria-label="Random vox style">⚄</button></div></div>
-        <div class="bankrow"><label class="tag" for="voxSpaceSel"><span class="tl">Space</span><span class="ts">Spc</span><b id="voxSpaceCount"></b></label>
-          <div class="nav"><button type="button" data-bank="voxspace" data-d="-10" aria-label="Back 10 vox spaces">«</button><button type="button" data-bank="voxspace" data-d="-1" aria-label="Previous vox spaces">‹</button><select id="voxSpaceSel" aria-label="Vox space"></select><button type="button" data-bank="voxspace" data-d="1" aria-label="Next vox spaces">›</button><button type="button" data-bank="voxspace" data-d="10" aria-label="Forward 10 vox spaces">»</button><button type="button" class="dice" id="voxSpaceDice" title="Random vox space" aria-label="Random vox space">⚄</button></div></div>
+        <div class="bankrow"><label class="tag" for="voxStyleSel"><span class="tl">Style</span><span class="ts">St</span><b id="voxStyleCount"></b></label>
+          <div class="nav"><button type="button" data-bank="voxstyle" data-d="-10" aria-label="Back 10 vox styles">«</button><button type="button" data-bank="voxstyle" data-d="-1" aria-label="Previous vox styles">‹</button><select id="voxStyleSel" title="Vox style" aria-label="Vox style"></select><button type="button" data-bank="voxstyle" data-d="1" aria-label="Next vox styles">›</button><button type="button" data-bank="voxstyle" data-d="10" aria-label="Forward 10 vox styles">»</button><button type="button" class="dice" id="voxStyleDice" title="Random vox style" aria-label="Random vox style">⚄</button></div></div>
+        <div class="bankrow"><label class="tag" for="voxSpaceSel"><span class="tl">Space</span><span class="ts">Sp</span><b id="voxSpaceCount"></b></label>
+          <div class="nav"><button type="button" data-bank="voxspace" data-d="-10" aria-label="Back 10 vox spaces">«</button><button type="button" data-bank="voxspace" data-d="-1" aria-label="Previous vox spaces">‹</button><select id="voxSpaceSel" title="Vox space" aria-label="Vox space"></select><button type="button" data-bank="voxspace" data-d="1" aria-label="Next vox spaces">›</button><button type="button" data-bank="voxspace" data-d="10" aria-label="Forward 10 vox spaces">»</button><button type="button" class="dice" id="voxSpaceDice" title="Random vox space" aria-label="Random vox space">⚄</button></div></div>
+      </section>
+      <section class="strip mel" aria-label="Melody">
+        <div class="strip-head"><button class="btn sw small2" id="leadOn" type="button" aria-pressed="false">Lead</button><button class="btn sw small2" id="bassOn" type="button" aria-pressed="false">Bass</button><span class="meter" aria-hidden="true"><b id="melLevelMeter"></b></span><input type="range" id="melLevel" class="lvl" min="-30" max="6" step="0.5" value="-5" aria-label="Melody level"><output id="melLevelOut" class="db">0 dB</output></div>
+        <div class="bankrow"><label class="tag" for="leadSel"><span class="tl">Lead</span><span class="ts">Ld</span><b id="leadCount"></b></label>
+          <div class="nav"><button type="button" data-bank="lead" data-d="-10" aria-label="Back 10 leads">«</button><button type="button" data-bank="lead" data-d="-1" aria-label="Previous leads">‹</button><select id="leadSel" title="Lead" aria-label="Lead"></select><button type="button" data-bank="lead" data-d="1" aria-label="Next leads">›</button><button type="button" data-bank="lead" data-d="10" aria-label="Forward 10 leads">»</button><button type="button" class="dice" id="leadDice" title="A random lead" aria-label="A random lead">⚄</button></div></div>
+        <div class="bankrow"><label class="tag" for="bassSel"><span class="tl">Bass</span><span class="ts">Bs</span><b id="bassCount"></b></label>
+          <div class="nav"><button type="button" data-bank="bass" data-d="-10" aria-label="Back 10 basses">«</button><button type="button" data-bank="bass" data-d="-1" aria-label="Previous basses">‹</button><select id="bassSel" title="Bass" aria-label="Bass"></select><button type="button" data-bank="bass" data-d="1" aria-label="Next basses">›</button><button type="button" data-bank="bass" data-d="10" aria-label="Forward 10 basses">»</button><button type="button" class="dice" id="bassDice" title="A random bass" aria-label="A random bass">⚄</button></div></div>
+      </section>
+      <section class="strip piano piano-only" aria-label="Piano">
+        <div class="strip-head"><button class="btn sw" id="pianoOn" type="button" aria-pressed="false">Piano</button><span class="meter" aria-hidden="true"><b id="pianoLevelMeter"></b></span><input type="range" id="pianoLevel" class="lvl" min="-30" max="6" step="0.5" value="-4" aria-label="Piano level"><output id="pianoLevelOut" class="db">0 dB</output></div>
+        <div class="bankrow"><label class="tag" for="pianoSel"><span class="tl">Piano</span><span class="ts">Pn</span><b id="pianoCount"></b></label>
+          <div class="nav"><button type="button" data-bank="piano" data-d="-10" aria-label="Back 10 pianos">«</button><button type="button" data-bank="piano" data-d="-1" aria-label="Previous pianos">‹</button><select id="pianoSel" title="Piano" aria-label="Piano"></select><button type="button" data-bank="piano" data-d="1" aria-label="Next pianos">›</button><button type="button" data-bank="piano" data-d="10" aria-label="Forward 10 pianos">»</button><button type="button" class="dice" id="pianoDice" title="A random piano" aria-label="A random piano">⚄</button></div></div>
       </section>
     </div>
     <div class="pads" id="pads" role="group" aria-label="Chord pads: hold one to play its chord"></div>
@@ -559,7 +614,7 @@ class DriftSonata extends AudioWorkletProcessor {
         x.ds_bank_commit(); break;
       }
       case 'line': this.line = m.line; this.lineStart = m.start || 0; if (this.playing) this.slot = -2; break;  // start: the beat the line begins on (a song's section)
-      case 'drums': this.drumsOn = m.on; if (m.lanes) this.drumLayer({ lanes: m.lanes, swing: m.swing }); break;
+      case 'drums': this.drumsOn = m.on; if (m.lanes) this.drumLayer({ lanes: m.lanes, swing: m.swing, seed: m.seed }); break;
       case 'kit': this.drumLayer({ kit: m.kit }); break;  // per lane: the sound, its level, place and sends (made in the page)
       case 'vocal': for (const i of CH.chord) { this.use(i); const ptr = x.ds_vocal(m.data.length); new Float32Array(x.memory.buffer, ptr, m.data.length).set(m.data); } break;
       case 'bpm': this.bpm = m.bpm; break;
@@ -568,14 +623,22 @@ class DriftSonata extends AudioWorkletProcessor {
     }
   }
   // Drums fade too: a new kit or groove is a new layer coming in while the old one goes
+  rnd() { this.seedR = ((this.seedR || 22222) * 1664525 + 1013904223) >>> 0; return this.seedR / 4294967296; }
   drumLayer(change) {
     const top = this.layers[this.layers.length - 1] || { kit: {}, lanes: {}, swing: 0 };
-    const L = { kit: change.kit || top.kit, lanes: change.lanes || top.lanes, swing: change.swing ?? top.swing, g: 0, dir: 1 };
+    const L = { kit: change.kit || top.kit, lanes: change.lanes || top.lanes, swing: change.swing ?? top.swing, seed: change.seed ?? top.seed ?? 1, g: 0, dir: 1, bars: new Map() };
     if (!this.playing || !this.layers.length) { this.layers = [{ ...L, g: 1 }]; return; }
     for (const l of this.layers) l.dir = -1;
     this.layers.push(L);
   }
   release() { for (const n of this.sounding) this.off('chord', n); this.sounding = []; }
+  // A groove over 32 bars: the same pocket, with small changes so it never turns into a loop. Every bar is made once
+  // (seeded by the groove and its place in the 32), as a velocity per lane and sixteenth.
+  barOf(ly, bar) {
+    const b = ((bar % 32) + 32) % 32;
+    if (!ly.bars.has(b)) ly.bars.set(b, grooveBar(ly.lanes, ly.seed || 1, b));
+    return ly.bars.get(b);
+  }
   process(inputs, outputs) {
     const out = outputs[0], L = out[0], R = out[1] || out[0], n = L.length;
     if (!this.ready) return true;
@@ -605,12 +668,17 @@ class DriftSonata extends AudioWorkletProcessor {
           const s16 = ((k % 16) + 16) % 16, at = k * .25 + (s16 % 2 ? sw : 0);
           if (at < this.ppq - 1e-9 || at >= this.ppq + step || ly.g <= .001) continue;
           const off = Math.min(n - 1, Math.max(0, Math.round((at - this.ppq) / step * n))), acc = s16 % 4 === 0 ? 1 : s16 % 2 === 0 ? .8 : .66;
-          for (const lane in lanes) {
-            const v = ly.kit[lane]; if (!v || !lanes[lane].includes(s16)) continue;
+          const V = this.barOf(ly, Math.floor(k / 16));
+          for (const lane in V) {
+            const v = ly.kit[lane], vel = V[lane][s16]; if (!v || !vel) continue;
             if (lane === 'h') for (const h of this.hits) if (h.lane === 'o') h.choke = true;  // a closed hat closes the open one
             const lg = Math.sin(ly.g * Math.PI / 2);
-            if (lane === 'k' && lg > .3) this.kicks.push(off);
-            this.hits.push({ v, lane, pos: -off, g: (lane === 'k' ? .9 + .1 * acc : acc) * lg, choke: false, cg: 1 });
+            if (lane === 'k' && lg > .3 && vel > .5) this.kicks.push(off);
+            // the next of its five, never the one just played; a hair early or late and a little softer or harder, as a drummer plays
+            const vs = v.vars || [v.data], rr = this.rr || (this.rr = {}), r1 = this.rnd(), r2 = this.rnd();
+            let pick = Math.floor(r1 * vs.length); if (vs.length > 1 && pick === rr[lane]) pick = (pick + 1) % vs.length; rr[lane] = pick;
+            const late = lane === 'k' ? 0 : Math.round((r2 - .4) * sampleRate * (lane === 'h' || lane === 'o' ? .006 : .004));
+            this.hits.push({ v, data: vs[pick], lane, pos: -off - Math.max(-off, late), g: (lane === 'k' ? .9 + .1 * acc : acc) * vel * lg * (.9 + .18 * r2), choke: false, cg: 1 });
           }
         }
       }
@@ -666,7 +734,7 @@ class DriftSonata extends AudioWorkletProcessor {
     if (D && D[0]) { D[0].fill(0); D[1].fill(0); F[0].fill(0); F[1].fill(0); }
     if (this.hits.length && D && D[0]) {
       for (const h of this.hits) {
-        const a = h.v.data, gl = h.v.gl * h.g, gr = h.v.gr * h.g, rv = h.v.rev * h.g, ec = h.v.echo * h.g;
+        const a = h.data || h.v.data, gl = h.v.gl * h.g, gr = h.v.gr * h.g, rv = h.v.rev * h.g, ec = h.v.echo * h.g;
         for (let i = 0; i < n; i++) {
           const j = h.pos + i; if (j < 0) continue; if (j >= a.length) break;
           if (h.choke) { h.cg *= .9965; if (h.cg < .001) { h.pos = a.length; break; } }
@@ -674,7 +742,7 @@ class DriftSonata extends AudioWorkletProcessor {
         }
         h.pos += n;
       }
-      this.hits = this.hits.filter(h => h.pos < h.v.data.length);
+      this.hits = this.hits.filter(h => h.pos < (h.data || h.v.data).length);
     }
     if (this.playing) this.ppq += step;
     if (++this.tick % 6 === 0) {
@@ -737,7 +805,7 @@ const store = {
 };
 
 /* ---------- Audio ---------- */
-let ctx = null, node = null, analyser = null, starting = null, master = null, chordBus = null;
+let ctx = null, node = null, analyser = null, starting = null, master = null, chordBus = null, chordLift = null;
 function b64ToBytes(b64) { const s = atob(b64), a = new Uint8Array(s.length); for (let i = 0; i < s.length; i++) a[i] = s.charCodeAt(i); return a; }
 async function startAudio() {
   if (node) { if (ctx.state !== 'running') await ctx.resume(); return; }
@@ -745,7 +813,7 @@ async function startAudio() {
   starting = (async () => {
     ctx = new AudioContext({ latencyHint: 'interactive' });
     // The worklet code is in this page. Some frames refuse a blob: module, others a data: one, so try both.
-    const code = $('workletSrc').textContent;
+    const code = $('workletSrc').textContent + '\n' + grooveBar.toString();
     try { await ctx.audioWorklet.addModule(URL.createObjectURL(new Blob([code], { type: 'application/javascript' }))); }
     catch (e) { await ctx.audioWorklet.addModule('data:application/javascript;base64,' + btoa(unescape(encodeURIComponent(code)))); }
     const wasm = b64ToBytes(WASM_B64).buffer;
@@ -754,13 +822,13 @@ async function startAudio() {
     analyser = ctx.createAnalyser(); analyser.fftSize = 2048;
     // The engine stops at -1 dBFS by itself; this catches the drums and the arp on top of it
     const safety = ctx.createDynamicsCompressor(); safety.threshold.value = -1; safety.knee.value = 0; safety.ratio.value = 20; safety.attack.value = .002; safety.release.value = .12;
-    master = ctx.createGain(); chordBus = ctx.createGain();
-    node.connect(chordBus, 0); chordBus.connect(master); master.connect(analyser); analyser.connect(safety); safety.connect(ctx.destination);
+    master = ctx.createGain(); chordBus = ctx.createGain(); chordLift = ctx.createGain();
+    node.connect(chordBus, 0); chordBus.connect(chordLift); chordLift.connect(master); master.connect(analyser); analyser.connect(safety); safety.connect(ctx.destination);
     drumAudio(); drumFx.bus.connect(master); drumTempo();
-    recNode = new AudioWorkletNode(ctx, 'ds-rec', { numberOfInputs: 5, numberOfOutputs: 0, channelCount: 2, channelCountMode: 'explicit' });
+    recNode = new AudioWorkletNode(ctx, 'ds-rec', { numberOfInputs: 8, numberOfOutputs: 0, channelCount: 2, channelCountMode: 'explicit' });
     recNode.port.onmessage = e => { if (e.data.t === 'chunk') recChunk(e.data); else if (e.data.t === 'done' && recDone) { const f = recDone; recDone = null; pendingRec = null; f(); } };
-    recConnect(safety, 0); recConnect(chordBus, 1); recConnect(drumFx.bus, 2);
-    mixApply(true); meterOn(chordBus, 'chordLevelMeter'); meterOn(drumFx.bus, 'drumLevelMeter'); meterOn(master, 'masterMeter');
+    recConnect(safety, 0); recConnect(chordLift, 1); recConnect(drumFx.bus, 2);
+    mixApply(true); meterOn(chordLift, 'chordLevelMeter'); meterOn(drumFx.bus, 'drumLevelMeter'); meterOn(master, 'masterMeter');
     node.port.onmessage = e => onWorklet(e.data);
     node.port.postMessage({ t: 'fade', s: fadeTime() });
     sendSound('chord', .01); sentGroove = -1;
@@ -772,6 +840,8 @@ async function startAudio() {
     if (ctx.state !== 'running') await ctx.resume();
     if (HAS_ARP && arpPrefs.on) arpAudio();
     if (HAS_VOX && voxPrefs.on) voxAudio();
+    if (melPrefs.lead || melPrefs.bass) melAudio().then(() => { melVoices(.05); melApply(); });
+    if (percPrefs.on) percAudio();
   })().catch(e => { starting = null; setStatus('The sound engine could not start in this browser: ' + e.message); throw e; });
   return starting;
 }
@@ -872,7 +942,8 @@ requestAnimationFrame(drawTrace);
 const ORBIT_NAMES = ['Osc 1', 'Osc 2', 'Osc 3', 'Osc 4', 'Osc 5', 'Osc 6', 'Choir', 'Cello', 'Strings', 'Brass', 'Texture', 'Robot'];
 const ORBIT_COLORS = ['#e486ab', '#ecd08f', '#e486ab', '#ecd08f', '#e486ab', '#ecd08f', '#7fd3d3', '#3aa3aa', '#b9e3e0', '#c39539', '#f6eee8', '#ffffff'];
 let orbitSrc = [], arpSrc = [], voxSrc = [];
-const ORBITS = [['orbit', () => orbitSrc, ORBIT_COLORS], ['arpOrbit', () => arpOrbitSources(), ORBIT_COLORS], ['voxOrbit', () => voxSrc, null]];
+var percSrc = [];
+const ORBITS = [['orbit', () => orbitSrc, ORBIT_COLORS], ['arpOrbit', () => arpOrbitSources(), ORBIT_COLORS], ['voxOrbit', () => voxSrc, null], ['percOrbit', () => percSrc, null]];
 function drawOrbitOn(c, srcs, colors) {
   const g = c.getContext('2d'), w = c.width = c.clientWidth * devicePixelRatio, h = c.height = c.clientHeight * devicePixelRatio, cx = w / 2, cy = h / 2, R = w * .44;
   g.clearRect(0, 0, w, h);
@@ -1178,7 +1249,7 @@ $('soundDice').addEventListener('click', () => {
 });
 // « ‹ › » step through a bank by one or ten
 document.querySelectorAll('[data-bank]').forEach(b => b.addEventListener('click', () => {
-  const sel = $({ sound: 'soundSel', line: 'lineSel', arp: 'arpSel', arps: 'arpSoundSel', kit: 'kitSel', groove: 'drumSel', voxstyle: 'voxStyleSel', voxspace: 'voxSpaceSel', mood: 'moodSel', song: 'songSel' }[b.dataset.bank]), opts = [...sel.options].filter(o => o.value !== 'x');
+  const sel = $({ sound: 'soundSel', line: 'lineSel', arp: 'arpSel', arps: 'arpSoundSel', kit: 'kitSel', groove: 'drumSel', voxstyle: 'voxStyleSel', voxspace: 'voxSpaceSel', mood: 'moodSel', song: 'songSel', lead: 'leadSel', bass: 'bassSel', piano: 'pianoSel', perckit: 'percKitSel', percgroove: 'percGrooveSel' }[b.dataset.bank]), opts = [...sel.options].filter(o => o.value !== 'x');
   let i = opts.findIndex(o => o.value === sel.value);
   if (i < 0) i = opts.findIndex(o => o.value === (b.dataset.bank === 'sound' ? soundChoice : String(lineChoice)));
   i = ((Math.max(0, i) + +b.dataset.d) % opts.length + opts.length) % opts.length;
@@ -1342,6 +1413,28 @@ function drawPads() {
 }
 
 /* ---------- Grooves: STAB LAB's, each with an open hat and two percussion lines, and new ones with all six ---------- */
+// A groove over 32 bars: the same pocket, with small changes so it never turns into a loop. Each bar (seeded by the
+// groove and its place in the 32) is a velocity per lane and sixteenth. The engine's worklet gets this same function.
+function grooveBar(lanes, seed, b) {
+  const R = rng32(seed * 7919 + b * 131), V = {};
+  for (const lane in lanes) { V[lane] = new Float32Array(16); for (const s of lanes[lane]) V[lane][s] = 1; }
+  const has = l => V[l] && V[l].some(x => x > 0), set = (l, s, v) => { if (V[l]) V[l][s] = Math.max(V[l][s], v); };
+  // the second half of the 32: the two percussion lines trade places, the first a little later
+  if (b >= 16 && V.p && V.q) { const p = V.p, q = V.q; V.p = new Float32Array(16); V.q = new Float32Array(16); for (let s = 0; s < 16; s++) { V.p[(s + 2) % 16] = q[s]; V.q[s] = p[s]; } }
+  // ghost hats now and then, very soft
+  if (has('h') && R() < .35) for (let g = 0; g < 2; g++) { const s = 1 + 2 * Math.floor(R() * 8); if (!V.h[s]) V.h[s] = .38; }
+  // a kick that leans forward in some bars
+  if (has('k') && b % 4 === 2 && R() < .5) { const s = R() < .5 ? 10 : 14; if (!(V.s && V.s[s])) set('k', s, .75); }
+  // a little fill every fourth bar, a longer one every eighth
+  if (b % 4 === 3) { if (V.s && has('s')) set('s', 15, .45); else if (V.p) set('p', 15, .6); if (V.p) set('p', 13, .5); }
+  if (b % 8 === 7) { if (V.s && has('s')) [12, 13, 14, 15].forEach((s, i) => set('s', s, .35 + .15 * i)); if (V.o) set('o', 14, .7); }
+  // the open hat finds a new place in some bars
+  if (b % 8 === 5 && V.o && R() < .6) set('o', 6, .6);
+  // towards the end of 16 the kick steps out for half a bar; bar 32 breaks down to percussion and hats
+  if (b % 16 === 15 && V.k) for (let s = 8; s < 16; s++) V.k[s] = 0;
+  if (b === 31) { for (const l of ['k', 's']) if (V[l]) for (let s = 8; s < 16; s++) V[l][s] = 0; if (V.p) [10, 12, 14].forEach(s => set('p', s, .55)); }
+  return V;
+}
 const DRUMS = [
   ['Floating dust', 68, 'Chill / Ambient', [[0, 10], [8], [2, 6, 10, 14]]], ['Slow neon', 76, 'Chill / Ambient', [[0, 7, 12], [8], [2, 6, 10, 14]]], ['Weightless', 84, 'Chill / Ambient', [[0, 11], [8], [0, 4, 8, 12]]],
   ['Late air', 88, 'Chill / Ambient', [[0, 6, 14], [8], [2, 6, 10, 13, 14]]], ['Tape steps', 72, 'Chill / Ambient', [[0, 10], [7, 15], [2, 4, 6, 10, 12, 14]]], ['Breathing room', 90, 'Chill / Ambient', [[0, 6, 11], [8], [1, 5, 9, 13]]],
@@ -1435,7 +1528,9 @@ const KITS = (() => {
   if (hitList.length) {
     const srcs = [...new Set(hitList.filter(h => h.kind === 'loop').map(h => h.src))];
     const any = (cls, src, R, kind) => { const own = hitList.map((h, i) => [h, i]).filter(([h]) => h.cls === cls && h.src === src).map(([, i]) => i); return own.length ? pickR(R, own) : pickR(R, hitsOf(cls, kind)); };
-    const percs = hitsOf('perc', 'perc'), hats = hitsOf('hat');
+    // The drum kits take the hand percussion, snaps and orchestral hits; the effects and foley crumbs are the Perc channel's
+    const percs = hitList.map((h, i) => [h, i]).filter(([h]) => h.cls === 'perc' && ['perc', 'snap', 'orch'].includes(h.kind)).map(([, i]) => i), hats = hitsOf('hat');
+    const oneSnares = hitList.map((h, i) => [h, i]).filter(([h]) => h.kind === 'snare').map(([, i]) => i);
     // Breaks: a loop's own kick, snare and hat (borrowed when it had none), with its own or a recorded percussion
     srcs.forEach((src, si) => { for (let v = 0; v < 3; v++) {
       const R = rng32(7001 + si * 131 + v * 17);
@@ -1446,7 +1541,7 @@ const KITS = (() => {
     // Hybrid: a synthesized kick, recorded snares, hats and percussion, from all over
     for (let v = 0; v < 150; v++) {
       const R = rng32(9001 + v * 613), arch = ARCHETYPES[Math.floor(R() * ARCHETYPES.length)][2](R);
-      const lanes = { k: R() < .75 ? arch.k : { t: 'hit', i: pickR(R, hitsOf('kick')) }, s: R() < .8 ? { t: 'hit', i: pickR(R, hitsOf('snare')) } : arch.s, h: R() < .7 ? { t: 'hit', i: pickR(R, hats) } : arch.h,
+      const lanes = { k: R() < .75 ? arch.k : { t: 'hit', i: pickR(R, hitsOf('kick')) }, s: R() < .8 ? { t: 'hit', i: pickR(R, oneSnares.length && R() < .4 ? oneSnares : hitsOf('snare')) } : arch.s, h: R() < .7 ? { t: 'hit', i: pickR(R, hats) } : arch.h,
         o: R() < .5 ? { t: 'hit', i: pickR(R, hats), rate: .8, len: .4 } : arch.o, p: { t: 'hit', i: pickR(R, percs), rate: between(R, .9, 1.12) }, q: R() < .6 ? { t: 'hit', i: pickR(R, percs), rate: between(R, .9, 1.2) } : arch.q };
       const pk = hitList[lanes.p.i];
       out.push({ name: `${pk.src} ${pickR(R, WORDS_B)} · ${pickR(R, WORDS_A).toLowerCase()}`, group: 'Hybrid', lanes, mix: vary(R, MIX), room: pickR(R, ROOMS), seed: 9001 + v });
@@ -1470,7 +1565,8 @@ function drumSound(v, sr) {
     const src = hitBufs[v.i]; if (!src) return new Float32Array(16);
     const rate = v.rate || 1, len = Math.min(Math.floor(src.length / rate), v.len ? Math.floor(v.len * sr) : 1e9), a = new Float32Array(len);
     for (let i = 0; i < len; i++) { const x = i * rate, j = Math.floor(x), f = x - j; a[i] = (src[j] || 0) * (1 - f) + (src[j + 1] || 0) * f; }
-    const fo = Math.min(len >> 2, Math.floor(sr * .015)); for (let i = 0; i < fo; i++) a[len - 1 - i] *= i / fo;
+    // a hit cut short fades out long, so a whoosh or a boom dies away instead of stopping
+    const fo = Math.min(len >> 2, Math.floor(sr * (len < Math.floor(src.length / rate) - 1 ? .3 : .015))); for (let i = 0; i < fo; i++) a[len - 1 - i] *= i / fo;
     return a;
   }
   const R = rng32(v.seed || 1453), dur = { kick: (v.dec || .15) * 6 + .05, snare: .45, clap: (v.dec || .2) + .1, hat: (v.dec || .02) * 7 + .01, tom: (v.dec || .25) * 5, rim: .08, cow: (v.dec || .15) * 5, clave: .12, shaker: (v.dec || .06) * 5 + .02, blip: (v.dec || .08) * 6, zap: (v.dec || .1) * 4, wood: (v.dec || .1) * 6 }[v.t] || .3;
@@ -1588,6 +1684,36 @@ function drumAudio() {
 }
 function drumTempo() { if (drumFx) { const t = .75 * 60 / tempo(); drumFx.dl.delayTime.setTargetAtTime(t, ctx.currentTime, .05); drumFx.dr.delayTime.setTargetAtTime(t, ctx.currentTime, .05); } }
 let kitGen = 0;
+/* Five of every drum in a kit, so a beat never hits the same way twice: a made drum a little higher or lower, longer or
+   shorter, with other noise; a recorded one also as the other hits of its kind from the same recording, a hair faster
+   or slower. Each is then made a little darker or brighter. The engine takes them in turn, never the same twice. */
+function drumVariants(v, seed, lane) {
+  const R = rng32(seed * 31 + 7), j = (x, a) => x * (1 + (R() * 2 - 1) * a), out = [{ seed, ...v }];
+  let others = [];
+  if (v.t === 'hit' && hitList[v.i]) { const h = hitList[v.i]; others = hitList.map((x, i) => [x, i]).filter(([x, i]) => i !== v.i && x.cls === h.cls && x.src === h.src).map(([, i]) => i); }
+  for (let k = 1; k < 5; k++) {
+    if (v.t === 'hit') {
+      const alt = others.length && k % 2 === 1 ? others[Math.floor(R() * others.length)] : v.i;
+      out.push({ ...v, i: alt, rate: (v.rate || 1) * (1 + (R() * 2 - 1) * (lane === 'k' ? .02 : .045)), len: v.len ? j(v.len, .15) : v.len });
+    } else {
+      const w = { ...v, seed: seed + k * 977 };
+      for (const key of ['f', 'tone', 'sweep']) if (w[key]) w[key] = j(w[key], key === 'f' && lane === 'k' ? .025 : .05);
+      for (const key of ['dec', 'td', 'nd']) if (w[key]) w[key] = j(w[key], .18);
+      for (const key of ['color', 'mix', 'click', 'noise', 'metal']) if (typeof w[key] === 'number' && w[key] > 0) w[key] = Math.max(0, Math.min(1, j(w[key], .2)));
+      if (w.hp) w.hp = j(w.hp, .12);
+      out.push(w);
+    }
+  }
+  return out;
+}
+// darker (a < 0) or brighter (a > 0): the sound against a soft low-passed copy of itself
+function tilt(d, a) {
+  if (!a) return d;
+  const o = new Float32Array(d.length); let lp = 0, pk = 0, pk0 = 0;
+  for (let i = 0; i < d.length; i++) { lp += (d[i] - lp) * .25; o[i] = a < 0 ? d[i] + (lp - d[i]) * -a * 1.6 : d[i] + (d[i] - lp) * a; pk = Math.max(pk, Math.abs(o[i])); pk0 = Math.max(pk0, Math.abs(d[i])); }
+  if (pk > 0) for (let i = 0; i < o.length; i++) o[i] *= pk0 / pk;
+  return o;
+}
 async function sendKit() {
   if (!node) return;
   const kit = KITS[drumPrefs.kit] || KITS[0], gen = ++kitGen;
@@ -1596,9 +1722,10 @@ async function sendKit() {
   const sr = ctx.sampleRate, out = {}, transfer = [];
   for (const l of LANES) {
     const v = kit.lanes[l]; if (!v) continue;
-    const [db, pan, rev, echo] = kit.mix[l], g = Math.pow(10, db / 20), data = drumSound({ seed: kit.seed + l.charCodeAt(0), ...v }, sr);
-    out[l] = { data, gl: g * Math.cos((pan + 1) * Math.PI / 4) * Math.SQRT2, gr: g * Math.sin((pan + 1) * Math.PI / 4) * Math.SQRT2, rev: g * rev, echo: g * echo };
-    transfer.push(data.buffer);
+    const [db, pan, rev, echo] = kit.mix[l], g = Math.pow(10, db / 20);
+    const vars = drumVariants(v, kit.seed + l.charCodeAt(0), l).map(spec => drumSound(spec, sr)).map((d, k) => k ? tilt(d, [0, -.45, .3, -.2, .15][k] || 0) : d);
+    out[l] = { data: vars[0], vars, gl: g * Math.cos((pan + 1) * Math.PI / 4) * Math.SQRT2, gr: g * Math.sin((pan + 1) * Math.PI / 4) * Math.SQRT2, rev: g * rev, echo: g * echo };
+    for (const d of vars) transfer.push(d.buffer);
   }
   node.port.postMessage({ t: 'kit', kit: out }, transfer);
   if (drumFx) drumFx.verb.buffer = drumRoom(kit.room);
@@ -1610,7 +1737,7 @@ function sendDrums() {
   if (!node) return;
   // a new groove is sent as such, so the engine fades it in over the old one
   const m = { t: 'drums', on: drumPrefs.on };
-  if (d.i !== sentGroove) { m.lanes = d.lanes; m.swing = d.swing; sentGroove = d.i; }
+  if (d.i !== sentGroove) { m.lanes = d.lanes; m.swing = d.swing; m.seed = d.i + 1; sentGroove = d.i; }
   node.port.postMessage(m);
 }
 function fillDrums() {
@@ -1648,7 +1775,7 @@ $('vocalFile').addEventListener('change', async () => {
 function sessionNow(name) {
   const vals = {}; P.forEach((p, i) => vals[p.id] = values[i]);
   return { app: 'DRIFT SONATA', version: 1, name, values: vals, sound: soundChoice, line, lineChoice, lineDirty, lineKey,
-    bars: $('lineBars').value, notes: $('lineAs').value, register: $('lineReg').value, surprise: $('lineSurprise').value, tempo: tempo(), drums: { ...drumPrefs }, mix: { ...mixPrefs }, arp: arpSession(), vox: { ...voxPrefs }, arpValues: arpValuesNow() };
+    bars: $('lineBars').value, notes: $('lineAs').value, register: $('lineReg').value, surprise: $('lineSurprise').value, tempo: tempo(), drums: { ...drumPrefs }, mix: { ...mixPrefs }, arp: arpSession(), vox: { ...voxPrefs }, mel: { ...melPrefs }, perc: { ...percPrefs }, piano: { ...pianoPrefs }, arpValues: arpValuesNow() };
 }
 function openSession(se) {
   if (!se || se.app !== 'DRIFT SONATA' || !se.values) { setStatus('That is not a DRIFT SONATA session.'); return; }
@@ -1668,6 +1795,9 @@ function openSession(se) {
   if (se.mix) Object.assign(mixPrefs, se.mix);
   mixApply();
   if (se.arp) arpOpenSession(se.arp);
+  if (se.piano) { Object.assign(pianoPrefs, se.piano); savePiano(); pianoControlsShow(); pianoDirty++; setPianoOn(!!pianoPrefs.on, true); pianoApply(); }
+  if (se.perc) { Object.assign(percPrefs, se.perc); savePerc(); percControlsShow(); setPercOn(!!percPrefs.on, true); if (percG) percKit(); }
+  if (se.mel) { Object.assign(melPrefs, se.mel); saveMel(); melDirty++; melControlsShow(); setMel('lead', !!melPrefs.lead, true); setMel('bass', !!melPrefs.bass, true); if (melG) { melVoices(); melApply(); } }
   if (se.arpValues) applyValues(P.map((p, i) => p.id in se.arpValues ? se.arpValues[p.id] : DEFAULTS[i]), 'arp');
   if (se.vox && HAS_VOX) { Object.assign(voxPrefs, se.vox); saveVox(); voxControlsShow(); $('voxStyleSel').value = String(voxPrefs.style); $('voxSpaceSel').value = String(voxPrefs.space); voxSpaceApply(); setVoxOn(!!voxPrefs.on, true); }
   fillLines(); lineChanged();
@@ -1792,12 +1922,14 @@ $('midiExport').addEventListener('click', async () => {
   if (sub.length) tracks.push([metaText('Sub-Drop', 3), ...sub]);
   if (drumPrefs.on) {
     const g = DRUMS[drumPrefs.i] || DRUMS[0], GM = { k: 36, s: 38, h: 42, o: 46, p: 63, q: 75 }, drums = [];
-    for (let bar = 0; bar < t / PPQ / 4; bar++) for (const l of LANES) for (const st of g.lanes[l] || []) {
+    for (let bar = 0; bar < t / PPQ / 4; bar++) { const V = grooveBar(g.lanes, g.i + 1, bar % 32); for (const l in V) for (let st = 0; st < 16; st++) { if (!V[l][st] || !GM[l]) continue;
       const at = bar * 4 * PPQ + st * PPQ / 4 + (st % 2 ? Math.round(g.swing * PPQ / 4 * .42) : 0);
-      drums.push([at, 0x99, GM[l], st % 4 === 0 ? 104 : st % 2 === 0 ? 88 : 72], [at + PPQ / 8, 0x89, GM[l], 0]);
-    }
+      drums.push([at, 0x99, GM[l], Math.round((st % 4 === 0 ? 104 : st % 2 === 0 ? 88 : 72) * V[l][st])], [at + PPQ / 8, 0x89, GM[l], 0]);
+    } }
     tracks.push([metaText('Drums · ' + (KITS[drumPrefs.kit] || KITS[0]).name, 3), ...drums]);
   }
+  for (const which of ['lead', 'bass']) { const notes = melMidi(PPQ, which); if (notes.length) tracks.push([metaText(which === 'lead' ? 'Lead' : 'Bass', 3), ...notes]); }
+  { const notes = pianoMidi(PPQ); if (notes.length) tracks.push([metaText('Piano', 3), ...notes.sort((a, b) => a[0] - b[0])]); }
   const arpNotes = arpMidi(PPQ, t);
   if (arpNotes.length) tracks.push([metaText('AVANTGARDIAN ARP', 3), ...arpNotes]);
   const lineName = song.on ? fileName(song.cur.name) : lineDirty ? 'my-line' : fileName(lineBank[lineChoice].name);
@@ -1910,8 +2042,9 @@ function meterOn(src, id) { const a = ctx.createAnalyser(); a.fftSize = 512; src
 var HAS_ARP = typeof NoteEngine !== 'undefined' && typeof ARP_META !== 'undefined' && typeof NBVoice !== 'undefined';
 var arpDirty = 1;
 if (!HAS_ARP) document.body.classList.add('no-arp');
-const ARP_DEFAULTS = { on: false, pattern: '', sound: '', level: -4, density: 100, variation: 15, swing: 0, gate: 78, octave: 0, direction: 'original', style: 'faithful', phrase: 16, delay: -1, reverb: -1, tone: 6500, seed: 1 };
+const ARP_DEFAULTS = { on: false, pattern: '', sound: '', level: -7, density: 100, variation: 15, swing: 0, gate: 100, octave: 0, direction: 'original', style: 'faithful', phrase: 16, delay: -1, reverb: -1, tone: 4200, wash: .45, auto: 16, roam: .8, seed: 1, v: 2 };
 const arpPrefs = Object.assign({}, ARP_DEFAULTS, store.get('ds-arp', {}));
+if (arpPrefs.v !== 2) Object.assign(arpPrefs, { level: -7, gate: 100, tone: 4200, wash: .45, v: 2 });  // the softer arp, for a saved one too
 const ARP_PARTS = Array.from({ length: 8 }, () => ({ moves: 0, space: 0, length: 0, spunk: 0, rhythmic: 0, spastic: 0, dust: 0, slide: 0, slup: 0, spsl: 0, fxd: 0, reverse: 0, snote: 0, spasMode: '3 over 4' }));
 const ARP_ENGINES = { an: 'Analogue', mod: 'Modular', wc: 'Wavefold', fm: 'FM', wt: 'Wavetable', vec: 'Vector', add: 'Modal' };
 let arpBin = null, arpDV = null, arpOffsets = [], arpLib = null, arpPatterns = [], arpSounds = [], arpMade = store.get('ds-arp-made', []), arpMadeSounds = store.get('ds-arp-sounds', []);
@@ -1928,8 +2061,11 @@ function arpPatternAt(k) {
 // A pad sound made into an arp sound: quick to speak, a short tail, no sub, no folding out, no beds or robot
 function arpify(v) {
   v = v.slice(); const set = (id, x) => { const p = P[idx[id]]; v[idx[id]] = Math.max(p.min, Math.min(p.max, x)); }, get = id => v[idx[id]];
-  set('attack', Math.min(get('attack'), .012)); set('release', Math.min(1.4, Math.max(.3, get('release') * .22)));
-  for (const id of ['subdrop', 'tension', 'unfold', 'glide', 'texture', 'robot', 'freeze']) set(id, 0);
+  // soft to speak and slow to leave, so the notes flow into each other and into the pads instead of ticking
+  set('attack', .03); set('release', Math.min(2.2, Math.max(.7, get('release') * .35)));
+  for (const id of ['subdrop', 'tension', 'unfold', 'glide', 'texture', 'robot', 'freeze', 'drive', 'air', 'vox']) set(id, 0);
+  // in a room of their own, a little darker than the pad they came from
+  set('space', Math.max(get('space'), .62)); set('shimmer', Math.max(get('shimmer'), .25)); set('delay', Math.max(get('delay'), .22)); set('cutoff', get('cutoff') * .9);
   set('expand', 1);  // as played: the arp's notes stay single notes
   for (const id of ['choir', 'cello', 'stringlayer', 'brass']) set(id, get(id) * .5);
   return v;
@@ -1992,11 +2128,15 @@ async function arpAudio() {
   arpStarting = (async () => {
     await startAudio();
     const sum = ctx.createGain(), hp = ctx.createBiquadFilter(), lp = ctx.createBiquadFilter(), out = ctx.createGain(), lev = leveler(-24);
-    hp.type = 'highpass'; hp.frequency.value = 150; hp.Q.value = .5; lp.type = 'lowpass'; lp.Q.value = .4; lp.frequency.value = arpPrefs.tone;
+    hp.type = 'highpass'; hp.frequency.value = 200; hp.Q.value = .5; lp.type = 'lowpass'; lp.Q.value = .4; lp.frequency.value = arpPrefs.tone;
     out.gain.value = dbGain(arpPrefs.level); recConnect(out, 3);
     node.connect(sum, 3); sum.connect(hp); hp.connect(lp); lp.connect(lev.in); lev.out.connect(out); out.connect(master);
+    // Wash: a long, dark room of the arp's own, so it lives in the same air as the pads
+    const wash = ctx.createGain(), washVerb = ctx.createConvolver(), washLp = ctx.createBiquadFilter();
+    washLp.type = 'lowpass'; washLp.frequency.value = 3200; washVerb.buffer = voxRoomIR(.75); wash.gain.value = arpPrefs.wash * 1.4;
+    lp.connect(wash); wash.connect(washVerb); washVerb.connect(washLp); washLp.connect(lev.in);
     await NBVoice.prepare(ctx);
-    arpG = { sum, hp, lp, out, chain: null };
+    arpG = { sum, hp, lp, out, wash, chain: null };
     meterOn(out, 'arpLevelMeter');
     arpUseSound(.01);
     return arpG;
@@ -2151,7 +2291,7 @@ function arpPlay(e, when, dur, scale = 1) {
   if (scale < .04) return;
   const t = Math.max(when, ctx.currentTime + .004);
   // velocities pulled together: the arp breathes with the pads instead of poking out of them
-  const vel = Math.max(20, Math.min(108, (56 + (e.vel - 56) * .6) * Math.sqrt(scale)));
+  const vel = Math.max(20, Math.min(96, (52 + (e.vel - 56) * .4) * Math.sqrt(scale)));
   if (arpSound().six) { node.port.postMessage({ t: 'arpnote', n: e.pitch, v: vel / 127, at: t, dur: Math.max(.03, dur) }); arpLastPitch = e.pitch; return; }
   if (!arpG.chain) return;
   const note = { pitch: e.pitch, velocity: Math.round(vel), duration: Math.max(.03, dur) };
@@ -2165,9 +2305,9 @@ var arpPos = null;
 function arpPlace(now) {
   if (!arpG || !arpG.chain || arpSound().six) return;
   const g = id => arpVals[idx[id]], t = now + .12, turnBars = Math.pow(2, 5 * (1 - g('orbitspeed'))), turn = 240 / tempo() * turnBars;
-  const o = g('orbit'), az0 = 2 * Math.PI * ((t / turn) % 1);
+  const o = g('orbit') + (1 - g('orbit')) * arpRoam, az0 = 2 * Math.PI * ((t / turn) % 1);
   let x = Math.sin(az0) * o, z = -(1 - o) - Math.cos(az0) * o;
-  const az = Math.atan2(x, -z), d = 1 + 3 * g('distance'), el = g('overhead') * .9, pan = arpG.chain.pan;
+  const az = Math.atan2(x, -z), d = 1 + 3 * g('distance') + (5 - 3 * g('distance')) * arpRoam, el = g('overhead') * .9 * (1 - arpRoam * .5), pan = arpG.chain.pan;
   x = Math.sin(az) * Math.cos(el) * d; z = -Math.cos(az) * Math.cos(el) * d; const y = Math.sin(el) * d;
   pan.positionX.linearRampToValueAtTime(x, t); pan.positionY.linearRampToValueAtTime(y, t); pan.positionZ.linearRampToValueAtTime(z, t);
   arpPos = [az, el, d];
@@ -2178,6 +2318,40 @@ function arpOrbitSources() {
   return arpPos && arpMode ? [[...arpPos, .05, '#ffd76a']] : [];
 }
 setInterval(arpTick, 40);
+
+/* The arp on its own. When nobody has touched anything for 30 seconds, it turns to a new pattern on the 16- (or 32-)
+   bar line, and every second turn to a new sound as well, so it never wears you out. And once every 32 bars it roams:
+   out to the far edge of the room, all the way round you, and slowly back again (bars 16 to 28 of the 32). */
+let userTouch = performance.now(), arpAutoAt = -1, arpTurns = 0, arpRoam = 0, arpRoamSent = -1;
+for (const ev of ['pointerdown', 'keydown', 'wheel']) addEventListener(ev, e => { if (e.isTrusted) userTouch = performance.now(); }, true);
+function arpRoamApply(e) {
+  arpRoam = e;
+  if (!arpSound().six || !node || (Math.abs(e - arpRoamSent) < .004 && (e > 0 || arpRoamSent === 0))) return;
+  arpRoamSent = e;
+  // the six oscillators' own orbit, taken out past where the card has it (the card keeps its own values)
+  for (const id of ['orbit', 'distance']) { const i = idx[id], v = T.arp.vals[i]; node.port.postMessage({ t: 'p', i, v: v + (1 - v) * e, ch: 'arp' }); }
+}
+function arpAutoTick() {
+  if (!HAS_ARP || !arpPrefs.on || !playing || !lineAnchor || !ctx) { if (arpRoam) arpRoamApply(0); return; }
+  const bpm = tempo(), barSec = 240 / bpm, barF = (lineAnchor.ppq + (ctx.currentTime - lineAnchor.time) * bpm / 60 - lineStartBeat) / 4;
+  const ph = ((barF % 32) + 32) % 32;
+  arpRoamApply(ph >= 16 && ph < 28 ? Math.sin(Math.PI * (ph - 16) / 12) ** 2 * arpPrefs.roam : 0);
+  const every = +arpPrefs.auto; if (!every) return;
+  const line = Math.round(barF / every) * every;
+  // just before the bar line, so the new pattern's fade starts on it
+  if (line <= 0 || line === arpAutoAt || (line - barF) * barSec > .45 || (line - barF) * barSec < -.2) return;
+  arpAutoAt = line;
+  if (performance.now() - userTouch < ALIVE_AFTER) return;
+  const R = rng32((line * 7919 + arpPrefs.seed * 31 + arpTurns) >>> 0), simple = NoteEngine.SIMPLE_PATTERNS.length;
+  const m = moodChoice >= 0 ? MOODS[moodChoice] : null, K = m ? MOOD_KINDS.find(k => k.kind === m.kind) : null;
+  pickArp(R() < ((K && K.arpSimple) || .3) ? Math.floor(R() * simple) : simple + Math.floor(R() * ARP_META.length), 'The arp turns by itself');
+  if (++arpTurns % 2 === 0) {
+    // a new sound in the same family as the one playing, so it changes colour without leaving the room
+    const g = arpSound().group, list = arpSounds.map((e, i) => [e, i]).filter(([e]) => !e.made && e.group === g);
+    if (list.length) setTimeout(() => pickArpSound(list[Math.floor(R() * list.length)][1]), (fadeTime() + .5) * 1000);
+  }
+}
+setInterval(arpAutoTick, 100);
 
 async function setArpOn(on, quiet) {
   arpPrefs.on = on; saveArp();
@@ -2281,11 +2455,14 @@ let arpControlsShow = () => {};
       range('variation', 'Variation', 0, 100, 1, pct, regen),
       range('swing', 'Swing', 0, 100, 1, pct, regen),
       range('gate', 'Note length', 20, 150, 1, pct, regen),
+      range('wash', 'Wash · Dry ↔ Washed', 0, 1, .01, v => Math.round(v * 100) + '%', () => { if (arpG) arpG.wash.gain.setTargetAtTime(arpPrefs.wash * 1.4, ctx.currentTime, .05); }, 'teal'),
       range('tone', 'Tone', 800, 16000, 10, v => v >= 1000 ? (v / 1000).toFixed(1) + ' kHz' : Math.round(v) + ' Hz', () => { if (arpG) arpG.lp.frequency.setTargetAtTime(arpPrefs.tone, ctx.currentTime, .03); }, 'teal'),
       pick('octave', 'Octave', [[-1, '−1'], [0, '0'], [1, '+1'], [2, '+2']], regen),
       pick('direction', 'Direction', [['original', 'As written'], ['up', 'Up'], ['down', 'Down'], ['updown', 'Up and down']], regen),
       pick('style', 'Style', [['faithful', 'Faithful'], ['progressive', 'Progressive'], ['evolve', 'Evolving']], regen),
       pick('phrase', 'Phrase', [[16, '16 bars'], [32, '32 bars'], [64, '64 bars']], regen),
+      pick('auto', 'Turns by itself', [[0, 'Never'], [16, 'Every 16 bars'], [32, 'Every 32 bars']], () => {}),
+      range('roam', 'Roam · Stays ↔ To the edge', 0, 1, .01, pct100, () => {}, 'teal'),
       pick('delay', 'Echo', [[-1, 'The sound’s own'], ...FXRecipes.delays.map((d, i) => [i, d.name])], arpApplyFx),
       pick('reverb', 'Room', [[-1, 'The sound’s own'], ...FXRecipes.reverbs.map((d, i) => [i, d.name])], arpApplyFx),
     );
@@ -2626,6 +2803,704 @@ if (HAS_VOX) {
   voxControlsShow();
 }
 
+/* ---------- Melody: a lead and a bass that follow the chords ----------
+   The lead sings a small motif and keeps answering it over the chords: chord notes on the strong beats, steps of the
+   key between, long notes gliding into each other, phrases with room to breathe. The bass walks the roots in one of
+   seven patterns. Both are mono synths with glide, made here (they are light), each with its own sound bank. */
+const LEAD_STYLES = {
+  Floating: { density: .3, long: [2, 6], leap: 2, rest: .3, glide: .22, grid: 1 },
+  Singing:  { density: .65, long: [.5, 2], leap: 2, rest: .15, glide: .1, grid: .5 },
+  Bells:    { density: .8, long: [.25, 1], leap: 3, rest: .1, glide: 0, grid: .5, high: 7 },
+  Sparse:   { density: .35, long: [1, 4], leap: 2, rest: .5, glide: .14, grid: 1 },
+  Hook:     { density: .75, long: [.5, 1.5], leap: 2, rest: .08, glide: .06, grid: .5, repeat: true },
+};
+const LEAD_SOUNDS = [
+  { name: 'Glide saw', osc: [['sawtooth', -8, 1], ['sawtooth', 8, 1], ['square', -1200, .25]], cut: 2400, q: 1, env: 1.6, atk: .06, rel: .7, vib: 14, chorus: true },
+  { name: 'Soft square', osc: [['square', -5, .8], ['square', 5, .8]], cut: 1700, q: .7, env: 1.2, atk: .05, rel: .6, vib: 10 },
+  { name: 'Whistle', osc: [['sine', 0, 1], ['triangle', 1200, .12]], cut: 6000, q: .5, env: 0, atk: .09, rel: .8, vib: 18 },
+  { name: 'Glass', osc: [['sine', 0, .9], ['sine', 1902, .25], ['triangle', 2400, .1]], cut: 7000, q: .5, env: 0, atk: .004, rel: 1.2, vib: 4, pluck: true },
+  { name: 'Kraft flute', osc: [['triangle', 0, 1], ['square', 0, .15]], cut: 2200, q: 2, env: .8, atk: .03, rel: .4, vib: 8 },
+  { name: 'Carlos', osc: [['sine', 0, 1], ['triangle', 1200, .35], ['sine', 1902, .1]], cut: 5000, q: .5, env: .4, atk: .02, rel: .5, vib: 6 },
+  { name: 'Dark reed', osc: [['square', -6, .7], ['sawtooth', 6, .5]], cut: 1100, q: 3, env: 1.4, atk: .05, rel: .6, vib: 9 },
+  { name: 'Choir lead', osc: [['sawtooth', -12, .7], ['sawtooth', 12, .7], ['sawtooth', 0, .5]], cut: 1500, q: 4, env: .5, atk: .2, rel: 1.4, vib: 12, chorus: true },
+];
+const BASS_STYLES = ['Held', 'Pulse', 'Root and fifth', 'Dub', 'Walking', 'Offbeat', 'Syncopated'];
+const BASS_SOUNDS = [
+  { name: 'Round sub', osc: [['sine', 0, 1], ['triangle', 0, .35]], cut: 900, q: .7, env: .2, atk: .01, rel: .25, drive: .2 },
+  { name: 'Warm saw', osc: [['sawtooth', -4, .6], ['sawtooth', 4, .6], ['sine', -1200, .5]], cut: 420, q: 2.5, env: 1.4, atk: .008, rel: .2, drive: .3 },
+  { name: 'Dub sine', osc: [['sine', 0, 1]], cut: 700, q: .7, env: 0, atk: .02, rel: .35, drive: .55 },
+  { name: 'Pluck', osc: [['sawtooth', 0, .8], ['square', -1200, .3]], cut: 600, q: 4, env: 2.2, atk: .004, rel: .15, drive: .2, pluck: true },
+  { name: 'Square', osc: [['square', 0, .6], ['sine', -1200, .5]], cut: 650, q: 1.2, env: .8, atk: .01, rel: .2, drive: .25 },
+];
+const LEAD_PRESETS = Object.keys(LEAD_STYLES).flatMap(st => LEAD_SOUNDS.map((so, k) => ({ name: `${st} · ${so.name}`, style: st, sound: k })));
+const BASS_PRESETS = BASS_STYLES.flatMap(st => BASS_SOUNDS.map((so, k) => ({ name: `${st} · ${so.name}`, style: st, sound: k })));
+const melPrefs = Object.assign({ lead: false, bass: false, level: -5, leadPreset: 8, bassPreset: 0, leadLevel: 0, bassLevel: -2, octave: 0, bassOctave: 0,
+  density: 1, glide: 1, vibrato: 1, tone: 1, echo: .35, room: .45, orbit: .35, seed: 1 }, store.get('ds-mel', {}));
+const saveMel = () => store.set('ds-mel', melPrefs);
+
+// One loop of lead notes over the chord segments, in beats
+const SCALE_MINOR = [0, 2, 3, 5, 7, 8, 10];
+function leadCompute(mode) {
+  const sg = chordSegments(mode); if (!sg) return { events: [], cycle: 64 };
+  const { segs, beats } = sg, reps = Math.max(1, Math.ceil(128 / beats)), cycle = beats * reps;
+  const pr = LEAD_PRESETS[melPrefs.leadPreset] || LEAD_PRESETS[0], S = LEAD_STYLES[pr.style], R = rng32(melPrefs.seed * 7717 + 13);
+  const scale = SCALE_MINOR.map(d => (d + lineKey) % 12), center = 72 + (S.high || 0) + 12 * melPrefs.octave;
+  const segAt = b => { const x = ((b % beats) + beats) % beats; return segs.find(s => x >= s.start && x < s.end) || segs[0]; };
+  const tones = b => { const s = segAt(b); return (VOX_TYPES[s.quality] || VOX_TYPES.min).map(i => (s.root + i) % 12); };
+  const near = (pcs, target) => { let best = target, bd = 99; for (let d = -7; d <= 7; d++) { const m = Math.round(target) + d; if (pcs.includes(((m % 12) + 12) % 12) && Math.abs(d) < bd) { bd = Math.abs(d); best = m; } } return best; };
+  // a two-bar motif: where the notes fall and which way they move
+  const motif = []; let t = 0;
+  while (t < 8) {
+    if (R() > S.density * melPrefs.density * (t % 4 === 0 ? 1.6 : 1) && motif.length) { t += S.grid; continue; }
+    const len = Math.min(8 - t, Math.max(S.grid, Math.round((S.long[0] + (S.long[1] - S.long[0]) * R()) / S.grid) * S.grid));
+    motif.push({ t, len, step: Math.round((R() * 2 - 1) * S.leap) }); t += len;
+  }
+  const events = []; let pitch = near(scale, center);
+  for (let phrase = 0; phrase * 8 < cycle; phrase++) {
+    const p0 = phrase * 8, form = phrase % 4;  // A A' B A''
+    if (R() < S.rest && form !== 0) continue;  // a phrase of silence: room to breathe
+    const shift = form === 2 ? Math.round((R() * 2 - 1) * 2) : 0;
+    for (const n of motif) {
+      if (form === 3 && n.t >= 6 && R() < .5) continue;
+      const b = p0 + n.t, strong = n.t % 2 === 0;
+      let target = pitch + n.step + (n === motif[0] ? shift : 0);
+      target = Math.max(center - 9, Math.min(center + 10, target));
+      pitch = strong ? near(tones(b), target) : near(scale, target);
+      const len = Math.min(n.len * (S.repeat ? .9 : 1), cycle - b) * .92;
+      events.push({ beat: b, len, pitch, vel: strong ? 88 : 72 });
+    }
+  }
+  return { events: events.filter(e => e.beat < cycle).sort((a, b) => a.beat - b.beat), cycle };
+}
+// One loop of bass notes: the roots in the chosen pattern, near the last one
+function bassCompute(mode) {
+  const sg = chordSegments(mode); if (!sg) return { events: [], cycle: 64 };
+  const { segs, beats } = sg, reps = Math.max(1, Math.ceil(128 / beats)), cycle = beats * reps;
+  const pr = BASS_PRESETS[melPrefs.bassPreset] || BASS_PRESETS[0], st = pr.style, events = [];
+  let last = 38 + 12 * melPrefs.bassOctave;
+  const nearRoot = pc => { let best = last, bd = 99; for (let m = 28 + 12 * melPrefs.bassOctave; m <= 50 + 12 * melPrefs.bassOctave; m++) if ((m % 12 + 12) % 12 === pc && Math.abs(m - last) < bd) { bd = Math.abs(m - last); best = m; } return best; };
+  for (let r = 0; r < reps; r++) segs.forEach((s, k) => {
+    const b0 = s.start + r * beats, len = s.end - s.start, root = nearRoot(s.root), fifth = root + 7 > 52 ? root - 5 : root + 7, next = segs[(k + 1) % segs.length];
+    last = root;
+    const add = (t, l, p, v = 92) => { if (t < len) events.push({ beat: b0 + t, len: Math.min(l, len - t) * .95, pitch: p, vel: v }); };
+    for (let bar = 0; bar * 4 < len; bar++) {
+      const o = bar * 4;
+      switch (st) {
+        case 'Held': if (bar === 0) add(0, len, root); break;
+        case 'Pulse': for (let e = 0; e < 8; e++) add(o + e * .5, .42, root, e % 2 ? 76 : 92); break;
+        case 'Root and fifth': add(o, 1.8, root); add(o + 2, 1.8, fifth, 82); break;
+        case 'Dub': add(o, 1.3, root); add(o + 1.5, .45, root, 78); add(o + 2.5, 1.2, root + 12 > 52 ? root : root + 12, 80); break;
+        case 'Walking': {
+          const target = nearRoot(next.root), step = (target - root) / 4;
+          for (let q = 0; q < 4; q++) add(o + q, .9, q === 0 ? root : near12(root + Math.round(step * q)), q ? 80 : 92);
+          break;
+        }
+        case 'Offbeat': for (let q = 0; q < 4; q++) add(o + q + .5, .4, root, 88); break;
+        case 'Syncopated': add(o, .7, root); add(o + .75, .5, root, 78); add(o + 2.5, .9, fifth, 84); add(o + 3.5, .4, root, 76); break;
+      }
+      // over 32 bars: a step towards the next chord every fourth bar, an octave answer every eighth, a rest before 16
+      const gb = Math.floor((b0 + o) / 4) % 32;
+      if (st !== 'Held' && st !== 'Walking') {
+        if (gb % 4 === 3) add(o + 3.5, .45, near12(nearRoot(next.root) + (nearRoot(next.root) > root ? -2 : 2)), 74);
+        if (gb % 8 === 7) add(o + 2.5, .4, root + 12 > 55 ? root - 12 : root + 12, 70);
+        if (gb % 16 === 15) for (let j = events.length - 1; j >= 0 && events[j].beat >= b0 + o + 2; j--) events.splice(j, 1);
+      }
+    }
+  });
+  function near12(m) { const sc = SCALE_MINOR.map(d => (d + lineKey) % 12); for (let d = 0; d < 3; d++) for (const s of [m + d, m - d]) if (sc.includes((s % 12 + 12) % 12)) return s; return m; }
+  return { events: events.sort((a, b) => a.beat - b.beat), cycle };
+}
+
+// A mono synth with glide: its oscillators run all the time, the notes are its envelopes and its pitch moving
+function monoVoice(spec, dest, opts = {}) {
+  const out = ctx.createGain(), amp = ctx.createGain(), filt = ctx.createBiquadFilter(), lfo = ctx.createOscillator(), vib = ctx.createGain();
+  filt.type = 'lowpass'; filt.Q.value = spec.q; filt.frequency.value = spec.cut; amp.gain.value = 0; out.gain.value = 0;
+  lfo.frequency.value = 5.1; vib.gain.value = 0; lfo.connect(vib); lfo.start();
+  let shaper = null;
+  if (spec.drive) { shaper = ctx.createWaveShaper(); const k = 1 + spec.drive * 6, c = new Float32Array(1024); for (let i = 0; i < 1024; i++) { const x = i / 511.5 - 1; c[i] = Math.tanh(k * x) / Math.tanh(k); } shaper.curve = c; }
+  const oscs = spec.osc.map(([type, cents, lv]) => { const o = ctx.createOscillator(), g = ctx.createGain(); o.type = type; o.detune.value = cents; g.gain.value = lv / spec.osc.length * 1.4; o.connect(g); g.connect(filt); vib.connect(o.detune); o.start(); return o; });
+  filt.connect(amp);
+  if (shaper) { amp.connect(shaper); shaper.connect(out); } else amp.connect(out);
+  out.connect(dest);
+  return {
+    out, spec,
+    note(t, pitch, dur, vel, glide) {
+      const f = 440 * Math.pow(2, (pitch - 69) / 12);
+      for (const o of oscs) { o.frequency.cancelScheduledValues(t); if (glide > 0) o.frequency.setTargetAtTime(f, t, glide); else o.frequency.setValueAtTime(f, t); }
+      const a = amp.gain, peak = Math.pow(vel / 127, 1.2), sus = spec.pluck ? peak * .25 : peak * .85;
+      a.cancelScheduledValues(t); a.setValueAtTime(a.value, t); a.linearRampToValueAtTime(peak, t + spec.atk); a.setTargetAtTime(sus, t + spec.atk, spec.pluck ? .12 : .4);
+      a.setTargetAtTime(0, t + dur, spec.rel / 3);
+      const fq = filt.frequency, top = spec.cut * Math.pow(2, spec.env) * (opts.tone ?? 1);
+      fq.cancelScheduledValues(t); fq.setValueAtTime(fq.value, t); fq.linearRampToValueAtTime(Math.min(16000, top), t + Math.max(.005, spec.atk)); fq.setTargetAtTime(spec.cut * (opts.tone ?? 1), t + spec.atk, .25);
+      // vibrato arrives late on a long note, the way a singer leans into it
+      vib.gain.cancelScheduledValues(t); vib.gain.setValueAtTime(0, t);
+      if (dur > .6 && spec.vib) vib.gain.linearRampToValueAtTime(spec.vib * (opts.vibrato ?? 1), t + Math.min(dur, .5 + dur * .3));
+    },
+    stop(t) { amp.gain.cancelScheduledValues(t); amp.gain.setTargetAtTime(0, t, .05); },
+    dispose() { try { oscs.forEach(o => o.stop()); lfo.stop(); out.disconnect(); } catch (e) {} },
+  };
+}
+let melG = null, melStarting = null, leadEv = { events: [], cycle: 64 }, bassEv = { events: [], cycle: 64 }, melKey = '', melMode = '', melNext = 0, melFree = null, melDirty = 1;
+async function melAudio() {
+  if (melG) return melG;
+  if (melStarting) return melStarting;
+  melStarting = (async () => {
+    await startAudio();
+    const sum = ctx.createGain(), lev = leveler(-24), out = ctx.createGain(); out.gain.value = dbGain(melPrefs.level);
+    sum.connect(lev.in); lev.out.connect(out); out.connect(master); recConnect(out, 5);
+    // the lead: its place in the room, a ping-pong echo and a long room
+    const leadIn = ctx.createGain(), pan = ctx.createPanner(), dry = ctx.createGain(), din = ctx.createGain(), rin = ctx.createGain();
+    pan.panningModel = 'HRTF'; pan.distanceModel = 'inverse'; pan.refDistance = 1; pan.rolloffFactor = .4; pan.positionZ.value = -1.4;
+    const dl = ctx.createDelay(3), dr = ctx.createDelay(3), fl = ctx.createGain(), fr = ctx.createGain(), tl = ctx.createBiquadFilter(), tr = ctx.createBiquadFilter(), merge = ctx.createChannelMerger(2);
+    tl.type = tr.type = 'lowpass'; tl.frequency.value = tr.frequency.value = 3000; fl.gain.value = fr.gain.value = .42;
+    din.connect(dl); dl.connect(tl); tl.connect(fr); fr.connect(dr); dr.connect(tr); tr.connect(fl); fl.connect(dl); dl.connect(merge, 0, 0); dr.connect(merge, 0, 1); merge.connect(sum);
+    const verb = ctx.createConvolver(); verb.buffer = typeof voxRoomIR === 'function' ? voxRoomIR(.6) : null; rin.connect(verb); verb.connect(sum);
+    leadIn.connect(pan); pan.connect(dry); dry.connect(sum); pan.connect(din); pan.connect(rin);
+    const leadG = ctx.createGain(), bassG = ctx.createGain(); leadG.connect(leadIn); bassG.connect(sum);
+    melG = { sum, out, leadIn, leadG, bassG, pan, dry, din, rin, dl, dr, lead: null, bass: null };
+    melApply(); meterOn(out, 'melLevelMeter');
+    return melG;
+  })();
+  return melStarting;
+}
+function melApply() {
+  if (!melG) return;
+  const t = ctx.currentTime, d = .75 * 60 / tempo();
+  melG.dl.delayTime.setTargetAtTime(d, t, .1); melG.dr.delayTime.setTargetAtTime(d, t, .1);
+  melG.din.gain.setTargetAtTime(melPrefs.echo * .8, t, .1); melG.rin.gain.setTargetAtTime(melPrefs.room * 1.1, t, .1); melG.dry.gain.setTargetAtTime(1 - melPrefs.room * .35, t, .1);
+  melG.leadG.gain.setTargetAtTime(melPrefs.lead ? dbGain(melPrefs.leadLevel) : 0, t, .3); melG.bassG.gain.setTargetAtTime(melPrefs.bass ? dbGain(melPrefs.bassLevel) : 0, t, .3);
+  melG.out.gain.setTargetAtTime(dbGain(melPrefs.level), t, .05);
+}
+// A new lead or bass sound: the new voice comes in while the old one fades
+function melVoices(fade = fadeTime()) {
+  if (!melG) return;
+  const lp = LEAD_PRESETS[melPrefs.leadPreset] || LEAD_PRESETS[0], bp = BASS_PRESETS[melPrefs.bassPreset] || BASS_PRESETS[0];
+  for (const [k, spec, dest] of [['lead', LEAD_SOUNDS[lp.sound], melG.leadG], ['bass', BASS_SOUNDS[bp.sound], melG.bassG]]) {
+    if (melG[k] && melG[k].spec === spec) continue;
+    const old = melG[k], v = monoVoice(spec, dest, { tone: melPrefs.tone, vibrato: melPrefs.vibrato }), t = ctx.currentTime;
+    v.out.gain.setValueAtTime(0, t); v.out.gain.linearRampToValueAtTime(1, t + (old ? fade : .05));
+    if (old) { old.out.gain.cancelScheduledValues(t); old.out.gain.setValueAtTime(old.out.gain.value, t); old.out.gain.linearRampToValueAtTime(0, t + fade); setTimeout(() => old.dispose(), (fade + 1) * 1000); }
+    melG[k] = v;
+  }
+}
+function melTick() {
+  if (!melG || !ctx || !(melPrefs.lead || melPrefs.bass)) return;
+  const now = ctx.currentTime, bpm = tempo();
+  const want = playing ? (lineAnchor ? 'line' : '') : liveChord() ? 'free' : '';
+  if (want !== melMode) { if (!want) { melG.lead && melG.lead.stop(now); melG.bass && melG.bass.stop(now); } melMode = want; melKey = ''; if (want === 'free') { melFree = { ppq: 0, time: now + .03, bpm }; melNext = 0; } }
+  // the lead drifts round you slowly
+  if (melPrefs.orbit > 0) { const ph = now / (32 * 60 / bpm) * 2 * Math.PI, o = melPrefs.orbit; melG.pan.positionX.linearRampToValueAtTime(Math.sin(ph) * 1.6 * o, now + .1); melG.pan.positionZ.linearRampToValueAtTime(-1.4 - Math.cos(ph) * 1.2 * o + 1.2 * o, now + .1); }
+  if (!melMode) return;
+  let a = melMode === 'line' ? lineAnchor : melFree;
+  if (a.bpm !== bpm) { a = { ppq: a.ppq + (now - a.time) * a.bpm / 60, time: now, bpm }; if (melMode === 'line') lineAnchor = a; else melFree = a; }
+  const ch = melMode === 'free' ? liveChord() : null, key = [melMode, melDirty, arpDirty, ch ? ch.root + ch.q : ''].join('|');
+  if (key !== melKey) { leadEv = leadCompute(melMode); bassEv = bassCompute(melMode); melKey = key; }
+  const beatNow = a.ppq + (now - a.time) * bpm / 60, horizon = beatNow + .3 * bpm / 60;
+  if (melNext < beatNow - .02) melNext = beatNow;
+  const off = melMode === 'line' ? lineStartBeat : 0, ao = { ppq: a.ppq - off, time: a.time }, glideT = g => g * melPrefs.glide * 60 / bpm * .5;
+  const S = LEAD_STYLES[(LEAD_PRESETS[melPrefs.leadPreset] || LEAD_PRESETS[0]).style];
+  if (melPrefs.lead && melG.lead) eventsBetween(leadEv.events, leadEv.cycle, melNext - off, horizon - off, ao, bpm, (e, w) => melG.lead.note(Math.max(w, now + .005), e.pitch, e.len * 60 / bpm, e.vel, glideT(S.glide)));
+  if (melPrefs.bass && melG.bass) eventsBetween(bassEv.events, bassEv.cycle, melNext - off, horizon - off, ao, bpm, (e, w) => melG.bass.note(Math.max(w, now + .005), e.pitch, e.len * 60 / bpm, e.vel, glideT(.04)));
+  melNext = horizon;
+}
+setInterval(melTick, 40);
+async function setMel(which, on, quiet) {
+  melPrefs[which] = on; saveMel(); $(which === 'lead' ? 'leadOn' : 'bassOn').setAttribute('aria-pressed', on);
+  if (!on) { melApply(); return; }
+  if (quiet && !node) return;
+  await melAudio(); melVoices(.05); melApply();
+  if (!quiet) setStatus(on ? (which === 'lead' ? 'The lead sings over the chords.' : 'The bass walks the roots.') : '');
+}
+function pickLead(i, why) { melPrefs.leadPreset = +i; $('leadSel').value = String(i); saveMel(); melDirty++; melVoices(); if (why) setStatus(why + ' · ' + LEAD_PRESETS[+i].name); }
+function pickBass(i, why) { melPrefs.bassPreset = +i; $('bassSel').value = String(i); saveMel(); melDirty++; melVoices(); if (why) setStatus(why + ' · ' + BASS_PRESETS[+i].name); }
+let melControlsShow = () => {};
+{
+  $('leadSel').innerHTML = Object.keys(LEAD_STYLES).map(st => `<optgroup label="${st}">${LEAD_PRESETS.map((x, i) => [x, i]).filter(([x]) => x.style === st).map(([x, i]) => `<option value="${i}">${esc(x.name)}</option>`).join('')}</optgroup>`).join('');
+  $('bassSel').innerHTML = BASS_STYLES.map(st => `<optgroup label="${st}">${BASS_PRESETS.map((x, i) => [x, i]).filter(([x]) => x.style === st).map(([x, i]) => `<option value="${i}">${esc(x.name)}</option>`).join('')}</optgroup>`).join('');
+  $('leadSel').value = String(melPrefs.leadPreset); $('bassSel').value = String(melPrefs.bassPreset); $('leadCount').textContent = LEAD_PRESETS.length; $('bassCount').textContent = BASS_PRESETS.length;
+  $('leadSel').addEventListener('change', () => pickLead($('leadSel').value)); $('bassSel').addEventListener('change', () => pickBass($('bassSel').value));
+  $('leadDice').addEventListener('click', () => pickLead(Math.floor(Math.random() * LEAD_PRESETS.length), 'A random lead'));
+  $('bassDice').addEventListener('click', () => pickBass(Math.floor(Math.random() * BASS_PRESETS.length), 'A random bass'));
+  $('leadOn').addEventListener('click', () => setMel('lead', !melPrefs.lead)); $('bassOn').addEventListener('click', () => setMel('bass', !melPrefs.bass));
+  $('melLevel').addEventListener('input', () => { melPrefs.level = +$('melLevel').value; saveMel(); faderShow('melLevel', melPrefs.level); melApply(); });
+  const shows = [], grid = $('melControls');
+  const range = (key, label, min, max, step, fmt, cls) => {
+    const w = document.createElement('div'); w.className = 'ctl'; const id = 'mel-' + key;
+    w.innerHTML = `<label for="${id}">${label} <output></output></label><input type="range" id="${id}" min="${min}" max="${max}" step="${step}" class="${cls || ''}">`;
+    const inp = w.querySelector('input'), out = w.querySelector('output'), show = () => { inp.value = melPrefs[key]; out.textContent = fmt(melPrefs[key]); inp.style.setProperty('--pct', (melPrefs[key] - min) / (max - min) * 100 + '%'); };
+    inp.addEventListener('input', () => { melPrefs[key] = +inp.value; saveMel(); show(); melDirty++; melApply(); if (key === 'tone' || key === 'vibrato') { const lp = melG && melG.lead; if (lp) { melG.lead = null; melG.bass = null; melVoices(.3); } } });
+    shows.push(show); show(); return w;
+  };
+  const pct = v => Math.round(v * 100) + '%', db = v => (v > 0 ? '+' : '') + (+v).toFixed(1) + ' dB', oct = v => (v > 0 ? '+' : '') + v;
+  grid.append(range('leadLevel', 'Lead level', -18, 6, .5, db, 'rose'), range('density', 'Lead · how many notes', .3, 1.6, .01, pct), range('octave', 'Lead octave', -1, 1, 1, oct), range('glide', 'Glide', 0, 2.5, .01, pct),
+    range('vibrato', 'Vibrato', 0, 2, .01, pct), range('tone', 'Brightness', .4, 2, .01, pct, 'teal'), range('echo', 'Echo', 0, 1, .01, pct, 'teal'), range('room', 'Room', 0, 1, .01, pct, 'teal'),
+    range('orbit', 'Lead round you', 0, 1, .01, pct, 'teal'), range('bassLevel', 'Bass level', -18, 6, .5, db, 'rose'), range('bassOctave', 'Bass octave', -1, 1, 1, oct));
+  const seed = document.createElement('div'); seed.className = 'ctl';
+  seed.innerHTML = '<label>Melody <output id="melSeedOut"></output></label><button class="btn" type="button" id="melSeed">A new melody</button>';
+  grid.append(seed);
+  const showSeed = () => { $('melSeedOut').textContent = '#' + melPrefs.seed; }; shows.push(showSeed);
+  $('melSeed').addEventListener('click', () => { melPrefs.seed = 1 + Math.floor(Math.random() * 99999); saveMel(); melDirty++; showSeed(); setStatus('The lead sings something new.'); });
+  melControlsShow = () => { shows.forEach(f => f()); faderShow('melLevel', melPrefs.level); $('leadOn').setAttribute('aria-pressed', melPrefs.lead); $('bassOn').setAttribute('aria-pressed', melPrefs.bass); $('leadSel').value = String(melPrefs.leadPreset); $('bassSel').value = String(melPrefs.bassPreset); };
+  melControlsShow();
+}
+// The melody view: one loop of the lead (rose) over the bass (teal), and where it is now
+function drawMel() {
+  const c = $('melView');
+  if (c && c.offsetParent) {
+    const g = c.getContext('2d'), w = c.width = c.clientWidth * devicePixelRatio, h = c.height = c.clientHeight * devicePixelRatio;
+    g.clearRect(0, 0, w, h);
+    const k = arpDirty + '|' + melDirty; if (drawMel.key !== k) { drawMel.lead = leadCompute('line'); drawMel.bass = bassCompute('line'); drawMel.key = k; }
+    const cyc = drawMel.lead.cycle, all = [...drawMel.lead.events, ...drawMel.bass.events]; if (!all.length) { requestAnimationFrame(drawMel); return; }
+    let lo = 127, hi = 0; for (const e of all) { lo = Math.min(lo, e.pitch); hi = Math.max(hi, e.pitch); } lo -= 2; hi += 2;
+    for (const [list, col] of [[drawMel.bass.events, '#7fd3d3'], [drawMel.lead.events, '#f2a5c3']]) for (const e of list) {
+      g.fillStyle = col; g.fillRect(e.beat / cyc * w, h - (e.pitch - lo) / (hi - lo) * h - 2 * devicePixelRatio, Math.max(2, e.len / cyc * w), 4 * devicePixelRatio);
+    }
+    if (playing && lineAnchor && ctx) { const b = lineAnchor.ppq + (ctx.currentTime - lineAnchor.time) * tempo() / 60 - lineStartBeat, x = (((b % cyc) + cyc) % cyc) / cyc * w; g.fillStyle = '#ecd08f'; g.fillRect(x, 0, 2 * devicePixelRatio, h); }
+  }
+  requestAnimationFrame(drawMel);
+}
+requestAnimationFrame(drawMel);
+// MIDI: the lead (channel 4) or the bass (channel 5) for one pass of the chord line
+function melMidi(PPQ, which) {
+  const out = [], on = melPrefs[which], ev = which === 'lead' ? leadCompute('line') : bassCompute('line'), ch = which === 'lead' ? 3 : 4;
+  if (!on) return out; const beats = chordSegments('line').beats;
+  for (const e of ev.events) { if (e.beat >= beats) break; const at = Math.round(e.beat * PPQ); out.push([at, 0x90 | ch, e.pitch, e.vel], [at + Math.max(1, Math.round(e.len * PPQ)) - 1, 0x80 | ch, e.pitch, 0]); }
+  return out;
+}
+
+/* ---------- Piano: long, simple melodies that come now and then ----------
+   A soft felt piano far out in the room. Each key is made once and kept: the attack is a real recorded note (the
+   nearest one, moved to the key) and under it the key rings on, from the partials measured in those recordings, on
+   two strings a hair apart (so it beats slowly), with a quick first fall and a long, slow second one, as a piano does.
+   It plays only now and then: a passage of a few phrases, then quiet. A phrase is a small motif of long notes that
+   answers itself over the chords, chord notes on the strong beats, the pedal changing with the chord. Every note has
+   its own place and drifts while it rings, into a big dark room and a slow echo. */
+const PIANO = "@@PIANO@@";
+const pianoNotes = Array.isArray(PIANO) ? PIANO : [];
+const PIANO_STYLES = {
+  'Long lines': { notes: [2, 3], lens: [4, 3, 2, 6], presence: .55, dyad: .25, low: 0, center: 74, answer: 0 },
+  Lullaby:      { notes: [3, 4], lens: [2, 1, 1, 2, 3], presence: .6, dyad: .15, low: .3, center: 72, answer: 0 },
+  Raindrops:    { notes: [1, 3], lens: [1.5, 2.5, 3, .5], presence: .5, dyad: 0, low: 0, center: 79, answer: .3, scatter: true },
+  Echoes:       { notes: [2, 3], lens: [2, 3, 4], presence: .5, dyad: .1, low: 0, center: 72, answer: .8 },
+  Hymn:         { notes: [2, 3], lens: [4, 4, 2], presence: .5, dyad: .7, low: .5, center: 69, answer: 0 },
+  Cinematic:    { notes: [3, 5], lens: [1, 2, 3, 1, 4], presence: .6, dyad: .3, low: .8, center: 74, answer: .2 },
+};
+const PIANO_ROOMS = {
+  'Far hall':    { room: .75, echo: .3, orbit: .5, dist: .7, tone: .8 },
+  Fog:           { room: .9, echo: .2, orbit: .3, dist: .9, tone: .55 },
+  'Night street': { room: .45, echo: .45, orbit: .4, dist: .5, tone: .85 },
+  Underwater:    { room: .8, echo: .35, orbit: .6, dist: .8, tone: .4 },
+  'Wide field':  { room: .6, echo: .4, orbit: .9, dist: 1, tone: .75 },
+  'Close felt':  { room: .35, echo: .15, orbit: .15, dist: .2, tone: .65 },
+};
+const PIANO_PRESETS = Object.keys(PIANO_STYLES).flatMap(st => Object.keys(PIANO_ROOMS).map(rm => ({ name: `${st} · ${rm}`, style: st, room: rm })));
+const pianoPrefs = Object.assign({ on: false, level: -4, preset: 0, density: 1, presence: 1, octave: 0, tone: 1, echo: 1, room: 1, orbit: 1, seed: 1 }, store.get('ds-piano', {}));
+const savePiano = () => store.set('ds-piano', pianoPrefs);
+
+// One loop of piano notes over the chord segments, in beats. It plays in passages: some 16-bar blocks have it, others rest
+function pianoCompute(mode) {
+  const sg = chordSegments(mode); if (!sg) return { events: [], cycle: 64 };
+  const { segs, beats } = sg, reps = Math.max(1, Math.ceil(256 / beats)), cycle = beats * reps;
+  const pr = PIANO_PRESETS[pianoPrefs.preset] || PIANO_PRESETS[0], S = PIANO_STYLES[pr.style], R = rng32(pianoPrefs.seed * 6113 + pianoPrefs.preset * 31 + 7);
+  const scale = SCALE_MINOR.map(d => (d + lineKey) % 12), center = S.center + 12 * pianoPrefs.octave;
+  const segAt = b => { const x = ((b % beats) + beats) % beats; return segs.find(s => x >= s.start && x < s.end) || segs[0]; };
+  const nextChange = b => { const x = ((b % beats) + beats) % beats, s = segAt(b); return b + (s.end - x); };
+  const tones = b => { const s = segAt(b); return (VOX_TYPES[s.quality] || VOX_TYPES.min).map(i => (s.root + i) % 12); };
+  const near = (pcs, target) => { let best = target, bd = 99; for (let d = -7; d <= 7; d++) { const m = Math.round(target) + d; if (pcs.includes(((m % 12) + 12) % 12) && Math.abs(d) < bd) { bd = Math.abs(d); best = m; } } return best; };
+  // the motif: a few long notes and the way they move (scale steps)
+  const motif = []; let t = R() < .5 ? 0 : 1;
+  const count = S.notes[0] + Math.floor(R() * (S.notes[1] - S.notes[0] + 1));
+  for (let i = 0; i < count && t < 7.5; i++) {
+    const len = Math.min(8 - t, S.lens[Math.floor(R() * S.lens.length)] * (S.scatter ? .5 + R() : 1));
+    motif.push({ t: S.scatter ? Math.round(t * 2) / 2 : t, len, step: i ? Math.round((R() * 2 - 1) * 2.4) : 0 }); t += len;
+  }
+  const events = [], blocks = Math.ceil(cycle / 64), play = [];
+  for (let k = 0; k < blocks; k++) play.push(R() < S.presence * pianoPrefs.presence || (k === 1 && !play[0]));
+  let pitch = near(scale, center);
+  for (let phrase = 0; phrase * 8 < cycle; phrase++) {
+    const p0 = phrase * 8, form = phrase % 4;  // A A' B rest-or-A
+    if (!play[Math.floor(p0 / 64)]) continue;
+    if (form === 3 && R() < .6) continue;  // room to breathe
+    if (R() > .55 + .45 * pianoPrefs.density) continue;
+    const lift = form === 2 ? 2 + Math.floor(R() * 2) : 0;
+    motif.forEach((n, i) => {
+      const b = p0 + n.t, strong = Math.abs(n.t % 2) < .01;
+      let target = (i === 0 ? near(tones(b), center + lift * 1.5) : pitch + n.step);
+      if (form === 1 && i === motif.length - 1) target = near(tones(b), pitch - 1);  // the answer comes home
+      target = Math.max(center - 8, Math.min(center + 9, target));
+      pitch = strong || i === 0 ? near(tones(b), target) : near(scale, target);
+      // the pedal: a note rings until the chord changes (and a little after), longer when it is the last of the phrase
+      const ring = Math.max(n.len, nextChange(b) - b + .5) + (i === motif.length - 1 ? 2 : 0), vel = 50 + 18 * (1 - i / motif.length) + R() * 8;
+      events.push({ beat: b, len: ring, pitch, vel });
+      if (S.dyad && i === 0 && R() < S.dyad) { const under = near(tones(b), pitch - (R() < .5 ? 4 : 8)); if (under < pitch - 2) events.push({ beat: b + .02, len: ring, pitch: under, vel: vel * .7 }); }
+      if (S.answer && i === motif.length - 1 && R() < S.answer) events.push({ beat: b + Math.max(1, n.len) + 1, len: ring, pitch: near(tones(b + n.len + 1), pitch + 12), vel: vel * .6 });
+    });
+    // a low octave under the start of a passage phrase, the way a pianist anchors it
+    if (S.low && form !== 3 && R() < S.low) { const s = segAt(p0), lowP = 36 + ((s.root - 36 % 12 + 12) % 12) + (s.root < 4 ? 12 : 0); events.push({ beat: p0, len: nextChange(p0) - p0 + 1, pitch: lowP, vel: 46 }); }
+  }
+  return { events: events.filter(e => e.beat < cycle).sort((a, b) => a.beat - b.beat), cycle };
+}
+
+// The keys, made once each. The tail: two strings per partial, a fast and a slow fall, higher partials dying first
+const pianoKeys = new Map();
+let pianoSrc = [];  // decoded recorded notes
+function pianoProfile(midi) {
+  // the partials of a soft felt hammer, struck an eighth along the string, blended with those measured nearby
+  const gen = Array.from({ length: 18 }, (_, k) => { const n = k + 1; return Math.abs(Math.sin(Math.PI * n * .125)) / Math.pow(n, 1.15) / (1 + Math.pow(n * 440 * Math.pow(2, (midi - 69) / 12) / 2400, 2)); });
+  const near = pianoNotes.map((p, i) => [p, i]).filter(([p]) => p.parts && Math.abs(p.midi - midi) <= 9).sort((a, b) => Math.abs(a[0].midi - midi) - Math.abs(b[0].midi - midi))[0];
+  if (!near) return gen;
+  const top = Math.max(...gen);
+  return gen.map((g, k) => { const m = near[0].parts[k]; return .55 * g / top + .45 * (m ? Math.min(1, m[0]) : 0) * Math.pow(.92, k); });
+}
+function pianoKey(midi) {
+  if (pianoKeys.has(midi)) return pianoKeys.get(midi);
+  const sr = ctx.sampleRate, hs = sr / 2, f = 440 * Math.pow(2, (midi - 69) / 12), dur = Math.max(4.5, Math.min(10, 9 - (midi - 48) * .1)), n = Math.floor(hs * dur);
+  const R = rng32(4441 + midi * 17), prof = pianoProfile(midi), half = new Float32Array(n), B = .00012 * Math.pow(2, (midi - 48) / 10), kf = Math.pow(2, (midi - 60) / 24);
+  const strings = midi < 38 ? [0] : [-(.35 + R() * .5), .35 + R() * .5];
+  prof.forEach((amp, k) => {
+    const pn = k + 1, fn = pn * f * Math.sqrt(1 + B * pn * pn); if (fn > hs * .45 || amp < .002) return;
+    const fast = Math.pow(10, -(5 + 1.1 * pn) * kf / 20 / hs), slow = Math.pow(10, -(1.1 + .32 * pn) * kf / 20 / hs);
+    for (const cents of strings) {
+      const w = 2 * Math.PI * fn * Math.pow(2, cents / 1200) / hs, c = Math.cos(w), s = Math.sin(w), a0 = amp / strings.length;
+      let x = Math.cos(R() * 6.28), y = Math.sin(R() * 6.28), e1 = a0 * .72, e2 = a0 * .28;
+      for (let i = 0; i < n; i++) { const nx = x * c - y * s; y = x * s + y * c; x = nx; half[i] += y * (e1 + e2); e1 *= fast; e2 *= slow; if (e1 + e2 < 1e-5) break; }
+    }
+  });
+  // up to the full rate, a soft start, the hammer's thump (a little filtered noise) and the end faded
+  const b = ctx.createBuffer(1, n * 2, sr), d = b.getChannelData(0);
+  for (let i = 0; i < n * 2; i++) { const j = i / 2, k = Math.floor(j), fr = j - k; d[i] = half[k] * (1 - fr) + (half[k + 1] || 0) * fr; }
+  let lp = 0; const thump = Math.floor(sr * .03);
+  for (let i = 0; i < n * 2; i++) { if (i < thump) { lp = lp * .8 + (R() * 2 - 1) * .2; d[i] += lp * .06 * (1 - i / thump); } if (i < 120) d[i] *= i / 120; }
+  // the recorded attack: the nearest real note, moved to this key, laid over the first moment and faded into the tail
+  const rec = pianoSrc.map((x, i) => [x, pianoNotes[i]]).filter(([x]) => x).sort((a, b) => Math.abs(a[1].midi - midi) - Math.abs(b[1].midi - midi))[0];
+  if (rec && Math.abs(rec[1].midi - midi) <= 10) {
+    const src = rec[0], rate = Math.pow(2, (midi - rec[1].midi) / 12), L = Math.min(Math.floor(src.length / rate), Math.floor(sr * .35)), fadeFrom = Math.floor(L * .35);
+    let es = 0, et = 0; for (let i = Math.floor(sr * .02); i < Math.min(L, Math.floor(sr * .12)); i++) { const x = i * rate, j = Math.floor(x), v = src[j] || 0; es += v * v; et += d[i] * d[i]; }
+    const g = es > 0 ? Math.sqrt(et / es) * 1.1 : 0;
+    for (let i = 0; i < L; i++) {
+      const x = i * rate, j = Math.floor(x), fr = x - j, v = ((src[j] || 0) * (1 - fr) + (src[j + 1] || 0) * fr) * g, k = i < fadeFrom ? 1 : Math.cos((i - fadeFrom) / (L - fadeFrom) * Math.PI / 2) ** 2;
+      d[i] = d[i] * (i < fadeFrom ? .45 : .45 + .55 * (1 - k)) + v * k;
+    }
+  }
+  let peak = 0; for (let i = 0; i < d.length; i++) peak = Math.max(peak, Math.abs(d[i]));
+  const fo = Math.floor(sr * .5); for (let i = 0; i < d.length; i++) { d[i] /= peak + 1e-9; if (i > d.length - fo) d[i] *= (d.length - i) / fo; }
+  pianoKeys.set(midi, b); return b;
+}
+let pianoLoading = null;
+async function loadPiano() {
+  if (pianoLoading) return pianoLoading;
+  pianoLoading = (async () => {
+    for (let i = 0; i < pianoNotes.length; i++) {
+      try { const d = (await ctx.decodeAudioData(b64ToBytes(pianoNotes[i].b64).buffer)).getChannelData(0); let pk = 0; for (const x of d) pk = Math.max(pk, Math.abs(x)); let s = 0; while (s < d.length && Math.abs(d[s]) < pk * .03) s++; pianoSrc[i] = d.slice(s); }
+      catch (e) { pianoSrc[i] = null; }
+    }
+  })();
+  return pianoLoading;
+}
+// Keys the coming notes need are made a little ahead, one at a time, so playing never waits
+const pianoQueue = new Set();
+setInterval(() => { if (!ctx || !pianoQueue.size || !pianoSrc.length) return; const m = pianoQueue.values().next().value; pianoQueue.delete(m); pianoKey(m); }, 60);
+
+let pianoG = null, pianoStarting = null, pianoEv = { events: [], cycle: 64 }, pianoKeyStr = '', pianoMode = '', pianoNext = 0, pianoDirty = 1, pianoActive = [], pianoFree = null;
+async function pianoAudio() {
+  if (pianoG) return pianoG;
+  if (pianoStarting) return pianoStarting;
+  pianoStarting = (async () => {
+    await startAudio(); await loadPiano();
+    const sum = ctx.createGain(), lev = leveler(-24), out = ctx.createGain(); out.gain.value = dbGain(pianoPrefs.level);
+    sum.connect(lev.in); lev.out.connect(out); out.connect(master); recConnect(out, 7);
+    // a slow ping-pong echo, darker each time round, and a big dark room that blooms after the note
+    const din = ctx.createGain(), dl = ctx.createDelay(4), dr = ctx.createDelay(4), fl = ctx.createGain(), fr = ctx.createGain(), tl = ctx.createBiquadFilter(), tr = ctx.createBiquadFilter(), merge = ctx.createChannelMerger(2);
+    tl.type = tr.type = 'lowpass'; tl.frequency.value = tr.frequency.value = 2400; fl.gain.value = fr.gain.value = .45;
+    din.connect(dl); dl.connect(tl); tl.connect(fr); fr.connect(dr); dr.connect(tr); tr.connect(fl); fl.connect(dl); dl.connect(merge, 0, 0); dr.connect(merge, 0, 1); merge.connect(sum);
+    const rin = ctx.createGain(), verb = ctx.createConvolver(), vlp = ctx.createBiquadFilter(); verb.buffer = voxRoomIR(1); vlp.type = 'lowpass'; vlp.frequency.value = 3800;
+    rin.connect(verb); verb.connect(vlp); vlp.connect(sum);
+    const dry = ctx.createGain(); dry.connect(sum);
+    pianoG = { sum, out, din, rin, dry, dl, dr };
+    pianoApply(); meterOn(out, 'pianoLevelMeter');
+    return pianoG;
+  })();
+  return pianoStarting;
+}
+const pianoRoom = () => PIANO_ROOMS[(PIANO_PRESETS[pianoPrefs.preset] || PIANO_PRESETS[0]).room];
+function pianoApply() {
+  if (!pianoG) return;
+  const t = ctx.currentTime, d = 1.5 * 60 / tempo(), rm = pianoRoom();
+  pianoG.dl.delayTime.setTargetAtTime(d, t, .2); pianoG.dr.delayTime.setTargetAtTime(d, t, .2);
+  pianoG.din.gain.setTargetAtTime(Math.min(1, rm.echo * pianoPrefs.echo) * .7, t, .3); pianoG.rin.gain.setTargetAtTime(Math.min(1.2, rm.room * pianoPrefs.room) * 1.2, t, .3);
+  pianoG.dry.gain.setTargetAtTime(1 - Math.min(1, rm.room * pianoPrefs.room) * .45, t, .3);
+  pianoG.out.gain.setTargetAtTime(dbGain(pianoPrefs.level), t, .05);
+}
+// Where a note sits: on a slow circle round you, its own height, a little further when the room is far
+function pianoPlace(t, R) {
+  const rm = pianoRoom(), o = Math.min(1, rm.orbit * pianoPrefs.orbit), ph = 2 * Math.PI * t / (64 * 60 / tempo()) + (R() - .5) * 1.4 * o;
+  const dist = 1.1 + 2.6 * rm.dist;
+  return [Math.sin(ph) * dist * (.35 + .65 * o), (R() - .4) * .9 * o, -Math.cos(ph) * dist * (o > .5 ? 1 : .6) - (1 - o) * 1.2];
+}
+function pianoPlay(e, when, ring, R) {
+  const b = pianoKeys.get(e.pitch) || pianoKey(e.pitch);
+  const t = Math.max(when, ctx.currentTime + .005), rm = pianoRoom(), src = ctx.createBufferSource(), g = ctx.createGain(), lp = ctx.createBiquadFilter(), pan = ctx.createPanner();
+  src.buffer = b; lp.type = 'lowpass'; lp.Q.value = .3; lp.frequency.value = Math.min(16000, (900 + 5200 * Math.pow(e.vel / 127, 1.6)) * rm.tone * pianoPrefs.tone * 1.6);
+  pan.panningModel = 'HRTF'; pan.distanceModel = 'inverse'; pan.refDistance = 1; pan.rolloffFactor = .35;
+  const from = pianoPlace(t, R), to = pianoPlace(t + ring, R), end = t + Math.min(b.duration, ring + 1.5);
+  pan.positionX.setValueAtTime(from[0], t); pan.positionY.setValueAtTime(from[1], t); pan.positionZ.setValueAtTime(from[2], t);
+  pan.positionX.linearRampToValueAtTime(to[0], end); pan.positionY.linearRampToValueAtTime(to[1], end); pan.positionZ.linearRampToValueAtTime(to[2], end);
+  const v = Math.pow(e.vel / 127, 1.3) * .9;
+  g.gain.setValueAtTime(v, t);
+  // the damper comes down when the pedal changes: a soft release, the room keeps the rest
+  if (ring + .05 < b.duration) { g.gain.setValueAtTime(v, t + ring); g.gain.setTargetAtTime(0, t + ring, .35); }
+  src.connect(g); g.connect(lp); lp.connect(pan); pan.connect(pianoG.dry); pan.connect(pianoG.din); pan.connect(pianoG.rin);
+  src.start(t); src.stop(end + .1);
+  src.onended = () => { try { src.disconnect(); g.disconnect(); lp.disconnect(); pan.disconnect(); } catch (er) {} };
+  pianoActive.push({ t0: t, t1: end, from, to, lv: v, pitch: e.pitch });
+}
+function pianoTick() {
+  if (!pianoPrefs.on || !pianoG || !ctx) return;
+  const now = ctx.currentTime, bpm = tempo();
+  pianoActive = pianoActive.filter(a => a.t1 > now);
+  const want = playing ? (lineAnchor ? 'line' : '') : liveChord() ? 'free' : '';
+  if (want !== pianoMode) { pianoMode = want; pianoKeyStr = ''; if (want === 'free') { pianoFree = { ppq: 0, time: now + .03, bpm }; pianoNext = 0; } }
+  if (!pianoMode) return;
+  const a = pianoMode === 'line' ? lineAnchor : pianoFree;
+  const ch = pianoMode === 'free' ? liveChord() : null, key = [pianoMode, pianoDirty, arpDirty, ch ? ch.root + ch.q : ''].join('|');
+  if (key !== pianoKeyStr) { pianoEv = pianoCompute(pianoMode); pianoKeyStr = key; for (const e of pianoEv.events) if (!pianoKeys.has(e.pitch)) pianoQueue.add(e.pitch); }
+  const beatNow = a.ppq + (now - a.time) * bpm / 60, horizon = beatNow + .3 * bpm / 60;
+  if (pianoNext < beatNow - .02) pianoNext = beatNow;
+  const off = pianoMode === 'line' ? lineStartBeat : 0, ao = { ppq: a.ppq - off, time: a.time }, R = rng32((Math.floor(beatNow * 4) * 2654435761) >>> 0);
+  eventsBetween(pianoEv.events, pianoEv.cycle, pianoNext - off, horizon - off, ao, bpm, (e, w) => pianoPlay(e, w, e.len * 60 / bpm, R));
+  pianoNext = horizon;
+}
+setInterval(pianoTick, 40);
+async function setPianoOn(on, quiet) {
+  pianoPrefs.on = on; savePiano(); $('pianoOn').setAttribute('aria-pressed', on);
+  if (!on) return;
+  if (quiet && !node) return;
+  await pianoAudio();
+  if (!quiet) setStatus(playing ? 'The piano comes in now and then, with long, simple lines.' : 'The piano is on: press ▶, or hold a chord.');
+}
+function pickPiano(i, why) { pianoPrefs.preset = +i; $('pianoSel').value = String(i); savePiano(); pianoDirty++; pianoApply(); if (why) setStatus(why + ' · ' + PIANO_PRESETS[+i].name); }
+let pianoControlsShow = () => {};
+{
+  if (!pianoNotes.length) document.body.classList.add('no-piano');
+  $('pianoSel').innerHTML = Object.keys(PIANO_STYLES).map(st => `<optgroup label="${st}">${PIANO_PRESETS.map((x, i) => [x, i]).filter(([x]) => x.style === st).map(([x, i]) => `<option value="${i}">${esc(x.name)}</option>`).join('')}</optgroup>`).join('');
+  $('pianoSel').value = String(pianoPrefs.preset); $('pianoCount').textContent = PIANO_PRESETS.length;
+  $('pianoSel').addEventListener('change', () => pickPiano($('pianoSel').value));
+  $('pianoDice').addEventListener('click', () => pickPiano(Math.floor(Math.random() * PIANO_PRESETS.length), 'A random piano'));
+  $('pianoOn').addEventListener('click', () => setPianoOn(!pianoPrefs.on));
+  $('pianoLevel').addEventListener('input', () => { pianoPrefs.level = +$('pianoLevel').value; savePiano(); faderShow('pianoLevel', pianoPrefs.level); pianoApply(); });
+  const shows = [], grid = $('pianoControls');
+  const range = (key, label, min, max, step, fmt, cls) => {
+    const w = document.createElement('div'); w.className = 'ctl'; const id = 'piano-' + key;
+    w.innerHTML = `<label for="${id}">${label} <output></output></label><input type="range" id="${id}" min="${min}" max="${max}" step="${step}" class="${cls || ''}">`;
+    const inp = w.querySelector('input'), out = w.querySelector('output'), show = () => { inp.value = pianoPrefs[key]; out.textContent = fmt(pianoPrefs[key]); inp.style.setProperty('--pct', (pianoPrefs[key] - min) / (max - min) * 100 + '%'); };
+    inp.addEventListener('input', () => { pianoPrefs[key] = +inp.value; savePiano(); show(); if (['density', 'presence', 'octave'].includes(key)) pianoDirty++; pianoApply(); });
+    shows.push(show); show(); return w;
+  };
+  const pct = v => Math.round(v * 100) + '%', oct = v => (v > 0 ? '+' : '') + v;
+  grid.append(range('presence', 'How often it comes', 0, 1.6, .01, pct), range('density', 'Notes in a phrase', .2, 1.4, .01, pct), range('octave', 'Octave', -1, 1, 1, oct),
+    range('tone', 'Brightness', .4, 1.6, .01, pct, 'teal'), range('echo', 'Echo', 0, 1.6, .01, pct, 'teal'), range('room', 'Room', 0, 1.4, .01, pct, 'teal'), range('orbit', 'Round you', 0, 1.4, .01, pct, 'teal'));
+  const seed = document.createElement('div'); seed.className = 'ctl';
+  seed.innerHTML = '<label>Melody <output id="pianoSeedOut"></output></label><button class="btn" type="button" id="pianoSeed">A new melody</button>';
+  grid.append(seed);
+  const showSeed = () => { $('pianoSeedOut').textContent = '#' + pianoPrefs.seed; }; shows.push(showSeed);
+  $('pianoSeed').addEventListener('click', () => { pianoPrefs.seed = 1 + Math.floor(Math.random() * 99999); savePiano(); pianoDirty++; showSeed(); setStatus('The piano plays something new.'); });
+  pianoControlsShow = () => { shows.forEach(f => f()); faderShow('pianoLevel', pianoPrefs.level); $('pianoOn').setAttribute('aria-pressed', pianoPrefs.on); $('pianoSel').value = String(pianoPrefs.preset); };
+  pianoControlsShow();
+}
+// The piano view: one loop of its notes, the passages and the silences, and where it is now
+function drawPiano() {
+  const c = $('pianoView');
+  if (c && c.offsetParent) {
+    const g = c.getContext('2d'), w = c.width = c.clientWidth * devicePixelRatio, h = c.height = c.clientHeight * devicePixelRatio;
+    g.clearRect(0, 0, w, h);
+    const k = arpDirty + '|' + pianoDirty; if (drawPiano.key !== k) { drawPiano.ev = pianoCompute('line'); drawPiano.key = k; }
+    const ev = drawPiano.ev, cyc = ev.cycle;
+    if (ev.events.length) {
+      let lo = 127, hi = 0; for (const e of ev.events) { lo = Math.min(lo, e.pitch); hi = Math.max(hi, e.pitch); } lo -= 2; hi += 2;
+      for (const e of ev.events) { g.fillStyle = 'rgba(236,208,143,' + (.35 + e.vel / 200) + ')'; g.fillRect(e.beat / cyc * w, h - (e.pitch - lo) / (hi - lo) * h - 2 * devicePixelRatio, Math.max(2, Math.min(e.len, 8) / cyc * w), 3 * devicePixelRatio); }
+    }
+    if (playing && lineAnchor && ctx) { const b = lineAnchor.ppq + (ctx.currentTime - lineAnchor.time) * tempo() / 60 - lineStartBeat, x = (((b % cyc) + cyc) % cyc) / cyc * w; g.fillStyle = '#f2a5c3'; g.fillRect(x, 0, 2 * devicePixelRatio, h); }
+  }
+  requestAnimationFrame(drawPiano);
+}
+requestAnimationFrame(drawPiano);
+// MIDI: the piano (channel 7) for one pass of the chord line
+function pianoMidi(PPQ) {
+  const out = []; if (!pianoPrefs.on) return out;
+  const ev = pianoCompute('line'), beats = chordSegments('line').beats;
+  for (const e of ev.events) { if (e.beat >= beats) break; const at = Math.round(e.beat * PPQ); out.push([at, 0x96, e.pitch, Math.round(e.vel)], [at + Math.max(1, Math.round(e.len * PPQ)) - 1, 0x86, e.pitch, 0]); }
+  return out;
+}
+
+/* ---------- Perc: floating percussion all round you ----------
+   Five lanes of percussion, each on its own Euclidean rhythm and its own cycle (16, 12, 7, 10 … sixteenths), so they
+   drift against each other and meet again; over 32 bars the lanes come in and step out. Every lane circles you at
+   its own height and pace, every hit flies a little while it rings, and some hits go off into the echo or the room.
+   The sounds: the recorded percussion (congas, bongos, toms, timbales, cowbells, stones, coins, rims …) and the
+   percussion made from oscillators. */
+const PERC_SYNTH = [
+  { t: 'wood', f: 620, dec: .09 }, { t: 'wood', f: 980, dec: .06 }, { t: 'clave', f: 2300, dec: .05 }, { t: 'rim', f: 1700, dec: .03 }, { t: 'shaker', dec: .05 },
+  { t: 'blip', f: 880, ratio: 2.5, index: 3, dec: .08 }, { t: 'blip', f: 1600, ratio: 3.5, index: 2, dec: .05 }, { t: 'tom', f: 180, bend: .3, dec: .2 }, { t: 'tom', f: 260, bend: .25, dec: .15 },
+  { t: 'cow', f: 760, dec: .1 }, { t: 'zap', f: 1200, to: 300, dec: .08 }, { t: 'hat', dec: .02, metal: 1, hp: 8000 },
+];
+const PERC_WORDS_A = ['Floating', 'Moss', 'Coin', 'Paper', 'Copper', 'Glass', 'Rain', 'Bamboo', 'Stone', 'Shell', 'Ember', 'Satellite'];
+const PERC_WORDS_B = ['Garden', 'Ritual', 'Orbit', 'Market', 'Temple', 'Rain', 'Clockwork', 'Caravan', 'Harbour', 'Canopy', 'Dust', 'Lanterns'];
+// A kit: five sounds, each either recorded (a hit) or made
+// Each flavour of kit draws on its own pools of recorded hits: hand percussion, snaps, effects (cracks, lasers, crickets,
+// whooshes), foley crumbs (chips, foil, apple, spray) and orchestral hits; 'made' kits are mostly oscillators
+const percPool = kinds => hitList.map((h, i) => [h, i]).filter(([h]) => h.cls === 'perc' && kinds.includes(h.kind)).map(([, i]) => i);
+const PERC_FLAVOURS = [
+  ['', ['perc'], .7], ['', ['perc', 'snap'], .75], ['Spark', ['fx', 'snap'], .65], ['Crumbs', ['texture', 'snap'], .8], ['Thunder', ['orch', 'perc'], .75],
+  ['Night', ['texture', 'fx', 'perc'], .7], ['', ['perc', 'orch', 'snap', 'fx', 'texture'], .75], ['made', ['perc'], .2],
+];
+const PERC_KITS = Array.from({ length: 96 }, (_, i) => {
+  const R = rng32(31001 + i * 211), [flav, kinds, share] = PERC_FLAVOURS[i % PERC_FLAVOURS.length], hats = hitsOf('hat');
+  let pool = percPool(kinds); if (!pool.length) pool = percPool(['perc']);
+  const lanes = Array.from({ length: 5 }, (_, l) => {
+    const u = R();
+    if (pool.length && u < share) { const p = l === 4 && hats.length && R() < .5 ? hats : pool; const hi = p[Math.floor(R() * p.length)]; return { t: 'hit', i: hi, rate: .85 + .35 * R(), ...(hitList[hi].len > 1.1 ? { len: 1.1 } : {}) }; }
+    return { ...PERC_SYNTH[Math.floor(R() * PERC_SYNTH.length)], seed: 1 + Math.floor(R() * 999) };
+  });
+  return { name: `${PERC_WORDS_A[Math.floor(R() * PERC_WORDS_A.length)]} ${PERC_WORDS_B[Math.floor(R() * PERC_WORDS_B.length)]}${flav ? ' · ' + flav.toLowerCase() : ''}`, lanes };
+});
+// Euclid: k hits spread as evenly as they can be over n steps, turned by r
+const euclid = (k, n, r) => Array.from({ length: n }, (_, s) => (((s + r) * k) % n) < k);
+const PERC_KINDS = [
+  ['Gentle rain', [[3, 16], [2, 12], [5, 16], [3, 10], [4, 16]], .55],
+  ['Three against four', [[3, 12], [4, 16], [2, 6], [5, 16], [3, 8]], .7],
+  ['Clockwork', [[4, 16], [3, 16], [7, 16], [2, 8], [5, 12]], .75],
+  ['Hand drums', [[5, 16], [3, 8], [7, 12], [2, 16], [4, 10]], .8],
+  ['Bells and coins', [[2, 7], [3, 10], [2, 9], [3, 11], [5, 16]], .6],
+  ['Forest floor', [[3, 7], [2, 5], [4, 9], [3, 16], [2, 11]], .55],
+  ['Slow tide', [[2, 16], [1, 12], [3, 32], [2, 10], [1, 7]], .5],
+  ['Busy market', [[7, 16], [5, 12], [3, 8], [9, 16], [4, 10]], .85],
+];
+const PERC_GROOVES = PERC_KINDS.flatMap(([name, lanes, vel], k) => Array.from({ length: 6 }, (_, v) => {
+  const R = rng32(41001 + k * 97 + v * 13);
+  return { name: v ? `${name} · ${['', 'turned', 'sparser', 'wider', 'restless', 'late'][v]}` : name, vel,
+    lanes: lanes.map(([hits, n]) => { const kk = Math.max(1, hits + (v === 2 ? -1 : v === 4 ? 1 : 0)); return { k: kk, n, r: v === 1 ? Math.floor(R() * n) : (v === 5 ? 1 : 0) }; }) };
+}));
+const percPrefs = Object.assign({ on: false, level: -6, kit: 0, groove: 0, spread: .8, height: .5, fly: .45, orbit: .5, echo: .3, room: .5, density: 1, seed: 1 }, store.get('ds-perc', {}));
+const savePerc = () => store.set('ds-perc', percPrefs);
+let percG = null, percStarting = null, percBufs = [], percMode = '', percNext = 0, percActive = [];
+async function percAudio() {
+  if (percG) return percG;
+  if (percStarting) return percStarting;
+  percStarting = (async () => {
+    await startAudio();
+    const sum = ctx.createGain(), lev = leveler(-25), out = ctx.createGain(), hp = ctx.createBiquadFilter(), fade = ctx.createGain();
+    hp.type = 'highpass'; hp.frequency.value = 90; out.gain.value = dbGain(percPrefs.level);
+    sum.connect(fade); fade.connect(hp); hp.connect(lev.in); lev.out.connect(out); out.connect(master); recConnect(out, 6);
+    const din = ctx.createGain(), dl = ctx.createDelay(3), dr = ctx.createDelay(3), fl = ctx.createGain(), fr = ctx.createGain(), tl = ctx.createBiquadFilter(), tr = ctx.createBiquadFilter(), merge = ctx.createChannelMerger(2);
+    tl.type = tr.type = 'lowpass'; tl.frequency.value = tr.frequency.value = 3400; fl.gain.value = fr.gain.value = .45;
+    din.connect(dl); dl.connect(tl); tl.connect(fr); fr.connect(dr); dr.connect(tr); tr.connect(fl); fl.connect(dl); dl.connect(merge, 0, 0); dr.connect(merge, 0, 1); merge.connect(sum);
+    const rin = ctx.createGain(), verb = ctx.createConvolver(); verb.buffer = voxRoomIR(.55); rin.connect(verb); verb.connect(sum);
+    percG = { sum, out, fade, din, rin, dl, dr };
+    percApply(); meterOn(out, 'percLevelMeter');
+    await percKit();
+    return percG;
+  })();
+  return percStarting;
+}
+async function percKit() {
+  const kit = PERC_KITS[percPrefs.kit] || PERC_KITS[0];
+  if (kit.lanes.some(v => v.t === 'hit')) await loadHits();
+  percBufs = kit.lanes.map((v, l) => { const d = drumSound({ seed: 77 + l, ...v }, ctx.sampleRate), b = ctx.createBuffer(1, d.length, ctx.sampleRate); b.copyToChannel(d, 0); return b; });
+}
+function percApply() {
+  if (!percG) return;
+  const t = ctx.currentTime, d = .75 * 60 / tempo();
+  percG.dl.delayTime.setTargetAtTime(d, t, .1); percG.dr.delayTime.setTargetAtTime(d, t, .1);
+  percG.out.gain.setTargetAtTime(dbGain(percPrefs.level), t, .05);
+}
+// Where lane l is now: its own circle round you, at its own height and pace
+function percLanePos(l, t) {
+  const p = percPrefs, turn = (12 + 9 * l) * (1.6 - p.orbit), ph = 2 * Math.PI * (t / turn + l / 5) * (l % 2 ? -1 : 1);
+  return [ph * p.orbit + (l - 2) * .9 * p.spread, (Math.sin(ph * .7 + l) * .5 + (l - 2) * .15) * p.height, .7 + 2.4 * p.spread * (.5 + .5 * Math.sin(ph * .4 + l * 2))];
+}
+function percHit(l, when, vel, R) {
+  const b = percBufs[l]; if (!b) return;
+  const t = Math.max(when, ctx.currentTime + .005), p = percPrefs, from = percLanePos(l, t), to = [from[0] + (R() - .5) * 1.6 * p.fly, from[1] + (R() - .5) * .8 * p.fly, from[2] * (1 + (R() - .5) * .6 * p.fly)];
+  const src = ctx.createBufferSource(), g = ctx.createGain(), pan = ctx.createPanner(); src.buffer = b; g.gain.value = vel * .7;
+  pan.panningModel = 'HRTF'; pan.distanceModel = 'inverse'; pan.refDistance = 1; pan.rolloffFactor = .5;
+  const len = b.duration + .05, [x0, y0, z0] = xyz(from), [x1, y1, z1] = xyz(to);
+  pan.positionX.setValueAtTime(x0, t); pan.positionY.setValueAtTime(y0, t); pan.positionZ.setValueAtTime(z0, t);
+  pan.positionX.linearRampToValueAtTime(x1, t + len); pan.positionY.linearRampToValueAtTime(y1, t + len); pan.positionZ.linearRampToValueAtTime(z1, t + len);
+  const dry = ctx.createGain(), ds = ctx.createGain(), rs = ctx.createGain(), toss = R() < .12;
+  dry.gain.value = toss ? .3 : 1; ds.gain.value = toss && R() < .5 ? 1 : p.echo * .45; rs.gain.value = toss ? 1 : p.room * .6;
+  src.connect(g); g.connect(pan); pan.connect(dry); dry.connect(percG.sum); pan.connect(ds); ds.connect(percG.din); pan.connect(rs); rs.connect(percG.rin);
+  src.start(t); src.onended = () => { try { src.disconnect(); g.disconnect(); pan.disconnect(); dry.disconnect(); ds.disconnect(); rs.disconnect(); } catch (e) {} };
+  percActive.push({ t0: t, t1: t + Math.max(.25, len), from, to, l, lv: vel });
+}
+// Which lanes play in a bar of the 32: they come in one by one, and now and then one steps out for a while
+function percLaneOn(l, bar) {
+  const b = ((bar % 32) + 32) % 32, R = rng32(percPrefs.seed * 977 + percPrefs.groove * 31 + l * 7 + Math.floor(b / 4) * 101);
+  if (b < l * 2 && l > 1) return false;  // the first bars: the lanes arrive
+  return R() > .18;
+}
+function percTick() {
+  if (!percPrefs.on || !percG || !ctx || !percBufs.length) return;
+  const now = ctx.currentTime, bpm = tempo(), want = playing && lineAnchor ? 'line' : '';
+  percActive = percActive.filter(a => a.t1 > now);
+  if (want !== percMode) { percMode = want; percNext = 0; }
+  if (!percMode) return;
+  const a = lineAnchor, beatNow = a.ppq + (now - a.time) * bpm / 60, horizon = beatNow + .35 * bpm / 60, G = PERC_GROOVES[percPrefs.groove] || PERC_GROOVES[0];
+  if (percNext < beatNow - .05) percNext = beatNow;
+  for (let k = Math.ceil(percNext * 4 - 1e-9); k / 4 < horizon; k++) {
+    if (k / 4 < percNext) continue;
+    const bar = Math.floor(k / 16), when = a.time + (k / 4 - a.ppq) * 60 / bpm;
+    G.lanes.forEach((ln, l) => {
+      if (!percLaneOn(l, bar)) return;
+      const s = ((k % ln.n) + ln.n) % ln.n, R = rng32(percPrefs.seed * 131 + k * 17 + l);
+      if (!euclid(ln.k, ln.n, ln.r)[s]) { if (R() < .02 * percPrefs.density) percHit(l, when, .3, R); return; }
+      if (R() > .92 * Math.min(1, percPrefs.density)) return;
+      const acc = s === 0 ? 1 : .62 + .25 * R(), late = (R() - .5) * .012;  // a breath of human timing
+      percHit(l, when + late, G.vel * acc, R);
+    });
+  }
+  percNext = horizon;
+}
+setInterval(percTick, 50);
+(function percDots() {
+  if (ctx) { const now = ctx.currentTime, cols = ['#f2a5c3', '#ecd08f', '#7fd3d3', '#b9a4e8', '#ffffff']; percSrc = percActive.filter(v => v.t0 <= now).map(v => { const f = Math.min(1, (now - v.t0) / (v.t1 - v.t0)); return [v.from[0] + (v.to[0] - v.from[0]) * f, v.from[1] + (v.to[1] - v.from[1]) * f, v.from[2] + (v.to[2] - v.from[2]) * f, v.lv * .06 * (1 - f * .7), cols[v.l]]; }); }
+  requestAnimationFrame(percDots);
+})();
+async function setPercOn(on, quiet) {
+  percPrefs.on = on; savePerc(); $('percOn').setAttribute('aria-pressed', on);
+  if (!on || (quiet && !node)) return;
+  await percAudio();
+  if (!quiet) setStatus(playing ? 'Percussion all round you.' : 'Perc is on: press ▶.');
+}
+function percCross(fn) {
+  if (!percG) { fn(); return; }
+  const t = ctx.currentTime, f = fadeTime() / 2; rampGain(percG.fade.gain, .2, f); setTimeout(async () => { await fn(); rampGain(percG.fade.gain, 1, f); }, f * 1000);
+}
+function pickPercKit(i, why) { percPrefs.kit = +i; $('percKitSel').value = String(i); savePerc(); percCross(() => percG && percKit()); if (why) setStatus(why + ' · ' + PERC_KITS[+i].name); }
+function pickPercGroove(i, why) { percPrefs.groove = +i; $('percGrooveSel').value = String(i); savePerc(); if (why) setStatus(why + ' · ' + PERC_GROOVES[+i].name); }
+let percControlsShow = () => {};
+{
+  $('percKitSel').innerHTML = PERC_KITS.map((k, i) => `<option value="${i}">${String(i + 1).padStart(2, '0')} / ${esc(k.name)}</option>`).join('');
+  $('percGrooveSel').innerHTML = PERC_KINDS.map(([name]) => `<optgroup label="${name}">${PERC_GROOVES.map((g, i) => [g, i]).filter(([g]) => g.name.startsWith(name)).map(([g, i]) => `<option value="${i}">${esc(g.name)}</option>`).join('')}</optgroup>`).join('');
+  $('percKitSel').value = String(percPrefs.kit); $('percGrooveSel').value = String(percPrefs.groove);
+  $('percKitSel').addEventListener('change', () => pickPercKit($('percKitSel').value)); $('percGrooveSel').addEventListener('change', () => pickPercGroove($('percGrooveSel').value));
+  $('percKitDice').addEventListener('click', () => pickPercKit(Math.floor(Math.random() * PERC_KITS.length), 'A random perc kit'));
+  $('percGrooveDice').addEventListener('click', () => pickPercGroove(Math.floor(Math.random() * PERC_GROOVES.length), 'A random perc rhythm'));
+  $('percOn').addEventListener('click', () => setPercOn(!percPrefs.on));
+  $('percLevel').addEventListener('input', () => { percPrefs.level = +$('percLevel').value; savePerc(); faderShow('percLevel', percPrefs.level); percApply(); });
+  const shows = [], grid = $('percControls');
+  const range = (key, label, cls) => {
+    const w = document.createElement('div'); w.className = 'ctl'; const id = 'perc-' + key, max = key === 'density' ? 1.5 : 1;
+    w.innerHTML = `<label for="${id}">${label} <output></output></label><input type="range" id="${id}" min="0" max="${max}" step="0.01" class="${cls || ''}">`;
+    const inp = w.querySelector('input'), out = w.querySelector('output'), show = () => { inp.value = percPrefs[key]; out.textContent = Math.round(percPrefs[key] * 100) + '%'; inp.style.setProperty('--pct', percPrefs[key] / max * 100 + '%'); };
+    inp.addEventListener('input', () => { percPrefs[key] = +inp.value; savePerc(); show(); }); shows.push(show); show(); return w;
+  };
+  grid.append(range('density', 'How much', 'rose'), range('spread', 'Spread round you', 'teal'), range('height', 'Height', 'teal'), range('fly', 'Flight while ringing', 'teal'), range('orbit', 'Orbit', 'teal'), range('echo', 'Echo'), range('room', 'Room'));
+  const seed = document.createElement('div'); seed.className = 'ctl'; seed.innerHTML = '<label>Arrangement</label><button class="btn" type="button" id="percSeed">Another way in</button>'; grid.append(seed);
+  $('percSeed').addEventListener('click', () => { percPrefs.seed = 1 + Math.floor(Math.random() * 9999); savePerc(); setStatus('The lanes come and go another way.'); });
+  percControlsShow = () => { shows.forEach(f => f()); faderShow('percLevel', percPrefs.level); $('percOn').setAttribute('aria-pressed', percPrefs.on); $('percKitSel').value = String(percPrefs.kit); $('percGrooveSel').value = String(percPrefs.groove); };
+  percControlsShow();
+}
+
 /* ---------- Moods: the whole machine at once (sound, chord line, key, tempo, drums, arp, vox, movement and room) ----------
    Sixteen families of mood, twelve of each, every one made from the banks above by its family's taste. Choosing one
    fades everything over to it on the next bar; the tempo glides there. Your saved sessions are moods too. */
@@ -2709,6 +3584,31 @@ MOOD_KINDS.forEach((K, ki) => K.names.forEach((name, n) => {
     arp: { on: R() < K.arp, simple: R() < K.arpSimple, six: R() < K.arpSix, pat: R(), snd: R(), density: K.arpDensity ? Math.round(rr(K.arpDensity)) : Math.round(70 + 30 * R()), octave: K.arpOct ? pick(K.arpOct) : 0, level: -6 - 4 * R(), seed: 1 + Math.floor(R() * 9999) },
     vox: { on: R() < K.vox, style: st(VOX_STYLES, K.styles), space: st(VOX_SPACES, K.spaces), level: -8 - 4 * R() } });
 }));
+// Each family's lead and bass: how often they sing, and in which styles
+const MEL_FOR = { 'Night bus': [.45, ['Singing', 'Sparse'], .7, ['Held', 'Dub']], Glacier: [.35, ['Floating'], .2, ['Held']], 'Orbital sunrise': [.6, ['Hook', 'Singing'], .9, ['Offbeat', 'Pulse']],
+  'Shoegaze haze': [.6, ['Singing', 'Floating'], .75, ['Root and fifth', 'Held']], 'Radio-Activity': [.75, ['Bells', 'Hook'], .9, ['Pulse', 'Syncopated']], 'Bristol smoke': [.35, ['Sparse'], .85, ['Dub', 'Syncopated']],
+  Darkwave: [.5, ['Hook'], .95, ['Pulse']], 'Dub lull': [.3, ['Floating', 'Sparse'], .9, ['Dub']], 'Berlin sequence': [.35, ['Floating'], .8, ['Pulse', 'Held']], 'Switched-on': [.85, ['Bells', 'Singing'], .6, ['Walking']],
+  Cathedral: [.25, ['Floating'], .1, ['Held']], 'Deep sea': [.35, ['Floating'], .6, ['Held', 'Dub']], 'Space station': [.65, ['Bells', 'Singing'], .7, ['Root and fifth']], 'Forest rain': [.45, ['Singing', 'Floating'], .5, ['Held']],
+  'City dusk': [.55, ['Singing'], .9, ['Walking', 'Syncopated']], 'Desert night': [.45, ['Sparse', 'Floating'], .6, ['Held', 'Dub']] };
+const PERC_FOR = { 'Forest rain': .9, 'Desert night': .8, 'Deep sea': .6, 'Dub lull': .7, 'Space station': .6, 'Shoegaze haze': .4, 'Night bus': .45, 'Orbital sunrise': .5, Glacier: .3, 'City dusk': .4, 'Berlin sequence': .35, 'Radio-Activity': .5, 'Bristol smoke': .35, Darkwave: .3, 'Switched-on': .3, Cathedral: .15 };
+// How much each family wants the piano, and which ways of playing suit it
+const PIANO_FOR = { Glacier: [.75, ['Long lines', 'Raindrops']], Cathedral: [.7, ['Hymn', 'Long lines']], 'Deep sea': [.6, ['Echoes', 'Long lines']], 'Night bus': [.55, ['Lullaby', 'Cinematic']],
+  'Dub lull': [.45, ['Echoes', 'Raindrops']], 'Forest rain': [.6, ['Raindrops', 'Lullaby']], 'City dusk': [.65, ['Cinematic', 'Lullaby']], 'Shoegaze haze': [.4, ['Long lines', 'Hymn']],
+  'Desert night': [.45, ['Echoes', 'Long lines']], 'Space station': [.4, ['Raindrops', 'Echoes']], 'Orbital sunrise': [.35, ['Cinematic', 'Lullaby']], 'Bristol smoke': [.4, ['Cinematic', 'Echoes']],
+  Darkwave: [.2, ['Long lines']], 'Berlin sequence': [.25, ['Raindrops']], 'Radio-Activity': [.2, ['Lullaby']], 'Switched-on': [.3, ['Lullaby', 'Raindrops']] };
+MOODS.forEach((m, i) => {
+  const R = rng32(87001 + i * 61), [pp, ps] = PIANO_FOR[m.kind] || [.35, ['Long lines']], list = PIANO_PRESETS.map((x, k) => [x, k]).filter(([x]) => ps.includes(x.style)).map(([, k]) => k);
+  m.piano = { on: pianoNotes.length > 0 && R() < pp, preset: list[Math.floor(R() * list.length)], seed: 1 + Math.floor(R() * 9999) };
+});
+MOODS.forEach((m, i) => {
+  const R = rng32(85001 + i * 59);
+  m.perc = { on: R() < (PERC_FOR[m.kind] ?? .4), kit: Math.floor(R() * PERC_KITS.length), groove: Math.floor(R() * PERC_GROOVES.length), level: -6 - 4 * R() };
+});
+MOODS.forEach((m, i) => {
+  const R = rng32(80001 + i * 53), [lp, ls, bp, bs] = MEL_FOR[m.kind] || [.4, ['Singing'], .6, ['Held']], pick = a => a[Math.floor(R() * a.length)];
+  const leads = LEAD_PRESETS.map((x, k) => [x, k]).filter(([x]) => ls.includes(x.style)).map(([, k]) => k), basses = BASS_PRESETS.map((x, k) => [x, k]).filter(([x]) => bs.includes(x.style)).map(([, k]) => k);
+  m.mel = { lead: R() < lp, leadPreset: pick(leads), bass: R() < bp && m.drums.on || R() < bp * .4, bassPreset: pick(basses), seed: 1 + Math.floor(R() * 9999) };
+});
 // The arp's pattern and sound for a mood (only known once the ARP is loaded)
 function moodArp(m) {
   if (!HAS_ARP) return null;
@@ -2720,6 +3620,23 @@ function moodArp(m) {
 // A channel switched on or off by a mood fades in or out rather than starting or stopping
 function rampGain(g, to, dur) { if (!g || !ctx) return; const t = ctx.currentTime; g.cancelScheduledValues(t); g.setValueAtTime(g.value, t); g.linearRampToValueAtTime(to, t + dur); }
 async function channelTo(ch, on, dur) {
+  if (ch === 'piano') {
+    if (!pianoNotes.length) return;
+    if (on && !pianoPrefs.on) { await setPianoOn(true, true); await pianoAudio(); pianoG.out.gain.setValueAtTime(0, ctx.currentTime); rampGain(pianoG.out.gain, dbGain(pianoPrefs.level), dur); }
+    else if (!on && pianoPrefs.on) { if (pianoG) rampGain(pianoG.out.gain, 0, dur); setTimeout(() => { if (!moodWants.piano) { setPianoOn(false); if (pianoG) pianoG.out.gain.value = dbGain(pianoPrefs.level); } }, dur * 1000); }
+    return;
+  }
+  if (ch === 'perc') {
+    if (on && !percPrefs.on) { await setPercOn(true, true); await percAudio(); percG.out.gain.setValueAtTime(0, ctx.currentTime); rampGain(percG.out.gain, dbGain(percPrefs.level), dur); }
+    else if (!on && percPrefs.on) { if (percG) rampGain(percG.out.gain, 0, dur); setTimeout(() => { if (!moodWants.perc) { setPercOn(false); if (percG) percG.out.gain.value = dbGain(percPrefs.level); } }, dur * 1000); }
+    return;
+  }
+  if (ch === 'lead' || ch === 'bass') {
+    if (on === !!melPrefs[ch]) return;
+    if (on) { await setMel(ch, true, true); await melAudio(); melVoices(.05); const g = melG[ch + 'G'].gain; g.cancelScheduledValues(ctx.currentTime); g.setValueAtTime(0, ctx.currentTime); rampGain(g, dbGain(ch === 'lead' ? melPrefs.leadLevel : melPrefs.bassLevel), dur); }
+    else { if (melG) rampGain(melG[ch + 'G'].gain, 0, dur); setTimeout(() => { if (!moodWants[ch]) { melPrefs[ch] = false; saveMel(); $(ch === 'lead' ? 'leadOn' : 'bassOn').setAttribute('aria-pressed', false); } }, dur * 1000); }
+    return;
+  }
   if (ch === 'drums') {
     if (on && !drumPrefs.on) { setDrumsOn(true); if (drumFx) { drumFx.bus.gain.setValueAtTime(0, ctx.currentTime); rampGain(drumFx.bus.gain, dbGain(drumPrefs.level), dur); } }
     else if (!on && drumPrefs.on) { if (drumFx) rampGain(drumFx.bus.gain, 0, dur); setTimeout(() => { if (!moodWants.drums) { setDrumsOn(false); mixApply(); } }, dur * 1000); }
@@ -2731,7 +3648,7 @@ async function channelTo(ch, on, dur) {
     else if (!on && voxPrefs.on) { if (voxG) rampGain(voxG.out.gain, 0, dur); setTimeout(() => { if (!moodWants.vox) { setVoxOn(false); if (voxG) voxG.out.gain.value = dbGain(voxPrefs.level); } }, dur * 1000); }
   }
 }
-const moodWants = { drums: false, arp: false, vox: false };
+const moodWants = { drums: false, arp: false, vox: false, lead: false, bass: false, perc: false, piano: false };
 // The tempo glides to a mood's over the fade
 let tempoGlide = null;
 function glideTempo(to, dur) {
@@ -2786,6 +3703,20 @@ function applyMood(m, opts = {}) {
   moodWants.vox = HAS_VOX && m.vox.on;
   if (moodWants.vox) { voxPrefs.level = m.vox.level; if (voxPrefs.style !== m.vox.style) pickVoxStyle(m.vox.style); if (voxPrefs.space !== m.vox.space) pickVoxSpace(m.vox.space); }
   if (HAS_VOX) channelTo('vox', moodWants.vox, fade);
+  // lead and bass
+  moodWants.lead = m.mel.lead; moodWants.bass = m.mel.bass;
+  if (m.mel.lead) { melPrefs.leadPreset = m.mel.leadPreset; melPrefs.seed = m.mel.seed; }
+  if (m.mel.bass) melPrefs.bassPreset = m.mel.bassPreset;
+  saveMel(); melDirty++; melControlsShow(); if (melG) melVoices(fade);
+  channelTo('lead', m.mel.lead, fade); channelTo('bass', m.mel.bass, fade);
+  // perc
+  moodWants.perc = m.perc.on;
+  if (m.perc.on) { percPrefs.level = m.perc.level; if (percPrefs.groove !== m.perc.groove) pickPercGroove(m.perc.groove); if (percPrefs.kit !== m.perc.kit) pickPercKit(m.perc.kit); percControlsShow(); }
+  channelTo('perc', m.perc.on, fade);
+  // piano
+  moodWants.piano = m.piano.on;
+  if (m.piano.on) { pianoPrefs.preset = m.piano.preset; pianoPrefs.seed = m.piano.seed; pianoDirty++; savePiano(); pianoControlsShow(); pianoApply(); }
+  channelTo('piano', m.piano.on, fade);
   if (!opts.quiet) setStatus(`${m.name} · ${m.kind} · ${m.bpm} BPM${m.drums.on ? '' : ' · no drums'}`);
 }
 function fillMoods() {
@@ -2813,7 +3744,8 @@ $('moodDice').addEventListener('click', () => pickMood(Math.floor(Math.random() 
 const PACE = { calm: [[48, 96], [16, 32]], drift: [[32, 64], [8, 24]], restless: [[16, 32], [4, 12]] };
 const endless = { on: false, pace: store.get('ds-pace', 'drift'), nextMood: 0, nextSmall: 0, bar: 0, breakUntil: -1, R: rng32(Date.now() >>> 0) };
 function endlessBar() { if (!playing || !lineAnchor || !ctx) return -1; const a = lineAnchor; return Math.floor((a.ppq + (ctx.currentTime - a.time) * tempo() / 60) / 4); }
-function endlessPlan(bar, kind) { const [lo, hi] = PACE[endless.pace][kind === 'mood' ? 0 : 1]; return bar + lo + Math.floor(endless.R() * (hi - lo + 1)); }
+// changes land where players would make them: on a phrase (a 4-bar line, a mood on an 8-bar one)
+function endlessPlan(bar, kind) { const [lo, hi] = PACE[endless.pace][kind === 'mood' ? 0 : 1], q = kind === 'mood' ? 8 : 4; return Math.ceil((bar + lo + Math.floor(endless.R() * (hi - lo + 1))) / q) * q; }
 async function setEndless(on) {
   endless.on = on; $('endlessOn').setAttribute('aria-pressed', on);
   if (on && typeof song !== 'undefined' && song.on) setSong(false);
@@ -2823,10 +3755,46 @@ async function setEndless(on) {
   endless.nextMood = -1; endless.nextSmall = -1;
   setStatus(`Endless · ${endless.pace} · starting from ${MOODS[Math.max(0, moodChoice)].name}`);
 }
+/* Alive: when nobody has touched anything for 30 seconds (and no song is playing), the machine lives on its own, as
+   Endless does: new chord lines, the arp turning, other kits and grooves, other leads and basses, voices drifting in
+   and out, and in time other moods. A touch hands it back; it goes on living after the next 30 quiet seconds.
+   Like a long ambient set, it never has every channel playing at once: channels come in and step out, a few at a time
+   (fewer when calm, more when restless). */
+const ALIVE_AFTER = 30000;
+const alive = { on: store.get('ds-alive', true), was: false };
+const living = () => endless.on || (alive.on && performance.now() - userTouch > ALIVE_AFTER && !(typeof song !== 'undefined' && song.on));
+function setAlive(on) { alive.on = on; store.set('ds-alive', on); $('aliveOn').setAttribute('aria-pressed', on); setStatus(on ? 'Alive: after 30 quiet seconds it goes on by itself.' : 'Alive off: it stays as you leave it.'); }
+const ARR_CH = ['drums', 'arp', 'vox', 'perc', 'lead', 'bass', 'piano'], ARR_SIZE = { calm: [1, 3], drift: [2, 4], restless: [3, 5] };
+const chCan = c => (c !== 'arp' || HAS_ARP) && (c !== 'vox' || HAS_VOX) && (c !== 'piano' || pianoNotes.length > 0);
+const chOn = c => c === 'drums' ? drumPrefs.on : c === 'arp' ? arpPrefs.on : c === 'vox' ? voxPrefs.on : c === 'perc' ? percPrefs.on : c === 'piano' ? pianoPrefs.on : !!melPrefs[c];
+// how much a mood's family likes each channel
+function chLike(c, m, K) { const mf = MEL_FOR[m.kind] || [.4, 0, .6]; return { drums: K.drums ?? .7, arp: K.arp ?? .7, vox: K.vox ?? .4, perc: PERC_FOR[m.kind] ?? .4, lead: mf[0], bass: mf[2], piano: (PIANO_FOR[m.kind] || [.35])[0] }[c]; }
+// One step of the arrangement: a channel steps out, one comes in, or one gives its place to another
+function arrange(R, m, K) {
+  const on = ARR_CH.filter(c => chCan(c) && chOn(c)), off = ARR_CH.filter(c => chCan(c) && !chOn(c)), [lo, hi] = ARR_SIZE[endless.pace];
+  const pickW = (list, w) => { let x = list.reduce((t, c) => t + w(c), 0) * R(); for (const c of list) if ((x -= w(c)) <= 0) return c; return list[list.length - 1]; };
+  const out = [], inn = [];
+  if (on.length > hi || (on.length > lo && R() < .5)) out.push(pickW(on, c => 1.25 - chLike(c, m, K)));
+  if (on.length > hi + 1) out.push(pickW(on.filter(c => !out.includes(c)), c => 1.25 - chLike(c, m, K)));
+  const room = on.length - out.length;
+  if (off.length && (room < lo || (room < hi && (!out.length || R() < .6)))) inn.push(pickW(off, c => chLike(c, m, K) + .05));
+  for (const c of out) { moodWants[c] = false; channelTo(c, false, 14); }
+  for (const c of inn) {
+    moodWants[c] = true;
+    if (c === 'vox') pickVoxStyle(VOX_STYLES.findIndex(v => K.styles && K.styles.includes(v.name)) >= 0 && R() < .7 ? VOX_STYLES.findIndex(v => K.styles.includes(v.name)) : Math.floor(R() * VOX_STYLES.length));
+    channelTo(c, true, 14);
+  }
+  const N = { drums: 'the drums', arp: 'the arp', vox: 'the voices', perc: 'the percussion', lead: 'the lead', bass: 'the bass', piano: 'the piano' };
+  return [...inn.map(c => N[c] + ' drift in'), ...out.map(c => N[c] + ' step out')].join(', ');
+}
 function endlessTick() {
-  if (!endless.on) return;
-  const bar = endlessBar(); if (bar < 0) return;
-  const R = endless.R, m = MOODS[Math.max(0, moodChoice)], K = MOOD_KINDS.find(k => k.kind === m.kind);
+  const live = living(), bar = endlessBar();
+  if (!live || bar < 0) { alive.was = false; return; }
+  const R = endless.R, m = MOODS[Math.max(0, moodChoice)], K = MOOD_KINDS.find(k => k.kind === m.kind), who = endless.on ? 'Endless' : 'Alive';
+  const say = t => setStatus(who + ' · ' + t);
+  if (!alive.was) { alive.was = true; endless.nextArr = bar; if (!endless.on) { endless.nextMood = endlessPlan(bar, 'mood'); endless.nextSmall = bar + 4; } }
+  // the arrangement keeps its own clock: every 8 or 16 bars a channel may step out or come in
+  if (bar >= (endless.nextArr ?? 0)) { const t = arrange(R, m, K); if (t) say(t); endless.nextArr = Math.ceil((bar + (R() < .5 ? 8 : 16)) / 8) * 8; }
   if (endless.nextMood < 0) { endless.nextMood = endlessPlan(bar, 'mood'); endless.nextSmall = endlessPlan(bar, 'small'); }
   if (endless.breakUntil >= 0 && bar >= endless.breakUntil) { endless.breakUntil = -1; moodWants.drums = true; channelTo('drums', true, 8); }
   if (bar >= endless.nextMood) {
@@ -2837,37 +3805,97 @@ function endlessTick() {
     const [nm, ni] = list[Math.floor(R() * list.length)];
     moodChoice = ni; store.set('ds-mood', ni); $('moodSel').value = String(ni);
     applyMood(nm, { fade: Math.max(12, fadeTime() * 2), quiet: true });
-    setStatus(`Endless · drifting into ${nm.name} (${nm.kind})`);
-    endless.nextMood = endlessPlan(bar, 'mood'); endless.nextSmall = endlessPlan(bar, 'small');
+    say(`drifting into ${nm.name} (${nm.kind})`);
+    endless.nextMood = endlessPlan(bar, 'mood'); endless.nextSmall = bar + 8;  // the arrangement thins it out from there
     return;
   }
   if (bar >= endless.nextSmall) {
-    const u = R();
-    if (u < .3) {
-      // a new chord line in the mood's colours, sometimes in a new key a fourth or fifth away
-      const base = LINE_BASES.findIndex(b => b[0] === K.lines[Math.floor(R() * K.lines.length)]), newKey = R() < .2 ? (lineKey + (R() < .5 ? 5 : 7)) % 12 : lineKey;
-      onNextBar(() => { lineKey = newKey; $('lineKey').value = String(lineKey); lineChoice = Math.max(0, base) + LINE_BASES.length * Math.floor(R() * 9); lineDirty = false; line = lineFrom(lineBank[lineChoice], lineKey); fillLines(); lineChanged(); });
-      setStatus(`Endless · a new chord line${newKey !== lineKey ? ' in ' + NAMES[newKey] + ' minor' : ''}`);
-    } else if (u < .5 && HAS_ARP && arpPrefs.on) {
-      const simple = NoteEngine.SIMPLE_PATTERNS.length; pickArp(R() < (K.arpSimple || .3) ? Math.floor(R() * simple) : simple + Math.floor(R() * ARP_META.length), 'Endless · the arp turns');
-    } else if (u < .65 && drumPrefs.on && moodWants.drums) {
-      // a break: the drums step out for a while
-      moodWants.drums = false; channelTo('drums', false, 6); endless.breakUntil = bar + [8, 8, 16][Math.floor(R() * 3)];
-      setStatus('Endless · the drums step out for a while');
-    } else if (u < .8 && HAS_VOX) {
-      moodWants.vox = !voxPrefs.on || R() < .4; if (moodWants.vox && voxPrefs.on) pickVoxStyle(Math.floor(R() * VOX_STYLES.length)); channelTo('vox', moodWants.vox, 10);
-      setStatus(moodWants.vox ? 'Endless · the voices drift in' : 'Endless · the voices fade away');
-    } else {
-      // the sound twists more or less for a while
-      const to = Math.max(.2, Math.min(1, values[idx.twist] + (R() - .45) * .6)), from = values[idx.twist], t0 = performance.now(), dur = 16000;
-      const iv = setInterval(() => { const k = Math.min(1, (performance.now() - t0) / dur); setValue('twist', from + (to - from) * (.5 - .5 * Math.cos(Math.PI * k))); if (k >= 1) clearInterval(iv); }, 200);
-      setStatus(`Endless · the sound ${to > from ? 'twists more' : 'settles'}`);
+    const pickIn = (list, ok) => { const l = list.map((x, i) => [x, i]).filter(([x]) => ok(x)).map(([, i]) => i); return l.length ? l[Math.floor(R() * l.length)] : Math.floor(R() * list.length); };
+    const ev = [
+      [2.5, () => {
+        // a new chord line in the mood's colours, sometimes in a new key a fourth or fifth away
+        const base = LINE_BASES.findIndex(b => b[0] === K.lines[Math.floor(R() * K.lines.length)]), newKey = R() < .2 ? (lineKey + (R() < .5 ? 5 : 7)) % 12 : lineKey;
+        onNextBar(() => { lineKey = newKey; $('lineKey').value = String(lineKey); lineChoice = Math.max(0, base) + LINE_BASES.length * Math.floor(R() * 9); lineDirty = false; line = lineFrom(lineBank[lineChoice], lineKey); fillLines(); lineChanged(); });
+        say(`a new chord line${newKey !== lineKey ? ' in ' + NAMES[newKey] + ' minor' : ''}`); return true;
+      }],
+      [1.5, () => {
+        // another chord sound, as clean or as worn as the mood likes, with the mood's movement and room
+        const clean = R() < (K.clean ?? .4), i = pickIn(soundBank, x => !!x.clean === clean), v = soundValues(soundBank[i]);
+        for (const k in m.params) if (k in idx) v[idx[k]] = m.params[k];
+        onNextBar(() => { applyValues(v, 'chord', Math.max(8, fadeTime() * 2)); soundChoice = String(i); soundDirty = true; fillSounds(); });
+        say('the chords take another sound · ' + soundBank[i].name); return true;
+      }],
+      [arpPrefs.on && HAS_ARP ? 1 : 0, () => { const simple = NoteEngine.SIMPLE_PATTERNS.length; pickArp(R() < (K.arpSimple || .3) ? Math.floor(R() * simple) : simple + Math.floor(R() * ARP_META.length), who + ' · the arp turns'); return true; }],
+      [drumPrefs.on ? 1 : 0, () => { const l = KITS.map((k, i) => [k, i]).filter(([k]) => K.kits && K.kits.some(w => k.group === w || k.name.startsWith(w))).map(([, i]) => i); pickKit(l.length ? l[Math.floor(R() * l.length)] : Math.floor(R() * KITS.length), who + ' · another kit'); return true; }],
+      [drumPrefs.on ? .8 : 0, () => { const l = DRUMS.filter(d => K.grooves && K.grooves.includes(d.group)); if (!l.length) return; const d = l[Math.floor(R() * l.length)]; onNextBar(() => { $('drumSel').value = String(d.i); sendDrums(); }); say('another groove · ' + d.name); return true; }],
+      [drumPrefs.on && moodWants.drums ? .8 : 0, () => { moodWants.drums = false; channelTo('drums', false, 6); endless.breakUntil = bar + [8, 8, 16][Math.floor(R() * 3)]; say('the drums step out for a while'); return true; }],
+      [voxPrefs.on && HAS_VOX ? .8 : 0, () => { pickVoxStyle(Math.floor(R() * VOX_STYLES.length), who + ' · the voices change'); return true; }],
+      [percPrefs.on ? 1 : 0, () => { if (R() < .5) pickPercKit(Math.floor(R() * PERC_KITS.length), who + ' · other percussion'); else pickPercGroove(Math.floor(R() * PERC_GROOVES.length), who + ' · the percussion turns'); return true; }],
+      [pianoPrefs.on ? 1 : 0, () => {
+        const [, ps] = PIANO_FOR[m.kind] || [.35, ['Long lines']];
+        if (R() < .5) { pianoPrefs.seed = 1 + Math.floor(R() * 99999); savePiano(); pianoDirty++; pianoControlsShow(); say('the piano finds a new melody'); }
+        else { const l = PIANO_PRESETS.map((x, k) => [x, k]).filter(([x]) => ps.includes(x.style)).map(([, k]) => k); pickPiano(l[Math.floor(R() * l.length)], who + ' · the piano'); }
+        return true;
+      }],
+      [melPrefs.lead || melPrefs.bass ? 1 : 0, () => {
+        const [, ls, , bs] = MEL_FOR[m.kind] || [.4, ['Singing'], .6, ['Held']];
+        if (melPrefs.lead && (!melPrefs.bass || R() < .55)) pickLead(pickIn(LEAD_PRESETS, x => ls.includes(x.style)), who + ' · another lead');
+        else pickBass(pickIn(BASS_PRESETS, x => bs.includes(x.style)), who + ' · another bass');
+        return true;
+      }],
+      [1.2, () => {
+        // the band builds or breathes out together, over a few phrases
+        const now = values[idx.intensity], to = now < .35 ? .45 + R() * .4 : now > .7 ? .1 + R() * .3 : (R() < .5 ? now + .3 : now - .3);
+        glideParam('intensity', Math.max(0, Math.min(1, to)), 8 * 240 / tempo());
+        say(to > now ? 'the band builds' : 'the band breathes out'); return true;
+      }],
+      [1, () => {
+        // the sound twists more or less for a while
+        const to = Math.max(.2, Math.min(1, values[idx.twist] + (R() - .45) * .6)), from = values[idx.twist], t0 = performance.now(), dur = 16000;
+        const iv = setInterval(() => { const k = Math.min(1, (performance.now() - t0) / dur); setValue('twist', from + (to - from) * (.5 - .5 * Math.cos(Math.PI * k))); if (k >= 1) clearInterval(iv); }, 200);
+        say(`the sound ${to > from ? 'twists more' : 'settles'}`); return true;
+      }],
+    ].filter(([w]) => w > 0);
+    for (let tries = 0; tries < 4; tries++) {
+      let x = ev.reduce((t, [w]) => t + w, 0) * R(), f = ev[ev.length - 1][1];
+      for (const [w, g] of ev) if ((x -= w) <= 0) { f = g; break; }
+      if (f()) break;
     }
     endless.nextSmall = endlessPlan(bar, 'small');
   }
 }
 setInterval(endlessTick, 400);
 $('endlessOn').addEventListener('click', () => setEndless(!endless.on));
+// As many mixer columns as there are channels here
+const fitMixer = () => { const mx = document.querySelector('.mixer'); if (mx) mx.style.setProperty('--strips', [...mx.children].filter(s => getComputedStyle(s).display !== 'none').length); };
+fitMixer(); addEventListener('load', fitMixer);
+// The chords come forward when the room empties: alone with the drums they are clearly heard, under everything they
+// sit back (Alive only; the change glides over seconds)
+setInterval(() => {
+  if (!chordLift) return;
+  const others = ARR_CH.filter(c => chCan(c) && chOn(c)).length, lift = alive.on && playing ? [4.5, 3, 1.5, 0][Math.min(3, others)] : 0;
+  chordLift.gain.setTargetAtTime(dbGain(lift), ctx.currentTime, 2.5);
+  // and the arp listens to the lead: while a melody sings it plays darker and further back, as a player would
+  if (arpG && alive.on) { const lead = !!melPrefs.lead || !!pianoPrefs.on; arpG.lp.frequency.setTargetAtTime(arpPrefs.tone * (lead ? .55 : 1), ctx.currentTime, 3); arpG.wash.gain.setTargetAtTime(arpPrefs.wash * 1.4 * (lead ? 1.5 : 1), ctx.currentTime, 3); }
+}, 500);
+// The voices never sing the same way for long: about once a minute (Alive on, whether or not you are touching
+// things) they take another style, another space, other singers or another way of singing it, faded over
+let voxVaryAt = 0;
+setInterval(() => {
+  if (!alive.on || !HAS_VOX || !voxPrefs.on || !playing) { voxVaryAt = 0; return; }
+  const now = performance.now(); if (!voxVaryAt) { voxVaryAt = now + 50000 + Math.random() * 20000; return; }
+  if (now < voxVaryAt) return;
+  voxVaryAt = now + 50000 + Math.random() * 25000;
+  const m = MOODS[Math.max(0, moodChoice)], K = MOOD_KINDS.find(k => k.kind === m.kind) || {}, u = Math.random();
+  const near = (list, names) => { const l = list.map((x, i) => [x, i]).filter(([x]) => names && names.some(n => x.name.startsWith(n))).map(([, i]) => i); return l.length && Math.random() < .65 ? l[Math.floor(Math.random() * l.length)] : Math.floor(Math.random() * list.length); };
+  if (u < .4) pickVoxStyle(near(VOX_STYLES, K.styles), 'The voices change');
+  else if (u < .7) pickVoxSpace(near(VOX_SPACES, K.spaces), 'The voices move to another room');
+  else if (u < .85 && VOX_SINGERS.length > 2) {
+    const pick = VOX_SINGERS.slice().sort(() => Math.random() - .5).slice(0, 2 + Math.floor(Math.random() * Math.min(4, VOX_SINGERS.length - 1)));
+    voxCross(() => { voxPrefs.singers = pick; saveVox(); voxControlsShow(); }); setStatus('Other singers · ' + pick.join(', '));
+  } else { voxCross(() => { voxPrefs.seed = 1 + Math.floor(Math.random() * 99999); saveVox(); }); setStatus('The voices sing it another way'); }
+}, 1000);
+$('aliveOn').setAttribute('aria-pressed', alive.on); $('aliveOn').addEventListener('click', () => setAlive(!alive.on));
 // the pace: calm, drifting or restless, one press each
 const PACE_NAMES = { calm: 'Calm', drift: 'Drifting', restless: 'Restless' };
 $('paceBtn').textContent = PACE_NAMES[endless.pace];
@@ -2879,12 +3907,12 @@ $('paceBtn').addEventListener('click', () => { const k = Object.keys(PACE), i = 
    the bridge in other chords, the breakdown without drums. Sections change on their first bar; channels fade in and
    out, Intensity and the arp glide. Played from the start, it can loop or end. */
 const SECTION_FEEL = {
-  Intro:     { color: '#7fd3d3', intensity: .15, drums: false, arp: .45, vox: true, twist: .1, sub: .5 },
-  Verse:     { color: '#ecd08f', intensity: .4, drums: true, arp: .75, vox: null, twist: 0, sub: 1 },
-  Chorus:    { color: '#e486ab', intensity: .9, drums: true, arp: 1, vox: true, twist: .15, sub: 1, fuller: true },
-  Bridge:    { color: '#8e7cc3', intensity: .55, drums: true, arp: .6, vox: true, twist: .05, sub: .8, other: true },
-  Breakdown: { color: '#3aa3aa', intensity: .25, drums: false, arp: 0, vox: true, twist: -.1, sub: .4 },
-  Outro:     { color: '#c9b8a5', intensity: .12, drums: false, arp: .35, vox: true, twist: .1, sub: .4 },
+  Intro:     { color: '#7fd3d3', intensity: .15, drums: false, arp: .45, vox: true, twist: .1, sub: .5, lead: false, bass: false },
+  Verse:     { color: '#ecd08f', intensity: .4, drums: true, arp: .75, vox: null, twist: 0, sub: 1, lead: .7, bass: true },
+  Chorus:    { color: '#e486ab', intensity: .9, drums: true, arp: 1, vox: true, twist: .15, sub: 1, fuller: true, lead: 1.25, bass: true },
+  Bridge:    { color: '#8e7cc3', intensity: .55, drums: true, arp: .6, vox: true, twist: .05, sub: .8, other: true, lead: 1, bass: true },
+  Breakdown: { color: '#3aa3aa', intensity: .25, drums: false, arp: 0, vox: true, twist: -.1, sub: .4, lead: .5, bass: false },
+  Outro:     { color: '#c9b8a5', intensity: .12, drums: false, arp: .35, vox: true, twist: .1, sub: .4, lead: false, bass: false },
 };
 const SONG_FORMS = {
   'Full song': [['Intro', 8], ['Verse', 16], ['Chorus', 16], ['Verse', 16], ['Chorus', 16], ['Bridge', 8], ['Chorus', 16], ['Outro', 8]],
@@ -3000,6 +4028,16 @@ function applySection(k, fade) {
     channelTo('arp', moodWants.arp, fade);
   }
   if (HAS_VOX) { moodWants.vox = F.vox === null ? m.vox.on : F.vox && (m.vox.on || x.type !== 'Verse'); channelTo('vox', moodWants.vox, fade); }
+  // the lead sings more in the chorus, a new line in the bridge, rests in the intro and outro; the bass leaves with the drums
+  moodWants.lead = !!(m.mel.lead && F.lead); moodWants.bass = !!(m.mel.bass && F.bass);
+  if (moodWants.lead) { melPrefs.density = Math.min(1.6, F.lead); melPrefs.seed = m.mel.seed + (F.other ? 11 : 0); melDirty++; saveMel(); melControlsShow(); }
+  channelTo('lead', moodWants.lead, fade); channelTo('bass', moodWants.bass, fade);
+  // percussion floats through most parts, and carries the breakdown on its own
+  moodWants.perc = !!(m.perc.on && x.type !== 'Outro' && (x.type !== 'Intro' || F.drums === false)); channelTo('perc', moodWants.perc, fade);
+  // the piano opens and closes the song, and carries the bridge and the breakdown; it leaves the chorus to the others
+  moodWants.piano = pianoNotes.length > 0 && (['Intro', 'Outro', 'Bridge', 'Breakdown'].includes(x.type) ? m.piano.on || x.type !== 'Bridge' : m.piano.on && x.type === 'Verse' && k % 2 === 1);
+  if (moodWants.piano) { pianoPrefs.preset = m.piano.preset; pianoPrefs.seed = m.piano.seed + k; pianoDirty++; savePiano(); pianoControlsShow(); }
+  channelTo('piano', moodWants.piano, fade);
   song.section = k; drawSongHead();
   setStatus(`Song · ${x.type} · ${x.bars} bars · ${lineBank[x.line].name}`);
 }
@@ -3144,15 +4182,18 @@ function toggleEl(label, get, set) {
    A small worklet takes what the master and each channel's fader send, sample for sample together, and hands it over
    once a second as 16-bit. Stopping makes the files: one WAV for the mix, or a zip with the mix and the stems. */
 let recNode = null, rec = null;
-const REC_NAMES = ['mix', 'chord', 'drums', 'arp', 'vox'];
+const REC_NAMES = ['mix', 'chord', 'drums', 'arp', 'vox', 'melody', 'perc', 'piano'];
 function recConnect(src, k) { if (recNode && src) src.connect(recNode, 0, k); }
 async function recStart() {
   await startAudio();
   if (HAS_ARP && arpPrefs.on) await arpAudio();
   if (HAS_VOX && voxPrefs.on) await voxAudio();
+  if (melPrefs.lead || melPrefs.bass) await melAudio();
+  if (percPrefs.on) await percAudio();
+  if (pianoPrefs.on) await pianoAudio();
   const stems = $('recWhat').dataset.v === 'stems';
   rec = { stems, parts: REC_NAMES.map(() => [[], []]), frames: 0, t0: performance.now(), max: (stems ? 15 : 30) * 60 * ctx.sampleRate };
-  recNode.port.postMessage({ t: 'start', inputs: 5 });
+  recNode.port.postMessage({ t: 'start', inputs: REC_NAMES.length });
   $('recBtn').setAttribute('aria-pressed', true); recClock();
   setStatus(stems ? 'Recording the mix and each channel on its own.' : 'Recording the mix.');
 }
@@ -3179,7 +4220,7 @@ function recStop() {
     const files = REC_NAMES.map((n, k) => [n, k]).filter(([, k]) => k === 0 || r.stems).map(([n, k]) => [`${base}-${n}.wav`, wavOf(r.parts[k], sr)]);
     if (files.length === 1 && !claudeDownloads) download(files[0][0], new Blob([files[0][1]], { type: 'audio/wav' }));
     else download(`${base}${r.stems ? '-stems' : ''}.zip`, zipMany(files));
-    setStatus(`Recorded ${Math.round(r.frames / sr)} s${r.stems ? ': the mix and four stems' : ''}.`);
+    setStatus(`Recorded ${Math.round(r.frames / sr)} s${r.stems ? ': the mix and six stems' : ''}.`);
   };
 }
 let recDone = null, pendingRec = null;
@@ -3275,7 +4316,7 @@ function arrowize(sel) {
   new MutationObserver(sync).observe(sel, { childList: true, subtree: true, attributes: true });
   sel._sync = sync;
 }
-document.querySelectorAll('select').forEach(sel => { if (!['soundSel', 'lineSel', 'soundFilter', 'arpSel', 'arpSoundSel', 'kitSel', 'drumSel', 'voxStyleSel', 'voxSpaceSel', 'moodSel', 'songSel'].includes(sel.id)) arrowize(sel); });
+document.querySelectorAll('select').forEach(sel => { if (!['soundSel', 'lineSel', 'soundFilter', 'arpSel', 'arpSoundSel', 'kitSel', 'drumSel', 'voxStyleSel', 'voxSpaceSel', 'moodSel', 'songSel', 'leadSel', 'bassSel', 'pianoSel', 'percKitSel', 'percGrooveSel'].includes(sel.id)) arrowize(sel); });
 // keep the arrows right when a menu is set from code (a sound loads, a chord is picked)
 setInterval(() => document.querySelectorAll('.stepper select').forEach(sel => sel._sync && sel._sync()), 400);
 fillSessions(); fillLines(); drawSlots(); drawPads(); lastNotes = voiceLine();
@@ -3284,4 +4325,6 @@ fillDrums(); setDrumsOn(!!drumPrefs.on); mixApply();
 $('soundCount').textContent = soundBank.length; $('lineCount').textContent = lineBank.length;
 arpInit();
 setVoxOn(!!voxPrefs.on, true);
+setMel('lead', !!melPrefs.lead, true); setMel('bass', !!melPrefs.bass, true);
+setPercOn(!!percPrefs.on, true);
 </script>
