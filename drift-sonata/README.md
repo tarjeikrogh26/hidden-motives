@@ -131,6 +131,16 @@ Eco (Auto, På, Av, i akkordlinjekortet): på telefon og nettbrett fra start (de
 vanlig panorering i stedet for hodets filtre, halvparten av ASMR-kornene, én kanal færre om gangen i Alive, og visningene
 tegnes sjeldnere. Visningene tegnes uansett bare når de vises, rundt 20 ganger i sekundet.
 
+☾ Journey spiller et helt sett på 30 minutter til 2 timer med en bue: den varmer opp tynt og rolig, bygger, topper seg
+med mer av bandet, kommer ned igjen og fader ut. Den kan ta opp hele settet som én komprimert fil. ● med Long tar opp
+mikset komprimert i timevis (Opus eller AAC). Under ⋯: lengden på reisen, en søvntimer som fader ut, hodetelefoner
+(alt i 3D rundt hodet) eller høyttalere (vanlig panorering, mindre 3D), og MIDI. ◐ viser ett stort bilde som puster med
+musikken.
+
+MIDI (Chrome og Edge, Safari har ikke Web MIDI): klokke ut (24 per slag, start og stopp) og notene ut, hver del på sin
+kanal (akkorder 1, arp 2, lead 4, bass 5, synthbass 6, piano 7), og å følge en klokke som kommer inn (tempo, start,
+stopp). På Mac når man en DAW med IAC Driver i Audio MIDI-oppsett.
+
 Lydbytter fader over: motoren har to motorer per kanal (akkord og arp), og trommesett, grooves, arp-mønstre og
 vox-stiler fader også over tiden som er valgt under Fade.
 

@@ -171,7 +171,10 @@ details.room .eyebrow { color: #9fc3c4; }
 .toast { position: fixed; left: 50%; bottom: calc(var(--dock-h, 220px) + 10px); transform: translate(-50%, 6px); z-index: 30; max-width: min(640px, calc(100vw - 32px));
   background: var(--night); color: var(--cream); border: 1px solid #2c5a62; border-radius: 999px; padding: 6px 14px; font-size: 12.5px; opacity: 0; pointer-events: none; transition: opacity .4s, transform .4s; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .toast.on { opacity: .96; transform: translate(-50%, 0); }
-.moodbank { flex: 1 1 260px; min-width: 0; display: grid; grid-template-columns: 44px minmax(0, 1fr); gap: 5px; align-items: center; }
+.transport.top { flex-wrap: wrap; row-gap: 6px; }  /* two lines: the transport and the mood above, tempo, key, master and the rest below */
+.transport.top .rowbreak { flex-basis: 100%; height: 0; } .transport.top .spacer2 { flex: 1 1 0; }
+.transport.top .rowbreak + .field { margin-left: 46px; }
+.moodbank { flex: 1 1 380px; min-width: 300px; display: grid; grid-template-columns: 44px minmax(0, 1fr); gap: 5px; align-items: center; }
 .transport.top { align-items: center; }
 .transport.top .play { width: 36px; height: 36px; }
 .moodbank .nav select { font-size: 16px; }
@@ -245,11 +248,22 @@ details.room .eyebrow { color: #9fc3c4; }
 .pads-on .pads { display: grid; }
 /* one row on top: the transport, the mood, tempo, key and master side by side, so the bar stays low */
 .field.inline { flex-direction: row; align-items: center; gap: 5px; flex: none; }
+.more-panel { position: fixed; right: max(16px, env(safe-area-inset-right, 0px)); bottom: calc(var(--dock-h, 220px) + 8px); z-index: 25; width: min(440px, calc(100vw - 32px)); max-height: calc(100vh - var(--dock-h, 220px) - 24px); overflow: auto;
+  background: #fffaf6; border: 1px solid var(--gold-hi); border-radius: 12px; box-shadow: 0 10px 40px -12px rgba(23,54,62,.35); padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; }
+.more-panel[hidden], .view-layer[hidden] { display: none; }
+.more-panel h3 { font-family: var(--display); font-style: italic; font-size: 19px; margin: 0 0 4px; }
+.more-panel .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; } .more-panel p { margin: 4px 0 0; font-size: 12.5px; color: var(--muted); }
+.more-panel label { font-size: 13px; display: inline-flex; gap: 6px; align-items: center; }
+.view-layer { position: fixed; left: 0; right: 0; top: 0; bottom: var(--dock-h, 220px); z-index: 15; background: #0f2a30; cursor: zoom-out; }
+.view-layer canvas { width: 100%; height: 100%; display: block; }
+.view-words { position: absolute; left: 0; right: 0; bottom: 8%; text-align: center; pointer-events: none; color: var(--cream); }
+.view-words .chord-name { font-size: clamp(48px, 9vw, 140px); color: #f6eee8; opacity: .85; } .view-words .eyebrow { color: #ecd08f; opacity: .8; }
+.view-layer #viewFull { position: absolute; right: 16px; top: 16px; }
 .field.counter { font-size: 10.5px; letter-spacing: 0; color: var(--ink); min-width: 74px; justify-content: center; white-space: nowrap; }
 .field.counter b { color: var(--rose-deep); font-weight: 500; }
 .transport.top .master .lvl { width: 80px; }
 .transport.top .masterrow .meter, .transport.top .master .db { display: none; }
-@media (max-width: 1499px) { .field.inline:not(.counter) { font-size: 0; gap: 0; } .transport.top { gap: 7px; } .endless-group .btn.endless { padding-left: 7px; padding-right: 7px; } }
+@media (max-width: 1099px) { .field.inline:not(.counter) { font-size: 0; gap: 0; } .transport.top { gap: 7px; } .endless-group .btn.endless { padding-left: 7px; padding-right: 7px; } }
 .pad { padding: 4px 0; border-radius: 6px; border: 1px solid var(--line); background: var(--pearl); font-family: var(--display); font-style: italic; font-weight: 600; font-size: 14.5px; touch-action: none; user-select: none; color: var(--ink); }
 .pad.out { background: transparent; color: var(--muted); }
 
@@ -539,18 +553,36 @@ canvas#lifeView { width: 100%; height: 180px; display: block; border-radius: 6px
 </div>
 
 <div class="toast" id="status" role="status" aria-live="polite"></div>
+<div class="more-panel" id="morePanel" hidden>
+  <section><h3>Journey</h3>
+    <div class="row"><label>Length <select id="journeyLen"><option value="30">30 min</option><option value="60">1 hour</option><option value="90">1½ hours</option><option value="120">2 hours</option></select></label>
+      <label class="toggle"><input type="checkbox" id="journeyRec"> Record it</label><button class="btn" type="button" id="journeyGo">Start the journey</button></div>
+    <p>Warms up thin and calm, builds, peaks with more of the band, comes down and fades out at the end. Recording saves the whole set as one compressed file.</p></section>
+  <section><h3>Sleep timer</h3>
+    <div class="row"><label>Fade out after <select id="sleepSel"><option value="0">no timer</option><option value="15">15 min</option><option value="30">30 min</option><option value="45">45 min</option><option value="60">1 hour</option><option value="90">1½ hours</option><option value="120">2 hours</option></select></label></div></section>
+  <section><h3>Listening on</h3>
+    <div class="row"><label><select id="outSel"><option value="phones">Headphones: everything round your head</option><option value="speakers">Speakers: plain panning, less 3D</option></select></label></div></section>
+  <section><h3>MIDI</h3><div id="midiBox"><p>MIDI needs Chrome or Edge (Safari has no Web MIDI).</p></div></section>
+</div>
+<div class="view-layer" id="viewLayer" hidden>
+  <canvas id="viewCanvas" aria-label="The picture"></canvas>
+  <div class="view-words"><div id="viewChord" class="chord-name"></div><div id="viewMood" class="eyebrow"></div></div>
+  <button class="btn small" id="viewFull" type="button" title="Full screen">⛶</button>
+</div>
 <div class="dock" id="dock">
   <div class="dock-in">
     <div class="transport top">
       <button class="play" id="play" type="button" aria-label="Play the chord line"><svg viewBox="0 0 20 20" id="playIcon"><path d="M5 3l12 7-12 7z"/></svg></button>
-      <span class="endless-group"><button class="btn sw endless" id="songOn2" type="button" aria-pressed="false" title="Play the song in the Song line card">♪ Song</button><button class="btn sw endless" id="endlessOn" type="button" aria-pressed="false" title="Endless: a journey through the moods that never repeats">∞ Endless</button><button class="btn sw endless" id="aliveOn" type="button" aria-pressed="true" title="Alive: when nobody touches anything for 30 seconds, it changes by itself, channels come and go">✦ Alive</button><button class="btn small" id="paceBtn" type="button" title="How fast Endless and Alive move: calm, drifting or busy">Drift</button></span>
+      <span class="endless-group"><button class="btn sw endless" id="songOn2" type="button" aria-pressed="false" title="Play the song in the Song line card">♪ Song</button><button class="btn sw endless" id="endlessOn" type="button" aria-pressed="false" title="Endless: a journey through the moods that never repeats">∞ Endless</button><button class="btn sw endless" id="journeyOn" type="button" aria-pressed="false" title="Journey: a whole set of 30 minutes to two hours with an arc (choose its length under ⋯)">☾ Journey</button><button class="btn sw endless" id="aliveOn" type="button" aria-pressed="true" title="Alive: when nobody touches anything for 30 seconds, it changes by itself, channels come and go">✦ Alive</button><button class="btn small" id="paceBtn" type="button" title="How fast Endless and Alive move: calm, drifting or busy">Drift</button></span>
       <div class="moodbank"><label class="tag" for="moodSel"><span class="tl">Mood</span><span class="ts">Mood</span><b id="moodCount"></b></label>
         <div class="nav"><button type="button" data-bank="mood" data-d="-10" aria-label="Back 10 moods">«</button><button type="button" data-bank="mood" data-d="-1" aria-label="Previous mood">‹</button><select id="moodSel" aria-label="Mood"></select><button type="button" data-bank="mood" data-d="1" aria-label="Next mood">›</button><button type="button" data-bank="mood" data-d="10" aria-label="Forward 10 moods">»</button><button type="button" class="dice" id="moodDice" title="A random mood" aria-label="A random mood">⚄</button><button type="button" class="dice" id="moodSave" title="Save this as your own mood (it goes under Your sessions in this menu)" aria-label="Save this as your own mood">★</button><button type="button" class="dice" id="barSaveFile" title="Save what is playing as a file on your computer" aria-label="Save as a file">⤓</button><button type="button" class="dice" id="barOpenFile" title="Open a saved file" aria-label="Open a saved file">⤒</button><input type="file" id="barFile" accept=".json,application/json" hidden></div></div>
+      <span class="rowbreak" aria-hidden="true"></span>
       <label class="field inline">BPM<input type="number" id="tempo" min="40" max="200" value="84"></label>
       <label class="field inline">Key<select id="lineKey"></select></label>
       <span class="field inline counter" id="posOut" title="How far it has come and how long is left: the song (♪), the mood until Endless or Alive moves on (∞), or the chord line (bar)"></span>
+      <span class="spacer2" aria-hidden="true"></span>
       <label class="field inline master">Master<span class="masterrow"><span class="meter" aria-hidden="true"><b id="masterMeter"></b></span><input type="range" id="master" class="lvl" min="-24" max="6" step="0.5" value="0" aria-label="Master level"><output id="masterOut" class="db">0 dB</output></span></label>
-      <span class="recgroup"><button class="btn small" id="appSave" type="button" title="Save the whole app as one HTML file, to open in Safari or Chrome on your computer">App ⤓</button><button class="btn small" id="padsBtn" type="button" aria-pressed="false" title="Show the chord pads in the bar">Pads</button><button class="btn rec" id="recBtn" type="button" aria-pressed="false" title="Record">●</button><button class="btn small" id="recWhat" type="button" data-v="mix" title="Record the mix, or the mix and each channel on its own">Mix</button><span id="recTime" class="db"></span></span>
+      <span class="recgroup"><button class="btn small" id="viewOn" type="button" aria-pressed="false" title="The picture: one big breathing image over the page">◐</button><button class="btn small" id="moreBtn" type="button" aria-expanded="false" title="Journey, sleep timer, headphones or speakers, MIDI">⋯</button><button class="btn small" id="appSave" type="button" title="Save the whole app as one HTML file, to open in Safari or Chrome on your computer">App ⤓</button><button class="btn small" id="padsBtn" type="button" aria-pressed="false" title="Show the chord pads in the bar">Pads</button><button class="btn rec" id="recBtn" type="button" aria-pressed="false" title="Record">●</button><button class="btn small" id="recWhat" type="button" data-v="mix" title="What ● records: the mix (WAV, up to 30 minutes), Stems (the mix and every channel, WAV, 15 minutes) or Long (the mix compressed, for hours)">Mix</button><span id="recTime" class="db"></span></span>
     </div>
     <div class="mixer">
       <section class="strip chord" aria-label="Chord">
@@ -883,7 +915,7 @@ const store = {
 };
 
 /* ---------- Audio ---------- */
-let ctx = null, node = null, analyser = null, starting = null, master = null, chordBus = null, chordLift = null;
+let safetyNode = null, ctx = null, node = null, analyser = null, starting = null, master = null, chordBus = null, chordLift = null;
 function b64ToBytes(b64) { const s = atob(b64), a = new Uint8Array(s.length); for (let i = 0; i < s.length; i++) a[i] = s.charCodeAt(i); return a; }
 async function startAudio() {
   if (node) { if (ctx.state !== 'running') await ctx.resume(); return; }
@@ -899,7 +931,7 @@ async function startAudio() {
     node = new AudioWorkletNode(ctx, 'drift-sonata', { numberOfInputs: 0, numberOfOutputs: 4, outputChannelCount: [2, 2, 2, 2], processorOptions: { wasm, seed: (Math.random() * 1e9) | 0 } });
     analyser = ctx.createAnalyser(); analyser.fftSize = 2048;
     // The engine stops at -1 dBFS by itself; this catches the drums and the arp on top of it
-    const safety = ctx.createDynamicsCompressor(); safety.threshold.value = -1; safety.knee.value = 0; safety.ratio.value = 20; safety.attack.value = .002; safety.release.value = .12;
+    const safety = safetyNode = ctx.createDynamicsCompressor(); safety.threshold.value = -1; safety.knee.value = 0; safety.ratio.value = 20; safety.attack.value = .002; safety.release.value = .12;
     master = ctx.createGain(); chordBus = ctx.createGain(); chordLift = ctx.createGain();
     node.connect(chordBus, 0); chordBus.connect(chordLift); chordLift.connect(master); masterDissolve(); master.connect(dissolve.lp); dissolve.lp.connect(analyser); analyser.connect(safety); safety.connect(ctx.destination);
     drumAudio(); drumFx.bus.connect(master); drumTempo();
@@ -941,10 +973,10 @@ async function loadSamples() {
   }
   node.port.postMessage({ t: 'bank', zones, tables }, [...zones.map(z => z.data.buffer), ...tables.map(t => t.data.buffer)]);
 }
-function send(i, ch = 'chord') { if (node && !loadingSound) node.port.postMessage({ t: 'p', i, v: T[ch].vals[i], ch }); }
+function send(i, ch = 'chord') { if (node && !loadingSound) node.port.postMessage({ t: 'p', i, v: T[ch].vals[i] * outScale(i), ch }); }
 // A whole new sound: it starts in the channel's other engine and the two cross over the fade time
 const fadeTime = () => +($('fadeSel') ? $('fadeSel').value : 4);
-function sendSound(ch, fade) { if (node) node.port.postMessage({ t: 'sound', ch, values: Float32Array.from(T[ch].vals), fade: fade ?? fadeTime() }); }
+function sendSound(ch, fade) { if (node) node.port.postMessage({ t: 'sound', ch, values: Float32Array.from(T[ch].vals, (v, i) => v * outScale(i)), fade: fade ?? fadeTime() }); }
 
 /* ---------- Chord display ---------- */
 let display = { root: -1, notes: [], sub: 0 }, held = new Set(), lineHeld = new Set();
@@ -976,7 +1008,7 @@ function chordName(root, q, notes) {
 function onWorklet(m) {
   if (m.t === 'ready') setStatus(playing ? 'Playing the chord line.' : 'Ready. Play the keyboard, or press ▶.');
   else if (m.t === 'anchor') arpAnchorFrom(m);
-  else if (m.t === 'slot') markSlot(m.s);
+  else if (m.t === 'slot') { markSlot(m.s); if (typeof midiChord === 'function' && lastNotes && lastNotes[m.s]) midiChord(lastNotes[m.s]); }
   else if (m.t === 'disp') {
     display = m; orbitSrc = m.src || orbitSrc; arpAnchorFrom(m);
     if (m.lifeLanes) { lifeLanes = m.lifeLanes; lifeSteps = m.lifeSteps; }
@@ -1007,7 +1039,7 @@ var MOBILE = matchMedia('(pointer: coarse)').matches || /iPhone|iPad|Android/i.t
 var ecoNow = MOBILE && (store.get('ds-eco', 'auto') !== 'off');  // Eco: see below, where it also switches itself on when the machine cannot keep up
 const nextFrame = fn => setTimeout(() => requestAnimationFrame(fn), ecoNow ? 120 : 45);
 // a single note or grain is placed with the head's own filters (HRTF), or in Eco with plain panning (much cheaper)
-const panModel = () => ecoNow ? 'equalpower' : 'HRTF';
+const panModel = () => ecoNow || (typeof outMode !== 'undefined' && outMode === 'speakers') ? 'equalpower' : 'HRTF';
 // how far ahead the notes are put in place: further in Eco, so a busy moment of the page never drops one
 const ahead = () => ecoNow ? .8 : .3;
 const onScreen = c => { if (!c || !c.offsetParent) return false; const r = c.getBoundingClientRect(); return r.bottom > 0 && r.top < innerHeight; };
@@ -2396,6 +2428,7 @@ function arpPlay(e, when, dur, scale = 1) {
   const t = Math.max(when, ctx.currentTime + .004);
   // velocities pulled together: the arp breathes with the pads instead of poking out of them
   const vel = Math.max(20, Math.min(96, (52 + (e.vel - 56) * .4) * Math.sqrt(scale)));
+  midiNote(2, e.pitch, vel, t, dur);
   if (arpSound().six) { node.port.postMessage({ t: 'arpnote', n: e.pitch, v: vel / 127, at: t, dur: Math.max(.03, dur) }); arpLastPitch = e.pitch; return; }
   if (!arpG.chain) return;
   const note = { pitch: e.pitch, velocity: Math.round(vel), duration: Math.max(.03, dur) };
@@ -3119,8 +3152,8 @@ function melTick() {
   if (melNext < beatNow - .02) melNext = beatNow;
   const off = melMode === 'line' ? lineStartBeat : 0, ao = { ppq: a.ppq - off, time: a.time }, glideT = g => g * melPrefs.glide * 60 / bpm * .5;
   const S = LEAD_STYLES[(LEAD_PRESETS[melPrefs.leadPreset] || LEAD_PRESETS[0]).style];
-  if (melPrefs.lead && melG.lead) eventsBetween(leadEv.events, leadEv.cycle, melNext - off, horizon - off, ao, bpm, (e, w) => melG.lead.note(Math.max(w, now + .005), e.pitch, e.len * 60 / bpm, e.vel, glideT(S.glide)));
-  if (melPrefs.bass && melG.bass) eventsBetween(bassEv.events, bassEv.cycle, melNext - off, horizon - off, ao, bpm, (e, w) => melG.bass.note(Math.max(w, now + .005), e.pitch, e.len * 60 / bpm, e.vel, glideT(.04)));
+  if (melPrefs.lead && melG.lead) eventsBetween(leadEv.events, leadEv.cycle, melNext - off, horizon - off, ao, bpm, (e, w) => { melG.lead.note(Math.max(w, now + .005), e.pitch, e.len * 60 / bpm, e.vel, glideT(S.glide)); midiNote(4, e.pitch, e.vel, w, e.len * 60 / bpm); });
+  if (melPrefs.bass && melG.bass) eventsBetween(bassEv.events, bassEv.cycle, melNext - off, horizon - off, ao, bpm, (e, w) => { melG.bass.note(Math.max(w, now + .005), e.pitch, e.len * 60 / bpm, e.vel, glideT(.04)); midiNote(5, e.pitch, e.vel, w, e.len * 60 / bpm); });
   melNext = horizon;
 }
 setInterval(melTick, 40);
@@ -3375,7 +3408,7 @@ function pianoPlay(e, when, ring, R) {
   src.connect(g); g.connect(lp); lp.connect(pan); pan.connect(pianoG.dry); pan.connect(pianoG.din); pan.connect(pianoG.rin);
   src.start(t); src.stop(end + .1);
   src.onended = () => { try { src.disconnect(); g.disconnect(); lp.disconnect(); pan.disconnect(); } catch (er) {} };
-  pianoActive.push({ t0: t, t1: end, from, to, lv: v, pitch: e.pitch });
+  pianoActive.push({ t0: t, t1: end, from, to, lv: v, pitch: e.pitch }); midiNote(7, e.pitch, e.vel, t, ring);
 }
 function pianoTick() {
   if (!pianoPrefs.on || !pianoG || !ctx) return;
@@ -3742,7 +3775,7 @@ function asmrApply() {
 }
 // Where a grain is, in the flurry's own way of moving: [azimuth, elevation, distance], always close
 function asmrWhere(F, k, R) {
-  const wild = asmrPrefs.wild, d = (.22 + .35 * R()) * (1.5 - .5 * asmrPrefs.close), e = (R() - .5) * .9 * wild;
+  const wild = asmrPrefs.wild, d = (.22 + .35 * R()) * (1.5 - .5 * asmrPrefs.close) * (outMode === 'speakers' ? 2 : 1), e = (R() - .5) * .9 * wild;
   switch (F.spread) {
     case 'ears': return [(k % 2 ? 1 : -1) * (Math.PI / 2 + (R() - .5) * .5 * wild), e * .5, d];
     case 'circle': return [F.dir * k * (.5 + .4 * wild) + F.az0, e, d];
@@ -4305,6 +4338,7 @@ function synthTick() {
     const base = 36 + ((seg.root - 36 % 12 + 120) % 12) + 12 * synthPrefs.octave, pitch = base + [0, 12, 7, seventh, third][st.deg];
     const next = steps[i + 1], hold = !!(st.slide && next), when = a.time + (k / 4 - a.ppq) * 60 / bpm, dur = Math.max(.05, st.len * 60 / bpm / 4 * (hold ? 1.05 : .8));
     const prev = steps[i - 1];
+    midiNote(6, pitch, st.acc ? 112 : 88, when, dur);
     synthG.voice.note(Math.max(when, now + .005), pitch, dur, st.acc ? .95 : .72, !!(prev && prev.slide), st.acc, hold);
   }
   synthNext = horizon;
@@ -5013,7 +5047,7 @@ async function setEndless(on) {
    (fewer when calm, more when restless). */
 const ALIVE_AFTER = 30000;
 const alive = { on: store.get('ds-alive', true), was: false };
-const living = () => endless.on || (alive.on && performance.now() - userTouch > ALIVE_AFTER && !(typeof song !== 'undefined' && song.on));
+const living = () => endless.on || journey.on || (alive.on && performance.now() - userTouch > ALIVE_AFTER && !(typeof song !== 'undefined' && song.on));
 function setAlive(on) { alive.on = on; store.set('ds-alive', on); $('aliveOn').setAttribute('aria-pressed', on); setStatus(on ? 'Alive: after 30 quiet seconds it goes on by itself.' : 'Alive off: it stays as you leave it.'); }
 const ARR_CH = ['drums', 'arp', 'vox', 'perc', 'lead', 'bass', 'piano', 'guitar', 'high', 'world'], ARR_SIZE = { calm: [1, 3], drift: [2, 4], restless: [3, 5] };
 const chCan = c => (c !== 'arp' || HAS_ARP) && (c !== 'vox' || HAS_VOX) && (c !== 'piano' || pianoNotes.length > 0) && (c !== 'guitar' || guitarData.phrases.length > 0) && (c !== 'world' || worldData.phrases.length > 0);
@@ -5022,7 +5056,7 @@ const chOn = c => c === 'drums' ? drumPrefs.on : c === 'arp' ? arpPrefs.on : c =
 function chLike(c, m, K) { const mf = MEL_FOR[m.kind] || [.4, 0, .6]; return { drums: K.drums ?? .7, arp: K.arp ?? .7, vox: K.vox ?? .4, perc: PERC_FOR[m.kind] ?? .4, lead: mf[0], bass: mf[2], piano: (PIANO_FOR[m.kind] || [.35])[0], guitar: (GUITAR_FOR[m.kind] || [.3])[0], high: ['Glacier', 'Cathedral', 'Deep sea', 'Shoegaze haze'].includes(m.kind) ? .55 : .3, world: WORLD_FOR[m.kind] ?? .25 }[c]; }
 // One step of the arrangement: a channel steps out, one comes in, or one gives its place to another
 function arrange(R, m, K) {
-  const on = ARR_CH.filter(c => chCan(c) && chOn(c)), off = ARR_CH.filter(c => chCan(c) && !chOn(c)), [lo, hi0] = ARR_SIZE[endless.pace], hi = hi0 - (ecoNow ? 1 : 0);
+  const on = ARR_CH.filter(c => chCan(c) && chOn(c)), off = ARR_CH.filter(c => chCan(c) && !chOn(c)), [lo, hi0] = journey.on ? journeyAt()[0][3] : ARR_SIZE[endless.pace], hi = hi0 - (ecoNow ? 1 : 0);
   const pickW = (list, w) => { let x = list.reduce((t, c) => t + w(c), 0) * R(); for (const c of list) if ((x -= w(c)) <= 0) return c; return list[list.length - 1]; };
   const out = [], inn = [];
   if (on.length > hi || (on.length > lo && R() < .5)) out.push(pickW(on, c => 1.25 - chLike(c, m, K)));
@@ -5042,7 +5076,7 @@ function arrange(R, m, K) {
 function endlessTick() {
   const live = living(), bar = endlessBar();
   if (!live || bar < 0) { alive.was = false; return; }
-  const R = endless.R, m = MOODS[Math.max(0, moodChoice)], K = MOOD_KINDS.find(k => k.kind === m.kind), who = endless.on ? 'Endless' : 'Alive';
+  const R = endless.R, m = MOODS[Math.max(0, moodChoice)], K = MOOD_KINDS.find(k => k.kind === m.kind), who = journey.on ? 'Journey' : endless.on ? 'Endless' : 'Alive';
   const say = t => setStatus(who + ' · ' + t);
   if (!alive.was) { alive.was = true; endless.nextArr = bar; if (!endless.on) { endless.nextMood = endlessPlan(bar, 'mood'); endless.nextSmall = bar + 4; } }
   // the arrangement keeps its own clock: every 8 or 16 bars a channel may step out or come in
@@ -5223,6 +5257,7 @@ setInterval(() => {
   const el = $('posOut'); if (!el) return;
   if (!playing || !lineAnchor || !ctx) { el.textContent = ''; return; }
   const bpm = tempo(), beat = lineAnchor.ppq + (ctx.currentTime - lineAnchor.time) * bpm / 60;
+  if (journey.on) { const e = (performance.now() - journey.t0) / 1000; el.innerHTML = `☾ ${mmss(e)} <b>−${mmss(journey.len * 60 - e)}</b>`; return; }
   if (typeof song !== 'undefined' && song.on && song.cur) {
     const total = songBars(song.cur) * 4, pos = ((beat - song.startBeat) % total + total) % total;
     el.innerHTML = `♪ ${mmss(pos * 60 / bpm)} <b>−${mmss((total - pos) * 60 / bpm)}</b>`;
@@ -5598,8 +5633,9 @@ function zipMany(files) {
   const end = new Uint8Array([0x50, 0x4b, 5, 6, 0, 0, 0, 0, ...u16(files.length), ...u16(files.length), ...u32(size), ...u32(offset), 0, 0]);
   return new Blob([...parts, ...central, end], { type: 'application/zip' });
 }
-$('recBtn').addEventListener('click', () => rec ? recStop() : recStart());
-$('recWhat').addEventListener('click', () => { const b = $('recWhat'); if (rec) return; b.dataset.v = b.dataset.v === 'stems' ? 'mix' : 'stems'; b.textContent = b.dataset.v === 'stems' ? 'Stems' : 'Mix'; });
+$('recBtn').addEventListener('click', () => { if (longRec.on) return longRecStop(); if (!rec && $('recWhat').dataset.v === 'long') return startAudio().then(longRecStart); rec ? recStop() : recStart(); });
+// what ● records: the mix (WAV, 30 minutes), the mix and every channel (WAV, 15 minutes), or the mix compressed (hours)
+$('recWhat').addEventListener('click', () => { const b = $('recWhat'); if (rec || longRec.on) return; const k = ['mix', 'stems', 'long'], v = k[(k.indexOf(b.dataset.v) + 1) % 3]; b.dataset.v = v; b.textContent = { mix: 'Mix', stems: 'Stems', long: 'Long' }[v]; });
 
 /* ---------- Keyboard, computer keys and MIDI ---------- */
 const LOW = 36, HIGH = 84, keyEls = {};
@@ -5652,6 +5688,197 @@ if (navigator.requestMIDIAccess) {
   }).catch(() => {});
 }
 
+/* ---------- Journey, sleep timer, long recording, headphones or speakers, the picture ---------- */
+
+// Headphones or speakers. On headphones every sound has its place round your head (the head's own filters); on speakers
+// the single notes are panned plainly, the engines' binaural placement is turned well down and the ASMR keeps its distance
+let outMode = store.get('ds-out', 'phones');
+const outScale = i => outMode === 'speakers' && i === idx.space3d ? .3 : 1;
+function setOut(mode) {
+  outMode = mode; store.set('ds-out', mode);
+  if (node) for (const ch of ['chord', 'arp']) node.port.postMessage({ t: 'p', i: idx.space3d, v: T[ch].vals[idx.space3d] * outScale(idx.space3d), ch });
+  const pm = panModel(); for (const p of [arpG && arpG.chain && arpG.chain.pan, melG && melG.pan]) if (p) p.panningModel = pm;
+  setStatus(mode === 'speakers' ? 'Speakers: plain panning, the 3D placement turned down.' : 'Headphones: every sound has its place round your head.');
+}
+
+// The sleep timer: it plays on, then everything fades out over a minute and a half, and it stops
+const sleep = { end: 0, fading: false };
+function setSleep(min) {
+  sleep.end = min ? performance.now() + min * 60000 : 0; sleep.fading = false;
+  setStatus(min ? `It plays for ${min} minutes, then fades out slowly.` : 'No timer.');
+}
+function fadeOutAndStop(secs, then) {
+  if (!ctx || !master) { then && then(); return; }
+  const t = ctx.currentTime, g = master.gain, was = g.value;
+  g.cancelScheduledValues(t); g.setValueAtTime(was, t); g.linearRampToValueAtTime(0, t + secs);
+  setTimeout(() => { if (playing) $('play').click(); setTimeout(() => { g.cancelScheduledValues(ctx.currentTime); g.setValueAtTime(was, ctx.currentTime); }, 400); then && then(); }, secs * 1000 + 200);
+}
+setInterval(() => {
+  if (!sleep.end || sleep.fading) return;
+  if (performance.now() > sleep.end - 90000) { sleep.fading = true; setStatus('The timer: fading out.'); fadeOutAndStop(90, () => { sleep.end = 0; sleep.fading = false; $('sleepSel').value = '0'; }); }
+}, 1000);
+
+/* The journey: a whole set of 30 minutes to two hours with an arc, played by Endless's engine. It starts thin and calm,
+   builds, peaks with more of the band (the synth bass and the fat basses are allowed in), comes down again, and at the
+   end fades out. It can record itself from the first note to the last. */
+const journey = { on: false, len: store.get('ds-journey-len', 60), rec: store.get('ds-journey-rec', false), t0: 0, stage: '' };
+const JOURNEY = [  // [from, stage, pace, channels lo-hi, intensity]
+  [0, 'warming up', 'calm', [1, 2], .2], [.15, 'building', 'drift', [2, 4], .45], [.45, 'at its height', 'restless', [3, 5], .75],
+  [.75, 'coming down', 'drift', [2, 3], .4], [.9, 'drifting home', 'calm', [1, 2], .2],
+];
+const journeyAt = () => { const f = (performance.now() - journey.t0) / (journey.len * 60000); let s = JOURNEY[0]; for (const x of JOURNEY) if (f >= x[0]) s = x; return [s, f]; };
+async function setJourney(on) {
+  journey.on = on; $('journeyOn').setAttribute('aria-pressed', on); $('journeyGo').textContent = on ? 'Stop the journey' : 'Start the journey';
+  if (!on) { setStatus('Journey off: it stays where it is.'); if (longRec.on) longRecStop(); return; }
+  if (typeof song !== 'undefined' && song.on) setSong(false);
+  if (!playing) $('play').click();
+  journey.t0 = performance.now(); journey.stage = '';
+  if (moodChoice < 0) await pickMood(Math.floor(Math.random() * MOODS.length));
+  endless.nextMood = endless.nextSmall = -1; endless.pace = 'calm';
+  if (journey.rec) setTimeout(() => longRecStart(), 300);
+  setStatus(`A ${journey.len}-minute journey: warming up${journey.rec ? ', recording it' : ''}.`);
+}
+setInterval(() => {
+  if (!journey.on) return;
+  const [s, f] = journeyAt();
+  if (f >= 1) { journey.on = false; $('journeyOn').setAttribute('aria-pressed', false); $('journeyGo').textContent = 'Start the journey'; setStatus('The journey ends: fading out.'); fadeOutAndStop(60, () => { if (longRec.on) longRecStop(); }); return; }
+  if (s[1] !== journey.stage) {
+    journey.stage = s[1]; endless.pace = s[2]; endless.nextSmall = -1;
+    glideParam('intensity', s[4], 30);
+    setStatus(`Journey · ${s[1]}`);
+  }
+}, 2000);
+
+/* A long recording: the mix, compressed as it plays (Opus in a .webm, or AAC in a .mp4 where that is what the browser
+   makes), so hours fit; the stems stay with the 15-minute WAV recording */
+const longRec = { on: false, mr: null, parts: [], dest: null, t0: 0 };
+function longRecStart() {
+  if (longRec.on || !ctx || !window.MediaRecorder) { if (!window.MediaRecorder) setStatus('This browser cannot record a long file.'); return; }
+  if (!longRec.dest) { longRec.dest = ctx.createMediaStreamDestination(); safetyNode.connect(longRec.dest); }
+  const type = ['audio/webm;codecs=opus', 'audio/mp4;codecs=mp4a.40.2', 'audio/mp4', 'audio/webm'].find(t => MediaRecorder.isTypeSupported(t)) || '';
+  const mr = new MediaRecorder(longRec.dest.stream, type ? { mimeType: type, audioBitsPerSecond: 192000 } : {});
+  longRec.parts = []; mr.ondataavailable = e => { if (e.data.size) longRec.parts.push(e.data); };
+  mr.onstop = () => {
+    const mt = mr.mimeType || type, ext = /mp4/.test(mt) ? 'mp4' : 'webm', base = moodChoice >= 0 ? fileName(MOODS[moodChoice].name) : 'drift-sonata';
+    download(`drift-sonata-${journey.len}min-${base}.${ext}`, new Blob(longRec.parts, { type: mt })); longRec.parts = [];
+  };
+  mr.start(10000); longRec.mr = mr; longRec.on = true; longRec.t0 = performance.now();
+  $('recBtn').setAttribute('aria-pressed', true); setStatus('Recording the whole thing, compressed: press ● to stop.');
+}
+function longRecStop() { if (!longRec.on) return; longRec.on = false; longRec.mr.stop(); $('recBtn').setAttribute('aria-pressed', false); setStatus('Saving the long recording.'); }
+
+/* The picture: one big, slow, breathing image over the page (the bar stays), a light for every channel in its own
+   colour, swelling with how loud it plays and drifting round, the sound's own shape in a ring in the middle and the
+   chord's name. Drawn small and shown large, so it is soft and costs little. */
+const VIEW_COLS = [['chordLevelMeter', '#7fd3d3'], ['drumLevelMeter', '#f2a5c3'], ['percLevelMeter', '#d98a4a'], ['arpLevelMeter', '#ecd08f'], ['voxLevelMeter', '#b9a4e8'],
+  ['melLevelMeter', '#5b8fd6'], ['pianoLevelMeter', '#e8c766'], ['guitarLevelMeter', '#c99a6e']];
+const view = { on: false, lv: VIEW_COLS.map(() => 0), t: 0 };
+function setView(on) {
+  view.on = on; $('viewOn').setAttribute('aria-pressed', on); $('viewLayer').hidden = !on; document.body.classList.toggle('viewing', on);
+  if (on) nextFrame(drawView);
+}
+function drawView() {
+  if (!view.on) return;
+  const c = $('viewCanvas'), scale = ecoNow ? 4 : 3, w = Math.max(64, Math.round(c.clientWidth / scale)), h = Math.max(64, Math.round(c.clientHeight / scale));
+  if (c.width !== w || c.height !== h) { c.width = w; c.height = h; }
+  const g = c.getContext('2d'); view.t += 1;
+  const bg = g.createLinearGradient(0, 0, 0, h); bg.addColorStop(0, '#0f2a30'); bg.addColorStop(1, '#173b43'); g.globalCompositeOperation = 'source-over'; g.fillStyle = bg; g.fillRect(0, 0, w, h);
+  g.globalCompositeOperation = 'lighter';
+  VIEW_COLS.forEach(([id, col], k) => {
+    const m = meters.find(x => x.el && x.el.id === id), db = m && playing ? m.v * 48 - 48 : -60, target = Math.max(0, Math.min(1, (db + 40) / 34));
+    view.lv[k] += (target - view.lv[k]) * .08;
+    const lv = view.lv[k]; if (lv < .02) return;
+    const a = view.t * .0025 * (1 + k * .13) + k * 2.1, x = w * (.5 + .34 * Math.sin(a) * Math.cos(a * .37 + k)), y = h * (.5 + .3 * Math.cos(a * .8 + k * .7)), r = Math.min(w, h) * (.18 + .42 * lv);
+    const gr = g.createRadialGradient(x, y, 0, x, y, r); gr.addColorStop(0, col + 'aa'); gr.addColorStop(.45, col + '44'); gr.addColorStop(1, col + '00');
+    g.fillStyle = gr; g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill();
+  });
+  // the sound's shape: the last moment of the mix, bent into a ring
+  if (analyser) {
+    const n = 256, buf = view.buf || (view.buf = new Float32Array(analyser.fftSize)); analyser.getFloatTimeDomainData(buf);
+    const cx = w / 2, cy = h * .4, R0 = Math.min(w, h) * .18; g.strokeStyle = 'rgba(246,238,232,.55)'; g.lineWidth = 1; g.beginPath();
+    for (let i = 0; i <= n; i++) { const v = buf[Math.floor(i / n * (buf.length - 1))] || 0, ang = i / n * Math.PI * 2 + view.t * .002, r = R0 * (1 + v * 1.6); const x = cx + Math.cos(ang) * r, y = cy + Math.sin(ang) * r; i ? g.lineTo(x, y) : g.moveTo(x, y); }
+    g.stroke();
+  }
+  $('viewChord').textContent = $('chordName').textContent; $('viewMood').textContent = moodChoice >= 0 ? MOODS[moodChoice].name + (journey.on ? ' · ' + journey.stage : '') : '';
+  nextFrame(drawView);
+}
+
+// The ⋯ panel and the buttons in the bar
+{
+  $('moreBtn').addEventListener('click', () => { const p = $('morePanel'); p.hidden = !p.hidden; $('moreBtn').setAttribute('aria-expanded', !p.hidden); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') { $('morePanel').hidden = true; if (view.on) setView(false); } });
+  $('journeyOn').addEventListener('click', () => setJourney(!journey.on)); $('journeyGo').addEventListener('click', () => setJourney(!journey.on));
+  $('journeyLen').value = String(journey.len); $('journeyLen').addEventListener('change', () => { journey.len = +$('journeyLen').value; store.set('ds-journey-len', journey.len); });
+  $('journeyRec').checked = journey.rec; $('journeyRec').addEventListener('change', () => { journey.rec = $('journeyRec').checked; store.set('ds-journey-rec', journey.rec); });
+  $('sleepSel').addEventListener('change', () => setSleep(+$('sleepSel').value));
+  $('outSel').value = outMode; $('outSel').addEventListener('change', () => setOut($('outSel').value));
+  $('viewOn').addEventListener('click', () => setView(!view.on)); $('viewLayer').addEventListener('click', e => { if (e.target.id !== 'viewFull') setView(false); });
+  $('viewFull').addEventListener('click', () => { const d = document.documentElement; (document.fullscreenElement ? document.exitFullscreen() : (d.requestFullscreen || d.webkitRequestFullscreen).call(d)); });
+}
+
+/* ---------- DAW sync: MIDI clock out and in, and the notes out ----------
+   Where the browser has Web MIDI (Chrome, Edge): DRIFT SONATA can send its clock (24 a beat, start and stop) so a DAW
+   or a drum machine follows it, and send the notes it plays, each part on its own channel (chords 1, arp 2, lead 4,
+   bass 5, synth bass 6, piano 7), to record or to play other instruments. Or it can follow a clock that comes in:
+   the tempo, start and stop. */
+const midi = { access: null, out: null, inp: null, clock: store.get('ds-midi-clock', true), notes: store.get('ds-midi-notes', true), follow: store.get('ds-midi-follow', false), nextTick: 0, ticks: [], held: [] };
+// an audio-clock time as the MIDI clock's (performance.now) time
+const midiAt = t => { if (!ctx) return performance.now(); const ts = ctx.getOutputTimestamp ? ctx.getOutputTimestamp() : null; return ts && ts.performanceTime ? ts.performanceTime + (t - ts.contextTime) * 1000 : performance.now() + (t - ctx.currentTime) * 1000; };
+function midiNote(ch, pitch, vel, t, dur) {
+  if (!midi.out || !midi.notes || pitch < 0 || pitch > 127) return;
+  const on = Math.max(performance.now(), midiAt(t)), v = Math.max(1, Math.min(127, Math.round(vel)));
+  try { midi.out.send([0x90 | (ch - 1), pitch, v], on); midi.out.send([0x80 | (ch - 1), pitch, 0], on + Math.max(20, dur * 1000)); } catch (e) {}
+}
+// the chord line's chords: held from one chord to the next
+function midiChord(notes) {
+  if (!midi.out || !midi.notes) return;
+  try { for (const n of midi.held) midi.out.send([0x80, n, 0]); for (const n of notes) midi.out.send([0x90, n, 80]); } catch (e) {}
+  midi.held = notes.slice();
+}
+function midiAllOff() { if (!midi.out) return; try { for (let c = 0; c < 16; c++) midi.out.send([0xB0 | c, 123, 0]); } catch (e) {} midi.held = []; }
+// the clock: 24 ticks a beat, put in place a little ahead on the line's own beat
+let midiWasPlaying = false;
+setInterval(() => {
+  if (!midi.out || !midi.clock || !ctx) return;
+  if (playing !== midiWasPlaying) { midiWasPlaying = playing; try { midi.out.send([playing ? 0xFA : 0xFC]); } catch (e) {} if (!playing) midiAllOff(); midi.nextTick = 0; }
+  if (!playing || !lineAnchor) return;
+  const a = lineAnchor, bpm = tempo(), beatNow = a.ppq + (ctx.currentTime - a.time) * bpm / 60, until = beatNow + .15 * bpm / 60;
+  if (!midi.nextTick || midi.nextTick < beatNow - .1) midi.nextTick = Math.ceil(beatNow * 24) / 24;
+  for (; midi.nextTick < until; midi.nextTick += 1 / 24) { try { midi.out.send([0xF8], Math.max(performance.now(), midiAt(a.time + (midi.nextTick - a.ppq) * 60 / bpm))); } catch (e) { break; } }
+}, 25);
+// following a clock that comes in: its tempo from the last two beats of ticks, its start and stop
+function midiIn(e) {
+  const st = e.data[0];
+  if (!midi.follow) return;
+  if (st === 0xF8) {
+    const t = e.timeStamp || performance.now(); midi.ticks.push(t); if (midi.ticks.length > 49) midi.ticks.shift();
+    if (midi.ticks.length >= 25) { const per = (midi.ticks[midi.ticks.length - 1] - midi.ticks[midi.ticks.length - 25]) / 24, bpm = Math.round(60000 / (per * 24) * 10) / 10;
+      if (bpm > 40 && bpm < 220 && Math.abs(bpm - tempo()) > .3) { $('tempo').value = bpm; $('tempo').dispatchEvent(new Event('change')); } }
+  } else if ((st === 0xFA || st === 0xFB) && !playing) $('play').click();
+  else if (st === 0xFC && playing) $('play').click();
+}
+function midiFill() {
+  const box = $('midiBox'); if (!midi.access) return;
+  const outs = [...midi.access.outputs.values()], ins = [...midi.access.inputs.values()];
+  const opt = (list, cur) => '<option value="">None</option>' + list.map(p => `<option value="${esc(p.id)}"${cur && cur.id === p.id ? ' selected' : ''}>${esc(p.name)}</option>`).join('');
+  box.innerHTML = `<div class="row"><label>Out to <select id="midiOutSel">${opt(outs, midi.out)}</select></label><label class="toggle"><input type="checkbox" id="midiClock"${midi.clock ? ' checked' : ''}> Clock</label><label class="toggle"><input type="checkbox" id="midiNotes"${midi.notes ? ' checked' : ''}> Notes</label></div>
+    <div class="row"><label>In from <select id="midiInSel">${opt(ins, midi.inp)}</select></label><label class="toggle"><input type="checkbox" id="midiFollow"${midi.follow ? ' checked' : ''}> Follow its clock</label></div>
+    <p>Notes go out on their own channels: chords 1, arp 2, lead 4, bass 5, synth bass 6, piano 7. ${outs.length || ins.length ? '' : 'No MIDI ports yet: on a Mac, switch on the IAC Driver in Audio MIDI Setup to reach a DAW.'}</p>`;
+  $('midiOutSel').addEventListener('change', () => { midiAllOff(); midi.out = midi.access.outputs.get($('midiOutSel').value) || null; store.set('ds-midi-out', midi.out ? midi.out.name : ''); midiWasPlaying = false; });
+  $('midiInSel').addEventListener('change', () => { if (midi.inp) midi.inp.removeEventListener('midimessage', midiIn); midi.inp = midi.access.inputs.get($('midiInSel').value) || null; if (midi.inp) midi.inp.addEventListener('midimessage', midiIn); store.set('ds-midi-in', midi.inp ? midi.inp.name : ''); });
+  $('midiClock').addEventListener('change', () => { midi.clock = $('midiClock').checked; store.set('ds-midi-clock', midi.clock); });
+  $('midiNotes').addEventListener('change', () => { midi.notes = $('midiNotes').checked; store.set('ds-midi-notes', midi.notes); if (!midi.notes) midiAllOff(); });
+  $('midiFollow').addEventListener('change', () => { midi.follow = $('midiFollow').checked; store.set('ds-midi-follow', midi.follow); midi.ticks = []; });
+}
+if (navigator.requestMIDIAccess) navigator.requestMIDIAccess().then(acc => {
+  midi.access = acc;
+  // the ports chosen last time, by name
+  const outName = store.get('ds-midi-out', ''), inName = store.get('ds-midi-in', '');
+  midi.out = [...acc.outputs.values()].find(p => p.name === outName) || null; midi.inp = [...acc.inputs.values()].find(p => p.name === inName) || null;
+  if (midi.inp) midi.inp.addEventListener('midimessage', midiIn);
+  midiFill(); acc.addEventListener('statechange', midiFill);
+}).catch(() => {});
+
 // ‹ › on both sides of every menu, one step at a time (the two banks have their own « ‹ › »)
 function arrowize(sel) {
   const wrap = document.createElement('span'); wrap.className = 'stepper';
@@ -5664,7 +5891,7 @@ function arrowize(sel) {
   new MutationObserver(sync).observe(sel, { childList: true, subtree: true, attributes: true });
   sel._sync = sync;
 }
-document.querySelectorAll('select').forEach(sel => { if (!['soundSel', 'lineSel', 'soundFilter', 'arpSel', 'arpSoundSel', 'kitSel', 'drumSel', 'voxStyleSel', 'voxSpaceSel', 'moodSel', 'songSel', 'leadSel', 'bassSel', 'pianoSel', 'synthSel', 'guitarSel', 'worldSel', 'percKitSel', 'percGrooveSel'].includes(sel.id)) arrowize(sel); });
+document.querySelectorAll('select').forEach(sel => { if (!['soundSel', 'lineSel', 'soundFilter', 'arpSel', 'arpSoundSel', 'kitSel', 'drumSel', 'voxStyleSel', 'voxSpaceSel', 'moodSel', 'songSel', 'leadSel', 'bassSel', 'journeyLen', 'sleepSel', 'outSel', 'midiOutSel', 'midiInSel', 'pianoSel', 'synthSel', 'guitarSel', 'worldSel', 'percKitSel', 'percGrooveSel'].includes(sel.id)) arrowize(sel); });
 // keep the arrows right when a menu is set from code (a sound loads, a chord is picked)
 setInterval(() => document.querySelectorAll('.stepper select').forEach(sel => sel._sync && sel._sync()), 400);
 fillSessions(); fillLines(); drawSlots(); drawPads(); lastNotes = voiceLine();
