@@ -62,7 +62,11 @@ def main():
     ap.add_argument('--guitar')
     ap.add_argument('--asmr')
     ap.add_argument('--world')
+    ap.add_argument('--quality', choices=['web', 'full'], default='web', help='web: small enough to publish (under 16 MB); full: the best sound, for a file to keep')
     a = ap.parse_args()
+    # AAC rates per kind of sound: the web page must stay under 16 MB, a file to keep need not
+    BR = dict(samples='80k', drums='80k', vox='72k', piano='160k', guitar='64k', world='48k', asmr='48k') if a.quality == 'web' else \
+        dict(samples='128k', drums='128k', vox='112k', piano='192k', guitar='128k', world='112k', asmr='96k')
 
     with tempfile.TemporaryDirectory() as tmp:
         wasm = os.path.join(tmp, 'drift.wasm')
@@ -92,7 +96,7 @@ def main():
                 if not m or not name.lower().endswith('.wav'):
                     continue
                 m4a = os.path.join(tmp, name + '.m4a')
-                run(['ffmpeg', '-v', 'error', '-y', '-i', os.path.join(a.samples, name), '-ac', '1', '-c:a', 'aac', '-b:a', '80k', m4a])
+                run(['ffmpeg', '-v', 'error', '-y', '-i', os.path.join(a.samples, name), '-ac', '1', '-c:a', 'aac', '-b:a', BR['samples'], m4a])
                 samples.append({'fam': fams.index(m.group(1)), 'root': float(m.group(2).rstrip('.')),
                                 'b64': base64.b64encode(open(m4a, 'rb').read()).decode()})
 
@@ -101,7 +105,7 @@ def main():
             # Drum hits cut by tools/chop_drums.py, each as AAC (the page finds the attack again after decoding)
             for h in json.load(open(os.path.join(a.drums, 'hits.json'))):
                 m4a = os.path.join(tmp, h['file'] + '.m4a')
-                run(['ffmpeg', '-v', 'error', '-y', '-i', os.path.join(a.drums, h['file']), '-ac', '1', '-c:a', 'aac', '-b:a', '80k', m4a])
+                run(['ffmpeg', '-v', 'error', '-y', '-i', os.path.join(a.drums, h['file']), '-ac', '1', '-c:a', 'aac', '-b:a', BR['drums'], m4a])
                 hits.append({'cls': h['cls'], 'src': h['src'], 'kind': h['kind'], 'b64': base64.b64encode(open(m4a, 'rb').read()).decode()})
 
         vox = []
@@ -109,7 +113,7 @@ def main():
             # Vox pieces cut by tools/chop_vox.py, as AAC (the page finds the start again after decoding)
             for v in json.load(open(os.path.join(a.vox, 'vox.json'))):
                 m4a = os.path.join(tmp, v['file'] + '.m4a')
-                run(['ffmpeg', '-v', 'error', '-y', '-i', os.path.join(a.vox, v['file']), '-ac', '1', '-c:a', 'aac', '-b:a', '72k', m4a])
+                run(['ffmpeg', '-v', 'error', '-y', '-i', os.path.join(a.vox, v['file']), '-ac', '1', '-c:a', 'aac', '-b:a', BR['vox'], m4a])
                 vox.append({k: v[k] for k in ('kind', 'singer', 'midi', 'len', 'bright') if k in v} | {'b64': base64.b64encode(open(m4a, 'rb').read()).decode()})
 
         piano = []
@@ -117,7 +121,7 @@ def main():
             # Piano notes cut by tools/chop_piano.py, as AAC, with their key and partials
             for v in json.load(open(os.path.join(a.piano, 'piano.json'))):
                 m4a = os.path.join(tmp, v['file'] + '.m4a')
-                run(['ffmpeg', '-v', 'error', '-y', '-i', os.path.join(a.piano, v['file']), '-ac', '1', '-c:a', 'aac', '-b:a', '160k', m4a])
+                run(['ffmpeg', '-v', 'error', '-y', '-i', os.path.join(a.piano, v['file']), '-ac', '1', '-c:a', 'aac', '-b:a', BR['piano'], m4a])
                 piano.append({k: v[k] for k in ('midi', 'len', 'bright', 'parts') if k in v} | {'b64': base64.b64encode(open(m4a, 'rb').read()).decode()})
 
         def phrases(folder, rate):
@@ -131,13 +135,13 @@ def main():
                 out['regions'].append({'src': r['src'], 'len': r['len'], 'b64': base64.b64encode(open(m4a, 'rb').read()).decode()})
             out['phrases'] = g['phrases']
             return out
-        guitar, world = phrases(a.guitar, '64k'), phrases(a.world, '48k')
+        guitar, world = phrases(a.guitar, BR['guitar']), phrases(a.world, BR['world'])
 
         asmr = {'pieces': [], 'b64': ''}
         if a.asmr:
             # The ASMR material from tools/chop_asmr.py: one stream of all of it (noise mostly, so a low rate does) and its pieces
             m4a = os.path.join(tmp, 'asmr.m4a')
-            run(['ffmpeg', '-v', 'error', '-y', '-i', os.path.join(a.asmr, 'asmr.wav'), '-ac', '1', '-c:a', 'aac', '-b:a', '48k', m4a])
+            run(['ffmpeg', '-v', 'error', '-y', '-i', os.path.join(a.asmr, 'asmr.wav'), '-ac', '1', '-c:a', 'aac', '-b:a', BR['asmr'], m4a])
             asmr = json.load(open(os.path.join(a.asmr, 'asmr.json'))) | {'b64': base64.b64encode(open(m4a, 'rb').read()).decode()}
 
     page = open(os.path.join(HERE, 'page.html')).read()

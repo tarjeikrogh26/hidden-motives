@@ -184,18 +184,21 @@ details.room .eyebrow { color: #9fc3c4; }
 @media (prefers-reduced-motion: reduce) { .btn.rec[aria-pressed=true] { animation: none; } .toast { transition: none; } }
 .master { flex: none; }
 .masterrow { display: flex; align-items: center; gap: 6px; }
-.mixer { display: grid; grid-template-columns: repeat(var(--strips, 7), minmax(0, 1fr)); gap: 6px; }
+.mixer { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }  /* four channels to a row: room for every control */
+.mixer .strip .lvl { width: auto; flex: 1 1 70px; min-width: 40px; }  /* the fader takes the room the switches leave */
+/* in the bar the menus get the room: one step at a time (‹ ›), the jumps by ten live in the cards' menus */
+.dock .nav button[data-d="-10"], .dock .nav button[data-d="10"] { display: none; }
+.transport.top #tempo { width: 64px; } .mixer .bankrow { grid-template-columns: 44px minmax(0, 1fr); }
+.moodbank { grid-template-columns: minmax(0, 1fr); } .moodbank .tag { display: none; }
 .tag .ts { display: none; }
-@media (min-width: 1500px) { .dock-in { max-width: 1560px; } }
-@media (min-width: 1960px) { .dock-in { max-width: 1900px; } }
-/* eight channels side by side at any width: the labels shorten, the jumps by ten step aside, the meters slim */
-@media screen {
+@media (min-width: 1500px) { .dock-in, .wrap { max-width: 1560px; } }  /* the bar and the page always as wide as each other */
+/* on a narrow window the strips shorten: the labels shorten, the jumps by ten step aside, the meters slim */
+@media (max-width: 1099px) {
   .mixer .bankrow { grid-template-columns: minmax(0, 1fr); gap: 0; } .mixer .bankrow .tag { display: none; }
   .mixer .nav button { min-width: 19px; padding: 2px 2px; font-size: 13px; } .mixer .nav .dice { font-size: 14px; }
   .strip-head { gap: 4px; } .strip-head .meter { min-width: 0; flex: 1 1 0; }
   .btn.sw.small2 { font-size: 11.5px; padding: 2px 4px; } .mixer .strip .lvl { min-width: 18px; }
   .btn.sw.small2::before, .btn.sw.small2[aria-pressed=true]::before { content: none; } .btn.sw.small2[aria-pressed=true] { background: rgba(255,255,255,.9); box-shadow: inset 0 -2px 0 var(--strip, var(--rose-deep)); }
-  .moodbank { grid-template-columns: minmax(0, 1fr); } .moodbank .tag { display: none; }
   /* lower strips: tighter rows, the menus and buttons a little smaller */
   .mixer .strip { padding: 3px 5px 4px; gap: 2px; } .mixer .strip-head { min-height: 22px; }
   .mixer .strip-head .btn.sw { padding: 1px 6px; font-size: 12.5px; line-height: 1.25; } .mixer .strip-head .btn.sw.small2 { padding: 1px 4px; font-size: 11.5px; }
@@ -206,7 +209,7 @@ details.room .eyebrow { color: #9fc3c4; }
   .nav button[data-d="-10"], .nav button[data-d="10"] { display: none; }
   .mixer .strip .lvl { width: auto; flex: 1 1 30px; min-width: 18px; } .strip .db { display: none; } .db { width: 38px; font-size: 9.5px; }
   /* the meter becomes a thin light along the top of its strip */
-  .strip { position: relative; } .strip-head .meter { position: absolute; left: 6px; right: 6px; top: 1px; height: 3px; min-width: 0; }
+  .strip { position: relative; } .strip-head .meter { position: absolute; left: 8px; right: 8px; bottom: 2px; top: auto; height: 2px; min-width: 0; opacity: .8; }
   .strip-head .btn.sw { flex: none; }
   .nav select.mini { display: none; }
   .nav select { font-size: 13.5px; padding: 3px 4px; }
@@ -244,7 +247,7 @@ details.room .eyebrow { color: #9fc3c4; }
 .field.counter b { color: var(--rose-deep); font-weight: 500; }
 .transport.top .master .lvl { width: 80px; }
 .transport.top .masterrow .meter, .transport.top .master .db { display: none; }
-@media (max-width: 1499px) { .field.inline:not(.counter) { font-size: 0; gap: 0; } .transport.top #tempo { width: 46px; } .transport.top { gap: 7px; } .endless-group .btn.endless { padding-left: 7px; padding-right: 7px; } }
+@media (max-width: 1499px) { .field.inline:not(.counter) { font-size: 0; gap: 0; } .transport.top { gap: 7px; } .endless-group .btn.endless { padding-left: 7px; padding-right: 7px; } }
 .pad { padding: 4px 0; border-radius: 6px; border: 1px solid var(--line); background: var(--pearl); font-family: var(--display); font-style: italic; font-weight: 600; font-size: 14.5px; touch-action: none; user-select: none; color: var(--ink); }
 .pad.out { background: transparent; color: var(--muted); }
 
@@ -284,6 +287,8 @@ details.room .eyebrow { color: #9fc3c4; }
 canvas#asmrOrbit, canvas#percOrbit { width: 100%; aspect-ratio: 1; max-width: 260px; justify-self: center; display: block; border-radius: 50%; background: radial-gradient(circle, #21474f 0%, #17363e 70%); }
 .btn.sw.small2 { font-size: 13px; padding: 3px 6px; }
 .melcard h2 { font-family: var(--display); font-size: 30px; font-weight: 600; font-style: italic; }
+canvas#pianoView, canvas#worldView { width: 100%; height: 90px; display: block; border-radius: 6px; background: var(--night); }
+canvas#guitarView { width: 100%; height: 80px; display: block; border-radius: 6px; background: var(--night); }
 canvas#melView { width: 100%; height: 100px; display: block; border-radius: 6px; background: var(--night); }
 .voxcard h2 { font-family: var(--display); font-size: 30px; font-weight: 600; font-style: italic; }
 .vox-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr); gap: 16px; align-items: start; }
@@ -971,6 +976,8 @@ let histPos = 0;
 /* Drawing, kept light: a canvas is sized only when its size changes (sizing it every frame makes the browser start it
    afresh), the views draw about 20 times a second (8 in Eco), and the cards' views only when they are on screen */
 function fitCanvas(c) {
+  // its height held to what it first showed, so a canvas without a height of its own cannot grow by its own pixels
+  if (!c.style.height) c.style.height = c.clientHeight + 'px';
   const w = Math.round(c.clientWidth * devicePixelRatio), h = Math.round(c.clientHeight * devicePixelRatio);
   if (c.width !== w || c.height !== h) { c.width = w; c.height = h; } else c.getContext('2d').clearRect(0, 0, w, h);
   return [w, h];

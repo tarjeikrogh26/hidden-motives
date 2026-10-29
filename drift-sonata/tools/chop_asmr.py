@@ -18,7 +18,7 @@ import numpy as np
 
 SR = 44100
 GAP = int(SR * .05)
-KEEP = {'foley': 1.5, 'voice': 2.0}  # seconds kept of a long recording: its busiest stretch (most clicks, crackles, syllables)
+KEEP = {'foley': float(os.environ.get('KEEP_FOLEY', 1.5)), 'voice': float(os.environ.get('KEEP_VOICE', 2.0))}  # seconds kept of a long recording: its busiest stretch (most clicks, crackles, syllables)
 VOICE = re.compile(r'whisper|vocal|dialogue', re.I)  # and every short one-word file
 
 
