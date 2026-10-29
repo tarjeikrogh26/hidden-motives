@@ -513,6 +513,7 @@ class DriftSonata extends AudioWorkletProcessor {
     this.cur = { chord: 0, arp: 2 };
     this.eng = [0, 1, 2, 3].map(i => ({ g: i === 0 ? 1 : 0, from: 0, to: i === 0 ? 1 : 0, t: 1, dur: 1, live: i === 0 }));
     this.held = { chord: new Map(), arp: new Map() }; this.arpQ = []; this.arpOff = [];
+    this.pump = 0; this.duck = 0; this.kicks = [];  // sidechain: how deep the pads and arp dip on each kick, and where they are now
     this.port.onmessage = e => this.ready ? this.msg(e.data) : this.queue.push(e.data);
     const stub = { fd_close: () => 0, fd_seek: () => 0, fd_write: () => 0 };
     WebAssembly.instantiate(options.processorOptions.wasm, { wasi_snapshot_preview1: stub }).then(({ instance }) => {
@@ -546,6 +547,7 @@ class DriftSonata extends AudioWorkletProcessor {
       case 'p': this.use(this.cur[m.ch || 'chord']); x.ds_set_param(m.i, m.v); break;
       case 'sound': this.sound(m.ch, m.values, m.fade); break;
       case 'fade': this.fade = m.s; break;
+      case 'pump': this.pump = m.v; break;
       case 'on': this.on(m.ch || 'chord', m.n, m.v); break;
       case 'off': this.off(m.ch || 'chord', m.n); break;
       case 'arpnote': this.arpQ.push(m); this.arpQ.sort((a, b) => a.at - b.at); break;
@@ -607,6 +609,7 @@ class DriftSonata extends AudioWorkletProcessor {
             const v = ly.kit[lane]; if (!v || !lanes[lane].includes(s16)) continue;
             if (lane === 'h') for (const h of this.hits) if (h.lane === 'o') h.choke = true;  // a closed hat closes the open one
             const lg = Math.sin(ly.g * Math.PI / 2);
+            if (lane === 'k' && lg > .3) this.kicks.push(off);
             this.hits.push({ v, lane, pos: -off, g: (lane === 'k' ? .9 + .1 * acc : acc) * lg, choke: false, cg: 1 });
           }
         }
@@ -645,6 +648,19 @@ class DriftSonata extends AudioWorkletProcessor {
         done = end;
       }
     }
+    // Pump: the chords and the arp dip on each kick and come back over most of a beat, the way a sidechain breathes
+    if (this.pump > 0 && (this.kicks.length || this.duck > .001 || this.duckUp)) {
+      const rel = Math.exp(-1 / (sampleRate * 60 / this.bpm * .32)), att = 1 - Math.exp(-1 / (sampleRate * .004));
+      this.kicks.sort((a, b) => a - b); let ki = 0;
+      for (let i = 0; i < n; i++) {
+        while (ki < this.kicks.length && this.kicks[ki] <= i) { this.duckUp = true; ki++; }
+        // down quickly (a few ms, kept across blocks), then back up over about a third of a beat
+        if (this.duckUp) { this.duck += (1 - this.duck) * att; if (this.duck > .97) this.duckUp = false; } else this.duck *= rel;
+        const g = 1 - this.pump * .7 * this.duck;
+        L[i] *= g; R[i] *= g; if (A && A[0]) { A[0][i] *= g; A[1][i] *= g; }
+      }
+    }
+    this.kicks = [];
     // Drums on their own outputs: dry, and the sends (reverb left, echo right) that the page turns into rooms
     const D = outputs[1], F = outputs[2];
     if (D && D[0]) { D[0].fill(0); D[1].fill(0); F[0].fill(0); F[1].fill(0); }
@@ -674,7 +690,7 @@ class DriftSonata extends AudioWorkletProcessor {
       const cnt = x.ds_disp_count(), notes = [];
       for (let i = 0; i < cnt; i++) notes.push(x.ds_disp_note(i));
       this.port.postMessage({ t: 'disp', root: x.ds_disp_root(), q: x.ds_disp_quality(), notes, sub: x.ds_disp_sub(), src: c.src, lifeLanes: c.lanes, lifeSteps: c.lifeSteps,
-        arp: a, ppq: ppq0, time: currentTime, playing: this.playing });
+        arp: a, ppq: ppq0, time: currentTime, playing: this.playing, duck: this.duck, pump: this.pump });
     }
     return true;
   }
@@ -1007,6 +1023,9 @@ function colourCard(title, text, lo, hi, build, wide) {
 }
 colourCard('Movement', 'Each of the six oscillators turns inside itself: its shape, its own filter, its harmonics and cross-modulation sweep, and they swell past each other.', '', '', c => {
   c.appendChild(slider('twist', { label: 'Still ↔ Twisting', rose: true })); c.appendChild(choice('twistrate')); c.appendChild(slider('lifeseq', { label: 'Life sequencer' }));
+});
+colourCard('Transitions', 'Reverse swells into the next chord, a frozen rising room before a new part, and a pump with the kick.', '', '', c => {
+  const g = document.createElement('div'); g.id = 'transControls'; g.style.display = 'flex'; g.style.flexDirection = 'column'; g.style.gap = '6px'; c.appendChild(g);
 });
 colourCard('Intensity', 'Verse to chorus: takes away or brings in the octave, the voices, shimmer and air.', 'Verse', 'Chorus', c => c.appendChild(slider('intensity', { label: 'Verse ↔ Chorus' })));
 colourCard('Analog', 'Tape wow, flutter, saturation and hiss.', 'Clean', 'Worn', c => c.appendChild(slider('tape', { label: 'Clean ↔ Worn tape', rose: true })));
@@ -2744,6 +2763,10 @@ function applyMood(m, opts = {}) {
     lineChoice = m.line; lineDirty = false; line = lineFrom(lineBank[lineChoice], lineKey); fillLines(); lineChanged();
   });
   glideTempo(m.bpm, fade);
+  // how it moves between chords: the dance families pump, the slow ones swell
+  const PUMP = { 'Orbital sunrise': .45, Darkwave: .3, 'City dusk': .15, 'Radio-Activity': .2, 'Space station': .15, 'Shoegaze haze': .2 };
+  transPrefs.pump = PUMP[m.kind] || 0; transPrefs.swell = ['Glacier', 'Cathedral', 'Deep sea', 'Dub lull', 'Shoegaze haze', 'Desert night'].includes(m.kind) ? .55 : .35; saveTrans();
+  if (window.transControlsShow) transControlsShow(); pumpSend();
   // drums: a new kit and groove fade over the old; switched on or off softly
   moodWants.drums = m.drums.on;
   if (m.drums.on) { drumPrefs.level = m.drums.level; $('drumSel').value = String(m.drums.groove); sendDrums(); pickKit(m.drums.kit); mixApply(); }
@@ -3010,6 +3033,112 @@ $('songOn2').addEventListener('click', () => setSong(!song.on));
 $('songLoop').setAttribute('aria-pressed', song.loop);
 $('songLoop').addEventListener('click', () => { song.loop = !song.loop; store.set('ds-song-loop', song.loop); $('songLoop').setAttribute('aria-pressed', song.loop); });
 fillSongs(); drawSong();
+
+/* ---------- Transitions: the way ambient moves from one place to the next ----------
+   Reverse swells: the next chord, struck softly and sent through a long room, played backwards so it swells up and
+   lands exactly on the change. Rise: before a new part of a song (or a new mood in Endless) the room freezes and
+   the shimmer climbs, and both let go on its first bar. Pump: the chords and the arp breathe with the kick. */
+const transPrefs = Object.assign({ swell: .45, swellOn: 'chords', rise: true, pump: 0 }, store.get('ds-trans', {}));
+const saveTrans = () => store.set('ds-trans', transPrefs);
+const swellCache = new Map(); let swellDone = -1, swellIR = null;
+async function swellBuffer(notes, secs) {
+  const key = notes.join(',') + '|' + secs.toFixed(2); if (swellCache.has(key)) return swellCache.get(key);
+  const sr = ctx.sampleRate, tail = 3.2, off = new OfflineAudioContext(2, Math.ceil(sr * (secs + tail)), sr);
+  if (!swellIR || swellIR.sampleRate !== sr) {
+    swellIR = off.createBuffer(2, Math.floor(sr * 3.4), sr);
+    for (let c = 0; c < 2; c++) { const a = swellIR.getChannelData(c), R = rng32(4441 + c); let lp = 0; for (let i = 0; i < a.length; i++) { const t = i / sr; lp = lp * .7 + (R() * 2 - 1) * .3; a[i] = lp * Math.exp(-4 * t / 3.4) * Math.min(1, t / .02); } }
+  }
+  const conv = off.createConvolver(); conv.buffer = swellIR; conv.connect(off.destination);
+  const lp = off.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 2600; lp.connect(conv);
+  for (const n of notes) for (const [mul, typ, lv] of [[1, 'sawtooth', .5], [2, 'triangle', .3], [.5, 'sine', .4]]) {
+    const o = off.createOscillator(), g = off.createGain(); o.type = typ; o.frequency.value = 440 * Math.pow(2, (n - 69) / 12) * mul;
+    g.gain.setValueAtTime(0, 0); g.gain.linearRampToValueAtTime(lv / notes.length, .006); g.gain.exponentialRampToValueAtTime(.0001, .5);
+    o.connect(g); g.connect(lp); o.start(0); o.stop(.6);
+  }
+  const r = await off.startRendering();
+  // backwards: the room's tail first, growing into the strike; cut to the swell's length, faded in from nothing
+  const len = Math.floor(sr * secs), out = ctx.createBuffer(2, len, sr);
+  for (let c = 0; c < 2; c++) {
+    const src = r.getChannelData(c), dst = out.getChannelData(c); let peak = 1e-6;
+    for (let i = 0; i < len; i++) { const j = len - 1 - i + Math.floor(sr * .02); dst[i] = j < src.length ? src[j] : 0; peak = Math.max(peak, Math.abs(dst[i])); }
+    for (let i = 0; i < len; i++) dst[i] = dst[i] / peak * Math.pow(i / len, 1.6);
+  }
+  if (swellCache.size > 40) swellCache.delete(swellCache.keys().next().value);
+  swellCache.set(key, out); return out;
+}
+// The next chord change ahead on the chord line's clock: when it lands and which chord it brings
+function nextChange(beat) {
+  if (!lastNotes || !lastNotes.length) return null;
+  const bars = lastNotes.map((_, k) => slotBars(line[k])), total = bars.reduce((a, b) => a + b, 0) * 4;
+  const pos = (((beat - lineStartBeat) % total) + total) % total; let acc = 0;
+  for (let k = 0; k < bars.length; k++) { acc += bars[k] * 4; if (acc > pos + 1e-6) return { beat: beat + (acc - pos), notes: lastNotes[(k + 1) % bars.length], len: bars[k] * 4 }; }
+  return null;
+}
+async function swellTick() {
+  if (!playing || !lineAnchor || !ctx || transPrefs.swell <= 0 || !mixPrefs.chordOn) return;
+  const a = lineAnchor, bpm = tempo(), beat = a.ppq + (ctx.currentTime - a.time) * bpm / 60;
+  let ch = null;
+  if (transPrefs.swellOn === 'chords') ch = nextChange(beat);
+  else if (song.on && song.section >= 0) {
+    // only into a new part of the song
+    const k = (song.section + 1) % song.cur.sections.length, b = sectionStartBeat(k, beat) + (k === 0 ? songBars(song.cur) * 4 : 0);
+    const x = song.cur.sections[k], L = lineFrom(lineBank[x.line], lineKey); ch = { beat: b, notes: voiceChord(L[0], null) };
+  } else if (endless.on && endless.nextMood > 0) ch = { beat: endless.nextMood * 4, notes: lastNotes && lastNotes[0] };
+  if (!ch || !ch.notes || ch.beat <= swellDone + .05) return;  // (the same change, give or take rounding)
+  // the swell fills most of the chord before the change (at most a bar, at most 3.5 s)
+  const secs = Math.min(3.5, Math.min(4, ch.len || 4) * .85 * 60 / bpm), at = a.time + (ch.beat - a.ppq) * 60 / bpm - secs;
+  if (at - ctx.currentTime > 2.5 || at + secs < ctx.currentTime + .3) return;
+  swellDone = ch.beat;
+  const buf = await swellBuffer(ch.notes.map(n => n + 12), secs);
+  const src = ctx.createBufferSource(), g = ctx.createGain(); src.buffer = buf; g.gain.value = transPrefs.swell * .55;
+  // if making it took too long, it starts part way in, so it still lands on the change
+  const now = ctx.currentTime + .01;
+  src.connect(g); g.connect(chordBus); if (at >= now) src.start(at); else src.start(now, now - at);
+  src.onended = () => { src.disconnect(); g.disconnect(); };
+}
+setInterval(swellTick, 150);
+// Rise: two bars before a new part the shimmer climbs, one bar before the room freezes; both let go on the new part
+let riseFor = -1;
+function riseTick() {
+  if (!transPrefs.rise || !playing || !lineAnchor || !ctx) return;
+  const a = lineAnchor, bpm = tempo(), beat = a.ppq + (ctx.currentTime - a.time) * bpm / 60;
+  let target = -1;
+  if (song.on && song.section >= 0) { const k = (song.section + 1) % song.cur.sections.length; target = sectionStartBeat(k, beat) + (k === 0 ? songBars(song.cur) * 4 : 0); if (!song.loop && k === 0) target = -1; }
+  else if (endless.on && endless.nextMood > 0) target = endless.nextMood * 4;
+  if (target < 0 || target === riseFor || target - beat > 8 || target - beat < 0) return;
+  riseFor = target;
+  const shim = values[idx.shimmer], ms = b => Math.max(0, (a.time + (b - a.ppq) * 60 / bpm - ctx.currentTime) * 1000);
+  glideParam('shimmer', Math.min(1, shim + .45), (target - beat) * 60 / bpm * .9);
+  setTimeout(() => setValue('freeze', 1), ms(target - 4));
+  setTimeout(() => { setValue('freeze', 0); glideParam('shimmer', shim, 4); }, ms(target));
+}
+setInterval(riseTick, 200);
+function pumpSend() { if (node) node.port.postMessage({ t: 'pump', v: drumPrefs.on ? transPrefs.pump : 0 }); }
+setInterval(pumpSend, 1000);
+// The Transitions card
+{
+  const c = $('transControls'), shows = [];
+  const range = (key, label, change, cls) => {
+    const w = document.createElement('div'); w.className = 'ctl'; const id = 'tr-' + key;
+    w.innerHTML = `<label for="${id}">${label} <output></output></label><input type="range" id="${id}" min="0" max="1" step="0.01" class="${cls || ''}">`;
+    const inp = w.querySelector('input'), out = w.querySelector('output'), show = () => { inp.value = transPrefs[key]; out.textContent = Math.round(transPrefs[key] * 100) + '%'; inp.style.setProperty('--pct', transPrefs[key] * 100 + '%'); };
+    inp.addEventListener('input', () => { transPrefs[key] = +inp.value; saveTrans(); show(); change && change(); }); shows.push(show); show(); return w;
+  };
+  c.append(range('swell', 'Reverse swells', null, 'rose'));
+  const on = document.createElement('div'); on.className = 'ctl';
+  on.innerHTML = '<label for="tr-on">Swell into</label><select id="tr-on"><option value="chords">Every chord</option><option value="parts">New parts only</option></select>';
+  const sel = on.querySelector('select'); sel.addEventListener('change', () => { transPrefs.swellOn = sel.value; saveTrans(); }); shows.push(() => { sel.value = transPrefs.swellOn; });
+  c.append(on, range('pump', 'Pump with the kick', pumpSend, 'teal'));
+  const rise = toggleEl('Rise before new parts', () => transPrefs.rise, v => { transPrefs.rise = v; saveTrans(); });
+  c.append(rise.el); shows.push(rise.show);
+  shows.forEach(f => f());
+  window.transControlsShow = () => shows.forEach(f => f());
+}
+function toggleEl(label, get, set) {
+  const el = document.createElement('label'); el.className = 'toggle'; el.innerHTML = `<input type="checkbox"> ${label}`;
+  const box = el.querySelector('input'), show = () => { box.checked = get(); }; box.addEventListener('change', () => set(box.checked)); show();
+  return { el, show };
+}
 
 /* ---------- Recording: the mix, or the mix and each channel on its own (stems), as WAV ----------
    A small worklet takes what the master and each channel's fader send, sample for sample together, and hands it over

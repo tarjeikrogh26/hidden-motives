@@ -59,6 +59,10 @@ langt unna). Hver del starter sin akkordlinje på sin egen første takt, kanalen
 og sub glir. 192 sanger, én per stemning, i fem former; delene kan endres, flyttes, legges til og lagres, og
 MIDI-eksporten tar hele sangen med markører for delene.
 
+Overganger: reverserte svell (neste akkord slått mykt gjennom et langt rom og spilt baklengs, så den vokser opp og
+lander på skiftet, på hvert akkordskifte eller bare inn i nye deler), en stigning før nye deler (skimmeret klatrer,
+rommet fryses siste takt, alt slippes på første takt) og pumping med sparken (sidechain på akkord og arp).
+
 Lydbytter fader over: motoren har to motorer per kanal (akkord og arp), og trommesett, grooves, arp-mønstre og
 vox-stiler fader også over tiden som er valgt under Fade.
 
