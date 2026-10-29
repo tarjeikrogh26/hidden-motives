@@ -30,12 +30,12 @@ def arp_scripts(folder):
     and its patterns packed: per pattern a meta row, per note start and length in 1/480 beats, pitch and velocity."""
     import struct
     safe = lambda code: code.replace('</script', '<\\/script')
-    parts = ['<script>window.__ARP_LADDER = ' + json.dumps(open(os.path.join(folder, 'nb-ladder.js')).read()) + ';</script>']
+    parts = ['<script data-ds>window.__ARP_LADDER = ' + json.dumps(open(os.path.join(folder, 'nb-ladder.js')).read()) + ';</script>']
     for f in ARP_FILES:
         code = open(os.path.join(folder, f)).read()
         if f == 'nb-voice.js':
             code = code.replace("c.audioWorklet.addModule('nb-ladder.js?v=09')", 'window.__arpLadder(c)')
-        parts.append(f'<script>/* AVANTGARDIAN ARP · {f} */\n{safe(code)}\n</script>')
+        parts.append(f'<script data-ds>/* AVANTGARDIAN ARP · {f} */\n{safe(code)}\n</script>')
     pats = json.load(open(os.path.join(folder, 'assets', 'patterns.json')))['patterns']
     meta, blob = [], bytearray()
     for p in pats:
@@ -44,7 +44,7 @@ def arp_scripts(folder):
         blob += struct.pack('<H', len(p['notes']))
         for st, du, pi, ve in p['notes']:
             blob += struct.pack('<HHBB', min(65535, round(st * 480)), min(65535, max(1, round(du * 480))), int(pi) & 127, int(ve) & 127)
-    parts.append('<script>const ARP_META = ' + json.dumps(meta, separators=(',', ':')) + ';\nconst ARP_BIN = "' + base64.b64encode(bytes(blob)).decode() + '";</script>')
+    parts.append('<script data-ds>const ARP_META = ' + json.dumps(meta, separators=(',', ':')) + ';\nconst ARP_BIN = "' + base64.b64encode(bytes(blob)).decode() + '";</script>')
     print(f'ARP: {len(pats)} patterns, {len(blob) / 1e6:.2f} MB packed')
     return '\n'.join(parts)
 

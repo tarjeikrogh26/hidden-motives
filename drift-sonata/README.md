@@ -73,6 +73,14 @@ tumbi), spilt som gitaren fra fraser i opptakene og flyttet til akkordene. Han t
 han et nytt instrument og en ny måte å spille på for hver (fri taqsim, hypnotisk ostinato, spørsmål og svar, tremolo-
 blomst, duett). Han deler stripe med gitaren.
 
+Synth bass er en modulær analog stemme: flere oscillatorer noen cent fra hverandre, sub og støy, en kompleks
+oscillator for FM (vestkyst-måten), ringmodulator, wavefolder, drive og crusher for de sure og skrapete, og et filter av
+fem slag: stige (24 dB, Moog-måten), tvillingtopper (high-pass og skrikende low-pass, MS-20-måten), mykt 24 dB
+(Jupiter-måten), notch med low-pass (SEM-måten) og low-pass-gate (Buchla-måten). 16 patcher i åtte mønstre (acid,
+Berlin-sekstendeler, rullende, offbeat, brutt, stikk, sprett, halvtempo), med aksenter og slides, på beaten fra
+akkordens grunntone, oktav, kvint, septim og ters. Den kommer inn noen toner om gangen. Alive tar den fram når en
+stemning har spilt lenge, og gangbassen går ut så lenge den spiller. Den deler stripe med pianoet.
+
 ASMR har sin egen motor: `tools/chop_asmr.py <ut-mappe> <filer>` legger stemmer, hvisking og nær foley etter hverandre
 i én fil. Sida tar korn på 20-400 ms, baklengs, flyttet i oktaver og kvinter, stammende, og kaster dem helt inntil
 ørene i korte byger (flutter, crawl, cloud, crackle, glitch, swarm), over bassen og under musikken. Ingenting spilles
@@ -99,10 +107,12 @@ Overganger: reverserte svell (neste akkord slått mykt gjennom et langt rom og s
 lander på skiftet, på hvert akkordskifte eller bare inn i nye deler), en stigning før nye deler (skimmeret klatrer,
 rommet fryses siste takt, alt slippes på første takt) og pumping med sparken (sidechain på akkord og arp).
 
-1192 stemninger: de 192, 500 ensemble-stemninger og 500 Far and wide, så ulike som mulig (hele lydbanken, alle
+1692 stemninger: de 192, 500 ensemble-stemninger, 500 Far and wide og 500 After hours (andre veier gjennom banken, og
+synthbassen på beaten i de fleste), så ulike som mulig (hele lydbanken, alle
 akkordlinjer, alle tonearter rundt kvintsirkelen, tempo jevnt fra 60 til 124, alle sett og grooves, sitt eget band og sin
 egen miks), med en sang til hver. Ensemble-stemningene har hver et band på fire til seks instrumenter, alltid med piano
-eller gitar. ★ ved siden av terningen lagrer det som spiller nå som din egen (under Your sessions). Et stemningsbytte
+eller gitar. ⤓ ved siden av lagrer det som en fil på maskinen (⤒ åpner den igjen), og App ⤓ lagrer hele appen som én HTML-fil som
+åpnes i nettleseren med lyd og alt. ★ ved siden av terningen lagrer det som spiller nå som din egen (under Your sessions). Et stemningsbytte
 er en oppløsning: hele mikset synker inn i et mykt lavpass og et langt rom, den nye stemningen kommer på bunnen av
 det, og alt åpner seg igjen. Telleren i baren viser spilt og igjen av sangen (♪), av stemningen til Endless eller
 Alive går videre (∞), eller takten i akkordlinja. En kanal som spiller lyser i sin egen farge, sterkere jo høyere den
