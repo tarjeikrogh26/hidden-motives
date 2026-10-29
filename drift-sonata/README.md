@@ -144,6 +144,23 @@ stopp). På Mac når man en DAW med IAC Driver i Audio MIDI-oppsett.
 Lydbytter fader over: motoren har to motorer per kanal (akkord og arp), og trommesett, grooves, arp-mønstre og
 vox-stiler fader også over tiden som er valgt under Fade.
 
+## Plugin (VST3, AU, app)
+
+`plugin/` er motoren i `dsp/` inne i JUCE 8: en instrument-plugin med alle motorens parametere (automatiserbare i
+DAW-en), de 833 lydene som programmer, MIDI inn, og vertens tempo og posisjon (sub-dropet lander på vertens ener og
+Life-sekvenseren går i dens tid). Opptakene (kor, cello, strykere, brass, teksturer og wavetables) lastes fra en mappe
+man velger i pluginen; uten dem spiller synthen alene. Trommer, arp, vox og de andre kanalene på nettsida er
+JavaScript og er ikke med i pluginen.
+
+```sh
+cmake -S plugin -B build -DCMAKE_BUILD_TYPE=Release        # henter JUCE 8.0.9
+cmake --build build --config Release
+cmake -S plugin -B build -DDS_TEST=ON && cmake --build build --target plugin_test && build/plugin_test_artefacts/Release/plugin_test [mappe med opptak]
+```
+
+GitHub Actions (`.github/workflows/drift-sonata-plugin.yml`) bygger VST3, AU og app på Mac (Apple silicon og Intel i
+én), og VST3 og app på Windows og Linux, og legger dem ved hver kjøring som nedlastinger.
+
 ## Teste motoren
 
 ```sh
