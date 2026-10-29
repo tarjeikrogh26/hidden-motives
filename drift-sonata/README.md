@@ -127,7 +127,7 @@ takt helt ut til kanten av rommet og tilbake. Stemmene skifter stil, rom, sanger
 minutt. Når en stemning har spilt lenge (2,5 til 4 minutter) kommer en fet synthbass inn i 32 takter (Reese, Moog,
 Juno, growl, wobble, oktavstabel) og går så igjen.
 
-Eco (Auto, På, Av, i akkordlinjekortet): når maskinen ikke henger med, spiller sida lettere: enkelttoner og korn med
+Eco (Auto, På, Av, i akkordlinjekortet): på telefon og nettbrett fra start (der får lyden også en større buffer), og ellers når maskinen ikke henger med, spiller sida lettere: notene settes på plass 0,8 s før i stedet for 0,3 s, enkelttoner og korn med
 vanlig panorering i stedet for hodets filtre, halvparten av ASMR-kornene, én kanal færre om gangen i Alive, og visningene
 tegnes sjeldnere. Visningene tegnes uansett bare når de vises, rundt 20 ganger i sekundet.
 

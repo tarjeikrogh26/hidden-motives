@@ -889,7 +889,7 @@ async function startAudio() {
   if (node) { if (ctx.state !== 'running') await ctx.resume(); return; }
   if (starting) return starting;
   starting = (async () => {
-    ctx = new AudioContext({ latencyHint: 'interactive' });
+    ctx = new AudioContext({ latencyHint: MOBILE ? 'playback' : 'interactive' });
     // The worklet code is in this page. Some frames refuse a blob: module, others a data: one, so try both.
     const code = $('workletSrc').textContent + '\n' + grooveBar.toString();
     try { await ctx.audioWorklet.addModule(URL.createObjectURL(new Blob([code], { type: 'application/javascript' }))); }
@@ -1002,10 +1002,14 @@ function fitCanvas(c) {
   if (c.width !== w || c.height !== h) { c.width = w; c.height = h; } else c.getContext('2d').clearRect(0, 0, w, h);
   return [w, h];
 }
-var ecoNow = false;  // Eco: see below, where it switches itself on when the machine cannot keep up
+// A phone or a tablet starts in Eco, with a larger audio buffer: a little more delay, far fewer drop-outs
+var MOBILE = matchMedia('(pointer: coarse)').matches || /iPhone|iPad|Android/i.test(navigator.userAgent);
+var ecoNow = MOBILE && (store.get('ds-eco', 'auto') !== 'off');  // Eco: see below, where it also switches itself on when the machine cannot keep up
 const nextFrame = fn => setTimeout(() => requestAnimationFrame(fn), ecoNow ? 120 : 45);
 // a single note or grain is placed with the head's own filters (HRTF), or in Eco with plain panning (much cheaper)
 const panModel = () => ecoNow ? 'equalpower' : 'HRTF';
+// how far ahead the notes are put in place: further in Eco, so a busy moment of the page never drops one
+const ahead = () => ecoNow ? .8 : .3;
 const onScreen = c => { if (!c || !c.offsetParent) return false; const r = c.getBoundingClientRect(); return r.bottom > 0 && r.top < innerHeight; };
 function drawTrace() {
   const [w, h] = fitCanvas(trace);
@@ -2374,7 +2378,7 @@ function arpTick() {
     if (arpKey && arpPrefs.pattern !== arpPatId && arpEvents.length) arpIn = { old: { events: arpEvents, cycle: arpCycle }, t0: now + .3, dur: fadeTime() };
     const r = arpCompute(arpMode); arpEvents = r.events; arpCycle = r.cycle; arpKey = key; arpPatId = arpPrefs.pattern;
   }
-  const beatNow = a.ppq + (now - a.time) * bpm / 60, horizon = beatNow + .3 * bpm / 60;
+  const beatNow = a.ppq + (now - a.time) * bpm / 60, horizon = beatNow + ahead() * bpm / 60;
   arpBeatNow = beatNow - (arpMode === 'line' ? lineStartBeat : 0);
   if (arpNext < beatNow - .02) arpNext = beatNow;  // after a stall (a hidden tab), skip ahead rather than play a burst
   const k = w => arpIn ? Math.max(0, Math.min(1, (w - arpIn.t0) / arpIn.dur)) : 1;
@@ -2831,7 +2835,7 @@ function voxTick() {
   if (!voxMode) return;
   let a = voxMode === 'line' ? lineAnchor : voxFree;
   if (a.bpm !== bpm) { a = { ppq: a.ppq + (now - a.time) * a.bpm / 60, time: now, bpm }; if (voxMode === 'line') lineAnchor = a; else voxFree = a; }
-  const beatNow = a.ppq + (now - a.time) * bpm / 60, horizon = beatNow + .35 * bpm / 60;
+  const beatNow = a.ppq + (now - a.time) * bpm / 60, horizon = beatNow + (ahead() + .05) * bpm / 60;
   if (voxNext < beatNow - .05) voxNext = beatNow;
   for (let k = Math.ceil(voxNext * 4 - 1e-9); k / 4 < horizon; k++) {
     const beat = k / 4; if (beat < voxNext) continue;
@@ -3111,7 +3115,7 @@ function melTick() {
   if (a.bpm !== bpm) { a = { ppq: a.ppq + (now - a.time) * a.bpm / 60, time: now, bpm }; if (melMode === 'line') lineAnchor = a; else melFree = a; }
   const ch = melMode === 'free' ? liveChord() : null, key = [melMode, melDirty, arpDirty, ch ? ch.root + ch.q : ''].join('|');
   if (key !== melKey) { leadEv = leadCompute(melMode); bassEv = bassCompute(melMode); melKey = key; }
-  const beatNow = a.ppq + (now - a.time) * bpm / 60, horizon = beatNow + .3 * bpm / 60;
+  const beatNow = a.ppq + (now - a.time) * bpm / 60, horizon = beatNow + ahead() * bpm / 60;
   if (melNext < beatNow - .02) melNext = beatNow;
   const off = melMode === 'line' ? lineStartBeat : 0, ao = { ppq: a.ppq - off, time: a.time }, glideT = g => g * melPrefs.glide * 60 / bpm * .5;
   const S = LEAD_STYLES[(LEAD_PRESETS[melPrefs.leadPreset] || LEAD_PRESETS[0]).style];
@@ -3383,7 +3387,7 @@ function pianoTick() {
   const a = pianoMode === 'line' ? lineAnchor : pianoFree;
   const ch = pianoMode === 'free' ? liveChord() : null, key = [pianoMode, pianoDirty, arpDirty, ch ? ch.root + ch.q : ''].join('|');
   if (key !== pianoKeyStr) { pianoEv = pianoCompute(pianoMode); pianoKeyStr = key; for (const e of pianoEv.events) if (!pianoKeys.has(e.pitch)) pianoQueue.add(e.pitch); }
-  const beatNow = a.ppq + (now - a.time) * bpm / 60, horizon = beatNow + .3 * bpm / 60;
+  const beatNow = a.ppq + (now - a.time) * bpm / 60, horizon = beatNow + ahead() * bpm / 60;
   if (pianoNext < beatNow - .02) pianoNext = beatNow;
   const off = pianoMode === 'line' ? lineStartBeat : 0, ao = { ppq: a.ppq - off, time: a.time }, R = rng32((Math.floor(beatNow * 4) * 2654435761) >>> 0);
   eventsBetween(pianoEv.events, pianoEv.cycle, pianoNext - off, horizon - off, ao, bpm, (e, w) => pianoPlay(e, w, e.len * 60 / bpm, R));
@@ -3621,7 +3625,7 @@ function guitarTick() {
   const a = guitarMode === 'line' ? lineAnchor : guitarFree;
   const ch = guitarMode === 'free' ? liveChord() : null, key = [guitarMode, guitarDirty, arpDirty, Math.round(bpm), ch ? ch.root + ch.q : ''].join('|');
   if (key !== guitarKeyStr) { guitarEv = guitarCompute(guitarMode); guitarKeyStr = key; }
-  const beatNow = a.ppq + (now - a.time) * bpm / 60, horizon = beatNow + .3 * bpm / 60;
+  const beatNow = a.ppq + (now - a.time) * bpm / 60, horizon = beatNow + ahead() * bpm / 60;
   if (guitarNext < beatNow - .02) guitarNext = beatNow;
   const off = guitarMode === 'line' ? lineStartBeat : 0, ao = { ppq: a.ppq - off, time: a.time };
   eventsBetween(guitarEv.events, guitarEv.cycle, guitarNext - off, horizon - off, ao, bpm, (e, w) => guitarPlay(e, w, e.ring * 60 / bpm));
@@ -3890,7 +3894,7 @@ function highTick() {
   if (!highMode) return;
   const a = lineAnchor, key = [highDirty, arpDirty].join('|');
   if (key !== highKeyStr) { highEv = highCompute('line'); highKeyStr = key; }
-  const beatNow = a.ppq + (now - a.time) * bpm / 60, horizon = beatNow + .3 * bpm / 60;
+  const beatNow = a.ppq + (now - a.time) * bpm / 60, horizon = beatNow + ahead() * bpm / 60;
   if (highNext < beatNow - .02) highNext = beatNow;
   const off = lineStartBeat, ao = { ppq: a.ppq - off, time: a.time };
   eventsBetween(highEv.events, highEv.cycle, highNext - off, horizon - off, ao, bpm, (e, w) => highPlay(e, w, e.len * 60 / bpm));
@@ -4072,7 +4076,7 @@ function worldTick() {
   if (!worldMode) return;
   const a = lineAnchor, key = [worldDirty, arpDirty, Math.round(bpm)].join('|');
   if (key !== worldKeyStr) { worldEv = worldCompute('line'); worldKeyStr = key; }
-  const beatNow = a.ppq + (now - a.time) * bpm / 60, horizon = beatNow + .3 * bpm / 60;
+  const beatNow = a.ppq + (now - a.time) * bpm / 60, horizon = beatNow + ahead() * bpm / 60;
   if (worldNext < beatNow - .02) worldNext = beatNow;
   const off = lineStartBeat, ao = { ppq: a.ppq - off, time: a.time };
   eventsBetween(worldEv.events, worldEv.cycle, worldNext - off, horizon - off, ao, bpm, (e, w) => worldPlay(e, w, e.ring * 60 / bpm));
@@ -4286,7 +4290,7 @@ function synthTick() {
   const now = ctx.currentTime, bpm = tempo(), want = playing && lineAnchor ? 'line' : '';
   if (want !== synthMode) { if (!want) synthG.voice.stop(now); synthMode = want; }
   if (!synthMode) return;
-  const a = lineAnchor, beatNow = a.ppq + (now - a.time) * bpm / 60, horizon = beatNow + .25 * bpm / 60 + .05;
+  const a = lineAnchor, beatNow = a.ppq + (now - a.time) * bpm / 60, horizon = beatNow + ahead() * bpm / 60 + .05;
   if (synthNext < beatNow - .02) synthNext = beatNow;
   if (!synthSince) synthSince = beatNow;
   const pr = SYNTH_PRESETS[synthPrefs.preset] || SYNTH_PRESETS[0], sg = chordSegments('line'); if (!sg) return;
@@ -4473,7 +4477,7 @@ function percTick() {
   percActive = percActive.filter(a => a.t1 > now);
   if (want !== percMode) { percMode = want; percNext = 0; }
   if (!percMode) return;
-  const a = lineAnchor, beatNow = a.ppq + (now - a.time) * bpm / 60, horizon = beatNow + .35 * bpm / 60, G = PERC_GROOVES[percPrefs.groove] || PERC_GROOVES[0];
+  const a = lineAnchor, beatNow = a.ppq + (now - a.time) * bpm / 60, horizon = beatNow + (ahead() + .05) * bpm / 60, G = PERC_GROOVES[percPrefs.groove] || PERC_GROOVES[0];
   if (percNext < beatNow - .05) percNext = beatNow;
   for (let k = Math.ceil(percNext * 4 - 1e-9); k / 4 < horizon; k++) {
     if (k / 4 < percNext) continue;
@@ -5210,6 +5214,7 @@ function setEco(on, why) { if (ecoNow === on) return; ecoNow = on; document.body
     behind = ratio < .93 ? behind + 1 : Math.max(0, behind - 1);
     if (!ecoNow && (late >= 4 || behind >= 4)) setEco(true, 'Eco: this machine is busy, so DRIFT SONATA plays a little lighter.');
   }, 500);
+  if (ecoNow) document.body.classList.add('eco');
   $('ecoSel').value = ecoPref(); $('ecoSel').addEventListener('change', () => { store.set('ds-eco', $('ecoSel').value); setEco($('ecoSel').value === 'on'); });
 }
 // The counter in the bar: played and left of the song, of this mood (when Endless or Alive will move on), or the bar of the line
