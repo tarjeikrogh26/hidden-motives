@@ -152,8 +152,8 @@ details.room .eyebrow { color: #9fc3c4; }
 .osc:nth-child(even) .head h3 { color: var(--gold-hi) !important; }
 .osc.off { opacity: .5; }
 
-/* Fixed bottom bar: the transport and master on top, then a mixer with three channels (chord, drums, arp), each
-   with its switch, meter and fader over its two banks, then twelve thin chord pads */
+/* Fixed bottom bar: one row with the transport, the mood, tempo, key and master, then the mixer, a strip per channel
+   with its switch, meter and fader over its banks, and (when asked for) twelve thin chord pads */
 .dock { position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; background: rgba(255,250,246,.96); border-top: 1px solid var(--gold-hi); backdrop-filter: blur(10px);
   padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-top: 7px; padding-bottom: calc(7px + env(safe-area-inset-bottom, 0px)); }
 .dock-in { max-width: 1180px; margin: 0 auto; display: flex; flex-direction: column; gap: 7px; }
@@ -188,16 +188,18 @@ details.room .eyebrow { color: #9fc3c4; }
 .tag .ts { display: none; }
 @media (min-width: 1500px) { .dock-in { max-width: 1560px; } }
 @media (min-width: 1960px) { .dock-in { max-width: 1900px; } }
-/* below that the seven channels still sit side by side: the labels shorten, the jumps by ten step aside, the meters slim */
-@media (max-width: 1959px) {
+/* eight channels side by side at any width: the labels shorten, the jumps by ten step aside, the meters slim */
+@media screen {
   .mixer .bankrow { grid-template-columns: minmax(0, 1fr); gap: 0; } .mixer .bankrow .tag { display: none; }
   .mixer .nav button { min-width: 19px; padding: 2px 2px; font-size: 13px; } .mixer .nav .dice { font-size: 14px; }
   .strip-head { gap: 4px; } .strip-head .meter { min-width: 0; flex: 1 1 0; }
-  .btn.sw.small2 { font-size: 12px; padding: 2px 5px; }
+  .btn.sw.small2 { font-size: 11.5px; padding: 2px 4px; } .mixer .strip .lvl { min-width: 18px; }
+  .btn.sw.small2::before, .btn.sw.small2[aria-pressed=true]::before { content: none; } .btn.sw.small2[aria-pressed=true] { background: rgba(255,255,255,.9); box-shadow: inset 0 -2px 0 var(--strip, var(--rose-deep)); }
+  .moodbank { grid-template-columns: minmax(0, 1fr); } .moodbank .tag { display: none; }
   .nav { gap: 2px; } .nav button { min-width: 21px; padding: 2px 3px; }
   .tag .tl, .tag b { display: none; } .tag .ts { display: block; }
   .nav button[data-d="-10"], .nav button[data-d="10"] { display: none; }
-  .mixer .strip .lvl { width: auto; flex: 1 1 30px; min-width: 30px; } .strip .db { display: none; } .db { width: 38px; font-size: 9.5px; }
+  .mixer .strip .lvl { width: auto; flex: 1 1 30px; min-width: 18px; } .strip .db { display: none; } .db { width: 38px; font-size: 9.5px; }
   /* the meter becomes a thin light along the top of its strip */
   .strip { position: relative; } .strip-head .meter { position: absolute; left: 6px; right: 6px; top: 1px; height: 3px; min-width: 0; }
   .strip-head .btn.sw { flex: none; }
@@ -229,7 +231,15 @@ details.room .eyebrow { color: #9fc3c4; }
 .nav select.mini { flex: none; width: 54px; font-family: var(--mono); font-style: normal; font-weight: 400; font-size: 10px; padding: 2px 2px; }
 .nav .dice { color: var(--gold); font-size: 16px; }
 .nav .dice.bpm { font-size: 11px; font-family: var(--mono); color: var(--muted); }
-.pads { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 5px; }
+.pads { display: none; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 5px; }
+.pads-on .pads { display: grid; }
+/* one row on top: the transport, the mood, tempo, key and master side by side, so the bar stays low */
+.field.inline { flex-direction: row; align-items: center; gap: 5px; flex: none; }
+.field.counter { font-size: 10.5px; letter-spacing: 0; color: var(--ink); min-width: 74px; justify-content: center; white-space: nowrap; }
+.field.counter b { color: var(--rose-deep); font-weight: 500; }
+.transport.top .master .lvl { width: 80px; }
+.transport.top .masterrow .meter, .transport.top .master .db { display: none; }
+@media (max-width: 1499px) { .field.inline:not(.counter) { font-size: 0; gap: 0; } .transport.top #tempo { width: 46px; } .transport.top { gap: 7px; } .endless-group .btn.endless { padding-left: 7px; padding-right: 7px; } }
 .pad { padding: 4px 0; border-radius: 6px; border: 1px solid var(--line); background: var(--pearl); font-family: var(--display); font-style: italic; font-weight: 600; font-size: 14.5px; touch-action: none; user-select: none; color: var(--ink); }
 .pad.out { background: transparent; color: var(--muted); }
 
@@ -237,11 +247,11 @@ details.room .eyebrow { color: #9fc3c4; }
   /* phones: the three channels side by side to swipe through */
   .mixer, .no-arp .mixer { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; gap: 8px; padding-bottom: 2px; }
   .strip { flex: 0 0 88%; scroll-snap-align: start; }
-  .pads { display: none; } .transport.top { flex-wrap: wrap; } .moodbank { flex-basis: 100%; order: 5; } .recgroup, .endless-group .small { display: none; } .spacer { display: none; }
+  .pads, .pads-on .pads, #padsBtn { display: none; } .transport.top { flex-wrap: wrap; } .moodbank { flex-basis: 100%; order: 5; } .recgroup, .endless-group .small { display: none; } .spacer { display: none; }
   .transport .field[title] { display: none; }
   .master { flex: 1 1 auto; min-width: 0; } .masterrow .meter { display: none; } .master .lvl { flex: 1 1 auto; width: auto; min-width: 60px; }
 }
-.no-arp .arp-only, .no-vox .vox-only, .no-piano .piano-only { display: none !important; }
+.no-arp .arp-only, .no-vox .vox-only, .no-piano .piano-only, .no-guitar .guitar-only, .no-asmr .asmr-only { display: none !important; }
 .songcard h2 { font-family: var(--display); font-size: 30px; font-weight: 600; font-style: italic; }
 .songbar { align-items: center; }
 .songbank { flex: 1 1 320px; grid-template-columns: 44px minmax(0, 1fr); }
@@ -256,8 +266,18 @@ details.room .eyebrow { color: #9fc3c4; }
 .strip.vox { --strip: #8e7cc3; }
 .strip.mel { --strip: #5b8fd6; }
 .strip.perc { --strip: #d98a4a; }
+.strip.piano { --strip: #c9a227; } .strip.guitar { --strip: #b5835a; }
+/* A channel that is playing glows in its own soft colour, breathing with how loud it is */
+.strip { --lv: 0; transition: background-color .8s, box-shadow .25s; isolation: isolate; }
+.strip.live { background: color-mix(in srgb, var(--strip) calc(6% + 14% * var(--lv)), #fffaf6);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--strip) calc(25% + 45% * var(--lv)), transparent), 0 0 calc(6px + 22px * var(--lv)) calc(-2px + 3px * var(--lv)) color-mix(in srgb, var(--strip) calc(25% + 50% * var(--lv)), transparent); }
+.strip.live::after { content: ''; position: absolute; inset: 0; z-index: -1; border-radius: inherit; pointer-events: none; background: radial-gradient(120% 80% at 50% 0%, color-mix(in srgb, var(--strip) 22%, transparent), transparent 70%); animation: breathe 4.8s ease-in-out infinite; }
+@keyframes breathe { 0%, 100% { opacity: .35; } 50% { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .strip.live::after { animation: none; opacity: .6; } }
+.strip .btn.sw[aria-pressed=true] { background: color-mix(in srgb, var(--strip) 16%, #fff); }
+.strip { position: relative; }
 .perccard h2 { font-family: var(--display); font-size: 30px; font-weight: 600; font-style: italic; }
-canvas#percOrbit { width: 100%; aspect-ratio: 1; max-width: 260px; justify-self: center; display: block; border-radius: 50%; background: radial-gradient(circle, #21474f 0%, #17363e 70%); }
+canvas#asmrOrbit, canvas#percOrbit { width: 100%; aspect-ratio: 1; max-width: 260px; justify-self: center; display: block; border-radius: 50%; background: radial-gradient(circle, #21474f 0%, #17363e 70%); }
 .btn.sw.small2 { font-size: 13px; padding: 3px 6px; }
 .melcard h2 { font-family: var(--display); font-size: 30px; font-weight: 600; font-style: italic; }
 canvas#melView { width: 100%; height: 100px; display: block; border-radius: 6px; background: var(--night); }
@@ -390,6 +410,22 @@ canvas#lifeView { width: 100%; height: 180px; display: block; border-radius: 6px
     <div class="life-controls" id="pianoControls"></div>
   </details>
 
+  <details class="card fold guitarcard guitar-only" id="guitarCard" data-fold="guitar" open>
+    <summary class="head"><h2>Guitar</h2><span class="eyebrow">a player who drops by · real phrases · moved to every chord</span></summary>
+    <p>Real guitar, played from the recordings: short phrases (a pick, a run, a strum) cut from them. For every chord the guitarist reaches for the phrase whose notes fit it best, moved a few semitones at most, at a speed near the song's. He comes in for a passage, plays a little, and goes again, standing somewhere in the room.</p>
+    <canvas id="guitarView" width="1100" height="80" aria-label="One loop of the guitar: strums (gold) and picked phrases (rose)"></canvas>
+    <div class="life-controls" id="guitarControls"></div>
+  </details>
+
+  <details class="card fold asmrcard asmr-only" id="asmrCard" data-fold="asmr" open>
+    <summary class="head"><h2>ASMR</h2><span class="eyebrow">ear candy · now and then · right at your ears</span></summary>
+    <p>Its own engine: grains of whispers, words and close foley, turned round, moved by octaves, stuttered, never played as they were recorded. They come in short flurries (flutter, crawl, cloud, crackle, glitch, swarm), right round your head, then leave the music alone. Switch it on next to Perc in the bar below.</p>
+    <div class="vox-grid">
+      <div class="orbit-wrap vox-room"><canvas id="asmrOrbit" width="260" height="260" aria-label="Where the grains are now, close round your head"></canvas></div>
+      <div class="life-controls" id="asmrControls"></div>
+    </div>
+  </details>
+
   <details class="card fold voxcard vox-only" id="voxCard" data-fold="vox" open>
     <summary class="head"><h2>Vox</h2><span class="eyebrow"><span id="voxInfo"></span> · no words, a new voice</span></summary>
     <p>Hums, held vowels, bits of syllables, breaths and sung chords from all the singers, tuned to the chords and laid across each other into a voice nobody has. Each piece takes its own path through the room; now and then one is thrown into the echo or the big room. Choose a Style and a Space in the bar below.</p>
@@ -428,6 +464,8 @@ canvas#lifeView { width: 100%; height: 180px; display: block; border-radius: 6px
         <h2>Chord line</h2>
       </div>
       <div class="row">
+        <div class="ctl" title="How many bars each chord lasts"><label for="lineBars">Bars per chord</label><select id="lineBars"><option value="1">1</option><option value="2" selected>2</option><option value="4">4</option><option value="8">8</option><option value="16">16</option><option value="32">32</option></select></div>
+        <div class="ctl" title="How long a new sound, kit, groove or arp takes to fade in"><label for="fadeSel">Fade</label><select id="fadeSel"><option value="1">1 s</option><option value="2">2 s</option><option value="4">4 s</option><option value="8" selected>8 s</option><option value="16">16 s</option></select></div>
         <div class="ctl" title="How many notes each chord in the chord line plays. Tension can add more on top."><label for="lineAs">Chord notes</label><select id="lineAs"><option value="1">1 · root</option><option value="2">2</option><option value="3" selected>3 · triad</option><option value="4">4 · seventh</option></select></div>
         <div class="ctl"><label for="lineReg">Register</label><select id="lineReg"><option value="-12">Low</option><option value="0" selected>Mid</option><option value="12">High</option></select></div>
         <div class="ctl" style="flex:1 1 160px"><label for="lineSurprise">Surprise <output id="lineSurpriseOut">25%</output></label><input type="range" id="lineSurprise" min="0" max="1" step="0.01" value="0.25" class="rose"></div>
@@ -479,22 +517,18 @@ canvas#lifeView { width: 100%; height: 180px; display: block; border-radius: 6px
   <div class="dock-in">
     <div class="transport top">
       <button class="play" id="play" type="button" aria-label="Play the chord line"><svg viewBox="0 0 20 20" id="playIcon"><path d="M5 3l12 7-12 7z"/></svg></button>
-      <span class="endless-group"><button class="btn sw endless" id="songOn2" type="button" aria-pressed="false" title="Play the song in the Song line card">♪ Song</button><button class="btn sw endless" id="endlessOn" type="button" aria-pressed="false" title="Endless: a journey through the moods that never repeats">∞ Endless</button><button class="btn sw endless" id="aliveOn" type="button" aria-pressed="true" title="Alive: when nobody touches anything for 30 seconds, it changes by itself, channels come and go">✦ Alive</button><button class="btn small" id="paceBtn" type="button" title="How fast the journey moves">Drifting</button></span>
+      <span class="endless-group"><button class="btn sw endless" id="songOn2" type="button" aria-pressed="false" title="Play the song in the Song line card">♪ Song</button><button class="btn sw endless" id="endlessOn" type="button" aria-pressed="false" title="Endless: a journey through the moods that never repeats">∞ Endless</button><button class="btn sw endless" id="aliveOn" type="button" aria-pressed="true" title="Alive: when nobody touches anything for 30 seconds, it changes by itself, channels come and go">✦ Alive</button><button class="btn small" id="paceBtn" type="button" title="How fast Endless and Alive move: calm, drifting or busy">Drift</button></span>
       <div class="moodbank"><label class="tag" for="moodSel"><span class="tl">Mood</span><span class="ts">Mood</span><b id="moodCount"></b></label>
-        <div class="nav"><button type="button" data-bank="mood" data-d="-10" aria-label="Back 10 moods">«</button><button type="button" data-bank="mood" data-d="-1" aria-label="Previous mood">‹</button><select id="moodSel" aria-label="Mood"></select><button type="button" data-bank="mood" data-d="1" aria-label="Next mood">›</button><button type="button" data-bank="mood" data-d="10" aria-label="Forward 10 moods">»</button><button type="button" class="dice" id="moodDice" title="A random mood" aria-label="A random mood">⚄</button></div></div>
-      <span class="recgroup"><button class="btn rec" id="recBtn" type="button" aria-pressed="false" title="Record">●</button><button class="btn small" id="recWhat" type="button" data-v="mix" title="Record the mix, or the mix and each channel on its own">Mix</button><span id="recTime" class="db"></span></span>
-    </div>
-    <div class="transport">
-      <label class="field">BPM<input type="number" id="tempo" min="40" max="200" value="84"></label>
-      <label class="field">Key<select id="lineKey"></select></label>
-      <label class="field" title="How long a new sound, kit, groove or arp takes to fade in">Fade<select id="fadeSel"><option value="1">1 s</option><option value="2">2 s</option><option value="4">4 s</option><option value="8" selected>8 s</option><option value="16">16 s</option></select></label>
-      <label class="field" title="How many bars each chord lasts">Bars<select id="lineBars"><option value="1">1</option><option value="2" selected>2</option><option value="4">4</option><option value="8">8</option><option value="16">16</option><option value="32">32</option></select></label>
-      <span class="spacer"></span>
-      <label class="field master">Master<span class="masterrow"><span class="meter" aria-hidden="true"><b id="masterMeter"></b></span><input type="range" id="master" class="lvl" min="-24" max="6" step="0.5" value="0" aria-label="Master level"><output id="masterOut" class="db">0 dB</output></span></label>
+        <div class="nav"><button type="button" data-bank="mood" data-d="-10" aria-label="Back 10 moods">«</button><button type="button" data-bank="mood" data-d="-1" aria-label="Previous mood">‹</button><select id="moodSel" aria-label="Mood"></select><button type="button" data-bank="mood" data-d="1" aria-label="Next mood">›</button><button type="button" data-bank="mood" data-d="10" aria-label="Forward 10 moods">»</button><button type="button" class="dice" id="moodDice" title="A random mood" aria-label="A random mood">⚄</button><button type="button" class="dice" id="moodSave" title="Save this as your own mood (it goes under Your sessions in this menu)" aria-label="Save this as your own mood">★</button></div></div>
+      <label class="field inline">BPM<input type="number" id="tempo" min="40" max="200" value="84"></label>
+      <label class="field inline">Key<select id="lineKey"></select></label>
+      <span class="field inline counter" id="posOut" title="How far it has come and how long is left: the song (♪), the mood until Endless or Alive moves on (∞), or the chord line (bar)"></span>
+      <label class="field inline master">Master<span class="masterrow"><span class="meter" aria-hidden="true"><b id="masterMeter"></b></span><input type="range" id="master" class="lvl" min="-24" max="6" step="0.5" value="0" aria-label="Master level"><output id="masterOut" class="db">0 dB</output></span></label>
+      <span class="recgroup"><button class="btn small" id="padsBtn" type="button" aria-pressed="false" title="Show the chord pads in the bar">Pads</button><button class="btn rec" id="recBtn" type="button" aria-pressed="false" title="Record">●</button><button class="btn small" id="recWhat" type="button" data-v="mix" title="Record the mix, or the mix and each channel on its own">Mix</button><span id="recTime" class="db"></span></span>
     </div>
     <div class="mixer">
       <section class="strip chord" aria-label="Chord">
-        <div class="strip-head"><button class="btn sw" id="chordOn" type="button" aria-pressed="true">Chord</button><span class="meter" aria-hidden="true"><b id="chordLevelMeter"></b></span><input type="range" id="chordLevel" class="lvl" min="-30" max="6" step="0.5" value="0" aria-label="Chord level"><output id="chordLevelOut" class="db">0 dB</output></div>
+        <div class="strip-head"><button class="btn sw small2" id="chordOn" type="button" aria-pressed="true">Chord</button><button class="btn sw small2" id="highOn" type="button" aria-pressed="false" title="High strings: a slow line an octave or two above the chords, now and then">High</button><span class="meter" aria-hidden="true"><b id="chordLevelMeter"></b></span><input type="range" id="chordLevel" class="lvl" min="-30" max="6" step="0.5" value="0" aria-label="Chord level"><output id="chordLevelOut" class="db">0 dB</output></div>
         <div class="bankrow"><label class="tag" for="soundSel"><span class="tl">Sound</span><span class="ts">Sn</span><b id="soundCount"></b></label>
           <div class="nav"><button type="button" data-bank="sound" data-d="-10" aria-label="Back 10 sounds">«</button><button type="button" data-bank="sound" data-d="-1" aria-label="Previous sounds">‹</button><select id="soundSel" title="Sound" aria-label="Sound"></select><button type="button" data-bank="sound" data-d="1" aria-label="Next sounds">›</button><button type="button" data-bank="sound" data-d="10" aria-label="Forward 10 sounds">»</button><button type="button" class="dice" id="soundDice" title="Randomize the sound" aria-label="Randomize the sound">⚄</button><select id="soundFilter" class="mini" aria-label="Which sounds to show" title="Which sounds to show"><option value="all">All</option><option value="clean">Clean</option><option value="warm">Warm</option></select></div></div>
         <div class="bankrow"><label class="tag" for="lineSel"><span class="tl">Line</span><span class="ts">Ln</span><b id="lineCount"></b></label>
@@ -508,7 +542,7 @@ canvas#lifeView { width: 100%; height: 180px; display: block; border-radius: 6px
           <div class="nav"><button type="button" data-bank="groove" data-d="-10" aria-label="Back 10 grooves">«</button><button type="button" data-bank="groove" data-d="-1" aria-label="Previous grooves">‹</button><select id="drumSel" title="Groove" aria-label="Groove"></select><button type="button" data-bank="groove" data-d="1" aria-label="Next grooves">›</button><button type="button" data-bank="groove" data-d="10" aria-label="Forward 10 grooves">»</button><button type="button" class="dice" id="grooveDice" title="Random groove" aria-label="Random groove">⚄</button><button type="button" class="dice bpm" id="matchBpm" title="Set the tempo to the groove’s" aria-label="Set the tempo to the groove’s">♩=</button></div></div>
       </section>
       <section class="strip perc" aria-label="Perc">
-        <div class="strip-head"><button class="btn sw" id="percOn" type="button" aria-pressed="false">Perc</button><span class="meter" aria-hidden="true"><b id="percLevelMeter"></b></span><input type="range" id="percLevel" class="lvl" min="-30" max="6" step="0.5" value="-6" aria-label="Perc level"><output id="percLevelOut" class="db">0 dB</output></div>
+        <div class="strip-head"><button class="btn sw small2" id="percOn" type="button" aria-pressed="false">Perc</button><button class="btn sw small2 asmr-only" id="asmrOn" type="button" aria-pressed="false" title="ASMR: ear candy now and then, close round your head">ASMR</button><span class="meter" aria-hidden="true"><b id="percLevelMeter"></b></span><input type="range" id="percLevel" class="lvl" min="-30" max="6" step="0.5" value="-6" aria-label="Perc level"><output id="percLevelOut" class="db">0 dB</output></div>
         <div class="bankrow"><label class="tag" for="percKitSel"><span class="tl">Kit</span><span class="ts">Kt</span><b>96</b></label>
           <div class="nav"><button type="button" data-bank="perckit" data-d="-10" aria-label="Back 10 perc kits">«</button><button type="button" data-bank="perckit" data-d="-1" aria-label="Previous perc kits">‹</button><select id="percKitSel" title="Perc kit" aria-label="Perc kit"></select><button type="button" data-bank="perckit" data-d="1" aria-label="Next perc kits">›</button><button type="button" data-bank="perckit" data-d="10" aria-label="Forward 10 perc kits">»</button><button type="button" class="dice" id="percKitDice" title="A random perc kit" aria-label="A random perc kit">⚄</button></div></div>
         <div class="bankrow"><label class="tag" for="percGrooveSel"><span class="tl">Rhythm</span><span class="ts">Rh</span><b>48</b></label>
@@ -539,6 +573,11 @@ canvas#lifeView { width: 100%; height: 180px; display: block; border-radius: 6px
         <div class="strip-head"><button class="btn sw" id="pianoOn" type="button" aria-pressed="false">Piano</button><span class="meter" aria-hidden="true"><b id="pianoLevelMeter"></b></span><input type="range" id="pianoLevel" class="lvl" min="-30" max="6" step="0.5" value="-4" aria-label="Piano level"><output id="pianoLevelOut" class="db">0 dB</output></div>
         <div class="bankrow"><label class="tag" for="pianoSel"><span class="tl">Piano</span><span class="ts">Pn</span><b id="pianoCount"></b></label>
           <div class="nav"><button type="button" data-bank="piano" data-d="-10" aria-label="Back 10 pianos">«</button><button type="button" data-bank="piano" data-d="-1" aria-label="Previous pianos">‹</button><select id="pianoSel" title="Piano" aria-label="Piano"></select><button type="button" data-bank="piano" data-d="1" aria-label="Next pianos">›</button><button type="button" data-bank="piano" data-d="10" aria-label="Forward 10 pianos">»</button><button type="button" class="dice" id="pianoDice" title="A random piano" aria-label="A random piano">⚄</button></div></div>
+      </section>
+      <section class="strip guitar guitar-only" aria-label="Guitar">
+        <div class="strip-head"><button class="btn sw" id="guitarOn" type="button" aria-pressed="false">Guitar</button><span class="meter" aria-hidden="true"><b id="guitarLevelMeter"></b></span><input type="range" id="guitarLevel" class="lvl" min="-30" max="6" step="0.5" value="-4" aria-label="Guitar level"><output id="guitarLevelOut" class="db">0 dB</output></div>
+        <div class="bankrow"><label class="tag" for="guitarSel"><span class="tl">Guitar</span><span class="ts">Gt</span><b id="guitarCount"></b></label>
+          <div class="nav"><button type="button" data-bank="guitar" data-d="-10" aria-label="Back 10 guitars">«</button><button type="button" data-bank="guitar" data-d="-1" aria-label="Previous guitars">‹</button><select id="guitarSel" title="Guitar" aria-label="Guitar"></select><button type="button" data-bank="guitar" data-d="1" aria-label="Next guitars">›</button><button type="button" data-bank="guitar" data-d="10" aria-label="Forward 10 guitars">»</button><button type="button" class="dice" id="guitarDice" title="A random guitar" aria-label="A random guitar">⚄</button></div></div>
       </section>
     </div>
     <div class="pads" id="pads" role="group" aria-label="Chord pads: hold one to play its chord"></div>
@@ -678,7 +717,7 @@ class DriftSonata extends AudioWorkletProcessor {
             const vs = v.vars || [v.data], rr = this.rr || (this.rr = {}), r1 = this.rnd(), r2 = this.rnd();
             let pick = Math.floor(r1 * vs.length); if (vs.length > 1 && pick === rr[lane]) pick = (pick + 1) % vs.length; rr[lane] = pick;
             const late = lane === 'k' ? 0 : Math.round((r2 - .4) * sampleRate * (lane === 'h' || lane === 'o' ? .006 : .004));
-            this.hits.push({ v, data: vs[pick], lane, pos: -off - Math.max(-off, late), g: (lane === 'k' ? .9 + .1 * acc : acc) * vel * lg * (.9 + .18 * r2), choke: false, cg: 1 });
+            this.hits.push({ v, data: vs[pick], lane, pos: -off - Math.max(-off, late), g: (lane === 'k' ? .9 + .1 * acc : acc) * vel * lg * (.88 + .14 * r2), choke: false, cg: 1 });
           }
         }
       }
@@ -823,9 +862,9 @@ async function startAudio() {
     // The engine stops at -1 dBFS by itself; this catches the drums and the arp on top of it
     const safety = ctx.createDynamicsCompressor(); safety.threshold.value = -1; safety.knee.value = 0; safety.ratio.value = 20; safety.attack.value = .002; safety.release.value = .12;
     master = ctx.createGain(); chordBus = ctx.createGain(); chordLift = ctx.createGain();
-    node.connect(chordBus, 0); chordBus.connect(chordLift); chordLift.connect(master); master.connect(analyser); analyser.connect(safety); safety.connect(ctx.destination);
+    node.connect(chordBus, 0); chordBus.connect(chordLift); chordLift.connect(master); masterDissolve(); master.connect(dissolve.lp); dissolve.lp.connect(analyser); analyser.connect(safety); safety.connect(ctx.destination);
     drumAudio(); drumFx.bus.connect(master); drumTempo();
-    recNode = new AudioWorkletNode(ctx, 'ds-rec', { numberOfInputs: 8, numberOfOutputs: 0, channelCount: 2, channelCountMode: 'explicit' });
+    recNode = new AudioWorkletNode(ctx, 'ds-rec', { numberOfInputs: 10, numberOfOutputs: 0, channelCount: 2, channelCountMode: 'explicit' });
     recNode.port.onmessage = e => { if (e.data.t === 'chunk') recChunk(e.data); else if (e.data.t === 'done' && recDone) { const f = recDone; recDone = null; pendingRec = null; f(); } };
     recConnect(safety, 0); recConnect(chordLift, 1); recConnect(drumFx.bus, 2);
     mixApply(true); meterOn(chordLift, 'chordLevelMeter'); meterOn(drumFx.bus, 'drumLevelMeter'); meterOn(master, 'masterMeter');
@@ -858,6 +897,7 @@ async function loadSamples() {
     try {
       const buf = await ctx.decodeAudioData(b64ToBytes(s.b64).buffer);
       zones.push({ fam: s.fam, root: s.root, sr: buf.sampleRate, data: buf.getChannelData(0).slice() });
+      if (s.fam === 2 && typeof stringZones !== 'undefined') stringZones.push({ root: s.root, buf });  // the strings stay here too, for the high strings
     } catch (e) { /* skip a recording the browser cannot decode */ }
   }
   node.port.postMessage({ t: 'bank', zones, tables }, [...zones.map(z => z.data.buffer), ...tables.map(t => t.data.buffer)]);
@@ -942,8 +982,8 @@ requestAnimationFrame(drawTrace);
 const ORBIT_NAMES = ['Osc 1', 'Osc 2', 'Osc 3', 'Osc 4', 'Osc 5', 'Osc 6', 'Choir', 'Cello', 'Strings', 'Brass', 'Texture', 'Robot'];
 const ORBIT_COLORS = ['#e486ab', '#ecd08f', '#e486ab', '#ecd08f', '#e486ab', '#ecd08f', '#7fd3d3', '#3aa3aa', '#b9e3e0', '#c39539', '#f6eee8', '#ffffff'];
 let orbitSrc = [], arpSrc = [], voxSrc = [];
-var percSrc = [];
-const ORBITS = [['orbit', () => orbitSrc, ORBIT_COLORS], ['arpOrbit', () => arpOrbitSources(), ORBIT_COLORS], ['voxOrbit', () => voxSrc, null], ['percOrbit', () => percSrc, null]];
+var percSrc = [], asmrSrc = [];
+const ORBITS = [['orbit', () => orbitSrc, ORBIT_COLORS], ['arpOrbit', () => arpOrbitSources(), ORBIT_COLORS], ['voxOrbit', () => voxSrc, null], ['percOrbit', () => percSrc, null], ['asmrOrbit', () => asmrSrc, null]];
 function drawOrbitOn(c, srcs, colors) {
   const g = c.getContext('2d'), w = c.width = c.clientWidth * devicePixelRatio, h = c.height = c.clientHeight * devicePixelRatio, cx = w / 2, cy = h / 2, R = w * .44;
   g.clearRect(0, 0, w, h);
@@ -1249,7 +1289,7 @@ $('soundDice').addEventListener('click', () => {
 });
 // « ‹ › » step through a bank by one or ten
 document.querySelectorAll('[data-bank]').forEach(b => b.addEventListener('click', () => {
-  const sel = $({ sound: 'soundSel', line: 'lineSel', arp: 'arpSel', arps: 'arpSoundSel', kit: 'kitSel', groove: 'drumSel', voxstyle: 'voxStyleSel', voxspace: 'voxSpaceSel', mood: 'moodSel', song: 'songSel', lead: 'leadSel', bass: 'bassSel', piano: 'pianoSel', perckit: 'percKitSel', percgroove: 'percGrooveSel' }[b.dataset.bank]), opts = [...sel.options].filter(o => o.value !== 'x');
+  const sel = $({ sound: 'soundSel', line: 'lineSel', arp: 'arpSel', arps: 'arpSoundSel', kit: 'kitSel', groove: 'drumSel', voxstyle: 'voxStyleSel', voxspace: 'voxSpaceSel', mood: 'moodSel', song: 'songSel', lead: 'leadSel', bass: 'bassSel', piano: 'pianoSel', guitar: 'guitarSel', perckit: 'percKitSel', percgroove: 'percGrooveSel' }[b.dataset.bank]), opts = [...sel.options].filter(o => o.value !== 'x');
   let i = opts.findIndex(o => o.value === sel.value);
   if (i < 0) i = opts.findIndex(o => o.value === (b.dataset.bank === 'sound' ? soundChoice : String(lineChoice)));
   i = ((Math.max(0, i) + +b.dataset.d) % opts.length + opts.length) % opts.length;
@@ -1775,7 +1815,7 @@ $('vocalFile').addEventListener('change', async () => {
 function sessionNow(name) {
   const vals = {}; P.forEach((p, i) => vals[p.id] = values[i]);
   return { app: 'DRIFT SONATA', version: 1, name, values: vals, sound: soundChoice, line, lineChoice, lineDirty, lineKey,
-    bars: $('lineBars').value, notes: $('lineAs').value, register: $('lineReg').value, surprise: $('lineSurprise').value, tempo: tempo(), drums: { ...drumPrefs }, mix: { ...mixPrefs }, arp: arpSession(), vox: { ...voxPrefs }, mel: { ...melPrefs }, perc: { ...percPrefs }, piano: { ...pianoPrefs }, arpValues: arpValuesNow() };
+    bars: $('lineBars').value, notes: $('lineAs').value, register: $('lineReg').value, surprise: $('lineSurprise').value, tempo: tempo(), drums: { ...drumPrefs }, mix: { ...mixPrefs }, arp: arpSession(), vox: { ...voxPrefs }, mel: { ...melPrefs }, perc: { ...percPrefs }, piano: { ...pianoPrefs }, guitar: { ...guitarPrefs }, asmr: { ...asmrPrefs }, high: { ...highPrefs }, arpValues: arpValuesNow() };
 }
 function openSession(se) {
   if (!se || se.app !== 'DRIFT SONATA' || !se.values) { setStatus('That is not a DRIFT SONATA session.'); return; }
@@ -1795,6 +1835,9 @@ function openSession(se) {
   if (se.mix) Object.assign(mixPrefs, se.mix);
   mixApply();
   if (se.arp) arpOpenSession(se.arp);
+  if (se.high) { Object.assign(highPrefs, se.high); saveHigh(); highDirty++; setHighOn(!!highPrefs.on, true); }
+  if (se.asmr) { Object.assign(asmrPrefs, se.asmr); saveAsmr(); asmrControlsShow(); setAsmrOn(!!asmrPrefs.on, true); asmrApply(); }
+  if (se.guitar) { Object.assign(guitarPrefs, se.guitar); saveGuitar(); guitarControlsShow(); guitarDirty++; setGuitarOn(!!guitarPrefs.on, true); guitarApply(); }
   if (se.piano) { Object.assign(pianoPrefs, se.piano); savePiano(); pianoControlsShow(); pianoDirty++; setPianoOn(!!pianoPrefs.on, true); pianoApply(); }
   if (se.perc) { Object.assign(percPrefs, se.perc); savePerc(); percControlsShow(); setPercOn(!!percPrefs.on, true); if (percG) percKit(); }
   if (se.mel) { Object.assign(melPrefs, se.mel); saveMel(); melDirty++; melControlsShow(); setMel('lead', !!melPrefs.lead, true); setMel('bass', !!melPrefs.bass, true); if (melG) { melVoices(); melApply(); } }
@@ -1959,6 +2002,9 @@ $('play').addEventListener('click', async () => {
 document.addEventListener('keydown', e => { if (e.code === 'Space' && !/INPUT|SELECT|TEXTAREA|BUTTON/.test(e.target.tagName)) { e.preventDefault(); $('play').click(); } });
 // Keep the page clear of the bar at the bottom, whatever its height
 new ResizeObserver(() => document.documentElement.style.setProperty('--dock-h', $('dock').offsetHeight + 'px')).observe($('dock'));
+// the chord pads stay out of the bar unless you want them there
+{ const show = on => { document.body.classList.toggle('pads-on', on); $('padsBtn').setAttribute('aria-pressed', on); store.set('ds-pads', on); };
+  show(!!store.get('ds-pads', false)); $('padsBtn').addEventListener('click', () => show(!document.body.classList.contains('pads-on'))); }
 
 /* ---------- Mixer: chord, drums and arp, each with a switch, a meter and a fader, then the master ---------- */
 const mixPrefs = Object.assign({ chord: 0, chordOn: true, master: 0 }, store.get('ds-mix', {}));
@@ -2808,11 +2854,11 @@ if (HAS_VOX) {
    key between, long notes gliding into each other, phrases with room to breathe. The bass walks the roots in one of
    seven patterns. Both are mono synths with glide, made here (they are light), each with its own sound bank. */
 const LEAD_STYLES = {
-  Floating: { density: .3, long: [2, 6], leap: 2, rest: .3, glide: .22, grid: 1 },
-  Singing:  { density: .65, long: [.5, 2], leap: 2, rest: .15, glide: .1, grid: .5 },
-  Bells:    { density: .8, long: [.25, 1], leap: 3, rest: .1, glide: 0, grid: .5, high: 7 },
-  Sparse:   { density: .35, long: [1, 4], leap: 2, rest: .5, glide: .14, grid: 1 },
-  Hook:     { density: .75, long: [.5, 1.5], leap: 2, rest: .08, glide: .06, grid: .5, repeat: true },
+  Floating: { density: .25, long: [2, 6], leap: 2, rest: .45, glide: .22, grid: 1 },
+  Singing:  { density: .42, long: [1, 3], leap: 2, rest: .35, glide: .1, grid: .5 },
+  Bells:    { density: .5, long: [.5, 1.5], leap: 3, rest: .3, glide: 0, grid: .5, high: 7 },
+  Sparse:   { density: .28, long: [1.5, 4], leap: 2, rest: .6, glide: .14, grid: 1 },
+  Hook:     { density: .5, long: [1, 2], leap: 2, rest: .3, glide: .06, grid: .5, repeat: true },
 };
 const LEAD_SOUNDS = [
   { name: 'Glide saw', osc: [['sawtooth', -8, 1], ['sawtooth', 8, 1], ['square', -1200, .25]], cut: 2400, q: 1, env: 1.6, atk: .06, rel: .7, vib: 14, chorus: true },
@@ -2831,12 +2877,20 @@ const BASS_SOUNDS = [
   { name: 'Dub sine', osc: [['sine', 0, 1]], cut: 700, q: .7, env: 0, atk: .02, rel: .35, drive: .55 },
   { name: 'Pluck', osc: [['sawtooth', 0, .8], ['square', -1200, .3]], cut: 600, q: 4, env: 2.2, atk: .004, rel: .15, drive: .2, pluck: true },
   { name: 'Square', osc: [['square', 0, .6], ['sine', -1200, .5]], cut: 650, q: 1.2, env: .8, atk: .01, rel: .2, drive: .25 },
+  // the fat ones: for when a song has been going a while
+  { name: 'Reese', osc: [['sawtooth', -14, .7], ['sawtooth', 14, .7], ['sawtooth', -7, .5], ['sine', -1200, .8]], cut: 520, q: 1.4, env: .9, atk: .02, rel: .35, drive: .45, fat: true },
+  { name: 'Moog fat', osc: [['sawtooth', 0, .8], ['square', -1200, .55], ['sawtooth', 5, .4]], cut: 380, q: 5, env: 2.1, atk: .006, rel: .25, drive: .5, fat: true },
+  { name: 'Juno sub', osc: [['sawtooth', 0, .6], ['square', -1200, .7], ['sine', -1200, .6]], cut: 600, q: 1, env: .6, atk: .01, rel: .3, drive: .35, fat: true },
+  { name: 'Growl', osc: [['square', -9, .7], ['sawtooth', 9, .7], ['sine', -1200, .6]], cut: 420, q: 7, env: 1.8, atk: .008, rel: .2, drive: .7, fat: true },
+  { name: 'Wobble', osc: [['sawtooth', -6, .7], ['sawtooth', 6, .7], ['square', -1200, .5]], cut: 300, q: 4, env: .5, atk: .02, rel: .3, drive: .5, wob: 1.6, fat: true },
+  { name: 'Octave stack', osc: [['sawtooth', 0, .6], ['sawtooth', 1200, .25], ['square', -1200, .6], ['sine', -2400, .3]], cut: 700, q: 2, env: 1.2, atk: .01, rel: .3, drive: .4, fat: true },
 ];
 const LEAD_PRESETS = Object.keys(LEAD_STYLES).flatMap(st => LEAD_SOUNDS.map((so, k) => ({ name: `${st} · ${so.name}`, style: st, sound: k })));
 const BASS_PRESETS = BASS_STYLES.flatMap(st => BASS_SOUNDS.map((so, k) => ({ name: `${st} · ${so.name}`, style: st, sound: k })));
-const melPrefs = Object.assign({ lead: false, bass: false, level: -5, leadPreset: 8, bassPreset: 0, leadLevel: 0, bassLevel: -2, octave: 0, bassOctave: 0,
+const melPrefs = Object.assign({ lead: false, bass: false, level: -5, leadPreset: 8, bassPreset: 0, leadLevel: -4, bassLevel: -2, octave: 0, bassOctave: 0,
   density: 1, glide: 1, vibrato: 1, tone: 1, echo: .35, room: .45, orbit: .35, seed: 1 }, store.get('ds-mel', {}));
 const saveMel = () => store.set('ds-mel', melPrefs);
+if (melPrefs.v !== 2) { melPrefs.leadLevel = Math.min(melPrefs.leadLevel, -4); melPrefs.v = 2; saveMel(); }  // the quieter lead, for a saved one too
 
 // One loop of lead notes over the chord segments, in beats
 const SCALE_MINOR = [0, 2, 3, 5, 7, 8, 10];
@@ -2859,6 +2913,7 @@ function leadCompute(mode) {
   for (let phrase = 0; phrase * 8 < cycle; phrase++) {
     const p0 = phrase * 8, form = phrase % 4;  // A A' B A''
     if (R() < S.rest && form !== 0) continue;  // a phrase of silence: room to breathe
+    if (Math.floor(phrase / 4) % 2 === 1 && R() < .75) continue;  // it sings eight bars, then mostly listens for eight
     const shift = form === 2 ? Math.round((R() * 2 - 1) * 2) : 0;
     for (const n of motif) {
       if (form === 3 && n.t >= 6 && R() < .5) continue;
@@ -2867,7 +2922,7 @@ function leadCompute(mode) {
       target = Math.max(center - 9, Math.min(center + 10, target));
       pitch = strong ? near(tones(b), target) : near(scale, target);
       const len = Math.min(n.len * (S.repeat ? .9 : 1), cycle - b) * .92;
-      events.push({ beat: b, len, pitch, vel: strong ? 88 : 72 });
+      events.push({ beat: b, len, pitch, vel: strong ? 76 : 62 });
     }
   }
   return { events: events.filter(e => e.beat < cycle).sort((a, b) => a.beat - b.beat), cycle };
@@ -2920,6 +2975,9 @@ function monoVoice(spec, dest, opts = {}) {
   if (spec.drive) { shaper = ctx.createWaveShaper(); const k = 1 + spec.drive * 6, c = new Float32Array(1024); for (let i = 0; i < 1024; i++) { const x = i / 511.5 - 1; c[i] = Math.tanh(k * x) / Math.tanh(k); } shaper.curve = c; }
   const oscs = spec.osc.map(([type, cents, lv]) => { const o = ctx.createOscillator(), g = ctx.createGain(); o.type = type; o.detune.value = cents; g.gain.value = lv / spec.osc.length * 1.4; o.connect(g); g.connect(filt); vib.connect(o.detune); o.start(); return o; });
   filt.connect(amp);
+  // a slow wobble on the filter, two beats a sway (the Wobble bass)
+  let wob = null;
+  if (spec.wob) { wob = ctx.createOscillator(); const wg = ctx.createGain(); wob.frequency.value = tempo() / 60 / 2; wg.gain.value = spec.cut * spec.wob; wob.connect(wg); wg.connect(filt.frequency); wob.start(); }
   if (shaper) { amp.connect(shaper); shaper.connect(out); } else amp.connect(out);
   out.connect(dest);
   return {
@@ -2937,7 +2995,7 @@ function monoVoice(spec, dest, opts = {}) {
       if (dur > .6 && spec.vib) vib.gain.linearRampToValueAtTime(spec.vib * (opts.vibrato ?? 1), t + Math.min(dur, .5 + dur * .3));
     },
     stop(t) { amp.gain.cancelScheduledValues(t); amp.gain.setTargetAtTime(0, t, .05); },
-    dispose() { try { oscs.forEach(o => o.stop()); lfo.stop(); out.disconnect(); } catch (e) {} },
+    dispose() { try { oscs.forEach(o => o.stop()); lfo.stop(); if (wob) wob.stop(); out.disconnect(); } catch (e) {} },
   };
 }
 let melG = null, melStarting = null, leadEv = { events: [], cycle: 64 }, bassEv = { events: [], cycle: 64 }, melKey = '', melMode = '', melNext = 0, melFree = null, melDirty = 1;
@@ -2946,7 +3004,7 @@ async function melAudio() {
   if (melStarting) return melStarting;
   melStarting = (async () => {
     await startAudio();
-    const sum = ctx.createGain(), lev = leveler(-24), out = ctx.createGain(); out.gain.value = dbGain(melPrefs.level);
+    const sum = ctx.createGain(), lev = leveler(-27), out = ctx.createGain(); out.gain.value = dbGain(melPrefs.level);
     sum.connect(lev.in); lev.out.connect(out); out.connect(master); recConnect(out, 5);
     // the lead: its place in the room, a ping-pong echo and a long room
     const leadIn = ctx.createGain(), pan = ctx.createPanner(), dry = ctx.createGain(), din = ctx.createGain(), rin = ctx.createGain();
@@ -3332,6 +3390,455 @@ function pianoMidi(PPQ) {
   return out;
 }
 
+/* ---------- Guitar: a player who drops by now and then ----------
+   Real guitar, played from the recordings themselves: short phrases (a pick, a run, a strum) cut from them. For
+   every chord the guitarist reaches for the phrase whose notes fit it best, moved a few semitones at most, at a speed
+   near the song's; a strum on the chord change, picked phrases answering it, a run now and then. He comes in for a
+   passage, plays a little, and goes again; he stands somewhere in the room and drifts while he plays, with his own
+   room and a slow echo. */
+const GUITAR = "@@GUITAR@@";
+const guitarData = GUITAR && GUITAR.phrases ? GUITAR : { regions: [], phrases: [] };
+const GUITAR_STYLES = {
+  'Flamenco breeze': { presence: .5, strum: .55, picks: [1, 2], beats: [2, 1, 2, 4], start: [0, 1, 2], run: .25 },
+  'Nylon dreams':    { presence: .55, strum: 0, picks: [1, 2], beats: [2, 4, 4], start: [1, 2, 0], run: 0 },
+  'Strum swells':    { presence: .5, strum: 1, picks: [0, 0], beats: [2, 4], start: [0], run: 0, swell: true },
+  'Desert runs':     { presence: .45, strum: .2, picks: [2, 4], beats: [1, 1, 2], start: [.5, 1, 2], run: .6 },
+  Campfire:          { presence: .6, strum: .35, picks: [1, 3], beats: [4, 2], start: [0], run: 0, steady: true },
+  Duende:            { presence: .5, strum: .8, picks: [1, 3], beats: [2, 1, 2], start: [0, 1.5], run: .35 },
+};
+const GUITAR_ROOMS = {
+  Patio:          { room: .35, echo: .2, orbit: .2, dist: .25, tone: 1 },
+  'Night hall':   { room: .7, echo: .3, orbit: .35, dist: .55, tone: .85 },
+  Canyon:         { room: .55, echo: .7, orbit: .5, dist: .8, tone: .8 },
+  'Moon terrace': { room: .6, echo: .4, orbit: .9, dist: .6, tone: .9 },
+  Cave:           { room: .9, echo: .35, orbit: .3, dist: .7, tone: .55 },
+};
+const GUITAR_PRESETS = Object.keys(GUITAR_STYLES).flatMap(st => Object.keys(GUITAR_ROOMS).map(rm => ({ name: `${st} · ${rm}`, style: st, room: rm })));
+const guitarPrefs = Object.assign({ on: false, level: -4, preset: 0, presence: 1, density: 1, tone: 1, echo: 1, room: 1, orbit: 1, seed: 1 }, store.get('ds-guitar', {}));
+const saveGuitar = () => store.set('ds-guitar', guitarPrefs);
+
+// How well a phrase, moved by t semitones, fits a chord: its notes on the chord's (the root most), the key's in between
+function guitarFit(p, seg, t, scale) {
+  const tones = (VOX_TYPES[seg.quality] || VOX_TYPES.min).map(i => (seg.root + i) % 12);
+  let s = 0, tot = 0;
+  for (let i = 0; i < 12; i++) {
+    const v = p.chroma[i], pc = (i + t + 120) % 12; tot += v;
+    s += v * (pc === seg.root ? 1.25 : tones.includes(pc) ? 1 : scale.includes(pc) ? .3 : -.9);
+  }
+  return s / (tot + 1e-9);
+}
+// One loop of what the guitarist plays, in beats: phrases, the shift that fits each, how long it may ring
+function guitarCompute(mode) {
+  const sg = chordSegments(mode), P = guitarData.phrases; if (!sg || !P.length) return { events: [], cycle: 64 };
+  const { segs, beats } = sg, reps = Math.max(1, Math.ceil(256 / beats)), cycle = beats * reps, bpm = tempo();
+  const pr = GUITAR_PRESETS[guitarPrefs.preset] || GUITAR_PRESETS[0], S = GUITAR_STYLES[pr.style], R = rng32(guitarPrefs.seed * 5309 + guitarPrefs.preset * 17 + 3);
+  const scale = SCALE_MINOR.map(d => (d + lineKey) % 12), events = [], recent = [];
+  const play = Array.from({ length: Math.ceil(cycle / 64) }, (_, k) => R() < S.presence * guitarPrefs.presence);
+  if (!play.some(Boolean)) play[1 % play.length] = true;
+  // the best few phrases for this chord, then one of them; never one of the last six again
+  const choose = (seg, strum, wantBeats) => {
+    const scored = [];
+    P.forEach((p, i) => {
+      if (!!p.strum !== strum || recent.includes(i)) return;
+      for (let t = -5; t <= 6; t++) {
+        const rate = Math.pow(2, t / 12), speed = p.bpm * rate / bpm, tempoFit = Math.min(...[1, 2, .5].map(m => Math.abs(Math.log2(speed / m))));
+        scored.push([guitarFit(p, seg, t, scale) - .045 * Math.abs(t) - .5 * tempoFit - .15 * Math.abs(p.beats - wantBeats) / 2, i, t]);
+      }
+    });
+    scored.sort((a, b) => b[0] - a[0]);
+    const top = scored.slice(0, 6); if (!top.length) return null;
+    const [, i, t] = top[Math.floor(R() * R() * top.length)];
+    recent.push(i); if (recent.length > 6) recent.shift();
+    return { i, t };
+  };
+  for (let r = 0; r < reps; r++) segs.forEach(s0 => {
+    const seg = { ...s0, start: s0.start + r * beats, end: s0.end + r * beats };
+    if (!play[Math.floor(seg.start / 64)]) return;
+    if (R() > .45 + .5 * guitarPrefs.density && !S.steady) return;
+    let b = seg.start;
+    const add = (c, strum) => {
+      if (!c) return 0;
+      const p = P[c.i], rate = Math.pow(2, c.t / 12), dur = p.len / rate * bpm / 60;
+      const ring = Math.min(dur, seg.end - b + (strum ? 1.5 : .75));  // a phrase stops ringing a little after the chord changes
+      if (ring < .5) return 0;
+      events.push({ beat: b, i: c.i, t: c.t, ring, strum, vel: strum ? .75 + .2 * R() : .8 + .2 * R() });
+      return dur;
+    };
+    if (S.strum && R() < S.strum) { const d = add(choose(seg, true, 2), true); b += S.swell ? 0 : Math.max(1, Math.round(Math.min(d, 2) * 2) / 2); }
+    if (S.swell) return;
+    b = Math.max(b, seg.start + S.start[Math.floor(R() * S.start.length)]);
+    let n = S.picks[0] + Math.floor(R() * (S.picks[1] - S.picks[0] + 1));
+    if (S.run && R() < S.run) n += 2;  // a run: one phrase straight after another
+    while (n-- > 0 && b < seg.end - .5) {
+      const d = add(choose(seg, false, S.beats[Math.floor(R() * S.beats.length)]), false); if (!d) break;
+      b += Math.max(.5, Math.round(d * 2) / 2) + (S.run && R() < S.run ? 0 : (R() < .5 ? .5 : 1));
+    }
+  });
+  return { events: events.filter(e => e.beat < cycle).sort((a, b) => a.beat - b.beat), cycle };
+}
+
+let guitarBufs = [], guitarLoading = null;
+async function loadGuitar() {
+  if (guitarLoading) return guitarLoading;
+  guitarLoading = (async () => {
+    for (let i = 0; i < guitarData.regions.length; i++) {
+      try {
+        const b = await ctx.decodeAudioData(b64ToBytes(guitarData.regions[i].b64).buffer), d = b.getChannelData(0);
+        // the codec may put a little silence first: the stretch starts on an attack, so start there
+        let pk = 0; for (const x of d) pk = Math.max(pk, Math.abs(x)); let s = 0; while (s < d.length && Math.abs(d[s]) < pk * .01) s++;
+        s = Math.max(0, s - Math.floor(ctx.sampleRate * .002));
+        const out = ctx.createBuffer(1, d.length - s, ctx.sampleRate); out.copyToChannel(d.subarray(s), 0); guitarBufs[i] = out;
+      } catch (e) { guitarBufs[i] = null; }
+    }
+  })();
+  return guitarLoading;
+}
+let guitarG = null, guitarStarting = null, guitarEv = { events: [], cycle: 64 }, guitarKeyStr = '', guitarMode = '', guitarNext = 0, guitarDirty = 1, guitarActive = [], guitarFree = null;
+async function guitarAudio() {
+  if (guitarG) return guitarG;
+  if (guitarStarting) return guitarStarting;
+  guitarStarting = (async () => {
+    await startAudio(); await loadGuitar();
+    const sum = ctx.createGain(), lev = leveler(-23), out = ctx.createGain(); out.gain.value = dbGain(guitarPrefs.level);
+    // a gentle body: the boom under 120 Hz taken out, a little warmth at 250, air above 9k softened
+    const hp = ctx.createBiquadFilter(), warm = ctx.createBiquadFilter(), air = ctx.createBiquadFilter();
+    hp.type = 'highpass'; hp.frequency.value = 110; hp.Q.value = .6; warm.type = 'peaking'; warm.frequency.value = 260; warm.gain.value = 1.5; warm.Q.value = .8; air.type = 'highshelf'; air.frequency.value = 9000; air.gain.value = -3;
+    sum.connect(hp); hp.connect(warm); warm.connect(air); air.connect(lev.in); lev.out.connect(out); out.connect(master); recConnect(out, 8);
+    const din = ctx.createGain(), dl = ctx.createDelay(4), dr = ctx.createDelay(4), fl = ctx.createGain(), fr = ctx.createGain(), tl = ctx.createBiquadFilter(), tr = ctx.createBiquadFilter(), merge = ctx.createChannelMerger(2);
+    tl.type = tr.type = 'lowpass'; tl.frequency.value = tr.frequency.value = 2600; fl.gain.value = fr.gain.value = .42;
+    din.connect(dl); dl.connect(tl); tl.connect(fr); fr.connect(dr); dr.connect(tr); tr.connect(fl); fl.connect(dl); dl.connect(merge, 0, 0); dr.connect(merge, 0, 1); merge.connect(sum);
+    const rin = ctx.createGain(), verb = ctx.createConvolver(); verb.buffer = voxRoomIR(.55); rin.connect(verb); verb.connect(sum);
+    const dry = ctx.createGain(); dry.connect(sum);
+    guitarG = { sum, out, din, rin, dry, dl, dr };
+    guitarApply(); meterOn(out, 'guitarLevelMeter');
+    return guitarG;
+  })();
+  return guitarStarting;
+}
+const guitarRoom = () => GUITAR_ROOMS[(GUITAR_PRESETS[guitarPrefs.preset] || GUITAR_PRESETS[0]).room];
+function guitarApply() {
+  if (!guitarG) return;
+  const t = ctx.currentTime, d = .75 * 60 / tempo(), rm = guitarRoom();
+  guitarG.dl.delayTime.setTargetAtTime(d, t, .2); guitarG.dr.delayTime.setTargetAtTime(d * 1.5, t, .2);
+  guitarG.din.gain.setTargetAtTime(Math.min(1, rm.echo * guitarPrefs.echo) * .6, t, .3); guitarG.rin.gain.setTargetAtTime(Math.min(1.2, rm.room * guitarPrefs.room), t, .3);
+  guitarG.dry.gain.setTargetAtTime(1 - Math.min(1, rm.room * guitarPrefs.room) * .35, t, .3);
+  guitarG.out.gain.setTargetAtTime(dbGain(guitarPrefs.level), t, .05);
+}
+// Where he stands: a place for each passage, a few steps round you while he plays
+function guitarPlace(t) {
+  const rm = guitarRoom(), o = Math.min(1, rm.orbit * guitarPrefs.orbit), passage = Math.floor(t / (64 * 60 / tempo())), R = rng32(passage * 7 + guitarPrefs.seed);
+  const az = (R() * 2 - 1) * (.5 + 1.2 * o) + Math.sin(t / 23) * .5 * o, d = 1.1 + 2.2 * rm.dist;
+  return [Math.sin(az) * d, (R() - .5) * .4, -Math.cos(az) * d];
+}
+function guitarPlay(e, when, ringSec) {
+  const p = guitarData.phrases[e.i], buf = p && guitarBufs[p.r]; if (!buf) return;
+  const t = Math.max(when, ctx.currentTime + .005), rate = Math.pow(2, e.t / 12), rm = guitarRoom(), src = ctx.createBufferSource(), g = ctx.createGain(), lp = ctx.createBiquadFilter(), pan = ctx.createPanner();
+  src.buffer = buf; src.playbackRate.value = rate; lp.type = 'lowpass'; lp.Q.value = .4; lp.frequency.value = Math.min(18000, 7000 * rm.tone * guitarPrefs.tone);
+  pan.panningModel = 'HRTF'; pan.distanceModel = 'inverse'; pan.refDistance = 1; pan.rolloffFactor = .35;
+  const len = Math.min(p.len / rate, ringSec), from = guitarPlace(t), to = guitarPlace(t + len);
+  pan.positionX.setValueAtTime(from[0], t); pan.positionY.setValueAtTime(from[1], t); pan.positionZ.setValueAtTime(from[2], t);
+  pan.positionX.linearRampToValueAtTime(to[0], t + len); pan.positionY.linearRampToValueAtTime(to[1], t + len); pan.positionZ.linearRampToValueAtTime(to[2], t + len);
+  const v = e.vel * (e.strum ? .8 : 1), fo = Math.min(len * .4, e.strum ? .8 : .35);
+  g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(v, t + .006); g.gain.setValueAtTime(v, t + len - fo); g.gain.linearRampToValueAtTime(0, t + len);
+  src.connect(g); g.connect(lp); lp.connect(pan); pan.connect(guitarG.dry); pan.connect(guitarG.din); pan.connect(guitarG.rin);
+  src.start(t, p.at, Math.min(p.len, buf.duration - p.at)); src.stop(t + len + .05);
+  src.onended = () => { try { src.disconnect(); g.disconnect(); lp.disconnect(); pan.disconnect(); } catch (er) {} };
+  guitarActive.push({ t0: t, t1: t + len, pos: from, strum: e.strum });
+}
+function guitarTick() {
+  if (!guitarPrefs.on || !guitarG || !ctx) return;
+  const now = ctx.currentTime, bpm = tempo();
+  guitarActive = guitarActive.filter(a => a.t1 > now);
+  const want = playing ? (lineAnchor ? 'line' : '') : liveChord() ? 'free' : '';
+  if (want !== guitarMode) { guitarMode = want; guitarKeyStr = ''; if (want === 'free') { guitarFree = { ppq: 0, time: now + .03, bpm }; guitarNext = 0; } }
+  if (!guitarMode) return;
+  const a = guitarMode === 'line' ? lineAnchor : guitarFree;
+  const ch = guitarMode === 'free' ? liveChord() : null, key = [guitarMode, guitarDirty, arpDirty, Math.round(bpm), ch ? ch.root + ch.q : ''].join('|');
+  if (key !== guitarKeyStr) { guitarEv = guitarCompute(guitarMode); guitarKeyStr = key; }
+  const beatNow = a.ppq + (now - a.time) * bpm / 60, horizon = beatNow + .3 * bpm / 60;
+  if (guitarNext < beatNow - .02) guitarNext = beatNow;
+  const off = guitarMode === 'line' ? lineStartBeat : 0, ao = { ppq: a.ppq - off, time: a.time };
+  eventsBetween(guitarEv.events, guitarEv.cycle, guitarNext - off, horizon - off, ao, bpm, (e, w) => guitarPlay(e, w, e.ring * 60 / bpm));
+  guitarNext = horizon;
+}
+setInterval(guitarTick, 40);
+async function setGuitarOn(on, quiet) {
+  guitarPrefs.on = on; saveGuitar(); $('guitarOn').setAttribute('aria-pressed', on);
+  if (!on) return;
+  if (quiet && !node) return;
+  await guitarAudio();
+  if (!quiet) setStatus(playing ? 'The guitarist drops by now and then.' : 'The guitar is on: press ▶, or hold a chord.');
+}
+function pickGuitar(i, why) { guitarPrefs.preset = +i; $('guitarSel').value = String(i); saveGuitar(); guitarDirty++; guitarApply(); if (why) setStatus(why + ' · ' + GUITAR_PRESETS[+i].name); }
+let guitarControlsShow = () => {};
+{
+  if (!guitarData.phrases.length) document.body.classList.add('no-guitar');
+  $('guitarSel').innerHTML = Object.keys(GUITAR_STYLES).map(st => `<optgroup label="${st}">${GUITAR_PRESETS.map((x, i) => [x, i]).filter(([x]) => x.style === st).map(([x, i]) => `<option value="${i}">${esc(x.name)}</option>`).join('')}</optgroup>`).join('');
+  $('guitarSel').value = String(guitarPrefs.preset); $('guitarCount').textContent = GUITAR_PRESETS.length;
+  $('guitarSel').addEventListener('change', () => pickGuitar($('guitarSel').value));
+  $('guitarDice').addEventListener('click', () => pickGuitar(Math.floor(Math.random() * GUITAR_PRESETS.length), 'A random guitar'));
+  $('guitarOn').addEventListener('click', () => setGuitarOn(!guitarPrefs.on));
+  $('guitarLevel').addEventListener('input', () => { guitarPrefs.level = +$('guitarLevel').value; saveGuitar(); faderShow('guitarLevel', guitarPrefs.level); guitarApply(); });
+  const shows = [], grid = $('guitarControls');
+  const range = (key, label, min, max, step, fmt, cls) => {
+    const w = document.createElement('div'); w.className = 'ctl'; const id = 'guitar-' + key;
+    w.innerHTML = `<label for="${id}">${label} <output></output></label><input type="range" id="${id}" min="${min}" max="${max}" step="${step}" class="${cls || ''}">`;
+    const inp = w.querySelector('input'), out = w.querySelector('output'), show = () => { inp.value = guitarPrefs[key]; out.textContent = fmt(guitarPrefs[key]); inp.style.setProperty('--pct', (guitarPrefs[key] - min) / (max - min) * 100 + '%'); };
+    inp.addEventListener('input', () => { guitarPrefs[key] = +inp.value; saveGuitar(); show(); if (['density', 'presence'].includes(key)) guitarDirty++; guitarApply(); });
+    shows.push(show); show(); return w;
+  };
+  const pct = v => Math.round(v * 100) + '%';
+  grid.append(range('presence', 'How often he drops by', 0, 1.6, .01, pct), range('density', 'How much he plays', .2, 1.4, .01, pct),
+    range('tone', 'Brightness', .4, 1.6, .01, pct, 'teal'), range('echo', 'Echo', 0, 1.6, .01, pct, 'teal'), range('room', 'Room', 0, 1.4, .01, pct, 'teal'), range('orbit', 'Round you', 0, 1.4, .01, pct, 'teal'));
+  const seed = document.createElement('div'); seed.className = 'ctl';
+  seed.innerHTML = '<label>His phrases <output id="guitarSeedOut"></output></label><button class="btn" type="button" id="guitarSeed">Play it another way</button>';
+  grid.append(seed);
+  const showSeed = () => { $('guitarSeedOut').textContent = '#' + guitarPrefs.seed; }; shows.push(showSeed);
+  $('guitarSeed').addEventListener('click', () => { guitarPrefs.seed = 1 + Math.floor(Math.random() * 99999); saveGuitar(); guitarDirty++; showSeed(); setStatus('The guitarist plays it another way.'); });
+  guitarControlsShow = () => { shows.forEach(f => f()); faderShow('guitarLevel', guitarPrefs.level); $('guitarOn').setAttribute('aria-pressed', guitarPrefs.on); $('guitarSel').value = String(guitarPrefs.preset); };
+  guitarControlsShow();
+}
+// The guitar view: one loop of his phrases (strums gold, picked ones rose), and where it is now
+function drawGuitar() {
+  const c = $('guitarView');
+  if (c && c.offsetParent) {
+    const g = c.getContext('2d'), w = c.width = c.clientWidth * devicePixelRatio, h = c.height = c.clientHeight * devicePixelRatio;
+    g.clearRect(0, 0, w, h);
+    const k = arpDirty + '|' + guitarDirty + '|' + Math.round(tempo()); if (drawGuitar.key !== k) { drawGuitar.ev = guitarCompute('line'); drawGuitar.key = k; }
+    const ev = drawGuitar.ev, cyc = ev.cycle;
+    for (const e of ev.events) { const y = e.strum ? h * .2 : h * (.45 + ((e.t + 5) / 11) * .45); g.fillStyle = e.strum ? 'rgba(236,208,143,.9)' : 'rgba(242,165,195,.85)'; g.fillRect(e.beat / cyc * w, y, Math.max(2, e.ring / cyc * w), (e.strum ? 8 : 4) * devicePixelRatio); }
+    if (playing && lineAnchor && ctx) { const b = lineAnchor.ppq + (ctx.currentTime - lineAnchor.time) * tempo() / 60 - lineStartBeat, x = (((b % cyc) + cyc) % cyc) / cyc * w; g.fillStyle = '#7fd3d3'; g.fillRect(x, 0, 2 * devicePixelRatio, h); }
+  }
+  requestAnimationFrame(drawGuitar);
+}
+requestAnimationFrame(drawGuitar);
+
+/* ---------- ASMR: ear candy, close and wild, now and then ----------
+   Its own engine. Nothing is played as it was recorded: grains of 20 to 400 ms are taken from the voices and the close
+   foley (mouth sounds, tea, pencil, buttons, water, and the chips, foil, apple and snaps of the percussion), turned round, moved up or down by octaves and fifths, stuttered,
+   and thrown round your head very close, right at your ears. It comes in short flurries, one kind at a time, then
+   leaves the music alone for a while: flutter (grains hopping ear to ear on the beat), crawl (creeping round your
+   head), cloud (slow, low, all round), crackle (crumbs at one ear, then the other), glitch (one grain stuttering
+   faster and higher as it crosses in front of you) and swarm (everywhere at once, tiny). It stays above the bass
+   and under the music. */
+const ASMR = "@@ASMR@@";
+const asmrData = ASMR && ASMR.pieces ? ASMR : { pieces: [], b64: '' };
+const ASMR_KINDS = {
+  Flutter: { grain: [.03, .07], step: 1 / 8, pitch: [0, 12, 7, 19], spread: 'ears', w: 1 },
+  Crawl:   { grain: [.08, .2], step: 1 / 4, pitch: [0, -5, 7], spread: 'circle', w: 1 },
+  Cloud:   { grain: [.18, .4], step: .5, pitch: [-12, -7, -5, 0], spread: 'all', w: .8, overlap: true },
+  Crackle: { grain: [.02, .06], step: 0, pitch: [0, 5, 12], spread: 'one ear', w: .9, foley: .8 },
+  Glitch:  { grain: [.04, .09], step: 1 / 8, pitch: [0], spread: 'across', w: .7, stutter: true },
+  Swarm:   { grain: [.015, .04], step: 0, pitch: [12, 19, 24, 7], spread: 'all', w: .6, foley: .4 },
+};
+const asmrPrefs = Object.assign({ on: false, level: -10, often: 1, wild: 1, close: 1, pitch: 1, reverse: .5, room: .3, seed: 1 }, store.get('ds-asmr', {}));
+const saveAsmr = () => store.set('ds-asmr', asmrPrefs);
+let asmrG = null, asmrStarting = null, asmrBuf = null, asmrRev = null, asmrShift = 0, asmrFoley = [], asmrFlurry = null, asmrNextAt = 0, asmrActive = [];
+const ASMR_CURVE = Float32Array.from({ length: 64 }, (_, i) => Math.sin(Math.PI * i / 63) ** 2);
+async function asmrAudio() {
+  if (asmrG) return asmrG;
+  if (asmrStarting) return asmrStarting;
+  asmrStarting = (async () => {
+    await startAudio();
+    if (asmrData.b64) {
+      const b = await ctx.decodeAudioData(b64ToBytes(asmrData.b64).buffer), d = b.getChannelData(0);
+      // the codec may put a little silence first: find the first piece's start again (it was cut 200 samples before its sound)
+      let pk = 0; for (const x of d) pk = Math.max(pk, Math.abs(x)); let s = 0; while (s < d.length && Math.abs(d[s]) < pk * .01) s++;
+      asmrShift = Math.max(0, s - 200) / ctx.sampleRate; asmrBuf = b;
+      asmrRev = ctx.createBuffer(1, d.length, ctx.sampleRate); const r = asmrRev.getChannelData(0); for (let i = 0; i < d.length; i++) r[i] = d[d.length - 1 - i];
+    }
+    // the foley crumbs from the percussion: chips, foil, apple, spray, snaps
+    const crumbs = hitList.map((h, i) => [h, i]).filter(([h]) => h.kind === 'texture' || h.kind === 'snap').map(([, i]) => i);
+    if (crumbs.length) { await loadHits(); asmrFoley = crumbs.filter(i => hitBufs[i]).map(i => { const a = hitBufs[i], b = ctx.createBuffer(1, a.length, ctx.sampleRate); b.copyToChannel(a, 0); return b; }); }
+    const sum = ctx.createGain(), hp = ctx.createBiquadFilter(), soft = ctx.createBiquadFilter(), lev = leveler(-27), out = ctx.createGain();
+    // above the bass, and the harsh band a little softer, so it sits in the air round the music, not in it
+    hp.type = 'highpass'; hp.frequency.value = 320; hp.Q.value = .7; soft.type = 'peaking'; soft.frequency.value = 3200; soft.Q.value = .9; soft.gain.value = -3;
+    out.gain.value = dbGain(asmrPrefs.level);
+    sum.connect(hp); hp.connect(soft); soft.connect(lev.in); lev.out.connect(out); out.connect(master); recConnect(out, 9);
+    const rin = ctx.createGain(), verb = ctx.createConvolver(); verb.buffer = voxRoomIR(.3); rin.connect(verb); verb.connect(sum);
+    const dry = ctx.createGain(); dry.connect(sum);
+    asmrG = { sum, out, rin, dry };
+    asmrApply();
+    return asmrG;
+  })();
+  return asmrStarting;
+}
+function asmrApply() {
+  if (!asmrG) return;
+  const t = ctx.currentTime;
+  asmrG.rin.gain.setTargetAtTime(asmrPrefs.room * .8, t, .2); asmrG.dry.gain.setTargetAtTime(1 - asmrPrefs.room * .3, t, .2);
+  asmrG.out.gain.setTargetAtTime(dbGain(asmrPrefs.level), t, .05);
+}
+// Where a grain is, in the flurry's own way of moving: [azimuth, elevation, distance], always close
+function asmrWhere(F, k, R) {
+  const wild = asmrPrefs.wild, d = (.22 + .35 * R()) * (1.5 - .5 * asmrPrefs.close), e = (R() - .5) * .9 * wild;
+  switch (F.spread) {
+    case 'ears': return [(k % 2 ? 1 : -1) * (Math.PI / 2 + (R() - .5) * .5 * wild), e * .5, d];
+    case 'circle': return [F.dir * k * (.5 + .4 * wild) + F.az0, e, d];
+    case 'one ear': return [(Math.floor(k / F.side) % 2 ? 1 : -1) * Math.PI / 2 * (.8 + .2 * R()), e, d * .8];
+    case 'across': return [F.dir * (-Math.PI / 2 + Math.PI * Math.min(1, k / F.count)), e * .3, d];
+    default: return [R() * Math.PI * 2, e * 1.4, d * (1 + R())];
+  }
+}
+function asmrGrain(F, k, at, R) {
+  const useFoley = asmrFoley.length && R() < (F.foley || .1) * .4;
+  const rev = !useFoley && R() < asmrPrefs.reverse, len = F.grain[0] + (F.grain[1] - F.grain[0]) * R();
+  let buf, off;
+  if (useFoley) { buf = asmrFoley[Math.floor(R() * asmrFoley.length)]; off = R() * Math.max(0, buf.duration - len); }
+  else {
+    if (!asmrBuf || !asmrData.pieces.length) return;
+    const want = R() < (F.foley || .15) ? 'foley' : 'voice', pool = asmrData.pieces.filter(q => q.kind === want), from = pool.length ? pool : asmrData.pieces;
+    const p = F.stutter ? F.piece : from[Math.floor(R() * from.length)], marks = R() < .6 ? (R() < .5 ? p.hiss : p.hum) : null;
+    const local = F.stutter ? F.at : marks && marks.length ? marks[Math.floor(R() * marks.length)] - p.start : R() * Math.max(0, p.len - len);
+    off = asmrShift + p.start + Math.max(0, Math.min(p.len - len, local));
+    buf = asmrBuf;
+    if (rev) { buf = asmrRev; off = asmrRev.duration - off - len; }
+  }
+  const semis = F.stutter ? Math.min(24, k * 1.5) : F.pitch[Math.floor(R() * F.pitch.length)] * asmrPrefs.pitch + (R() - .5) * 1.2, rate = Math.pow(2, semis / 12);
+  const t = Math.max(at, ctx.currentTime + .004), dur = len / rate, src = ctx.createBufferSource(), g = ctx.createGain(), hp = ctx.createBiquadFilter(), pan = ctx.createPanner();
+  src.buffer = buf; src.playbackRate.value = rate;
+  hp.type = R() < .3 ? 'bandpass' : 'highpass'; hp.frequency.value = hp.type === 'bandpass' ? 1200 + 3500 * R() : 400 + 900 * R(); hp.Q.value = hp.type === 'bandpass' ? 1.2 : .7;
+  pan.panningModel = 'HRTF'; pan.distanceModel = 'inverse'; pan.refDistance = .3; pan.rolloffFactor = 1;
+  const p0 = asmrWhere(F, k, R), [x0, y0, z0] = xyz(p0), p1 = [p0[0] + (R() - .5) * .8 * asmrPrefs.wild, p0[1], p0[2]], [x1, y1, z1] = xyz(p1);
+  pan.positionX.setValueAtTime(x0, t); pan.positionY.setValueAtTime(y0, t); pan.positionZ.setValueAtTime(z0, t);
+  pan.positionX.linearRampToValueAtTime(x1, t + dur); pan.positionY.linearRampToValueAtTime(y1, t + dur); pan.positionZ.linearRampToValueAtTime(z1, t + dur);
+  const v = (.5 + .5 * R()) * F.vel;
+  g.gain.setValueAtTime(0, t); g.gain.setValueCurveAtTime(ASMR_CURVE.map(x => x * v), t, Math.max(.01, dur));
+  src.connect(hp); hp.connect(g); g.connect(pan); pan.connect(asmrG.dry); pan.connect(asmrG.rin);
+  src.start(t, Math.max(0, off), len); src.stop(t + dur + .02);
+  src.onended = () => { try { src.disconnect(); hp.disconnect(); g.disconnect(); pan.disconnect(); } catch (er) {} };
+  asmrActive.push({ t0: t, t1: t + Math.max(.15, dur), from: p0, to: p1, lv: v, foley: useFoley });
+}
+function asmrTick() {
+  if (!asmrPrefs.on || !asmrG || !ctx || !playing) { asmrFlurry = null; return; }
+  const now = ctx.currentTime, beat = 60 / tempo(), R = Math.random;
+  asmrActive = asmrActive.filter(a => a.t1 > now);
+  if (!asmrNextAt) asmrNextAt = now + 4 + 6 * R();
+  if (!asmrFlurry && now >= asmrNextAt) {
+    // a flurry: one kind of movement for a few seconds
+    const kinds = Object.keys(ASMR_KINDS), tot = kinds.reduce((t, k) => t + ASMR_KINDS[k].w, 0); let x = R() * tot, kind = kinds[0];
+    for (const k of kinds) if ((x -= ASMR_KINDS[k].w) <= 0) { kind = k; break; }
+    const K = ASMR_KINDS[kind], dur = 1.4 + 3.2 * R(), pieces = asmrData.pieces;
+    const piece = pieces.length ? pieces[Math.floor(R() * pieces.length)] : null;
+    asmrFlurry = { ...K, kind, t0: now + .05, t1: now + .05 + dur, next: now + .05, k: 0, dir: R() < .5 ? 1 : -1, az0: R() * 6.28, side: 3 + Math.floor(R() * 4), count: 8 + Math.floor(R() * 8),
+      vel: .7 + .3 * R(), piece, at: piece ? R() * Math.max(0, piece.len - .1) : 0 };
+    asmrNextAt = asmrFlurry.t1 + (7 + 26 * R()) / Math.max(.15, asmrPrefs.often);
+  }
+  const F = asmrFlurry; if (!F) return;
+  while (F.next < now + .12 && F.next < F.t1) {
+    asmrGrain(F, F.k, F.next, R); F.k++;
+    const step = F.step ? F.step * beat * (R() < .2 * asmrPrefs.wild ? .5 : 1) : .02 + .06 * R();
+    F.next += F.overlap ? step * (.4 + .6 * R()) : step;
+    if (F.stutter && F.k >= F.count) break;
+  }
+  if (F.next >= F.t1 || (F.stutter && F.k >= F.count)) asmrFlurry = null;
+}
+setInterval(asmrTick, 25);
+// The ASMR view: each grain where it is, close round the head
+setInterval(() => {
+  if (!ctx) return; const now = ctx.currentTime;
+  asmrSrc = asmrActive.filter(v => v.t0 <= now).map(v => { const f = Math.min(1, (now - v.t0) / (v.t1 - v.t0)); return [v.from[0] + (v.to[0] - v.from[0]) * f, v.from[1], v.from[2] * 2.2, v.lv * .05 * (1 - f * .6), v.foley ? '#ecd08f' : '#f2a5c3']; });
+}, 50);
+async function setAsmrOn(on, quiet) {
+  asmrPrefs.on = on; saveAsmr(); $('asmrOn').setAttribute('aria-pressed', on);
+  if (!on) return;
+  if (quiet && !node) return;
+  await asmrAudio(); asmrNextAt = ctx.currentTime + 2;
+  if (!quiet) setStatus(playing ? 'Ear candy: now and then, close round your head.' : 'ASMR is on: press ▶.');
+}
+let asmrControlsShow = () => {};
+{
+  if (!asmrData.pieces.length) document.body.classList.add('no-asmr');
+  $('asmrOn').addEventListener('click', () => setAsmrOn(!asmrPrefs.on));
+  const shows = [], grid = $('asmrControls');
+  const range = (key, label, min, max, step, fmt, cls) => {
+    const w = document.createElement('div'); w.className = 'ctl'; const id = 'asmr-' + key;
+    w.innerHTML = `<label for="${id}">${label} <output></output></label><input type="range" id="${id}" min="${min}" max="${max}" step="${step}" class="${cls || ''}">`;
+    const inp = w.querySelector('input'), out = w.querySelector('output'), show = () => { inp.value = asmrPrefs[key]; out.textContent = fmt(asmrPrefs[key]); inp.style.setProperty('--pct', (asmrPrefs[key] - min) / (max - min) * 100 + '%'); };
+    inp.addEventListener('input', () => { asmrPrefs[key] = +inp.value; saveAsmr(); show(); asmrApply(); });
+    shows.push(show); show(); return w;
+  };
+  const pct = v => Math.round(v * 100) + '%', db = v => (v > 0 ? '+' : '') + (+v).toFixed(1) + ' dB';
+  grid.append(range('level', 'Level', -30, 0, .5, db, 'rose'), range('often', 'How often', .15, 2, .01, pct), range('wild', 'How wild', 0, 1.6, .01, pct), range('close', 'How close', 0, 1, .01, pct),
+    range('pitch', 'Pitch moves', 0, 1.5, .01, pct, 'teal'), range('reverse', 'Backwards', 0, 1, .01, pct, 'teal'), range('room', 'Room', 0, 1, .01, pct, 'teal'));
+  asmrControlsShow = () => { shows.forEach(f => f()); $('asmrOn').setAttribute('aria-pressed', asmrPrefs.on); };
+  asmrControlsShow();
+}
+
+/* ---------- High strings: a slow line above everything ----------
+   The recorded strings, an octave or two above the chords, playing a few long notes now and then: chord notes held
+   and moved by a step, swelling in slowly and dying into a big room, two players a few cents apart, one each side.
+   Very quiet, bright but soft, so the strings never get stale and the music never notices it is being sung over. */
+const highPrefs = Object.assign({ on: false, level: -12, presence: 1, seed: 1 }, store.get('ds-high', {}));
+const saveHigh = () => store.set('ds-high', highPrefs);
+let stringZones = [], highG = null, highStarting = null, highEv = { events: [], cycle: 64 }, highKeyStr = '', highMode = '', highNext = 0, highDirty = 1;
+function highCompute(mode) {
+  const sg = chordSegments(mode); if (!sg) return { events: [], cycle: 64 };
+  const { segs, beats } = sg, reps = Math.max(1, Math.ceil(256 / beats)), cycle = beats * reps, R = rng32(highPrefs.seed * 4091 + 5);
+  const scale = SCALE_MINOR.map(d => (d + lineKey) % 12), events = [];
+  const segAt = b => { const x = ((b % beats) + beats) % beats; return segs.find(s => x >= s.start && x < s.end) || segs[0]; };
+  const tones = b => { const s = segAt(b); return (VOX_TYPES[s.quality] || VOX_TYPES.min).map(i => (s.root + i) % 12).concat((s.root + 2) % 12); };
+  const near = (pcs, target) => { let best = target, bd = 99; for (let d = -6; d <= 6; d++) { const m = Math.round(target) + d; if (pcs.includes(((m % 12) + 12) % 12) && Math.abs(d) < bd) { bd = Math.abs(d); best = m; } } return best; };
+  const play = Array.from({ length: Math.ceil(cycle / 32) }, () => R() < .45 * highPrefs.presence);
+  let pitch = 84;
+  for (let b = 0; b < cycle;) {
+    if (!play[Math.floor(b / 32)]) { b = (Math.floor(b / 32) + 1) * 32; continue; }
+    const len = [4, 6, 8, 3][Math.floor(R() * 4)], target = pitch + Math.round((R() * 2 - 1) * 2.5) + (pitch > 88 ? -2 : pitch < 79 ? 2 : 0);
+    pitch = Math.max(76, Math.min(91, R() < .7 ? near(tones(b), target) : near(scale, target)));
+    events.push({ beat: b, len: Math.min(len, cycle - b), pitch, vel: .55 + .3 * R() });
+    b += len - (R() < .4 ? 1 : 0) + (R() < .35 ? 4 : 0);  // the next swells in under this one, or after a breath
+  }
+  return { events, cycle };
+}
+async function highAudio() {
+  if (highG) return highG;
+  if (highStarting) return highStarting;
+  highStarting = (async () => {
+    await startAudio();
+    const sum = ctx.createGain(), hp = ctx.createBiquadFilter(), shelf = ctx.createBiquadFilter(), out = ctx.createGain(), verb = ctx.createConvolver(), wet = ctx.createGain(), dry = ctx.createGain();
+    hp.type = 'highpass'; hp.frequency.value = 650; hp.Q.value = .6; shelf.type = 'highshelf'; shelf.frequency.value = 6000; shelf.gain.value = 2;
+    verb.buffer = voxRoomIR(.7); wet.gain.value = 1; dry.gain.value = .6; out.gain.value = dbGain(highPrefs.level);
+    sum.connect(hp); hp.connect(shelf); shelf.connect(dry); shelf.connect(verb); verb.connect(wet); dry.connect(out); wet.connect(out); out.connect(master); recConnect(out, 5);
+    highG = { sum, out };
+    return highG;
+  })();
+  return highStarting;
+}
+function highPlay(e, when, dur) {
+  if (!stringZones.length) return;
+  const t = Math.max(when, ctx.currentTime + .01), zone = stringZones.reduce((a, z) => Math.abs(z.root + 12 - e.pitch) < Math.abs(a.root + 12 - e.pitch) ? z : a);
+  const rate = Math.pow(2, (e.pitch - zone.root) / 12), len = Math.min(dur + 2, zone.buf.duration / rate - .05), atk = Math.min(1.6, len * .35), v = e.vel * .5;
+  for (const side of [-1, 1]) {
+    const src = ctx.createBufferSource(), g = ctx.createGain(), pan = ctx.createStereoPanner();
+    src.buffer = zone.buf; src.playbackRate.value = rate; src.detune.value = side * 6; pan.pan.value = side * .55;
+    g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(v, t + atk); g.gain.setValueAtTime(v, t + Math.max(atk, len - 2)); g.gain.linearRampToValueAtTime(0, t + len);
+    src.connect(g); g.connect(pan); pan.connect(highG.sum); src.start(t, .15); src.stop(t + len + .05);
+    src.onended = () => { try { src.disconnect(); g.disconnect(); pan.disconnect(); } catch (er) {} };
+  }
+}
+function highTick() {
+  if (!highPrefs.on || !highG || !ctx) return;
+  const now = ctx.currentTime, bpm = tempo(), want = playing && lineAnchor ? 'line' : '';
+  if (want !== highMode) { highMode = want; highKeyStr = ''; }
+  if (!highMode) return;
+  const a = lineAnchor, key = [highDirty, arpDirty].join('|');
+  if (key !== highKeyStr) { highEv = highCompute('line'); highKeyStr = key; }
+  const beatNow = a.ppq + (now - a.time) * bpm / 60, horizon = beatNow + .3 * bpm / 60;
+  if (highNext < beatNow - .02) highNext = beatNow;
+  const off = lineStartBeat, ao = { ppq: a.ppq - off, time: a.time };
+  eventsBetween(highEv.events, highEv.cycle, highNext - off, horizon - off, ao, bpm, (e, w) => highPlay(e, w, e.len * 60 / bpm));
+  highNext = horizon;
+}
+setInterval(highTick, 50);
+async function setHighOn(on, quiet) {
+  highPrefs.on = on; saveHigh(); $('highOn').setAttribute('aria-pressed', on);
+  if (!on) return;
+  if (quiet && !node) return;
+  await highAudio();
+  if (!quiet) setStatus('High strings: a slow line an octave or two above, now and then.');
+}
+$('highOn').setAttribute('aria-pressed', highPrefs.on); $('highOn').addEventListener('click', () => setHighOn(!highPrefs.on));
+
 /* ---------- Perc: floating percussion all round you ----------
    Five lanes of percussion, each on its own Euclidean rhythm and its own cycle (16, 12, 7, 10 … sixteenths), so they
    drift against each other and meet again; over 32 bars the lanes come in and step out. Every lane circles you at
@@ -3571,8 +4078,8 @@ const MOOD_KINDS = [
     names: ['Desert Stars', 'Mirage Radio', 'Sand Dune Choir', 'Cold Desert Night', 'Caravan Lights', 'Moonlit Mesa', 'Dust Devil Dream', 'Oasis Signal', 'Silent Canyon', 'Salt Flat Echo', 'Night Road', 'Coyote Moon'] },
 ];
 const MOODS = [];
-MOOD_KINDS.forEach((K, ki) => K.names.forEach((name, n) => {
-  const R = rng32(70001 + ki * 1009 + n * 97), pick = a => a[Math.floor(R() * a.length)], rr = ([a, b]) => a + (b - a) * R();
+function makeMood(K, ki, name, seed) {
+  const R = rng32(seed), pick = a => a[Math.floor(R() * a.length)], rr = ([a, b]) => a + (b - a) * R();
   const sounds = soundBank.map((s, i) => [s, i]).filter(([s]) => !!s.clean === (R() < K.clean)).map(([, i]) => i);
   const base = LINE_BASES.findIndex(b => b[0] === pick(K.lines)), line = Math.max(0, base) + LINE_BASES.length * Math.floor(R() * 9);
   const kitList = KITS.map((k, i) => [k, i]).filter(([k]) => K.kits && K.kits.some(w => k.group === w || k.name.startsWith(w))).map(([, i]) => i);
@@ -3583,7 +4090,24 @@ MOOD_KINDS.forEach((K, ki) => K.names.forEach((name, n) => {
     drums: { on: R() < K.drums && kitList.length > 0, kit: kitList.length ? pick(kitList) : 0, groove: grooveList.length ? pick(grooveList) : 0, level: -4 - 4 * R() },
     arp: { on: R() < K.arp, simple: R() < K.arpSimple, six: R() < K.arpSix, pat: R(), snd: R(), density: K.arpDensity ? Math.round(rr(K.arpDensity)) : Math.round(70 + 30 * R()), octave: K.arpOct ? pick(K.arpOct) : 0, level: -6 - 4 * R(), seed: 1 + Math.floor(R() * 9999) },
     vox: { on: R() < K.vox, style: st(VOX_STYLES, K.styles), space: st(VOX_SPACES, K.spaces), level: -8 - 4 * R() } });
-}));
+}
+MOOD_KINDS.forEach((K, ki) => K.names.forEach((name, n) => makeMood(K, ki, name, 70001 + ki * 1009 + n * 97)));
+/* 500 ensemble moods: the same families, each with a band chosen from every instrument there is (piano, guitar,
+   percussion, lead, bass, voices, arp, drums), four to six of them, always the piano or the guitarist among them */
+const ENS_A = ['Amber', 'Velvet', 'Lunar', 'Silver', 'Hollow', 'Paper', 'Copper', 'Indigo', 'Salt', 'Ember', 'Pale', 'Slow', 'Golden', 'Quiet', 'Distant', 'Opal', 'Smoky', 'Tidal',
+  'Faded', 'Northern', 'Dusty', 'Glass', 'Warm', 'Sleeping', 'Wandering', 'Midnight', 'Hazy', 'Soft', 'Low', 'Late', 'Cedar', 'Linen', 'Rosewood', 'Cobalt', 'Mossy', 'Saffron',
+  'Lantern', 'Winter', 'Harbour', 'Orchard', 'Desert', 'Island', 'Echoing', 'Drifting', 'Floating', 'Secret', 'Morning', 'Evening'];
+const ENS_B = ['Tide', 'Harbour', 'Garden', 'Lanterns', 'Balcony', 'Corridor', 'Courtyard', 'Meadow', 'Window', 'Ferry', 'Terrace', 'Caravan', 'Station', 'Lagoon', 'Canyon', 'Cathedral',
+  'Library', 'Orchard', 'Observatory', 'Rooftop', 'Pier', 'Valley', 'Monastery', 'Greenhouse', 'Train', 'River', 'Island', 'Market', 'Dunes', 'Fjord', 'Avenue', 'Chapel', 'Hotel',
+  'Pavilion', 'Bridge', 'Lighthouse', 'Archive', 'Grove', 'Nocturne', 'Postcard', 'Letters', 'Shoreline', 'Embers', 'Satellites', 'Waltz', 'Siesta', 'Reverie', 'Promenade'];
+{
+  const used = new Set(MOODS.map(m => m.name)), R = rng32(990001);
+  for (let k = 0; k < 500; k++) {
+    const ki = k % MOOD_KINDS.length; let name;
+    do name = `${ENS_A[Math.floor(R() * ENS_A.length)]} ${ENS_B[Math.floor(R() * ENS_B.length)]}`; while (used.has(name) || name.split(' ')[0] === name.split(' ')[1]);
+    used.add(name); makeMood(MOOD_KINDS[ki], ki, name, 910001 + k * 7919); MOODS[MOODS.length - 1].ensemble = true;
+  }
+}
 // Each family's lead and bass: how often they sing, and in which styles
 const MEL_FOR = { 'Night bus': [.45, ['Singing', 'Sparse'], .7, ['Held', 'Dub']], Glacier: [.35, ['Floating'], .2, ['Held']], 'Orbital sunrise': [.6, ['Hook', 'Singing'], .9, ['Offbeat', 'Pulse']],
   'Shoegaze haze': [.6, ['Singing', 'Floating'], .75, ['Root and fifth', 'Held']], 'Radio-Activity': [.75, ['Bells', 'Hook'], .9, ['Pulse', 'Syncopated']], 'Bristol smoke': [.35, ['Sparse'], .85, ['Dub', 'Syncopated']],
@@ -3596,6 +4120,34 @@ const PIANO_FOR = { Glacier: [.75, ['Long lines', 'Raindrops']], Cathedral: [.7,
   'Dub lull': [.45, ['Echoes', 'Raindrops']], 'Forest rain': [.6, ['Raindrops', 'Lullaby']], 'City dusk': [.65, ['Cinematic', 'Lullaby']], 'Shoegaze haze': [.4, ['Long lines', 'Hymn']],
   'Desert night': [.45, ['Echoes', 'Long lines']], 'Space station': [.4, ['Raindrops', 'Echoes']], 'Orbital sunrise': [.35, ['Cinematic', 'Lullaby']], 'Bristol smoke': [.4, ['Cinematic', 'Echoes']],
   Darkwave: [.2, ['Long lines']], 'Berlin sequence': [.25, ['Raindrops']], 'Radio-Activity': [.2, ['Lullaby']], 'Switched-on': [.3, ['Lullaby', 'Raindrops']] };
+// The guitarist's favourite rooms: the warm, dusty and night families have him round most
+const GUITAR_FOR = { 'Desert night': [.8, ['Flamenco breeze', 'Duende', 'Desert runs']], 'Forest rain': [.5, ['Nylon dreams', 'Campfire']], 'City dusk': [.55, ['Nylon dreams', 'Flamenco breeze']],
+  'Night bus': [.45, ['Nylon dreams', 'Strum swells']], 'Dub lull': [.45, ['Strum swells', 'Campfire']], 'Bristol smoke': [.4, ['Duende', 'Nylon dreams']], Glacier: [.25, ['Nylon dreams']],
+  'Orbital sunrise': [.35, ['Campfire', 'Flamenco breeze']], 'Shoegaze haze': [.35, ['Strum swells']], 'Deep sea': [.3, ['Nylon dreams']], 'Space station': [.2, ['Desert runs']], Cathedral: [.2, ['Strum swells']],
+  Darkwave: [.15, ['Duende']], 'Berlin sequence': [.1, ['Desert runs']], 'Radio-Activity': [.1, ['Campfire']], 'Switched-on': [.2, ['Flamenco breeze']] };
+MOODS.forEach((m, i) => {
+  const R = rng32(89001 + i * 67), [gp, gs] = GUITAR_FOR[m.kind] || [.3, ['Nylon dreams']], list = GUITAR_PRESETS.map((x, k) => [x, k]).filter(([x]) => gs.includes(x.style)).map(([, k]) => k);
+  m.guitar = { on: guitarData.phrases.length > 0 && R() < gp, preset: list[Math.floor(R() * list.length)], seed: 1 + Math.floor(R() * 9999) };
+});
+// Ear candy: which families like it close round your head, and how often
+const ASMR_FOR = { 'Forest rain': .6, 'Deep sea': .5, 'Space station': .55, 'Dub lull': .5, 'Desert night': .45, 'Night bus': .4, 'Shoegaze haze': .4, Glacier: .35, 'Bristol smoke': .45,
+  'City dusk': .35, 'Orbital sunrise': .3, Darkwave: .3, 'Berlin sequence': .3, 'Radio-Activity': .35, 'Switched-on': .3, Cathedral: .15 };
+MOODS.forEach((m, i) => { const R = rng32(96001 + i * 43); m.high = { on: R() < (['Glacier', 'Cathedral', 'Deep sea', 'Shoegaze haze', 'Night bus'].includes(m.kind) ? .45 : .2), seed: 1 + Math.floor(R() * 9999) }; });
+MOODS.forEach((m, i) => { const R = rng32(95001 + i * 41); m.asmr = { on: asmrData.pieces.length > 0 && R() < (ASMR_FOR[m.kind] ?? .3), often: .6 + .8 * R(), wild: .5 + R() }; });
+// The ensemble moods' bands: four to six instruments, chosen by how much the family likes each, the piano or guitar always in
+function ensembleBand() {
+  MOODS.forEach((m, i) => {
+    if (!m.ensemble) return;
+    const R = rng32(93001 + i * 31), K = MOOD_KINDS.find(k => k.kind === m.kind), mf = MEL_FOR[m.kind] || [.4, 0, .6];
+    const like = { drums: K.drums ?? .7, arp: K.arp ?? .7, vox: K.vox ?? .4, perc: PERC_FOR[m.kind] ?? .4, lead: mf[0], bass: mf[2], piano: (PIANO_FOR[m.kind] || [.35])[0] + .2, guitar: (GUITAR_FOR[m.kind] || [.3])[0] + .2 };
+    if (!pianoNotes.length) delete like.piano; if (!guitarData.phrases.length) delete like.guitar; if (!HAS_VOX) delete like.vox;
+    const keys = Object.keys(like), n = Math.min(keys.length, 4 + Math.floor(R() * 3)), band = new Set();
+    const solo = keys.filter(c => c === 'piano' || c === 'guitar'); if (solo.length) band.add(solo[Math.floor(R() * solo.length)]);
+    while (band.size < n) { let x = keys.reduce((t, c) => t + (band.has(c) ? 0 : like[c] + .05), 0) * R(); for (const c of keys) { if (band.has(c)) continue; if ((x -= like[c] + .05) <= 0) { band.add(c); break; } } }
+    m.drums.on = band.has('drums') && KITS.length > 0; m.arp.on = band.has('arp'); m.vox.on = band.has('vox'); m.perc.on = band.has('perc');
+    m.mel.lead = band.has('lead'); m.mel.bass = band.has('bass'); m.piano.on = band.has('piano'); m.guitar.on = band.has('guitar');
+  });
+}
 MOODS.forEach((m, i) => {
   const R = rng32(87001 + i * 61), [pp, ps] = PIANO_FOR[m.kind] || [.35, ['Long lines']], list = PIANO_PRESETS.map((x, k) => [x, k]).filter(([x]) => ps.includes(x.style)).map(([, k]) => k);
   m.piano = { on: pianoNotes.length > 0 && R() < pp, preset: list[Math.floor(R() * list.length)], seed: 1 + Math.floor(R() * 9999) };
@@ -3609,6 +4161,7 @@ MOODS.forEach((m, i) => {
   const leads = LEAD_PRESETS.map((x, k) => [x, k]).filter(([x]) => ls.includes(x.style)).map(([, k]) => k), basses = BASS_PRESETS.map((x, k) => [x, k]).filter(([x]) => bs.includes(x.style)).map(([, k]) => k);
   m.mel = { lead: R() < lp, leadPreset: pick(leads), bass: R() < bp && m.drums.on || R() < bp * .4, bassPreset: pick(basses), seed: 1 + Math.floor(R() * 9999) };
 });
+ensembleBand();
 // The arp's pattern and sound for a mood (only known once the ARP is loaded)
 function moodArp(m) {
   if (!HAS_ARP) return null;
@@ -3620,6 +4173,23 @@ function moodArp(m) {
 // A channel switched on or off by a mood fades in or out rather than starting or stopping
 function rampGain(g, to, dur) { if (!g || !ctx) return; const t = ctx.currentTime; g.cancelScheduledValues(t); g.setValueAtTime(g.value, t); g.linearRampToValueAtTime(to, t + dur); }
 async function channelTo(ch, on, dur) {
+  if (ch === 'high') {
+    if (on && !highPrefs.on) { await setHighOn(true, true); await highAudio(); highG.out.gain.setValueAtTime(0, ctx.currentTime); rampGain(highG.out.gain, dbGain(highPrefs.level), dur); }
+    else if (!on && highPrefs.on) { if (highG) rampGain(highG.out.gain, 0, dur); setTimeout(() => { if (!moodWants.high) { setHighOn(false); if (highG) highG.out.gain.value = dbGain(highPrefs.level); } }, dur * 1000); }
+    return;
+  }
+  if (ch === 'asmr') {
+    if (!asmrData.pieces.length) return;
+    if (on && !asmrPrefs.on) { await setAsmrOn(true, true); await asmrAudio(); asmrG.out.gain.setValueAtTime(0, ctx.currentTime); rampGain(asmrG.out.gain, dbGain(asmrPrefs.level), dur); }
+    else if (!on && asmrPrefs.on) { if (asmrG) rampGain(asmrG.out.gain, 0, dur); setTimeout(() => { if (!moodWants.asmr) { setAsmrOn(false); if (asmrG) asmrG.out.gain.value = dbGain(asmrPrefs.level); } }, dur * 1000); }
+    return;
+  }
+  if (ch === 'guitar') {
+    if (!guitarData.phrases.length) return;
+    if (on && !guitarPrefs.on) { await setGuitarOn(true, true); await guitarAudio(); guitarG.out.gain.setValueAtTime(0, ctx.currentTime); rampGain(guitarG.out.gain, dbGain(guitarPrefs.level), dur); }
+    else if (!on && guitarPrefs.on) { if (guitarG) rampGain(guitarG.out.gain, 0, dur); setTimeout(() => { if (!moodWants.guitar) { setGuitarOn(false); if (guitarG) guitarG.out.gain.value = dbGain(guitarPrefs.level); } }, dur * 1000); }
+    return;
+  }
   if (ch === 'piano') {
     if (!pianoNotes.length) return;
     if (on && !pianoPrefs.on) { await setPianoOn(true, true); await pianoAudio(); pianoG.out.gain.setValueAtTime(0, ctx.currentTime); rampGain(pianoG.out.gain, dbGain(pianoPrefs.level), dur); }
@@ -3648,7 +4218,7 @@ async function channelTo(ch, on, dur) {
     else if (!on && voxPrefs.on) { if (voxG) rampGain(voxG.out.gain, 0, dur); setTimeout(() => { if (!moodWants.vox) { setVoxOn(false); if (voxG) voxG.out.gain.value = dbGain(voxPrefs.level); } }, dur * 1000); }
   }
 }
-const moodWants = { drums: false, arp: false, vox: false, lead: false, bass: false, perc: false, piano: false };
+const moodWants = { drums: false, arp: false, vox: false, lead: false, bass: false, perc: false, piano: false, guitar: false, asmr: false, high: false };
 // The tempo glides to a mood's over the fade
 let tempoGlide = null;
 function glideTempo(to, dur) {
@@ -3660,6 +4230,31 @@ function glideTempo(to, dur) {
     if (k >= 1) { clearInterval(tempoGlide); store.set('ds-tempo', tempo()); }
   }, 120);
 }
+/* A mood change as a dissolve: the whole mix sinks into a soft low-pass and a long room for a moment, the new mood
+   arrives at the bottom of it, and it all opens up again */
+let dissolve = null;
+function masterDissolve() {
+  const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 20000; lp.Q.value = .5;
+  dissolve = { lp, room: null, ir: voxRoomIR(.9) };
+}
+function moodDissolve(dur) {
+  if (!dissolve || !playing) return;
+  const t = ctx.currentTime, f = dissolve.lp.frequency;
+  f.cancelScheduledValues(t); f.setValueAtTime(f.value, t); f.exponentialRampToValueAtTime(1600, t + dur * .4); f.setValueAtTime(1600, t + dur * .5); f.exponentialRampToValueAtTime(20000, t + dur * 1.1);
+  // the long room runs only while a change happens (a room that is always there costs the audio thread all the time)
+  if (dissolve.room) { clearTimeout(dissolve.room.end); try { dissolve.room.send.disconnect(); } catch (e) {} }
+  const send = ctx.createGain(), verb = ctx.createConvolver(), back = ctx.createBiquadFilter();
+  verb.buffer = dissolve.ir; back.type = 'lowpass'; back.frequency.value = 5000; send.gain.value = 0;
+  master.connect(send); send.connect(verb); verb.connect(back); back.connect(analyser);
+  send.gain.setValueAtTime(0, t); send.gain.linearRampToValueAtTime(.4, t + dur * .4); send.gain.linearRampToValueAtTime(0, t + dur * 1.3);
+  const room = dissolve.room = { send, end: setTimeout(() => { try { master.disconnect(send); send.disconnect(); verb.disconnect(); back.disconnect(); } catch (e) {} if (dissolve.room === room) dissolve.room = null; }, (dur * 1.3 + 9) * 1000) };
+}
+// Run something on the first bar line at least sec seconds from now (at once when nothing plays)
+function onBarAfter(sec, fn) {
+  if (!playing || !lineAnchor || !ctx) { fn(); return; }
+  const a = lineAnchor, bpm = tempo(), beat = a.ppq + (ctx.currentTime + sec - a.time) * bpm / 60, next = Math.ceil(beat / 4) * 4;
+  setTimeout(fn, Math.max(0, (a.time + (next - a.ppq) * 60 / bpm - ctx.currentTime - .06) * 1000));
+}
 // Run something on the next bar line while the chord line plays (at once otherwise)
 function onNextBar(fn) {
   if (!playing || !lineAnchor || !ctx) { fn(); return; }
@@ -3667,14 +4262,17 @@ function onNextBar(fn) {
   setTimeout(fn, Math.max(0, (a.time + (next - a.ppq) * 60 / bpm - ctx.currentTime - .06) * 1000));
 }
 let moodChoice = store.get('ds-mood', -1);
+let moodSince = 0;
 function applyMood(m, opts = {}) {
-  const fade = opts.fade ?? Math.max(fadeTime(), 4);
+  moodSince = ctx ? ctx.currentTime : 0;
+  const fade = opts.fade ?? Math.max(fadeTime() * 1.25, 10);
+  moodDissolve(fade);
   // the sound: the bank's, with the mood's movement and room, faded over
   const v = soundValues(soundBank[m.sound]);
   for (const k in m.params) if (k in idx) v[idx[k]] = m.params[k];
   applyValues(v, 'chord', fade); soundChoice = String(m.sound); soundDirty = true; fillSounds();
-  onNextBar(() => {
-    // the chord line, key and bars per chord change on a bar line
+  onBarAfter(fade * .35, () => {
+    // the chord line, key and bars per chord change on a bar line, deep in the dissolve
     lineKey = m.key; $('lineKey').value = String(lineKey); if ($('lineKey')._sync) $('lineKey')._sync();
     $('lineBars').value = String(m.bars); if ($('lineBars')._sync) $('lineBars')._sync();
     lineChoice = m.line; lineDirty = false; line = lineFrom(lineBank[lineChoice], lineKey); fillLines(); lineChanged();
@@ -3717,6 +4315,17 @@ function applyMood(m, opts = {}) {
   moodWants.piano = m.piano.on;
   if (m.piano.on) { pianoPrefs.preset = m.piano.preset; pianoPrefs.seed = m.piano.seed; pianoDirty++; savePiano(); pianoControlsShow(); pianoApply(); }
   channelTo('piano', m.piano.on, fade);
+  // guitar
+  moodWants.guitar = m.guitar.on;
+  if (m.guitar.on) { guitarPrefs.preset = m.guitar.preset; guitarPrefs.seed = m.guitar.seed; guitarDirty++; saveGuitar(); guitarControlsShow(); guitarApply(); }
+  channelTo('guitar', m.guitar.on, fade);
+  // ear candy
+  moodWants.asmr = m.asmr.on;
+  if (m.asmr.on) { asmrPrefs.often = m.asmr.often; asmrPrefs.wild = m.asmr.wild; saveAsmr(); asmrControlsShow(); }
+  channelTo('asmr', m.asmr.on, fade);
+  // high strings
+  moodWants.high = m.high.on; if (m.high.on) { highPrefs.seed = m.high.seed; highDirty++; saveHigh(); }
+  channelTo('high', m.high.on, fade);
   if (!opts.quiet) setStatus(`${m.name} · ${m.kind} · ${m.bpm} BPM${m.drums.on ? '' : ' · no drums'}`);
 }
 function fillMoods() {
@@ -3736,6 +4345,13 @@ async function pickMood(v, why) {
 fillMoods();
 $('moodSel').addEventListener('change', () => pickMood($('moodSel').value));
 $('moodDice').addEventListener('click', () => pickMood(Math.floor(Math.random() * MOODS.length), 'A random mood'));
+// Keep what is playing now (a random mood, and whatever Alive or you have done to it since) as your own
+$('moodSave').addEventListener('click', () => {
+  const d = new Date(), base = moodChoice >= 0 ? MOODS[moodChoice].name : 'My mood', name = `${base} · ${d.toLocaleDateString()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+  const list = sessions().filter(x => x.name !== name); list.push(sessionNow(name)); store.set('ds-sessions', list); fillSessions(list.length - 1); fillMoods();
+  $('moodSel').value = 's' + (list.length - 1); if ($('moodSel')._sync) $('moodSel')._sync();
+  setStatus(`Saved “${name}”: it is under Your sessions in the mood menu.`);
+});
 
 /* ---------- Endless: a journey that never repeats ----------
    While it plays, it moves on by itself: now and then to another mood (mostly of the same family, sometimes a
@@ -3764,11 +4380,11 @@ const ALIVE_AFTER = 30000;
 const alive = { on: store.get('ds-alive', true), was: false };
 const living = () => endless.on || (alive.on && performance.now() - userTouch > ALIVE_AFTER && !(typeof song !== 'undefined' && song.on));
 function setAlive(on) { alive.on = on; store.set('ds-alive', on); $('aliveOn').setAttribute('aria-pressed', on); setStatus(on ? 'Alive: after 30 quiet seconds it goes on by itself.' : 'Alive off: it stays as you leave it.'); }
-const ARR_CH = ['drums', 'arp', 'vox', 'perc', 'lead', 'bass', 'piano'], ARR_SIZE = { calm: [1, 3], drift: [2, 4], restless: [3, 5] };
-const chCan = c => (c !== 'arp' || HAS_ARP) && (c !== 'vox' || HAS_VOX) && (c !== 'piano' || pianoNotes.length > 0);
-const chOn = c => c === 'drums' ? drumPrefs.on : c === 'arp' ? arpPrefs.on : c === 'vox' ? voxPrefs.on : c === 'perc' ? percPrefs.on : c === 'piano' ? pianoPrefs.on : !!melPrefs[c];
+const ARR_CH = ['drums', 'arp', 'vox', 'perc', 'lead', 'bass', 'piano', 'guitar', 'high'], ARR_SIZE = { calm: [1, 3], drift: [2, 4], restless: [3, 5] };
+const chCan = c => (c !== 'arp' || HAS_ARP) && (c !== 'vox' || HAS_VOX) && (c !== 'piano' || pianoNotes.length > 0) && (c !== 'guitar' || guitarData.phrases.length > 0);
+const chOn = c => c === 'drums' ? drumPrefs.on : c === 'arp' ? arpPrefs.on : c === 'vox' ? voxPrefs.on : c === 'perc' ? percPrefs.on : c === 'piano' ? pianoPrefs.on : c === 'guitar' ? guitarPrefs.on : c === 'high' ? highPrefs.on : !!melPrefs[c];
 // how much a mood's family likes each channel
-function chLike(c, m, K) { const mf = MEL_FOR[m.kind] || [.4, 0, .6]; return { drums: K.drums ?? .7, arp: K.arp ?? .7, vox: K.vox ?? .4, perc: PERC_FOR[m.kind] ?? .4, lead: mf[0], bass: mf[2], piano: (PIANO_FOR[m.kind] || [.35])[0] }[c]; }
+function chLike(c, m, K) { const mf = MEL_FOR[m.kind] || [.4, 0, .6]; return { drums: K.drums ?? .7, arp: K.arp ?? .7, vox: K.vox ?? .4, perc: PERC_FOR[m.kind] ?? .4, lead: mf[0], bass: mf[2], piano: (PIANO_FOR[m.kind] || [.35])[0], guitar: (GUITAR_FOR[m.kind] || [.3])[0], high: ['Glacier', 'Cathedral', 'Deep sea', 'Shoegaze haze'].includes(m.kind) ? .55 : .3 }[c]; }
 // One step of the arrangement: a channel steps out, one comes in, or one gives its place to another
 function arrange(R, m, K) {
   const on = ARR_CH.filter(c => chCan(c) && chOn(c)), off = ARR_CH.filter(c => chCan(c) && !chOn(c)), [lo, hi] = ARR_SIZE[endless.pace];
@@ -3784,8 +4400,9 @@ function arrange(R, m, K) {
     if (c === 'vox') pickVoxStyle(VOX_STYLES.findIndex(v => K.styles && K.styles.includes(v.name)) >= 0 && R() < .7 ? VOX_STYLES.findIndex(v => K.styles.includes(v.name)) : Math.floor(R() * VOX_STYLES.length));
     channelTo(c, true, 14);
   }
-  const N = { drums: 'the drums', arp: 'the arp', vox: 'the voices', perc: 'the percussion', lead: 'the lead', bass: 'the bass', piano: 'the piano' };
-  return [...inn.map(c => N[c] + ' drift in'), ...out.map(c => N[c] + ' step out')].join(', ');
+  const N = { drums: 'the drums', arp: 'the arp', vox: 'the voices', perc: 'the percussion', lead: 'the lead', bass: 'the bass', piano: 'the piano', guitar: 'the guitarist', high: 'the high strings' };
+  const many = c => ['drums', 'vox', 'high'].includes(c);
+  return [...inn.map(c => N[c] + (many(c) ? ' drift in' : ' drifts in')), ...out.map(c => N[c] + (many(c) ? ' step out' : ' steps out'))].join(', ');
 }
 function endlessTick() {
   const live = living(), bar = endlessBar();
@@ -3797,6 +4414,20 @@ function endlessTick() {
   if (bar >= (endless.nextArr ?? 0)) { const t = arrange(R, m, K); if (t) say(t); endless.nextArr = Math.ceil((bar + (R() < .5 ? 8 : 16)) / 8) * 8; }
   if (endless.nextMood < 0) { endless.nextMood = endlessPlan(bar, 'mood'); endless.nextSmall = endlessPlan(bar, 'small'); }
   if (endless.breakUntil >= 0 && bar >= endless.breakUntil) { endless.breakUntil = -1; moodWants.drums = true; channelTo('drums', true, 8); }
+  // when a mood has been playing a long while, a fat bass comes in for 32 bars, then leaves it as it was
+  if (!endless.fat && ctx.currentTime - moodSince > (endless.fatAfter || (endless.fatAfter = 150 + 90 * R())) && bar % 8 === 7) {
+    const fatSounds = BASS_SOUNDS.map((x, k) => [x, k]).filter(([x]) => x.fat).map(([, k]) => k), styles = ['Pulse', 'Syncopated', 'Root and fifth', 'Dub', 'Offbeat'];
+    const list = BASS_PRESETS.map((x, k) => [x, k]).filter(([x]) => fatSounds.includes(x.sound) && styles.includes(x.style)).map(([, k]) => k);
+    const pick = list[Math.floor(R() * list.length)];
+    endless.fat = { until: bar + 33, was: melPrefs.bassPreset, wasOn: !!melPrefs.bass };
+    onNextBar(() => { pickBass(pick); moodWants.bass = true; channelTo('bass', true, 4); });
+    say('a fat bass comes in · ' + BASS_PRESETS[pick].name);
+  }
+  if (endless.fat && bar >= endless.fat.until) {
+    const f = endless.fat; endless.fat = null; endless.fatAfter = 0; moodSince = ctx.currentTime;
+    if (!f.wasOn) { moodWants.bass = false; channelTo('bass', false, 10); setTimeout(() => pickBass(f.was), 10500); } else onNextBar(() => pickBass(f.was));
+    say('the fat bass steps back');
+  }
   if (bar >= endless.nextMood) {
     // on to another mood: the same family half the time, otherwise one whose tempo is near
     const same = MOODS.map((x, i) => [x, i]).filter(([x, i]) => x.kind === m.kind && i !== moodChoice);
@@ -3831,6 +4462,17 @@ function endlessTick() {
       [drumPrefs.on && moodWants.drums ? .8 : 0, () => { moodWants.drums = false; channelTo('drums', false, 6); endless.breakUntil = bar + [8, 8, 16][Math.floor(R() * 3)]; say('the drums step out for a while'); return true; }],
       [voxPrefs.on && HAS_VOX ? .8 : 0, () => { pickVoxStyle(Math.floor(R() * VOX_STYLES.length), who + ' · the voices change'); return true; }],
       [percPrefs.on ? 1 : 0, () => { if (R() < .5) pickPercKit(Math.floor(R() * PERC_KITS.length), who + ' · other percussion'); else pickPercGroove(Math.floor(R() * PERC_GROOVES.length), who + ' · the percussion turns'); return true; }],
+      [asmrData.pieces.length ? .7 : 0, () => {
+        // the ear candy comes or goes
+        moodWants.asmr = !asmrPrefs.on; if (moodWants.asmr) { asmrPrefs.wild = .5 + R(); asmrPrefs.often = .5 + R(); saveAsmr(); asmrControlsShow(); }
+        channelTo('asmr', moodWants.asmr, 6); say(moodWants.asmr ? 'ear candy, close round you' : 'the ear candy leaves'); return true;
+      }],
+      [guitarPrefs.on ? 1 : 0, () => {
+        const [, gs] = GUITAR_FOR[m.kind] || [.3, ['Nylon dreams']];
+        if (R() < .5) { guitarPrefs.seed = 1 + Math.floor(R() * 99999); saveGuitar(); guitarDirty++; guitarControlsShow(); say('the guitarist plays it another way'); }
+        else { const l = GUITAR_PRESETS.map((x, k) => [x, k]).filter(([x]) => gs.includes(x.style)).map(([, k]) => k); pickGuitar(l[Math.floor(R() * l.length)], who + ' · the guitar'); }
+        return true;
+      }],
       [pianoPrefs.on ? 1 : 0, () => {
         const [, ps] = PIANO_FOR[m.kind] || [.35, ['Long lines']];
         if (R() < .5) { pianoPrefs.seed = 1 + Math.floor(R() * 99999); savePiano(); pianoDirty++; pianoControlsShow(); say('the piano finds a new melody'); }
@@ -3873,7 +4515,7 @@ fitMixer(); addEventListener('load', fitMixer);
 // sit back (Alive only; the change glides over seconds)
 setInterval(() => {
   if (!chordLift) return;
-  const others = ARR_CH.filter(c => chCan(c) && chOn(c)).length, lift = alive.on && playing ? [4.5, 3, 1.5, 0][Math.min(3, others)] : 0;
+  const others = ARR_CH.filter(c => chCan(c) && chOn(c)).length, lift = alive.on && playing ? [3, 2, 1, 0][Math.min(3, others)] : 0;
   chordLift.gain.setTargetAtTime(dbGain(lift), ctx.currentTime, 2.5);
   // and the arp listens to the lead: while a melody sings it plays darker and further back, as a player would
   if (arpG && alive.on) { const lead = !!melPrefs.lead || !!pianoPrefs.on; arpG.lp.frequency.setTargetAtTime(arpPrefs.tone * (lead ? .55 : 1), ctx.currentTime, 3); arpG.wash.gain.setTargetAtTime(arpPrefs.wash * 1.4 * (lead ? 1.5 : 1), ctx.currentTime, 3); }
@@ -3895,11 +4537,42 @@ setInterval(() => {
     voxCross(() => { voxPrefs.singers = pick; saveVox(); voxControlsShow(); }); setStatus('Other singers · ' + pick.join(', '));
   } else { voxCross(() => { voxPrefs.seed = 1 + Math.floor(Math.random() * 99999); saveVox(); }); setStatus('The voices sing it another way'); }
 }, 1000);
+// Each strip glows while its channel is on, brighter as it plays louder (its meter, smoothed)
+{
+  const stripOf = id => { const m = $(id); return m && m.closest('.strip'); };
+  const rows = [['chordLevelMeter'], ['drumLevelMeter'], ['percLevelMeter'], ['arpLevelMeter'], ['voxLevelMeter'], ['melLevelMeter'], ['pianoLevelMeter'], ['guitarLevelMeter']].map(([id]) => ({ id, strip: stripOf(id), v: 0 }));
+  setInterval(() => {
+    for (const r of rows) {
+      if (!r.strip) continue;
+      const on = [...r.strip.querySelectorAll('.btn.sw')].some(b => b.getAttribute('aria-pressed') === 'true'), m = meters.find(x => x.el && x.el.id === r.id);
+      const lv = m && playing ? Math.max(0, Math.min(1, (m.v * 48 - 48 + 36) / 30)) : 0;
+      r.v += (lv - r.v) * (lv > r.v ? .35 : .08);
+      r.strip.classList.toggle('live', on); r.strip.style.setProperty('--lv', on ? r.v.toFixed(3) : 0);
+    }
+  }, 80);
+}
+// The counter in the bar: played and left of the song, of this mood (when Endless or Alive will move on), or the bar of the line
+const mmss = s => { s = Math.max(0, Math.round(s)); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); };
+setInterval(() => {
+  const el = $('posOut'); if (!el) return;
+  if (!playing || !lineAnchor || !ctx) { el.textContent = ''; return; }
+  const bpm = tempo(), beat = lineAnchor.ppq + (ctx.currentTime - lineAnchor.time) * bpm / 60;
+  if (typeof song !== 'undefined' && song.on && song.cur) {
+    const total = songBars(song.cur) * 4, pos = ((beat - song.startBeat) % total + total) % total;
+    el.innerHTML = `♪ ${mmss(pos * 60 / bpm)} <b>−${mmss((total - pos) * 60 / bpm)}</b>`;
+  } else if (living() && endless.nextMood > 0) {
+    const bar = Math.floor(beat / 4), left = Math.max(0, endless.nextMood * 4 - beat);
+    el.innerHTML = `∞ ${mmss(ctx.currentTime - moodSince)} <b>−${mmss(left * 60 / bpm)}</b>`;
+  } else {
+    const bars = Math.max(1, line.reduce((a, c) => a + slotBars(c), 0)), b = (((beat - lineStartBeat) / 4) % bars + bars) % bars;
+    el.textContent = `bar ${Math.floor(b) + 1} / ${bars}`;
+  }
+}, 250);
 $('aliveOn').setAttribute('aria-pressed', alive.on); $('aliveOn').addEventListener('click', () => setAlive(!alive.on));
 // the pace: calm, drifting or restless, one press each
-const PACE_NAMES = { calm: 'Calm', drift: 'Drifting', restless: 'Restless' };
+const PACE_NAMES = { calm: 'Calm', drift: 'Drift', restless: 'Busy' };
 $('paceBtn').textContent = PACE_NAMES[endless.pace];
-$('paceBtn').addEventListener('click', () => { const k = Object.keys(PACE), i = (k.indexOf(endless.pace) + 1) % k.length; endless.pace = k[i]; store.set('ds-pace', endless.pace); $('paceBtn').textContent = PACE_NAMES[endless.pace]; endless.nextMood = endless.nextSmall = -1; setStatus('Endless moves ' + PACE_NAMES[endless.pace].toLowerCase() + '.'); });
+$('paceBtn').addEventListener('click', () => { const k = Object.keys(PACE), i = (k.indexOf(endless.pace) + 1) % k.length; endless.pace = k[i]; store.set('ds-pace', endless.pace); $('paceBtn').textContent = PACE_NAMES[endless.pace]; endless.nextMood = endless.nextSmall = -1; setStatus('Endless and Alive move: ' + PACE_NAMES[endless.pace].toLowerCase() + '.'); });
 
 /* ---------- Song line: a whole song (intro, verse, chorus, bridge, breakdown, outro) ----------
    A song is a mood and a row of sections, each with its own chord line and length. Each kind of section has its own
@@ -4038,6 +4711,10 @@ function applySection(k, fade) {
   moodWants.piano = pianoNotes.length > 0 && (['Intro', 'Outro', 'Bridge', 'Breakdown'].includes(x.type) ? m.piano.on || x.type !== 'Bridge' : m.piano.on && x.type === 'Verse' && k % 2 === 1);
   if (moodWants.piano) { pianoPrefs.preset = m.piano.preset; pianoPrefs.seed = m.piano.seed + k; pianoDirty++; savePiano(); pianoControlsShow(); }
   channelTo('piano', moodWants.piano, fade);
+  // the guitarist drops in for the second verse and the bridge
+  moodWants.guitar = guitarData.phrases.length > 0 && m.guitar.on && (x.type === 'Bridge' || (x.type === 'Verse' && k > 1));
+  if (moodWants.guitar) { guitarPrefs.preset = m.guitar.preset; guitarPrefs.seed = m.guitar.seed + k; guitarDirty++; saveGuitar(); guitarControlsShow(); }
+  channelTo('guitar', moodWants.guitar, fade);
   song.section = k; drawSongHead();
   setStatus(`Song · ${x.type} · ${x.bars} bars · ${lineBank[x.line].name}`);
 }
@@ -4182,7 +4859,7 @@ function toggleEl(label, get, set) {
    A small worklet takes what the master and each channel's fader send, sample for sample together, and hands it over
    once a second as 16-bit. Stopping makes the files: one WAV for the mix, or a zip with the mix and the stems. */
 let recNode = null, rec = null;
-const REC_NAMES = ['mix', 'chord', 'drums', 'arp', 'vox', 'melody', 'perc', 'piano'];
+const REC_NAMES = ['mix', 'chord', 'drums', 'arp', 'vox', 'melody', 'perc', 'piano', 'guitar', 'asmr'];
 function recConnect(src, k) { if (recNode && src) src.connect(recNode, 0, k); }
 async function recStart() {
   await startAudio();
@@ -4191,6 +4868,9 @@ async function recStart() {
   if (melPrefs.lead || melPrefs.bass) await melAudio();
   if (percPrefs.on) await percAudio();
   if (pianoPrefs.on) await pianoAudio();
+  if (guitarPrefs.on) await guitarAudio();
+  if (asmrPrefs.on) await asmrAudio();
+  if (highPrefs.on) await highAudio();
   const stems = $('recWhat').dataset.v === 'stems';
   rec = { stems, parts: REC_NAMES.map(() => [[], []]), frames: 0, t0: performance.now(), max: (stems ? 15 : 30) * 60 * ctx.sampleRate };
   recNode.port.postMessage({ t: 'start', inputs: REC_NAMES.length });
@@ -4316,7 +4996,7 @@ function arrowize(sel) {
   new MutationObserver(sync).observe(sel, { childList: true, subtree: true, attributes: true });
   sel._sync = sync;
 }
-document.querySelectorAll('select').forEach(sel => { if (!['soundSel', 'lineSel', 'soundFilter', 'arpSel', 'arpSoundSel', 'kitSel', 'drumSel', 'voxStyleSel', 'voxSpaceSel', 'moodSel', 'songSel', 'leadSel', 'bassSel', 'pianoSel', 'percKitSel', 'percGrooveSel'].includes(sel.id)) arrowize(sel); });
+document.querySelectorAll('select').forEach(sel => { if (!['soundSel', 'lineSel', 'soundFilter', 'arpSel', 'arpSoundSel', 'kitSel', 'drumSel', 'voxStyleSel', 'voxSpaceSel', 'moodSel', 'songSel', 'leadSel', 'bassSel', 'pianoSel', 'guitarSel', 'percKitSel', 'percGrooveSel'].includes(sel.id)) arrowize(sel); });
 // keep the arrows right when a menu is set from code (a sound loads, a chord is picked)
 setInterval(() => document.querySelectorAll('.stepper select').forEach(sel => sel._sync && sel._sync()), 400);
 fillSessions(); fillLines(); drawSlots(); drawPads(); lastNotes = voiceLine();

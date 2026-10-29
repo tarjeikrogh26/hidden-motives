@@ -26,8 +26,12 @@ Motoren er ren C++ (`dsp/`) uten plugin-kode. Den samme koden kjører i dag i ne
 ```sh
 python3 web/build.py --wasi-sdk /sti/til/wasi-sdk --out dist/DriftSonata.html \
     --samples /sti/til/enkelttoner --header assets/header.webp --arp /sti/til/AVANTGARDIAN-ARP/dist \
-    --drums /sti/til/trommeslag --vox /sti/til/vox-biter --piano /sti/til/pianotoner
+    --drums /sti/til/trommeslag --vox /sti/til/vox-biter --piano /sti/til/pianotoner \
+    --guitar /sti/til/gitarfraser --asmr /sti/til/asmr
 ```
+
+Sida må holde seg under 16 MB (artifact-grensen); `build.py` skriver ut størrelsen. Lydene legges inn som AAC med
+bitrater valgt for det: opptakene 96k, trommeslag 80k, vox 72k, gitar 80k, ASMR 48k.
 
 Opptakene kommer fra samplepakker og ligger derfor ikke i repoet. Uten `--samples` spiller synthen alene.
 
@@ -55,7 +59,18 @@ Melodi-kanalen har en lead som synger et lite motiv og svarer seg selv over akko
 slagene), og en bass som følger grunntonene i sju mønstre. Piano-kanalen er et mykt filtpiano laget med
 `tools/chop_piano.py <ut-mappe> <filer>`: rene enkelttoner skilles ut av pianoopptak (venstre hånd filtreres bort),
 og hver tangent starter med en ekte innspilt tone og ringer videre på to strenger, laget av de målte deltonene. Det
-spiller lange, enkle linjer i passasjer, av og til, langt ute i et stort mørkt rom.
+spiller lange, enkle linjer i passasjer, av og til, langt ute i et stort mørkt rom. High (på Chord-stripen) er
+strykeropptakene en til to oktaver over akkordene, noen lange toner av og til, svært lavt.
+
+Gitaren spiller ekte fraser fra opptakene: `tools/chop_guitar.py <ut-mappe> <filer>` beholder det mest levende
+stykket av hvert opptak og finner frasene i det (ett, to eller fire slag, plukk eller strum), med kroma. For hver akkord
+velger sida frasen som passer best, flyttet noen halvtoner og i et tempo nær sangens; gitaristen kommer innom i
+passasjer. 30 måter å spille på (flamenco, nylon, strum-svell, ørkenløp, leirbål, duende) i fem rom.
+
+ASMR har sin egen motor: `tools/chop_asmr.py <ut-mappe> <filer>` legger stemmer, hvisking og nær foley etter hverandre
+i én fil. Sida tar korn på 20-400 ms, baklengs, flyttet i oktaver og kvinter, stammende, og kaster dem helt inntil
+ørene i korte byger (flutter, crawl, cloud, crackle, glitch, swarm), over bassen og under musikken. Ingenting spilles
+som det ble tatt opp.
 
 Vox-sporet lages av vokalister med `tools/chop_vox.py <ut-mappe> <navn>=<fil> ...`: et tonesøk (YIN) finner nynn og
 holdte vokaler, starten på stavelser blir korte ordbiter (aldri hele ord), og pust tas med. Sungne akkorder med
@@ -78,13 +93,21 @@ Overganger: reverserte svell (neste akkord slått mykt gjennom et langt rom og s
 lander på skiftet, på hvert akkordskifte eller bare inn i nye deler), en stigning før nye deler (skimmeret klatrer,
 rommet fryses siste takt, alt slippes på første takt) og pumping med sparken (sidechain på akkord og arp).
 
+692 stemninger: de 192 og 500 ensemble-stemninger der hver har et band på fire til seks instrumenter, alltid med piano
+eller gitar. ★ ved siden av terningen lagrer det som spiller nå som din egen (under Your sessions). Et stemningsbytte
+er en oppløsning: hele mikset synker inn i et mykt lavpass og et langt rom, den nye stemningen kommer på bunnen av
+det, og alt åpner seg igjen. Telleren i baren viser spilt og igjen av sangen (♪), av stemningen til Endless eller
+Alive går videre (∞), eller takten i akkordlinja. En kanal som spiller lyser i sin egen farge, sterkere jo høyere den
+er.
+
 Alive (på som standard): når ingen har rørt noe på 30 sekunder, lever maskinen selv som i Endless: nye
 akkordlinjer og lyder, arpen snur, andre sett og grooves, leads og basser, pianoet, stemmene, og etter hvert nye
 stemninger. Endringene lander på frasegrenser. Et arrangement med egen klokke lar kanalene komme og gå, så det aldri
 spiller alt på én gang (færre når rolig, flere når urolig), og akkordene løftes opptil 4,5 dB når de står nesten
 alene. Arpen spiller mørkere og lenger bak når en melodi synger, bytter mønster hver 16. takt og drar én gang hver 32.
 takt helt ut til kanten av rommet og tilbake. Stemmene skifter stil, rom, sangere eller måte å synge på omtrent hvert
-minutt.
+minutt. Når en stemning har spilt lenge (2,5 til 4 minutter) kommer en fet synthbass inn i 32 takter (Reese, Moog,
+Juno, growl, wobble, oktavstabel) og går så igjen.
 
 Lydbytter fader over: motoren har to motorer per kanal (akkord og arp), og trommesett, grooves, arp-mønstre og
 vox-stiler fader også over tiden som er valgt under Fade.
